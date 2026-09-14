@@ -1,0 +1,70 @@
+{
+  "_comment": [
+    "Fluent — SINGLE SOURCE OF TRUTH for runtime configuration.",
+    "Precedence, lowest to highest: this file  <  .env (per-machine overrides)",
+    "  <  environment variables  <  command-line flags.",
+    "So this file describes the project; .env only says how THIS machine differs",
+    "(cp .env.railab .env / cp .env.rapve .env). Read it with:",
+    "  python3 scripts/fluent-config.py --json      (effective config)",
+    "  python3 scripts/fluent-config.py --sh        (shell exports)",
+    "The server reads the models section directly; config/fluent-models.json is",
+    "kept as a deprecated override layer."
+  ],
+  "_schema_version": 1,
+  "paths": {
+    "model_dir": "/home/albert/aidev/models",
+    "default_manager": ""
+  },
+  "models": {
+    "deep": {
+      "backend": "native",
+      "managed": true,
+      "model": "/home/albert/aidev/models/Qwen3-14B-Q4_K_M.gguf",
+      "port": 12322,
+      "gpu": 1,
+      "ctx": 36864,
+      "kv_type": "f16",
+      "temperature": 0.2,
+      "max_tokens": 4096,
+      "timeout_ms": 600000
+    },
+    "face": {
+      "enabled": false,
+      "model": "/home/albert/aidev/models/Qwen3-1.7B-UD-Q4_K_XL.gguf",
+      "port": 12323,
+      "gpu": 1,
+      "ctx": 32768,
+      "temperature": 0.7,
+      "max_tokens": 4096,
+      "timeout_ms": 120000
+    },
+    "_kv_comment": [
+      "kv_type: precisio de la cache KV del model deep. 'f16' es el que hi havia.",
+      "'q8_0' la parteix per la meitat (cal -fa 1, que ja hi es) i allibera ~2.6 GB",
+      "a ctx 32768 — o permet pujar el ctx sense gastar mes VRAM.",
+      "Mesura sempre amb nvidia-smi despres de canviar-ho: docs/model-qwen14b-q4.md."
+    ]
+  },
+  "server": {
+    "stream": false
+  },
+  "tts": {
+    "_comment": [
+      "Local text-to-speech (piper). Off until a voice exists on this machine.",
+      "Install with: scripts/fluent-tts.sh install en_GB-alba-medium",
+      "'voices' maps the profile's target_language to a .onnx voice model.",
+      "CPU only: it must not compete for the VRAM the deep model needs."
+    ],
+    "enabled": true,
+    "binary": "/home/albert/.fluent/_tts/piper/piper",
+    "voices": {
+      "English": "/home/albert/.fluent/_tts/voices/en_GB-alba-medium.onnx"
+    },
+    "cache_max_mb": 200,
+    "timeout_ms": 20000
+  },
+  "_webs_comment": [
+    "El mapa perfil->port viu a FLUENT_WEBS a l'.env: es per maquina i porta",
+    "noms reals d'alumnes. Exemple: FLUENT_WEBS=\"alex-en:4100 sam-en:4101\""
+  ]
+}

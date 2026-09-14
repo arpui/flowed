@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fluent v0.3.0</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">🌍 Fluent</div>
+    <div id="status" class="status">connectant…</div>
+    <span id="pace" class="pace" hidden title="Exercicis d'aquesta sessió"></span>
+    <button id="new-session" class="ghost" title="Nova sessió">↺</button>
+    <nav id="commands" aria-label="Practice modes">
+      <button data-cmd="fluent-review" class="lesson" title="Today's lesson">🎓<span>Lesson</span><span class="badge" hidden></span></button>
+      <button data-cmd="fluent-writing" title="Writing">📝<span>Writing</span></button>
+      <button data-cmd="fluent-speaking" title="Speaking">🗣️<span>Speaking</span></button>
+      <button data-cmd="fluent-vocab" title="Vocabulary">📚<span>Vocab</span></button>
+      <button data-cmd="fluent-reading" title="Reading">📖<span>Reading</span></button>
+      <button data-cmd="fluent-learn" title="Surprise me! — adaptive mixed practice">🎲<span>Mix</span></button>
+      <button data-cmd="fluent-progress" title="Progress">📊<span>Stats</span></button>
+      <button data-cmd="fluent-end" class="finish" title="End this session and see the summary">🏁<span>End</span></button>
+    </nav>
+  </header>
+
+  <main id="messages" aria-live="polite"></main>
+
+  <div id="exercise-card" class="exercise-card" hidden>
+    <div class="ex-head">✏️ Exercici<button id="ex-speak" class="speak" type="button" title="Escolta-ho" aria-label="Escolta-ho" hidden>🔊</button></div>
+    <div id="exercise-body" class="ex-body md"></div>
+  </div>
+  <button id="current-q" class="current-q" hidden>↓ Últim missatge</button>
+
+  <footer id="composer">
+    <textarea id="input" rows="2" placeholder="Escriu la teva resposta…"></textarea>
+    <button id="expand" class="ghost" title="Escriptura gran">⤢</button>
+    <button id="send" aria-label="Envia" title="Envia (buit = següent exercici)">➤</button>
+  </footer>
+
+  <div id="progress-overlay" class="overlay" hidden>
+    <div class="progress-modal" role="dialog" aria-modal="true" aria-labelledby="progress-title">
+      <div class="progress-head">
+        <h2 id="progress-title">📊 Progrés</h2>
+        <div class="progress-actions">
+          <button id="progress-refresh" class="ghost" title="Actualitza">↻</button>
+          <button id="progress-close" class="ghost" title="Tanca">✕</button>
+        </div>
+      </div>
+      <div id="progress-body" class="progress-body"></div>
+    </div>
+  </div>
+
+  <script src="/marked.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

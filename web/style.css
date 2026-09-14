@@ -1,0 +1,622 @@
+:root {
+  --bg: #faf7f2;
+  --panel: #ffffff;
+  --ink: #2b2620;
+  --muted: #8a8177;
+  --accent: #2f7d5d;
+  --accent-ink: #ffffff;
+  --user-bubble: #e7edf5;
+  --assistant-correct: #e5f0ea;
+  --assistant-correct-strong: #d7e9de;
+  --border: #e6e0d6;
+  --err: #b3402f;
+  --chip: #efe9df;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  margin: 0 auto;
+  height: 100dvh;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  row-gap: 8px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.brand { font-weight: 700; font-size: 1.05rem; }
+
+/* Where you are in the session: count, and the target when there is one. */
+.pace {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pace .pace-bar {
+  width: 42px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.pace .pace-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: currentColor;
+  transition: width 0.3s ease;
+}
+
+.pace.done {
+  color: var(--ok, #3aa76d);
+  border-color: currentColor;
+}
+
+.status {
+  flex: 1;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghost {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.ghost:disabled { opacity: 0.4; cursor: default; }
+
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px 8px;
+  scroll-behavior: smooth;
+}
+
+.msg { margin-bottom: 14px; }
+.msg.user { display: flex; justify-content: flex-end; }
+.msg.user .bubble {
+  background: var(--user-bubble);
+  border-radius: 14px 14px 4px 14px;
+  padding: 8px 12px;
+  max-width: 85%;
+  overflow-wrap: break-word;
+}
+.msg.error { display: flex; }
+.msg.error .md {
+  background: #fbeae7;
+  border: 1px solid #ecc5be;
+  color: var(--err);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.msg.hint { display: flex; }
+.msg.hint .md { color: var(--muted); }
+
+.md { overflow-wrap: break-word; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md h1, .md h2, .md h3, .md h4 { line-height: 1.3; margin: 0.7em 0 0.35em; }
+.md h1 { font-size: 1.25rem; }
+.md h2 { font-size: 1.15rem; }
+.md h3 { font-size: 1.05rem; }
+.md pre {
+  background: #2b2620;
+  color: #f4efe8;
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+}
+.md code { background: var(--chip); padding: 1px 5px; border-radius: 5px; font-size: 0.9em; }
+.md pre code { background: none; padding: 0; }
+.md blockquote {
+  margin: 0.5em 0;
+  padding: 4px 12px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+}
+.md table { border-collapse: collapse; margin: 0.6em 0; font-size: 0.9em; display: block; overflow-x: auto; max-width: 100%; }
+.md th, .md td { border: 1px solid var(--border); padding: 4px 8px; }
+.md ul, .md ol { padding-left: 1.3em; margin: 0.4em 0; }
+
+.chip {
+  display: inline-block;
+  background: var(--chip);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 2px 4px 2px 0;
+}
+.chip.err { background: #fbeae7; color: var(--err); }
+
+/* ---- focus mode: hide practice nav mid-turn (piece 1, reversible) ---- */
+body.focusing nav#commands { display: none; }
+
+/* ---- collapsible tool activity (piece 1, reversible) ---- */
+details.toold {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  font-size: 0.75rem;
+  vertical-align: middle;
+}
+details.toold > summary { display: inline-block; cursor: pointer; list-style: none; }
+details.toold > summary::-webkit-details-marker { display: none; }
+details.toold > summary::marker { content: none; }
+details.toold > summary::before {
+  content: "▸ ";
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+details.toold[open] > summary::before { content: "▾ "; }
+details.toold .chip { margin: 0; }
+.tool-meta { color: var(--muted); font-size: 0.72rem; padding: 2px 6px; }
+.tool-err { color: var(--err); font-size: 0.75rem; padding: 2px 6px; }
+
+header nav#commands {
+  flex: 1 1 100%;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border-top: none;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+nav#commands button {
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+nav#commands button span { display: none; }
+nav#commands button:active { background: var(--chip); }
+nav#commands button:disabled { opacity: 0.45; cursor: default; }
+
+@media (min-width: 640px) {
+  nav#commands button span { display: inline; margin-left: 4px; }
+}
+
+footer#composer {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  align-items: flex-end;
+}
+footer#composer.awaiting {
+  border-top: 2px solid var(--accent);
+  box-shadow: 0 -2px 12px rgba(47, 125, 93, 0.15);
+}
+
+textarea#input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 9px 12px;
+  font: inherit;
+  background: var(--bg);
+  min-height: 64px;
+  max-height: 38dvh;
+}
+textarea#input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+footer#composer.expanded textarea#input { height: 70dvh; max-height: 70dvh; }
+
+button#expand {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  border-radius: 12px;
+  width: 46px;
+  height: 46px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+button#expand:disabled { opacity: 0.4; cursor: default; }
+footer#composer.expanded button#expand {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ---- active-exercise card: pinned above the composer, full text ---- */
+.exercise-card {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 8px 12px 10px;
+}
+.exercise-card[hidden] { display: none; }
+.exercise-card .ex-head {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+.exercise-card .ex-body {
+  font-size: 0.9rem;
+  max-height: 30dvh;
+  overflow-y: auto;
+  cursor: pointer;
+}
+.exercise-card .ex-body p, .exercise-card .ex-body ul,
+.exercise-card .ex-body ol { margin: 0.3em 0; }
+
+/* ---- painted feedback: correct version + correction items ---- */
+.fb-correct {
+  background: var(--assistant-correct);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+li.fb-wrong {
+  background: #fbeae7;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: 2px 0;
+}
+li.fb-right {
+  background: var(--assistant-correct);
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin: 2px 0;
+}
+
+/* ---- latest tutor message: green left edge ("darrera resposta") ---- */
+.msg-latest {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+}
+
+/* ---- exercise statement background (paragraph granularity) ---- */
+.ex-block {
+  background: var(--assistant-correct);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.ex-block + .ex-block { margin-top: 2px; }
+/* Question start: accent edge + stronger wash so the exercise
+   beginning stands out from its continuation. */
+.ex-start {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+  background: var(--assistant-correct-strong);
+}
+
+/* ---- in-flow exercise/feedback tagging ---- */
+.msg-exercise {
+  border-left: 3px solid var(--accent);
+  padding-left: 10px;
+}
+.flow-tag { margin-bottom: 4px; }
+.flow-tag .chip {
+  background: var(--assistant-correct);
+  color: var(--ink);
+  font-weight: 600;
+}
+.msg-feedback .flow-tag .chip { background: #fbf3e2; }
+
+/* ---- "jump to latest" pill: only visible when the latest tutor message
+   has scrolled out of view (driven by IntersectionObserver) ---- */
+button.current-q {
+  display: block;
+  margin: 6px auto 0;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+button.current-q[hidden] { display: none; }
+
+button#send {
+  border: none;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 12px;
+  width: 46px;
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+button#send:disabled { opacity: 0.4; cursor: default; }
+/* Empty-send gated: the tutor is waiting for an answer — write it
+   (or type "next" to skip). Typing still works; only empty-send is parked. */
+button#send.cant-next { opacity: 0.45; }
+
+@media (min-width: 640px) {
+  body { padding: 18px 0; }
+  body > header, main, footer { border-radius: 14px; }
+  body { max-width: 720px; }
+  main { padding: 18px; }
+}
+
+/* ---- visual progress dashboard (modal) ---- */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 38, 32, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 50;
+}
+.overlay[hidden] { display: none; }
+
+.progress-modal {
+  background: var(--panel);
+  border-radius: 16px;
+  max-width: 640px;
+  width: 100%;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 40px rgba(43, 38, 32, 0.25);
+}
+
+.progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.progress-head h2 { margin: 0; font-size: 1.1rem; }
+.progress-actions { display: flex; gap: 6px; }
+
+.progress-body {
+  overflow-y: auto;
+  padding: 14px 16px 18px;
+}
+.progress-body .p-warn {
+  background: #fbf3e2;
+  border: 1px solid #e8d5a8;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+.progress-body .p-error {
+  background: #fbeae7;
+  border: 1px solid #ecc5be;
+  color: var(--err);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.progress-body .p-loading, .progress-body .p-empty { color: var(--muted); }
+.progress-body section { margin-bottom: 16px; }
+.progress-body h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.progress-sub {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.kpi {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.kpi .v { font-size: 1.25rem; font-weight: 700; }
+.kpi .l { font-size: 0.72rem; color: var(--muted); }
+
+.skill-row { margin-bottom: 10px; }
+.skill-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+.skill-top .acc { color: var(--muted); font-size: 0.8rem; }
+.stars { color: var(--accent); letter-spacing: 1px; font-size: 0.9rem; }
+.bar {
+  height: 8px;
+  background: var(--chip);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.bar > i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+.skill-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+.pat-list, .sess-list, .ach-list { list-style: none; margin: 0; padding: 0; }
+.pat-list li, .sess-list li, .ach-list li {
+  font-size: 0.88rem;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pat-list li:last-child, .sess-list li:last-child, .ach-list li:last-child { border-bottom: none; }
+.pat-id { font-weight: 600; }
+.pat-meta, .sess-meta, .ach-meta { color: var(--muted); font-size: 0.78rem; }
+
+.trend {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 110px;
+  padding: 6px 2px 0;
+}
+.trend .t-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.trend .t-bar {
+  width: 100%;
+  max-width: 44px;
+  background: var(--accent);
+  border-radius: 5px 5px 2px 2px;
+  min-height: 3px;
+}
+.trend .t-date { font-size: 0.68rem; color: var(--muted); }
+.trend .t-val { font-size: 0.7rem; font-weight: 600; }
+
+.week-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.week-row:last-child { border-bottom: none; }
+.week-row .wm { color: var(--muted); }
+
+.due-chips { margin-top: 8px; }
+
+/* Review gate inside the pace indicator: 🔁 2/5 · ✏️ 3/8 */
+.pace-rev { opacity: .95; }
+.pace-rev.done { opacity: .5; }
+.pace-sep { margin: 0 .35em; opacity: .4; }
+#commands button.finish { margin-left: .4em; }
+
+/* Hear it said properly. Only drawn when a voice is installed (body.has-tts). */
+.speak {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: .95em;
+  line-height: 1;
+  margin-left: .4em;
+  opacity: .55;
+  padding: .15em .25em;
+  transition: opacity .15s, transform .15s;
+  vertical-align: baseline;
+}
+.speak:hover { opacity: 1; }
+.speak.speaking { opacity: 1; transform: scale(1.15); }
+.speak.speak-failed { opacity: .3; cursor: not-allowed; }
+.ex-head .speak { float: right; }
+
+/* A sentence the tutor marked as worth hearing. */
+.sayable { border-bottom: 1px dotted var(--muted); }
+
+/* The button bar has to fit on one line without pushing the composer under the
+   fold — it was long enough that the scrollbar sat under the edge of the
+   window and was not fully visible. Labels shrink before anything scrolls, and
+   on a narrow screen the emoji alone carry it (the title= stays for hover). */
+header nav#commands { overflow-x: auto; overscroll-behavior-x: contain; }
+header nav#commands::-webkit-scrollbar { height: 4px; }
+header nav#commands::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+nav#commands button { padding: 4px 8px; }
+nav#commands button span { margin-left: 4px; }
+@media (max-width: 560px) {
+  nav#commands button span { display: none; }
+  nav#commands button { padding: 5px 7px; font-size: 0.95rem; }
+}
+
+/* 🎓 Lesson: the one thing meant to be done today. Never disabled — the badge
+   says what is left and the learner decides when.
+
+   The badge used to sit above the button (position:absolute, top:-6px) and the
+   nav's own overflow-x:auto clipped its top half: the number was there and
+   unreadable. Inline inside the button, nothing can crop it. */
+nav#commands button.lesson {
+  border-color: var(--accent);
+  font-weight: 600;
+}
+nav#commands button.lesson.pending {
+  background: #fff7e6;
+  border-color: #e0a33e;
+}
+nav#commands button.lesson .badge {
+  display: inline-block;
+  min-width: 15px;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e0a33e;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  vertical-align: middle;
+}
+nav#commands button.lesson.done .badge { background: #3d9a50; }
+@media (prefers-reduced-motion: no-preference) {
+  nav#commands button.lesson.pending .badge { animation: lesson-pulse 2.4s ease-in-out infinite; }
+}
+@keyframes lesson-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+/* Breathing room so nothing in the bar sits against the scroll edge. */
+header nav#commands { padding-block: 3px; }
+/* The day's count, with a face that climbs to the goal. */
+.pace-face { font-size: 1.05em; margin-left: .3em; }

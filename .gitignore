@@ -1,0 +1,80 @@
+# ---------------------------------------------------------------------------
+# Fluent — .gitignore
+#
+# Three kinds of thing stay out: what belongs to a MACHINE, what belongs to a
+# CHILD, and what regenerates itself. The middle one is the one that matters:
+# this repo grew alongside real learners, and a transcript or a profile backup
+# is far harder to remove from a public history than to never commit.
+# ---------------------------------------------------------------------------
+
+# --- personal data: never commit -------------------------------------------
+# Learner profiles live in ~/.fluent/<id>/ and never belong here, but backups
+# and captured sessions have leaked into the tree over time.
+obsolet/.backups/
+**/learner-profile.json
+!data-examples/learner-profile-template.json
+**/session-log.json
+**/mistakes-db.json
+**/mastery-db.json
+**/progress-db.json
+**/spaced-repetition.json
+!data-examples/*-template.json
+results/
+!results/README.md
+!data/README.md
+.records/
+.metrics/
+.daily/
+.memories/
+.update-state/
+sessions/*.db
+sessions/*.db-*
+*.db.bak-*
+
+# Working transcripts of real sessions, with the learners' names in them.
+docs/sessio-*.json
+docs/opencode-migration/*.json
+
+# --- machine-specific -------------------------------------------------------
+# The .env says which machine this is; the .env.<host> templates are committed
+# so a new machine starts from one of them.
+.env
+!.env.railab
+!.env.rapve
+.fluent-active
+.web-password
+.web-password-default
+
+# Text-to-speech: a binary and ~80 MB of voice models, installed per machine
+# by scripts/fluent-tts.sh.
+.fluent/_tts/
+
+# --- regenerates itself -----------------------------------------------------
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+
+# --- archived runtime -------------------------------------------------------
+# 63 MB of the opencode build this project was freed from. Kept on disk for
+# reference, not worth a repository.
+obsolet/
+
+# --- editor and OS ----------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Marcador de mode dev, buit i local.
+.fluent-dev
+
+# --- scratch ----------------------------------------------------------------
+_to_delete/
+*.bak
+*.tmp
+*.orig
+/tmp/

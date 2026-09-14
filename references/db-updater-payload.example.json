@@ -1,0 +1,56 @@
+{
+  "_comment": "Canonical example payload for hooks/update-db.py. Only session_id and date are required. Every other field is optional — omit to skip.",
+
+  "session_id": "session-005",
+  "date": "2026-04-24",
+  "duration_minutes": 20,
+  "command_used": "/fluent-learn",
+  "skills_practiced": ["vocabulary", "writing"],
+
+  "skill_scores": {
+    "vocabulary": { "exercises": 5, "correct": 4, "time_minutes": 10 },
+    "writing":    { "exercises": 3, "correct": 3, "time_minutes": 10 }
+  },
+
+  "errors": [
+    {
+      "pattern_id": "verb_conjugation_3rd_person",
+      "category": "grammar",
+      "subcategory": "verb_conjugation",
+      "your_answer": "Hij spreek",
+      "correct_answer": "Hij spreekt",
+      "context": "3rd person singular",
+      "difficulty_score": 0.7,
+      "severity": "critical",
+      "notes": "optional free text"
+    }
+  ],
+
+  "new_vocabulary": [
+    {
+      "item_id": "het_huis",
+      "item_type": "vocabulary",
+      "content": "het huis",
+      "answer": "the house",
+      "category": "essential_nouns",
+      "difficulty": "A1",
+      "initial_quality": 4,
+      "priority": "medium"
+    }
+  ],
+
+  "review_results": [
+    { "item_id": "vocab_dag", "quality": 4 },
+    { "item_id": "grammar_omdat_word_order", "quality": 2 }
+  ],
+
+  "topics_covered": ["articles", "house_vocabulary"],
+  "breakthroughs": ["First correct use of 'het' vs 'de'"],
+  "focus_next_session": ["Drill de/het article gender"],
+  "session_notes": "Strong session. Article gender still tricky.",
+  "achievements_earned": [],
+  "milestones": [
+    { "milestone": "Reached 100 words learned", "date": "2026-04-24" },
+    "Completed first full conversation"
+  ]
+}
