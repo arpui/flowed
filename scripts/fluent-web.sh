@@ -181,7 +181,7 @@ if [[ -f "$PIDFILE" ]]; then
 fi
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
-LOG="/tmp/fluent-web-$PORT.log"
+LOG="$DATA_DIR/fluent-web-$PORT.log"
 PIDS=()
 
 # The learner instance must keep the tutor prompt even when the launcher's

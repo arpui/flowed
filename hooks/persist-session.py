@@ -309,9 +309,22 @@ def answer_key(text):
     return re.sub(r"\W+", "", str(text or "").lower())[:40]
 
 
-def pattern_id_for(category, wrong):
-    """Same id shape the prose parser builds, so both paths dedupe together."""
-    return f"{category}_{str(wrong).replace(' ', '_')[:20]}"
+def pattern_id_for(category, wrong, right=None):
+    """The id of the thing being LEARNED, not of the slip that revealed it.
+
+    Keyed on the wrong answer, this produced `vocabulary_ben` from a learner
+    who typed "ben" where "welcome" belonged — and three sessions later the
+    tutor dutifully asked "What is the correct English word for 'ben'?". "ben"
+    is not a word. It was a typo, promoted to study material.
+
+    Keyed on the correct form it is both meaningful and self-deduplicating:
+    three different misspellings of the same word collapse into one item
+    instead of spawning three. Falls back to the wrong form when there is no
+    correct one, so the prose parser (which often has only the mistake) keeps
+    the id shape it always had.
+    """
+    key = str(right or wrong)
+    return f"{category}_{key.replace(' ', '_')[:20]}"
 
 
 def records_to_payload(records):
@@ -339,7 +352,7 @@ def records_to_payload(records):
             right = str(corr.get("right", "")).strip()
             if not wrong or not right:
                 continue
-            pid = pattern_id_for(category, wrong)
+            pid = pattern_id_for(category, wrong, right)
             if pid in seen:
                 continue
             seen.add(pid)
@@ -485,7 +498,14 @@ def parse_error_patterns(transcript):
             if score >= 10 and not marked:
                 continue  # flawless answer: this is a demonstration
             cat = normalize_error_category(m.group(3))
-            pid = f"{cat}_{m.group(1).replace(' ', '_')[:20]}"
+            # The same rule as the structured path, which was fixed and this one
+            # was not: the id names the thing being LEARNED, never the slip. Both
+            # parsers run over the same session, so keying them differently
+            # produced two patterns per correction — `articles_an` from the right
+            # answer and `articles_banana` from the wrong one, side by side in a
+            # real profile. And the second one then became an SM-2 item, due
+            # tomorrow, asking the learner about her own typo.
+            pid = pattern_id_for(cat, m.group(1), m.group(2))
             if pid in seen:
                 continue
             seen.add(pid)
@@ -549,7 +569,8 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
 
     recorded_pids = {e["pattern_id"] for e in rec_errors}
     error_patterns = [p for p in prose_patterns
-                      if pattern_id_for(p["category"], p["example_incorrect"]) not in recorded_pids]
+                      if pattern_id_for(p["category"], p["example_incorrect"],
+                                        p.get("example_correct")) not in recorded_pids]
 
     recorded_items = {r["item_id"] for r in rec_reviews}
     review_results = rec_reviews + [r for r in block_reviews

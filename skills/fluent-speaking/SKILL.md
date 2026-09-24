@@ -3,6 +3,7 @@ name: fluent-speaking
 description: Run an interactive typed conversation session simulating spoken practice — free-flowing dialogue, role-plays, and opinion questions prioritizing communication over perfect grammar. Triggered only when the learner types /fluent-speaking. Asks questions one at a time in the target language, evaluates clarity and naturalness first and grammar second, and updates all databases at the end.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
+requires: [fluent-feedback-formatter]
 ---
 
 # Speaking Practice (Typed)
@@ -46,7 +47,9 @@ Need: `learner-profile` (level, target language), `mastery-db.skills_mastery.spe
 Today we're practicing **speaking** through typed conversation. I'll ask you questions or give scenarios, you respond naturally in {target_language} — just like a real conversation.
 
 **Focus:** natural expression, fluency, pronunciation (typed)
-**Level:** {CEFR}
+**Level:** {CEFR}  
+*(`{CEFR}` = `learner-profile.learner.current_level`, read verbatim — never estimated or guessed. Measured live, 2026-09-22, test-en: a profile with `current_level: "A0"` got a Speaking session opened at "Level: A2", a level nobody set anywhere. Same rule for `{target_language}`/`{native_language}` just above: read them from the profile, never swap or guess which is which —
+measured the same day: target_language "English"/native_language "Catalan" produced "Catalan Speaking Practice", asking the learner to answer IN THEIR OWN native language, backwards.)*
 **Duration:** 15-20 min
 
 **Tips:**
@@ -172,7 +175,7 @@ Ready? I'll start...
 ### 🚀 Keep going?
 {one concrete next step, e.g. "One more round on [topic] using [new phrase]."}
 
-Use the buttons at the top (🎲 🔁 📚 📝 🗣️ 📖) to continue, or ↺ for a brand-new session. What shall we do next?
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.

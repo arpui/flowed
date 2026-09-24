@@ -93,13 +93,13 @@ class CapaABTest(unittest.TestCase):
     def test_capa_b_keeps_what_capa_a_recorded(self):
         self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
         patterns_a, items_a = self._state()
-        self.assertIn("tenses_go", patterns_a, "Capa A did not record the error pattern")
-        self.assertIn("tenses_go", items_a, "Capa A did not queue the pattern for review")
+        self.assertIn("tenses_went", patterns_a, "Capa A did not record the error pattern")
+        self.assertIn("tenses_went", items_a, "Capa A did not queue the pattern for review")
 
         self._run("persist-session.py", "ses_T", "--dir", str(self.dir))
         patterns_b, items_b = self._state()
-        self.assertIn("tenses_go", patterns_b, "Capa B erased the error pattern Capa A had recorded")
-        self.assertIn("tenses_go", items_b, "Capa B erased the spaced-repetition item")
+        self.assertIn("tenses_went", patterns_b, "Capa B erased the error pattern Capa A had recorded")
+        self.assertIn("tenses_went", items_b, "Capa B erased the spaced-repetition item")
         self.assertEqual(patterns_a, patterns_b)
         self.assertEqual(items_a, items_b)
 
@@ -214,8 +214,8 @@ class StructuredRecordsTest(CapaABTest):
         self.assertEqual(self._log().get("exercises_completed"), 1,
                          "the same answer was counted by both the record and the parser")
         mistakes = json.loads((self.dir / "mistakes-db.json").read_text(encoding="utf-8"))
-        self.assertIn("tenses_go", mistakes["error_patterns"])
-        self.assertEqual(mistakes["error_patterns"]["tenses_go"]["frequency"], 1)
+        self.assertIn("tenses_went", mistakes["error_patterns"])
+        self.assertEqual(mistakes["error_patterns"]["tenses_went"]["frequency"], 1)
 
     def test_record_carries_the_category_the_tutor_declared(self):
         self._write_record(corrections=[
@@ -223,8 +223,88 @@ class StructuredRecordsTest(CapaABTest):
         ])
         self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
         mistakes = json.loads((self.dir / "mistakes-db.json").read_text(encoding="utf-8"))
-        self.assertEqual(mistakes["error_patterns"]["prepositions_in_Monday"]["category"],
+        self.assertEqual(mistakes["error_patterns"]["prepositions_on_Monday"]["category"],
                          "prepositions")
+
+    def test_the_item_is_named_after_the_right_answer_not_the_slip(self):
+        """A mistake is evidence. It is not the thing to be learned.
+
+        Keyed on the wrong answer, a learner typing "ben" where "welcome"
+        belonged created the item `vocabulary_ben` with content "ben" — and
+        three days later the tutor asked "What is the correct English word for
+        'ben'?". Seen live on test-en, 2026-09-19.
+        """
+        self._write_record(corrections=[
+            {"wrong": "ben", "right": "welcome", "category": "vocabulary"}
+        ])
+        self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
+        pats = json.loads((self.dir / "mistakes-db.json").read_text(encoding="utf-8"))["error_patterns"]
+        self.assertIn("vocabulary_welcome", pats)
+        self.assertNotIn("vocabulary_ben", pats)
+
+        sr = json.loads((self.dir / "spaced-repetition.json").read_text(encoding="utf-8"))
+        item = sr["items"]["vocabulary_welcome"]
+        self.assertEqual(item["content"], "welcome", "the item studies the word, not the typo")
+        self.assertEqual(item["answer"], "welcome")
+        self.assertEqual(item["learner_wrote"], "ben", "the slip is kept as context only")
+
+    def test_a_t0_from_another_day_is_not_this_session_s_past(self):
+        """The id is a counter, and counters restart.
+
+        `.update-state/session-002.json` held a snapshot from the night before
+        with one spaced-repetition item in it. A new session numbered 002 today
+        found that file, treated it as its own T0, and re-applying rolled the
+        databases back to it: twelve items became two. Measured on a real
+        profile, and it is the quietest kind of data loss there is — nothing
+        fails, the file is simply older than it should be.
+        """
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "udb", REPO_ROOT / "hooks" / "update-db.py")
+        udb = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(udb)
+        udb.DATA_DIR = self.dir
+        yesterday = udb.state_path("session-002", "2026-09-18")
+        today = udb.state_path("session-002", "2026-09-19")
+        self.assertNotEqual(yesterday, today)
+        yesterday.parent.mkdir(parents=True, exist_ok=True)
+        yesterday.write_text('{"sr": {}}', encoding="utf-8")
+        self.assertIsNone(udb.load_state("session-002", "2026-09-19"),
+                          "yesterday's snapshot must not be found as today's")
+        self.assertIsNotNone(udb.load_state("session-002", "2026-09-18"))
+        self.assertIsNone(udb.load_state("session-002"),
+                          "and there is no undated fallback: that fallback IS the bug")
+
+    def test_both_parsers_agree_on_the_id(self):
+        """The structured path and the prose path must name a pattern the same.
+
+        They did not: one was fixed to key on the correct form, the other kept
+        keying on the mistake, and both run over the same session. A real
+        profile came back holding `articles_an` and `articles_banana` for the
+        same correction — and the second became an SM-2 item, due the next day,
+        asking the learner about her own typo.
+        """
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "ps", REPO_ROOT / "hooks" / "persist-session.py")
+        ps = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ps)
+        self.assertEqual(ps.pattern_id_for("articles", "banana", "un"), "articles_un")
+        self.assertEqual(ps.pattern_id_for("articles", "banana", ""), "articles_banana",
+                         "with no correct form there is nothing else to key on")
+        src = (REPO_ROOT / "hooks" / "persist-session.py").read_text()
+        self.assertNotIn('pid = f"{cat}_{m.group(1)', src,
+                         "the prose parser is keying on the wrong answer again")
+
+    def test_three_typos_of_one_word_are_one_item(self):
+        for wrong in ("goob bye", "gudbye", "good by"):
+            self._write_record(corrections=[
+                {"wrong": wrong, "right": "goodbye", "category": "vocabulary"}
+            ])
+        self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
+        pats = json.loads((self.dir / "mistakes-db.json").read_text(encoding="utf-8"))["error_patterns"]
+        vocab = [k for k in pats if k.startswith("vocabulary_")]
+        self.assertEqual(vocab, ["vocabulary_goodbye"], vocab)
 
     def test_record_with_item_id_advances_sm2_and_survives_capa_b(self):
         self._write_record(item_id="example_item_id", sm2_quality=5)

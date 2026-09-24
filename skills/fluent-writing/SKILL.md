@@ -3,6 +3,7 @@ name: fluent-writing
 description: Run an interactive writing practice session (emails, letters, forms, short texts) with systematic error analysis, category-tagged corrections, and detailed feedback. Triggered only when the learner types /fluent-writing. Selects a scenario matched to mastery, lets the learner compose, then analyzes grammar, register, vocabulary, structure, and spelling before updating all databases.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
+requires: [fluent-feedback-formatter]
 ---
 
 # Writing Practice Session
@@ -15,7 +16,10 @@ Full-text writing practice with systematic correction. One scenario per session,
 
 Trigger this skill only when the learner types `/fluent-writing`. The skill is gated with `disable-model-invocation: true` — a 15-20 min interactive session with DB writes should never start from an ambiguous prompt.
 
-Skip this skill in favor of `/fluent-vocab` if the learner has not yet hit mastery 2 in basic vocabulary — writing needs a minimum word bank.
+Writing is the one practice where the learner writes her OWN words. Closed
+exercises — a gap to fill, a sentence to complete — belong to 🎲 Go, which
+drills the same structures. Never set one here, at any level: at A1 the task is
+tiny, but it is still hers to write.
 
 ## Instructions
 
@@ -36,9 +40,15 @@ python3 hooks/read-db.py
 
 Need: `learner-profile` (level, target language, focus areas), `mistakes-db` (weak writing patterns), `mastery-db` (writing sub-skills).
 
-### 2. Pick scenario type
+### 2. Pick the task
 
-From `mastery-db.skills_mastery`:
+**A1 and A2 — guided writing, one short task at a time.** A topic from her own
+life (her pet, her family, her school, her breakfast, her favourite game) and
+the one or two words she should use. If the server's note gives a *Writing
+frame*, the words to use come from it — it is the structure Go is teaching her
+right now. Grade the answer, then set the next short task in the same message.
+
+**B1 and above — one scenario per session**, from `mastery-db.skills_mastery`:
 
 - Formal email (if `writing_formal_email` mastery < 4)
 - Informal email (if `writing_informal_email` < 4)
@@ -49,6 +59,25 @@ From `mastery-db.skills_mastery`:
 Scenarios must match the learner's CEFR level — A2 uses everyday situations, B1+ adds opinion / complaint / inquiry.
 
 ### 3. Present the task
+
+At **A1 / A2**:
+
+```markdown
+## ✍️ Writing Exercise
+
+**Topic:** {one small topic from her life, in native language}
+
+**Task:** Write {1-2 | 3-5} sentences in {target_language}.
+
+**Use:** {one or two words or short structures, in target language}
+
+**Write your sentences below:**
+```
+
+No `___`, no sentence to complete, no sentence to copy, no model answer shown
+before she writes.
+
+At **B1 and above**:
 
 ```markdown
 ## ✍️ Writing Exercise
@@ -161,7 +190,7 @@ Type "rewrite" to try again, or "next" to continue.
 ### 🚀 Keep going?
 {one concrete next step, e.g. "Rewrite the text fixing [weak pattern], or try a new one."}
 
-Use the buttons at the top (🎲 🔁 📚 📝 🗣️ 📖) to continue, or ↺ for a brand-new session. What shall we do next?
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.
@@ -198,7 +227,7 @@ the fields listed above.)*
 > **Task:** Write a formal email to the clinic in {Target}.
 >
 > **Requirements:**
-> - Length: 40-60 words
+> - Length: see the table below — 40-60 words is a B1 task, not an A1 one
 > - Include: greeting, reason, request for a new appointment, closing
 > - Register: formal
 > - Level: A2
@@ -237,7 +266,26 @@ correction, then `(category — why)` in parentheses. That is what gets parsed.
 
 ## Critical Rules
 
-- **One scenario per session.** Don't chain multiple writing tasks — depth over breadth.
+- **Length follows the level, and the level is in the profile.** A learner who
+  is being asked what "apple" is in English cannot write a 50-word email, and
+  asking is not ambition, it is a wall.
+
+  | Level | Ask for |
+  |---|---|
+  | A1 | 1-2 sentences of her own, with the words to use named in the task |
+  | A2 | 3-5 sentences of her own: a short note, a message or a postcard |
+  | B1 | 50-70 words: an email with a greeting and a closing |
+  | B2+ | 80-120 words, with an argument to make |
+
+  Seen live: an A1 profile asked for a 50-70 word email in the same session as
+  "what is the English word for poma".
+
+
+
+- **Never a gap.** No `___`, nothing to complete, nothing to copy — at any level.
+  The server rejects a Writing turn that contains one.
+- **A1 / A2: one short task at a time**, graded, then the next. **B1+: one
+  scenario per session** — depth over breadth.
 - **Wait for the full answer** before correcting.
 - **Severity tagging is mandatory.** Fed into `mistakes-db` and drives spaced repetition priority.
 - **Never write files.** The results file under `~/.fluent/<id>/results/` is written by the server, from your graded feedback.

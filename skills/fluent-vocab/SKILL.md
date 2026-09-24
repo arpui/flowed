@@ -3,6 +3,7 @@ name: fluent-vocab
 description: Run an interactive vocabulary drill session with flashcard-style prompts, spaced repetition, and per-answer feedback. Triggered only when the learner types /fluent-vocab. Reads spaced-repetition / mistakes / mastery DBs to pick words, presents one word at a time, scores each answer, and calls fluent-db-updater at the end.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
+requires: [fluent-feedback-formatter]
 ---
 
 # Vocabulary Drill Session
@@ -23,6 +24,14 @@ Otherwise ALWAYS run a drill — even with an empty review queue:
   high-frequency starter words for the learner's level and native language.
 - NEVER emit the session summary with 0 words reviewed. If you have presented
   no words, you have not run a session — start one instead of closing.
+- **The 10-word floor and the `session_length` target (12 if absent) are not
+  suggestions — stopping earlier is not a shorter session, it is an incomplete
+  one.** (Seen live, 2026-09-22: a fresh profile, no `session_length` set, got
+  the summary after 2 words — a fifth of the 10-word floor, a sixth of the
+  default target.) If you are about to write the session summary and fewer than
+  10 words have been presented on a fresh/empty-queue profile, or fewer than the
+  target on any profile, do not close: pick more words (fall back to more
+  starter words, or repeat modes on ones already shown) and keep going instead.
 
 ## Instructions
 
@@ -74,6 +83,21 @@ Limit: `spaced-repetition.daily_limits.review_items_per_day` (default 20).
    water, house, eat, …) and START drilling immediately. Never ask the learner
    to choose, never close the session — an empty selection is not an outcome.
 
+**A word labeled `{native_language}:` must actually BE in
+{native_language} — check it is not still an English word before writing the
+card.** (Measured live, 2026-09-22, test-en: meant to translate "full" to
+Catalan ("ple"), the card instead showed `**Catalan:** fill` — not a
+translation at all, just the English word "full" corrupted into the
+similar-looking English word "fill", left untranslated and unrelated to the
+numbers-themed context and answer key around it. A card like this teaches
+nothing and cannot be graded sensibly — the learner has no way to know what is
+even being asked.) Before writing the `{native_language}:` line: (1) confirm
+the value is actually a {native_language} word, not an English one that
+slipped through untranslated or got garbled into a similar-looking English
+word; (2) confirm it is the correct translation, not a look-alike. If
+genuinely unsure, drop the word and pick a different one from the queue or the
+starter list — never invent or guess one to fill a slot.
+
 ### 3. Present one word at a time
 
 Your FIRST message in a vocab session MUST be `## Word 1/…` — never the
@@ -84,6 +108,15 @@ repeat. NEVER present the same mode twice in a row. If the session history
 shows the last mode used, continue the rotation from there. Do not label the
 mode — the format itself shows it. Both directions must appear every 3 words;
 a session that only drills target→native (or only native→target) is a failure.
+
+**Never reuse the same carrier sentence.** In Cloze (and the optional example
+sentence in Recognition/Production), invent a fresh sentence for every word —
+do not fall back to one convenient template with only the target word swapped.
+(Seen live, 2026-09-22: a numbers review queued twelve number-words together
+and every single one got "There are ___ apples on the table." with only the
+number changed — technically a different word each time, but it reads as the
+same question asked twelve times.) Vary the subject, the verb, and the
+sentence shape, not just the blanked word.
 
 **Recognition** (target_language → native):
 
@@ -122,7 +155,7 @@ a session that only drills target→native (or only native→target) is a failur
 
 {target_language sentence with _____ where the word goes}
 
-**Type the missing word:**
+**Type your answer (just the missing word):**
 ```
 
 ### 4. Feedback after each answer
@@ -159,7 +192,7 @@ Do **not** call `update-db.py` after every word — batch at session end.
 ### 🚀 Keep going?
 {one concrete next step, e.g. "Let's drill [words with mastery 0-2] once more."}
 
-Use the buttons at the top (🎲 🔁 📚 📝 🗣️ 📖) to continue, or ↺ for a brand-new session. What shall we do next?
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.
@@ -263,6 +296,16 @@ Learner: "{their attempt}"
 > {well done in the target language}! 🌟
 
 ## Critical Rules
+
+- **A flashcard needs a word, and not every review item is one.** The review
+  queue holds three kinds of item, and only `item_type: vocabulary` is a word to
+  show on a card. An `error_pattern` is a rule the learner broke — drill it as a
+  rule: a gap to fill, a sentence to correct, a choice between two forms. Its
+  id is not a word. Seen live: `articles_an_apple` turned into a flashcard
+  reading "**English:** an — what does it mean in català?", and
+  `capitalization_English` into "what does *capitalization* mean in català?".
+  Neither is a question, and neither teaches anything.
+
 
 - **One word at a time.** Wait for the learner's answer before showing the next.
 - **Immediate feedback** after each — use `fluent-feedback-formatter`.

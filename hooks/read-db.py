@@ -35,7 +35,9 @@ FILES = {
     "session_log": DATA_DIR / "session-log.json",
 }
 
+HEALED_MASTERY = 4  # mastery at or above this = fixed, stop drilling it
 TOP_WEAK_PATTERNS = 5
+REVIEW_ITEMS_PROMPT_CAP = 20  # matches server/src/pacing.ts REVIEW_DAILY_LIMIT_DEFAULT
 
 PRIORITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 RANK_PRIORITY = {v: k for k, v in PRIORITY_RANK.items()}
@@ -113,7 +115,16 @@ def ranked_due_items(items: dict, today: str) -> list:
         rank = effective_rank(item, overdue)
         entry = {
             k: item.get(k) for k in (
-                "id", "type", "content", "answer", "category", "difficulty", "priority",
+                # `learner_wrote` matters for `error_pattern` items: it is the
+                # only signal that `content`/`answer` is a translation-direction
+                # item (correct_answer in {Native}, the learner's own answer in
+                # {Target}) rather than a same-language drill. Dropped here, the
+                # review skill saw a bare {Native} sentence with no language
+                # context and built a {Native}-only cloze that looked like
+                # {Native} itself was the skill under test (seen live,
+                # 2026-09-22, test-en: "Hi ___ dues pomes sobre la taula.").
+                "id", "type", "content", "answer", "learner_wrote", "category",
+                "difficulty", "priority",
             ) if item.get(k) is not None
         }
         entry.setdefault("id", iid)
@@ -124,9 +135,34 @@ def ranked_due_items(items: dict, today: str) -> list:
     return [entry for _, _, entry in due]
 
 
+def curriculum_progress(today: str) -> dict | None:
+    """The active course's % from the curriculum path — the same number the web
+    bar shows — or None where there is no curriculum for this profile/level.
+
+    Without this, {progress}% in the greeting template had no real source: the
+    tutor filled it in itself (measured live, 2026-09-22: a freshly reset,
+    zero-record test-en profile greeted with "Level: A0 → A1 (65% progress)",
+    a number invented out of nothing)."""
+    try:
+        root = Path(__file__).resolve().parent.parent
+        sys.path.insert(0, str(root / "hooks"))
+        import curriculum as cu  # noqa: PLC0415
+        cf = cu.find_curriculum(root, DATA_DIR)
+        if cf is None:
+            return None
+        cur = cu.load_curriculum(cf)
+        path = cu.rebuild_path(DATA_DIR, cur, save=False)
+        rows = cu.summarize(cur, path, today)
+        pr = cu.progress(rows)
+        return {"level": cur["meta"].get("level"), "pct": round(pr["pct"], 1)}
+    except Exception:
+        return None
+
+
 def compact_databases(databases: dict, today: str) -> dict:
     """Build a small view of the 6 databases (see module docstring)."""
     out = {}
+    out["curriculum"] = curriculum_progress(today)
 
     profile = databases.get("learner_profile", {})
     learner = profile.get("learner", {})
@@ -193,12 +229,19 @@ def compact_databases(databases: dict, today: str) -> dict:
             return float(frequency)
         return float(frequency) * (0.5 ** (max(0, idle) / half_life))
 
+    # A pattern the learner has fixed is not a weak pattern. Until mastery was
+    # wired up this filter had nothing to filter on (every pattern sat at 0 for
+    # ever), so a word answered right three times kept being offered as one of
+    # this learner's weakest points — and with an empty review queue that is
+    # what the Lesson drills. Relapse lowers the level again and it comes back.
+    healed = {pid for pid, p in patterns.items() if (p.get("mastery_level") or 0) >= HEALED_MASTERY}
     ranked = sorted(
-        patterns.items(),
+        ((pid, p) for pid, p in patterns.items() if pid not in healed),
         key=lambda kv: (-pattern_weight(kv[1]), kv[1].get("mastery_level", 0)),
     )[:TOP_WEAK_PATTERNS]
     out["mistakes_db"] = {
         "total_patterns": len(patterns),
+        "healed_patterns": len(healed),
         "top_weak_patterns": [],
     }
     for pid, p in ranked:
@@ -220,6 +263,25 @@ def compact_databases(databases: dict, today: str) -> dict:
     sr = databases.get("spaced_repetition", {})
     items = sr.get("items", {})
     due = ranked_due_items(items, today)
+    # Only ever a handful of these are used: the review skill sorts by
+    # priority and caps at daily_limits.review_items_per_day (the server's
+    # lessonPlan caps at the same number, or lower once the queue is smaller
+    # than the limit). Dumping every due item regardless — measured live
+    # 2026-09-24, nes-en: 41 due items embedded (content+answer each) while
+    # the day's plan only ever worked through 14 of them — grows the system
+    # prompt with the backlog, not with the session, and eats straight into
+    # pruneHistory's budget: three context-full bounces in under an hour as
+    # the queue grew through the day. `due_today_count` still reports the
+    # true total for the "Items Due Today" banner; only the embedded bodies
+    # are capped, already sorted best-first so nothing that would be picked
+    # is dropped.
+    daily_limits = sr.get("daily_limits", {})
+    try:
+        review_cap = int(daily_limits.get("review_items_per_day"))
+        if review_cap <= 0:
+            review_cap = REVIEW_ITEMS_PROMPT_CAP
+    except (TypeError, ValueError):
+        review_cap = REVIEW_ITEMS_PROMPT_CAP
     tomorrow = [
         item.get("id")
         for item in items.values()
@@ -227,10 +289,10 @@ def compact_databases(databases: dict, today: str) -> dict:
     ]
     out["spaced_repetition"] = {
         "total_items": len(items),
-        "due_items": due,
+        "due_items": due[:review_cap],
         "due_today_count": len(due),
         "due_tomorrow_ids": tomorrow,
-        "daily_limits": sr.get("daily_limits", {}),
+        "daily_limits": daily_limits,
     }
 
     log = databases.get("session_log", {})

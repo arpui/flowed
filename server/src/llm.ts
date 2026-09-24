@@ -31,6 +31,18 @@ export interface ModelConfig {
   temperature?: number;
   maxTokens?: number;
   topP?: number;
+  topK?: number;
+  /** Sampling knobs that exist precisely for the failure this project keeps
+   *  hitting: a small model, a context full of near-identical exercise blocks,
+   *  and a temperature low enough to make "the same again" the most likely
+   *  continuation. llama.cpp's own repeat_penalty looks back 64 tokens by
+   *  default — the exercise being repeated is two thousand tokens away. These
+   *  are sent only when configured, so nothing changes until someone sets them
+   *  and measures with scripts/fluent-e2e.py. */
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
   timeoutMs?: number;
   /** Stream the answer token by token (FLUENT_STREAM=1). Off by default. */
   stream?: boolean;
@@ -196,6 +208,11 @@ async function chatStreaming(
         temperature: cfg.temperature ?? 0.7,
         max_tokens: cfg.maxTokens ?? 4096,
         top_p: cfg.topP ?? 0.95,
+        ...(cfg.topK !== undefined ? { top_k: cfg.topK } : {}),
+        ...(cfg.presencePenalty !== undefined ? { presence_penalty: cfg.presencePenalty } : {}),
+        ...(cfg.frequencyPenalty !== undefined ? { frequency_penalty: cfg.frequencyPenalty } : {}),
+        ...(cfg.repeatPenalty !== undefined ? { repeat_penalty: cfg.repeatPenalty } : {}),
+        ...(cfg.repeatLastN !== undefined ? { repeat_last_n: cfg.repeatLastN } : {}),
         stream: true,
         stream_options: { include_usage: true },
       }),
@@ -261,6 +278,11 @@ async function chat(
         temperature: cfg.temperature ?? 0.7,
         max_tokens: cfg.maxTokens ?? 4096,
         top_p: cfg.topP ?? 0.95,
+        ...(cfg.topK !== undefined ? { top_k: cfg.topK } : {}),
+        ...(cfg.presencePenalty !== undefined ? { presence_penalty: cfg.presencePenalty } : {}),
+        ...(cfg.frequencyPenalty !== undefined ? { frequency_penalty: cfg.frequencyPenalty } : {}),
+        ...(cfg.repeatPenalty !== undefined ? { repeat_penalty: cfg.repeatPenalty } : {}),
+        ...(cfg.repeatLastN !== undefined ? { repeat_last_n: cfg.repeatLastN } : {}),
         stream: false,
       }),
       signal: controller.signal,

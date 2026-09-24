@@ -26,7 +26,20 @@
       "kv_type": "f16",
       "temperature": 0.2,
       "max_tokens": 4096,
-      "timeout_ms": 600000
+      "timeout_ms": 600000,
+      "_sampling_comment": [
+        "Els quatre de sota van a la petició nomes si hi son. Existeixen per la",
+        "fallada que aquest projecte repeteix: model petit, context ple de blocs",
+        "d'exercici gairebe iguals, i temperatura prou baixa perque 'el mateix",
+        "un altre cop' sigui la continuacio mes probable. El repeat_penalty de",
+        "llama.cpp mira 64 tokens enrere; l'exercici que repeteix es a 2000.",
+        "NO ELS TOQUIS A CEGUES: mesura amb scripts/fluent-e2e.py abans i despres.",
+        "Punt de partida raonable per provar:",
+        "  temperature 0.6, presence_penalty 0.4, frequency_penalty 0.3,",
+        "  repeat_last_n 512",
+        "Contrapartida: pujar la temperatura pot degradar el format (marcador,",
+        "Correct version, nota) i les crides d'eina. L'e2e ho mesura tot alhora."
+      ]
     },
     "face": {
       "enabled": false,
@@ -66,5 +79,9 @@
   "_webs_comment": [
     "El mapa perfil->port viu a FLUENT_WEBS a l'.env: es per maquina i porta",
     "noms reals d'alumnes. Exemple: FLUENT_WEBS=\"alex-en:4100 sam-en:4101\""
-  ]
+  ],
+  "exercises": {
+    "_comment": "PLA-EXERCICIS-TANCATS.md fase 1: banc offline per a Go/Review, sense model, per competencia amb curriculum/bank/<curriculum>/<id>.json. Una competencia sense banc segueix pel cami de sempre.",
+    "bank": true
+  }
 }

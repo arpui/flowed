@@ -14,6 +14,10 @@ export interface HttpConfig {
   webDir: string;
   dataDir: () => string;
   password: string;
+  /** Stamp of server/src as this process loaded it. */
+  build?: string;
+  /** The sampling knobs actually in force, so a test can report them. */
+  sampling?: Record<string, number>;
   /** learner login name (lowercased first name); "opencode" always accepted too */
   loginName: string;
   port: number;
@@ -338,7 +342,9 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             ".css": "text/css",
             ".svg": "image/svg+xml",
           }[ext] ?? "application/octet-stream";
-        return new Response(fs.readFileSync(file), { headers: { "content-type": ct } });
+        return new Response(fs.readFileSync(file), {
+          headers: { "content-type": ct, "cache-control": "no-cache" },
+        });
       }
 
       // ---- API --------------------------------------------------------------
@@ -350,7 +356,8 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
 
       // health
       if (p === "/api/global/health") {
-        return json({ ok: true, version: opts.version, service: "fluent-server" });
+        return json({ ok: true, version: opts.version, service: "fluent-server",
+                      build: opts.build ?? null, sampling: opts.sampling ?? null });
       }
 
       // agents list (UI requires the "learner" agent to exist)
@@ -395,6 +402,44 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
           exitCode: proc.status ?? 0,
           data: buildFluentProgress(asRecord(parsed.databases), asRecord(parsed.computed), warnings),
         });
+      }
+
+      // the learner's path through the curriculum (bar, state per competence).
+      // `available:false` when the profile's level has no curriculum: the UI
+      // then shows nothing, never an error.
+      if (p === "/api/fluent/path") {
+        const script = path.join(opts.root, "hooks", "curriculum.py");
+        if (!fs.existsSync(script)) return json({ ok: true, data: { available: false } });
+        const { spawnSync } = await import("node:child_process");
+        const proc = spawnSync("python3", [script, "json", "--auto", "--data", opts.dataDir()], {
+          cwd: opts.root,
+          encoding: "utf8",
+          env: { ...process.env, FLUENT_DATA_DIR: opts.dataDir() },
+          timeout: 10000,
+        }) as unknown as { status: number | null; stdout: string; stderr: string; error?: unknown };
+        let data: unknown = null;
+        try {
+          data = JSON.parse(proc.stdout || "");
+        } catch {
+          data = null;
+        }
+        if (!data) {
+          const detail = proc.error ? String(proc.error) : (proc.stderr || "curriculum.py no ha produït JSON").slice(0, 800);
+          return json({ ok: false, exitCode: proc.status ?? -1, error: detail }, 500);
+        }
+        return json({ ok: true, data });
+      }
+
+      // the learner has seen the "course completed" notice: it does not come back.
+      if (p === "/api/fluent/path/seen" && req.method === "POST") {
+        const script = path.join(opts.root, "hooks", "curriculum.py");
+        if (fs.existsSync(script)) {
+          const { spawnSync } = await import("node:child_process");
+          spawnSync("python3", [script, "notice", "--data", opts.dataDir(), "--seen"], {
+            cwd: opts.root, encoding: "utf8", timeout: 10000,
+          });
+        }
+        return json({ ok: true });
       }
 
       // ---- audio: hear the sentence said properly ------------------------

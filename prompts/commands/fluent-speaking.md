@@ -3,7 +3,7 @@ description: Typed conversation practice (role-plays, free dialogue)
 agent: tutor
 ---
 Execute /fluent-speaking now:
-1. Load the `fluent-speaking` skill via the skill tool and follow it EXACTLY.
+1. The `fluent-speaking` instructions are already in your system prompt. Follow them EXACTLY. Do NOT call the skill tool for them — the server loads them for you, on every turn, whether this is the first command of the session or the fifth.
 2. Current learner state (preloaded by read-db.py):
 !`python3 hooks/read-db.py`
 3. Ask ONE question at a time in the target language, wait for the learner's reply, evaluate it with the `fluent_deep_evaluate` tool (task='speaking', answer=the reply, context=situation + target language + level) and continue the conversation with feedback that prioritizes communication over perfect grammar (severity tags from the `fluent-feedback-formatter` skill). Call the tool at most ONCE, only with the learner's real reply — never with placeholder, hypothetical or invented content. If the tool returns 'DEEP UNAVAILABLE', give the light corrections yourself.

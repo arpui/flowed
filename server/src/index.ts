@@ -12,8 +12,19 @@ import { FluentDB } from "./db";
 import { Agent } from "./agent";
 import { makeSessionService } from "./session";
 import { createHub, serve } from "./http";
+import { buildStamp } from "./pacing";
 
-const VERSION = "0.3.0";
+
+/** What server/src looked like when THIS process started. Printed at startup
+ *  and served at /api/global/health, so a test can say out loud whether it is
+ *  judging the code that is on disk. */
+const BUILD_STAMP = buildStamp(
+  path.resolve(import.meta.dirname, "..", ".."),
+  (f) => fs.readFileSync(f, "utf8"),
+  (d) => fs.readdirSync(d)
+);
+
+const VERSION = "0.4.0";
 
 function resolveRoot(): string {
   // Prefer the project root (contains AGENTS.md). When launched from the repo
@@ -82,14 +93,15 @@ function loadModels(root: string): AgentModels {
     timeoutMs: 120000,
   };
   // Model endpoints: project-local config (later wins):
-  //   code defaults <- config/fluent.json (canonical, P1-9)
-  //                  <- config/fluent-models.json (legacy override layer)
-  //                  <- $FLUENT_MODELS_FILE (explicit file override)
+  //   code defaults <- config/fluent.json (the ONE source, P1-9)
+  //                  <- $FLUENT_MODELS_FILE (explicit file override: an
+  //                     experiment, e.g. scripts/fluent-sweep.py)
   //                  <- $FLUENT_DEEP_BASE_URL / $FLUENT_FACE_BASE_URL (top;
   //                     so .env drives the server too, not just the scripts)
   const layers: Array<Record<string, unknown>> = [];
-  // Canonical project configuration (P1-9). Lowest layer: the deprecated flat
-  // files and the env variables below still win, so nothing breaks.
+  // Canonical project configuration (P1-9): where every model parameter lives.
+  // Only an explicit $FLUENT_MODELS_FILE and the *_BASE_URL variables below are
+  // allowed to sit on top of it.
   try {
     const canonical = JSON.parse(fs.readFileSync(path.join(root, "config", "fluent.json"), "utf8"));
     const models = (canonical?.models ?? {}) as Record<string, Record<string, unknown>>;
@@ -100,6 +112,12 @@ function loadModels(root: string): AgentModels {
         baseURL: (m.base_url as string) ?? (port ? `http://127.0.0.1:${port}/v1` : undefined),
         temperature: m.temperature,
         maxTokens: m.max_tokens ?? m.maxTokens,
+        topP: m.top_p ?? m.topP,
+        topK: m.top_k ?? m.topK,
+        presencePenalty: m.presence_penalty ?? m.presencePenalty,
+        frequencyPenalty: m.frequency_penalty ?? m.frequencyPenalty,
+        repeatPenalty: m.repeat_penalty ?? m.repeatPenalty,
+        repeatLastN: m.repeat_last_n ?? m.repeatLastN,
         timeout_ms: m.timeout_ms,
       };
     };
@@ -107,10 +125,11 @@ function loadModels(root: string): AgentModels {
   } catch {
     /* no canonical config — defaults and the legacy layers below cover it */
   }
-  for (const p of [
-    path.join(root, "config", "fluent-models.json"),
-    ...(process.env.FLUENT_MODELS_FILE ? [process.env.FLUENT_MODELS_FILE] : []),
-  ]) {
+  // config/fluent-models.json used to be a second layer here. It only repeated
+  // fluent.json — except that it won over it, so an edit to `temperature` in
+  // fluent.json did nothing and a sweep ran every setting at 0.2 without
+  // saying so. It is gone (obsolet/config/): a value has one place.
+  for (const p of process.env.FLUENT_MODELS_FILE ? [process.env.FLUENT_MODELS_FILE] : []) {
     try {
       const raw = JSON.parse(fs.readFileSync(p, "utf8"));
       if (raw && typeof raw === "object") layers.push(raw);
@@ -125,12 +144,21 @@ function loadModels(root: string): AgentModels {
     const f = merge("face", faceDefaults as unknown as Record<string, unknown>);
     const str = (v: unknown, fb: string) => (typeof v === "string" && v ? v : fb);
     const num = (v: unknown, fb: number) => (typeof v === "number" && Number.isFinite(v) ? v : fb);
+    /** Only what is configured: an absent knob must stay absent from the
+     *  request, so the backend's own default applies and nothing changes for a
+     *  machine that has not set it. */
+    const opt = (src: Record<string, unknown>, ...keys: string[]) => {
+      const out: Record<string, number> = {};
+      for (const k of keys) if (typeof src[k] === "number" && Number.isFinite(src[k])) out[k] = src[k] as number;
+      return out;
+    };
     const deepModel: ModelView = {
       name: str(d.name, deepDefaults.name),
       baseURL: str(d.baseURL, deepDefaults.baseURL),
       temperature: num(d.temperature, deepDefaults.temperature),
       maxTokens: num(d.maxTokens ?? d.max_tokens, deepDefaults.maxTokens),
-      topP: deepDefaults.topP,
+      topP: num(d.topP, deepDefaults.topP),
+      ...opt(d, "topK", "presencePenalty", "frequencyPenalty", "repeatPenalty", "repeatLastN"),
       timeoutMs: num(d.timeout_ms, deepDefaults.timeoutMs),
     };
     const faceModel: ModelView = {
@@ -138,7 +166,8 @@ function loadModels(root: string): AgentModels {
       baseURL: str(f.baseURL, faceDefaults.baseURL),
       temperature: num(f.temperature, faceDefaults.temperature),
       maxTokens: num(f.maxTokens ?? f.max_tokens, faceDefaults.maxTokens),
-      topP: faceDefaults.topP,
+      topP: num(f.topP, faceDefaults.topP),
+      ...opt(f, "topK", "presencePenalty", "frequencyPenalty", "repeatPenalty", "repeatLastN"),
       timeoutMs: num(f.timeout_ms, faceDefaults.timeoutMs),
     };
     // Explicit env wins over every file (lets .env drive the server too).
@@ -169,6 +198,11 @@ interface ModelView {
   temperature: number;
   maxTokens: number;
   topP: number;
+  topK?: number;
+  presencePenalty?: number;
+  frequencyPenalty?: number;
+  repeatPenalty?: number;
+  repeatLastN?: number;
   timeoutMs: number;
   /** Token streaming, set from FLUENT_STREAM (off by default). */
   stream?: boolean;
@@ -244,6 +278,7 @@ function main() {
   console.log(`[Fluent] face     : ${models.face.baseURL}  (${models.face.name})`);
   console.log(`[Fluent] streaming: ${models.deep.stream ? "on (FLUENT_STREAM)" : "off"}`);
   console.log(`[Fluent] serving  : http://127.0.0.1:${port}  (login: ${loginName} / ****)`);
+  console.log(`[Fluent] build    : ${BUILD_STAMP}  (server/src as it was when this process started)`);
 
   // Background sweeper: checks for stale learner sessions and runs Capa B (final persistence)
   const sweeper = setInterval(async () => {
@@ -338,6 +373,18 @@ function main() {
       agent,
       sessionService: sessions,
       version: VERSION,
+      build: BUILD_STAMP,
+      sampling: Object.fromEntries(
+        Object.entries({
+          temperature: models.deep.temperature,
+          top_p: models.deep.topP,
+          top_k: models.deep.topK,
+          presence_penalty: models.deep.presencePenalty,
+          frequency_penalty: models.deep.frequencyPenalty,
+          repeat_penalty: models.deep.repeatPenalty,
+          repeat_last_n: models.deep.repeatLastN,
+        }).filter(([, v]) => typeof v === "number")
+      ) as Record<string, number>,
       tts: loadTtsConfig(root),
     },
     hub

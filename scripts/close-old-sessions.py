@@ -27,6 +27,7 @@ import argparse
 import shutil
 import sqlite3
 import sys
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -106,15 +107,28 @@ def main(argv=None) -> int:
                     metavar="DIES", help=f"dies d'antiguitat mínima (per defecte {DEFAULT_OLDER_THAN_DAYS})")
     ap.add_argument("--legacy", action="store_true",
                     help="fes-ho també a la BD antiga (.opencode/), que el build vell encara usa")
+    ap.add_argument("--include-today", action="store_true",
+                    help="permet --older-than 0. NOMÉS per a perfils de proves "
+                         "(test*/demo*/e2e*): tanca també les sessions d'avui, perquè "
+                         "l'escombrall no reompli les bases de dades acabades de buidar")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args(argv)
 
     targets = profile_dirs(args)
     if not targets:
         ap.error("dona --profile, --dir o --all")
-    if args.older_than < 1:
+    if args.older_than < 1 and not args.include_today:
         ap.error("--older-than ha de ser 1 dia com a mínim: no toquem sessions d'avui")
 
+    if args.include_today:
+        # The rig guard: a scratch profile only. On a learner's profile this
+        # would close the session they are sitting in.
+        guard_names = [args.profile] if args.profile else ([Path(args.dir).name] if args.dir else [])
+        for name in guard_names:
+            if not re.match(r"^(test|demo|e2e)", name or "", re.I):
+                ap.error(f"--include-today només en perfils de proves, no en {name}")
+        if args.all:
+            ap.error("--include-today no es combina amb --all")
     cutoff_ms = int((datetime.now().timestamp() - args.older_than * 86400) * 1000)
     print(f"tancant sessions anteriors a {datetime.fromtimestamp(cutoff_ms / 1000):%Y-%m-%d %H:%M}"
           f"{'  (SIMULACIÓ)' if args.dry_run else ''}\n")

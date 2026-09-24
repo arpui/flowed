@@ -60,7 +60,7 @@ export const ERROR_CATEGORIES = [
 
 const CATEGORY_SET = new Set<string>(ERROR_CATEGORIES);
 
-function normalizeCategory(raw: unknown): string | null {
+export function normalizeCategory(raw: unknown): string | null {
   const c = String(raw ?? "").trim().toLowerCase().replace(/[-\s]+/g, "_");
   const aliases: Record<string, string> = {
     wordorder: "word_order",
@@ -162,6 +162,16 @@ export function buildTools(opts: {
   root: string;
   dataDir: () => string;
   deep: DeepEvaluator;
+  /** The queue item the SERVER put on screen for the exercise now being
+   *  graded, per session. The tutor is never told the id — the note carries
+   *  only the item's content — so asking it to copy one back was asking for a
+   *  number it does not have, and every record came back without one. What the
+   *  model must report, the server derives: same rule as the counter and the
+   *  marker. Still validated against the queue below. */
+  gradingItem?: (sessionId: string) => { id: string } | null;
+  /** The curriculum competence the exercise being graded was built for (free
+   *  practice), when the server verified it. Written on the record as `competency`. */
+  gradingCompetence?: (sessionId: string) => string | null;
 }): { definitions: ToolDefinition[]; deepCalls: Map<string, number> } {
   const rejects = makeRejectTracker(3);
   const deepCalls = new Map<string, number>(); // messageID -> count this turn
@@ -335,7 +345,7 @@ export function buildTools(opts: {
         item_id: {
           type: "string",
           description:
-            "ONLY when this exercise came from the spaced-repetition queue: the item id copied verbatim from the preloaded due-items list. Omit it otherwise.",
+            "Leave this out unless you were given an explicit item id: when the exercise came from the review queue the server attaches the right id itself.",
         },
         sm2_quality: {
           type: "number",
@@ -386,8 +396,16 @@ export function buildTools(opts: {
 
       let itemId = String(args.item_id ?? "").trim();
       let quality: number | null = null;
+      let itemFromServer = false;
+      if (!itemId) {
+        const assigned = opts.gradingItem?.(sid) ?? null;
+        if (assigned && queueItems(dataDir).has(assigned.id)) {
+          itemId = assigned.id;
+          itemFromServer = true;
+        }
+      }
       if (itemId) {
-        if (!queueItems(dataDir).has(itemId)) {
+        if (!itemFromServer && !queueItems(dataDir).has(itemId)) {
           return `REJECTED: item_id "${itemId}" is not in this learner's review queue. Copy it verbatim from the due-items list, or omit item_id when the exercise did not come from the queue.`;
         }
         const q = args.sm2_quality === undefined ? Math.floor(score / 2) : Number(args.sm2_quality);
@@ -407,6 +425,7 @@ export function buildTools(opts: {
         score: Math.round(score),
         corrections,
         ...(itemId ? { item_id: itemId, sm2_quality: quality } : {}),
+        ...(opts.gradingCompetence?.(sid) ? { competency: opts.gradingCompetence(sid) } : {}),
       };
 
       try {

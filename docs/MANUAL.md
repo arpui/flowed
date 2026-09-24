@@ -131,8 +131,12 @@ python3 scripts/fluent-config.py --sh        # el mateix, com a exports
 
 Els scripts carreguen l'`.env` com sempre i després omplen el que falti des de
 `config/fluent.json`, de manera que **el projecte arrenca sense `.env`** i, si
-n'hi ha, mana ell. `config/fluent-models.json` queda com a capa d'override
-heretada; la nova és la secció `models` de `config/fluent.json`.
+n'hi ha, mana ell. La secció `models` de `config/fluent.json` és **l'única font**
+dels paràmetres dels models (port, ctx, temperatura, penalitzacions…): no hi ha
+cap altre fitxer que se li superposi. Només poden passar-li al davant l'`.env`
+(port, GPU, backend) i, per a un experiment, `FLUENT_MODELS_FILE` (és el que fa
+servir `scripts/fluent-sweep.py`). `config/fluent-models.json` es va retirar el
+2026-09-20 (és a `obsolet/config/`): repetia `fluent.json` però hi guanyava.
 
 **Streaming (experimental).** `server.stream` a `config/fluent.json`, o
 `FLUENT_STREAM=1` a l'entorn, fa que el tutor escrigui token a token en lloc
@@ -222,7 +226,7 @@ amb config vella mentre el log nou enganya). Regles:
 
 - **SÍ copiar**: el repo sencer (`server/`, `web/`, `scripts/`, `hooks/`, `skills/`,
   `.opencode/`, `docker/`, docs). Comprovar vintage després:
-  `ls scripts/fluent-start.sh config/fluent-models.json` + `grep VERSION server/src/index.ts`.
+  `ls scripts/fluent-start.sh config/fluent.json` + `grep VERSION server/src/index.ts`.
 - **NO copiar a cegues**: `~/.fluent/<id>/` (sessions, ratxes, passwords i
   flags divergeixen per màquina). Si cal migrar un perfil: backup del destí
   primer, després còpia; mai fusió manual de JSONs.
@@ -841,3 +845,27 @@ de temps), 0 VRAM (KV pre-reservat pel `-c`).
   PRINCIPI de plantilla s'ignoren sistemàticament (4 intents, 2 models,
   skill verificat com a fresc servit); al FINAL funcionen al primer intent.
   Estructura > prohibició.
+
+## 8. Temes específics per alumne (`topics.txt`)
+
+Un fitxer de text al perfil, `~/.fluent/<perfil>/topics.txt` (o `topics.md`), amb un tema
+per línia. Model d'exemple: `data-examples/topics.example.txt`.
+
+- **Què és un tema:** text lliure. Serveix una estructura gramatical (`present perfect`,
+  `there is / there are`, `first conditional`), un tema de vocabulari i situació (`food and
+  restaurants`, `at the doctor's`), una funció (`asking for directions`, `making
+  suggestions`), una unitat de l'escola (`unit 4: describing people`) o una construcció
+  concreta (`irregular past participles`, `prepositions of time`). Es pot afegir una pista
+  després de dos punts o entre parèntesis: el tutor la llegeix tal qual.
+- **On s'aplica:** només on el tutor escull ell el tema: 🎲 Mix, Writing, Speaking, Reading,
+  Vocabulary, i els exercicis de la Lliçó que no tenen ítem de la cua ni patró assignat
+  pel servidor. **Un ítem pendent o un patró assignat mana sempre.**
+- **Com:** cada torn el servidor llegeix el fitxer i passa al tutor 2 temes (rota amb el
+  dia i les respostes, perquè tots tinguin torn). El canvi val des del missatge següent, sense
+  reiniciar; esborrar el fitxer ho atura. Sense fitxer, res canvia (nota nul·la).
+- **Límits:** 30 temes, 160 caràcters per línia; línies buides, `#` i vinyetes s'ignoren.
+- **Nivell:** el tutor l'aplica al nivell del perfil; si el tema és més difícil, en fa servir
+  la forma més simple. Si el tema no encaixa a la pràctica (una estructura a Vocabulary),
+  l'ignora.
+- **Proves:** `scripts/fluent-bench.sh --topics --quick` escriu un `topics.txt` temporal,
+  comprova que Writing hi va i que la Lliçó segueix manant la cua, i el restaura.

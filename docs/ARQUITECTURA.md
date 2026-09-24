@@ -53,7 +53,7 @@ del disseny original: **canviar com ensenya no requereix tocar codi**.
 | `prompts/commands/` | Les 10 comandes `/fluent-*` en Markdown, amb *frontmatter* (`agent:`) i directives `` !`cmd` `` que precarreguen l'estat de l'alumne |
 | `obsolet/opencode-runtime/` | El que era específic d'opencode: el seu plugin, `opencode.json` i el llançador de models gratuïts |
 | `scripts/` | Orquestració: `fluent-start.sh`, `fluent-stop.sh`, `fluent-web.sh`, `new-user.sh`, `fluent-friend.sh`, `migrate-db.py`, `reset-session.py`, `models/` (6 llançadors, inclòs `docker-llama.sh`) |
-| `config/fluent-models.json` | Endpoints i paràmetres dels rols `deep` i `face` |
+| `config/fluent.json` | Configuració canònica i **única font**: models (port, ctx, mostreig), backend, webs, camins |
 | `.env` / `.env.railab` / `.env.rapve` | Configuració viva per màquina (model, port, GPU, ctx, backend, llista de webs) |
 | `tests/` | 7 fitxers de test (unittest) sobre els hooks Python, inclòs un *golden test* de SM-2 |
 | `.github/workflows/ci.yml` | CI: byte-compile + `unittest discover` a Python 3.10/3.11/3.12 |
@@ -671,8 +671,11 @@ exports de shell (`--sh --missing-only`), que és com la consumeixen
 `fluent-start.sh`, `fluent-stop.sh` i `docker-llama.sh` *després* del seu propi
 bucle d'`.env` — així el projecte arrenca sense `.env` i, si n'hi ha, mana ell.
 El servidor llegeix la mateixa secció `models` com a capa de sota
-(`server/src/index.ts`), amb `config/fluent-models.json` degradat a capa
-d'override heretada. De passada: el servidor ignorava `max_tokens` dels fitxers
+(`server/src/index.ts`). *(Aquí es va deixar `config/fluent-models.json` com a
+capa d'override heretada; el 2026-09-20 es va retirar: repetia `fluent.json`
+valor per valor però hi guanyava, i una temperatura editada a `fluent.json` no
+arribava mai al servidor. Ara només `FLUENT_MODELS_FILE`, explícit, hi pot anar
+al damunt.)* De passada: el servidor ignorava `max_tokens` dels fitxers
 de config (només llegia `maxTokens`); ara accepta les dues formes.
 
 Verificat amb els tres camins: amb `.env` el pla surt idèntic al d'abans; sense
@@ -1139,3 +1142,585 @@ systemd/compose) · S10, S11, S12 · la resta de C.2/C.3.
 *Tancats en aquest lot:* S5 (convenció de noms de `results/`, amb l'analyzer) i
 S14 (el setup ja no és una entrevista inservible: l'alta la fa l'admin per
 terminal).
+
+---
+
+# E. Incident 2026-09-16 — la lliçó sense correcció ✅ CORREGIT
+
+Primeres sessions reals de les dues alumnes a **llvm**. Resultat: repetició
+constant de la mateixa pregunta tot i respondre bé, el comptador de la Lliçó
+sense baixar, i **cap correcció de les respostes**. Es van haver d'aturar.
+
+## E.1 Evidència
+
+Reconstruïda de `sessions.db` (transcripcions literals), `.metrics/turns.jsonl`
+(quines eines es van cridar cada torn) i `.daily/` (el pla de la lliçó).
+
+| | perfil A | perfil B |
+|---|---|---|
+| Torns | 60 | 19 |
+| Crides a `fluent_record_answer` | **0** | **4**, només els 2,5 primers minuts |
+| Directori `.records/` | **no existia** | 1 fitxer |
+| `lesson-2026-09-16.json` | `done: 3` | **`done: 0`** amb 13 exercicis contestats |
+| Repetició màxima | **25 torns idèntics** seguits | 5 torns |
+
+L'eina `skill` apareix **una sola vegada per sessió**, sempre al primer command.
+
+## E.2 Causa d'arrel
+
+**El model no carregava mai el skill `fluent-review`.**
+
+Cada sessió s'obre amb un `/fluent-learn` automàtic (`initialCommand()`,
+`web/app.js`). Quan l'alumna prem 🎓 Lesson, `/fluent-review` arriba com a
+**segon** command de la sessió. La primera línia del command deia *"Load the
+`fluent-review` skill via the skill tool and follow it EXACTLY"*, i el model,
+ja en ple flux amb un patró que funciona, no s'atura a cridar cap eina. El
+skill no era mai el primer command d'una sessió, i per tant no es carregava mai.
+
+Tot el contracte de correcció — marcador 🔴/🟡/🟢, `**Corrections:**`,
+`**Correct version:**`, `**Score: N/10**` — viu **només** a
+`skills/fluent-review/SKILL.md`. Sense skill:
+
+```
+sense skill → sense correcció visible → sense "Score: N/10" al text
+  → countGradedInText()==0 → creditTurn() retorna abans d'hora
+  → plan.done congelat → la nota de pacing diu el mateix cada torn
+  → "Present exercise 4 of 15 now, and nothing else" × 25
+```
+
+**Dues instruccions meves hi van contribuir directament.** Les dues es van
+afegir per arreglar *"la Lliçó torna a començar de zero quan hi tornes"*, i les
+dues diuen "salta't el preàmbul i ves a l'exercici" — i el preàmbul és
+exactament on hi havia la càrrega del skill:
+
+1. `agent.ts`, sufix `continuing` del cos del command: *"continue the ongoing
+   practice directly: ... present the next exercise"*.
+2. `pacingNote()`, missatge `system` al final del prompt, **cada torn**: *"This
+   is a CONTINUATION ... Do NOT greet ... Present exercise N of M now, and
+   nothing else."*
+
+Per a un 14B, "carrega un skill i segueix-lo" contra "presenta l'exercici N i
+res més" no és competició: guanya l'última i la més concreta. La prova és el
+perfil B: els 4 primers torns fan **exactament** el que deia la nota (cridar
+`fluent_record_answer`) i **res** del que deia el skill (cap línia de feedback).
+Obeïa la nota, no el skill.
+
+I com que el text de la nota és funció de `plan.done`, i `plan.done` es va
+congelar, el model va rebre una instrucció **idèntica byte a byte** amb un índex
+d'exercici fix durant 25 torns. No és el model derivant: és el servidor clavant-lo.
+
+## E.3 Correccions aplicades
+
+| # | Canvi | Fitxers |
+|---|---|---|
+| 1 | **El servidor carrega el skill.** `loadSkill()` llegeix `skills/<command>/SKILL.md` i el servidor el fixa al **system prompt** de la sessió (`activeSkill`), no a l'historial — l'historial es poda quan s'omple el context i el contracte de correcció és l'últim que pot desaparèixer. Present a **tots** els torns, no només al del botó | `commands.ts`, `agent.ts` |
+| 2 | Les 8 comandes deixen de demanar-ho al model: *"already in your system prompt ... Do NOT call the skill tool"* | `prompts/commands/*.md` |
+| 3 | **La nota de pacing passa a ser estat, no guió.** Diu on és la lliçó i què ja s'ha preguntat; com es fa un exercici és del skill. Fora `"and nothing else"`, fora `"Present exercise N"`, fora la duplicació del procediment | `agent.ts` |
+| 4 | **El comptador accepta evidència estructurada.** Compta si hi ha línia nova a `.records/` **o** `Score: N/10` al text. Abans només el text: 4 correccions estructurades i el comptador a 0 de 12 | `agent.ts` |
+| 5 | **Detector d'estancament.** Si la nota no canvia en 4 torns → línia al log. L'estat va durar 25 torns i no va sortir enlloc | `agent.ts` |
+| 6 | **Detector de repetició.** Si l'empremta de l'exercici és la mateixa que el torn anterior → línia al log | `agent.ts` |
+| 7 | `**Word (Catalan):**` ara sí que es detecta. Amb el patró antic tota una tanda de vocabulari era invisible per a la llista d'"already asked" | `pacing.ts` |
+| 8 | **Contracte de correcció escrit un sol cop, al skill:** *"Every answer gets BOTH"* — el feedback visible **i** la crida `fluent_record_answer`. No són alternatives | `skills/fluent-review/SKILL.md` |
+| 9 | Regla de varietat moguda al skill (abans només a la nota) | `skills/fluent-review/SKILL.md` |
+| 10 | **La nota i el bloc de skill surten de `agent.ts` cap a `pacing.ts`** (`lessonNote()`, `skillBlock()`). `pacing.ts` és Bun-free per disseny: és la part que es trenca, i per tant la que ha de poder-se executar en una prova sense model, sense BD i sense GPU | `pacing.ts`, `agent.ts` |
+| 11 | **`"critical"` deixa de ser un exercici.** L'única empremta que es treia d'un ítem de repàs era el parèntesi del títol (`## Exercise 2: Spaced Review (Critical)`), o sigui la dificultat. Al fitxer real del 16/09 hi ha literalment `"critical"` a la llista d'"already asked", fent de tapadora de quinze preguntes diferents. Ara es llegeix `**Exercise:**` / `**Item ID:**`, hi ha una llista de paraules que mai són un exercici, i `**Question:**` només és recurs de darrera hora (perquè sovint és una instrucció genèrica, "Rewrite this sentence correctly", i prohibir-la vetaria tot un tipus d'exercici) | `pacing.ts` |
+| 12 | **`fluent-check.py lliço`** — veredicte de vuit línies sobre la lliçó d'avui. Cap dels checks existents deia en una sola pantalla que el tutor no corregia | `scripts/fluent-check.py` |
+| 13 | **`skipDirectives` es reenvia de veritat.** Estava declarat a `loadCommand` i no s'passava mai a `expandDirectives`: cada command reexecutava `read-db.py` i reinjectava tot el bloc d'estat, **+2,8k tokens per premuda** (mesurat: 16519 → 19361) | `commands.ts` |
+
+## E.3bis Segona tanda — el que va sortir en engegar-ho (mateixa tarda)
+
+La primera prova en viu amb `test-en`, ja amb el skill carregat, va donar això:
+
+```
+Review 1/6 — 🟡
+Type: vocabulary
+Current mastery: ⭐☆☆☆☆
+{Target}: {the word}
+What does it mean in {Native}?
+```
+
+Tres errors independents en una sola pantalla, i **cap era visible abans**
+precisament perquè el skill no arribava mai:
+
+**a) El model copia els exemples del `SKILL.md`.** Això és l'Exemple 1 de
+`fluent-review`, literal. La secció ja porta escrit *"(Placeholders. NEVER copy
+the language of an example into a session)"* — i una regla que diu *no copiïs
+això* és una regla que el prompt no hauria de contenir. El mateix mecanisme
+explica el `{✅}` que surt al transcript del matí: és el `{✅ or ❌}` de la
+plantilla de `fluent-feedback-formatter`.
+
+**b) La cadena de skills tenia el mateix forat que el skill.**
+`fluent-review` § 4 diu *"Use the `fluent-feedback-formatter` skill for
+per-answer feedback"* — un segon salt amb l'eina `skill` que el model tampoc no
+fa. La plantilla de correcció viu en aquell segon fitxer: el contracte estava a
+**dues** càrregues de distància d'un model que no en feia ni una.
+
+**c) Les files de plantilla es comptaven com a dades reals.** `test-en` ve amb
+un ítem SM-2 el `item_id` del qual és la cadena `"{unique_identifier}"` i un
+patró d'error `example_pattern_1` amb freqüència 0. Comptats com a reals, un
+perfil buit es converteix en "6 ítems per repassar" — i el tutor, obligat a
+repassar sis coses que no existeixen, copia el primer exemple que veu.
+
+**Correccions:**
+
+| # | Canvi | Fitxers |
+|---|---|---|
+| 14 | **`renderSkillForModel()`** — el servidor renderitza el skill per al model en comptes d'entregar-lo cru: treu `## Examples`, resol `{Target}`/`{Native}` des del perfil de l'alumne, i afegeix una regla explícita («la teva resposta no pot contenir mai els caràcters `{` o `}`; si n'estàs escrivint un, estàs copiant el document en comptes de fer-lo servir») | `pacing.ts`, `commands.ts` |
+| 15 | **`requires:` al frontmatter** dels 5 skills de pràctica, i `loadSkill()` el segueix (un nivell, sense cicles). El `fluent-feedback-formatter` viatja ara amb el skill que el necessita | `skills/*/SKILL.md`, `commands.ts` |
+| 16 | **`isTemplateValue()` i `drillMaterial()`** — una fila que encara té la forma de la plantilla (`{...}`, `example_*`, `...`) no és una dada. `dueItemIds()` les filtra i `drillMaterial()` compta només patrons reals (freqüència > 0) | `pacing.ts` |
+| 17 | **El cas "no hi ha res a repassar".** Cua buida **i** cap patró real → la nota diu que això és una **primera lliçó, no un repàs**: prohibeix etiquetar els exercicis com a "Review", prohibeix inventar historial de mestria, i demana N peces de material **nou** al nivell de l'alumne | `pacing.ts`, `agent.ts` |
+
+*Cost:* el bloc de pràctica al *system prompt* passa a ~5.200 tokens
+(`fluent-review` renderitzat + `fluent-feedback-formatter`), contra 36864 de
+context. Ho compensa de sobra el punt 13 (el bloc d'estat que ja no es
+reinjecta, −2,8k per premuda).
+
+## E.4 Verificació feta abans de desplegar
+
+`tsc --noEmit` net · `python3 -m unittest discover -s tests` → **220/220**.
+
+**Banc de proves nou: `server/test/lesson-note.test.ts`** — 51 comprovacions que
+passen les cadenes **literals** del 16/09 (tretes de `sessions.db` i de
+`.daily/lesson-2026-09-16.json`) per les funcions reals, executades amb
+`node --experimental-strip-types`. No és un `grep`: és una execució.
+
+**Replay de les 79 respostes reals del tutor** contra el codi nou:
+
+| | perfil A (60 torns) | perfil B (19 torns) |
+|---|---|---|
+| Qualificades, regla antiga (només text) | 7 | **0** |
+| Qualificades, regla nova (text **o** registre) | 7 | **4** |
+| Comptador que hauria arribat a | 7 de 15 *(el fitxer real deia 3)* | 4 de 12 *(el real deia 0)* |
+| Exercicis amb empremta | **35** *(el real en tenia 6)* | **14** *(el real en tenia 4)* |
+| Torns amb exercici idèntic, ara detectats | 9 | 4 |
+| Notes de pacing diferents | 42 de 60 | 12 de 19 |
+
+La darrera fila és la que explica el bucle: abans la nota era **una sola**,
+repetida seixanta vegades.
+
+**El que això NO prova:** que el model, amb el skill al *system prompt*,
+efectivament corregeixi. Això necessita l'LLM real i és la prova de
+[`PROVES.md` § 22.2](PROVES.md), amb `test-en`.
+
+## E.5 La lliçó de fons
+
+És la mateixa d'aquest projecte, un pas més enllà:
+
+> El que el model ha de recordar, ho recorda el servidor.
+> **El que el model ha de carregar, el carrega el servidor.**
+
+I una de nova, del mateix incident:
+
+> El servidor li diu al model **on és**, no **què ha de fer**. Una instrucció
+> imperativa injectada cada torn deixa de ser una guia i passa a ser un bucle
+> el dia que el seu contingut es congela.
+
+## E.6 Deute obert que va sortir d'aquí
+
+- **La persona del tutor canvia entre torns.** La web envia sempre
+  `agent: "learner"`; `runCommand()` fa servir `resolved.agent`
+  (`tutor`/`tutor-fast`) i `runMessage()` torna a `learner`. Així, el torn del
+  botó i els torns de resposta corren amb *system prompt* diferent (i, on hi ha
+  face, amb model diferent). És el mateix patró que l'skill: estat per command
+  que no sobreviu als torns següents. **No tocat**: canviar quin model respon
+  té risc propi i mereix decisió a part.
+- **Direcció dels exercicis de vocabulari.** Al perfil A els ítems SM-2
+  s'estaven preguntant al revés (*"What is the Catalan word for 'morning'?"*):
+  examinaven la nena de la seva pròpia llengua. Ve de `fluent-learn` fent
+  vocabulari sense la regla de direcció del skill de review. Amb el skill
+  carregat hauria de desaparèixer — **cal confirmar-ho en viu**.
+- **Tall dur de repetició.** Ara només es detecta i es registra. Un reintent del
+  torn quan l'exercici es repeteix és més invasiu (el missatge ja s'ha
+  transmès) i queda pendent de decidir.
+- Les dades del 16/09 de les dues alumnes són brutes: `spaced-repetition.json` i
+  `mistakes-db.json` es van reescriure a partir d'una transcripció sense cap
+  qualificació.
+
+---
+
+# F. Auditoria de comportament (2026-09-19)
+
+Motiu, literal: *"abans també va passar test i per les nenes va ser un autèntic
+desastre... ha de provar que avança, que tot evoluciona com toca."*
+
+Té raó, i la crítica va al moll de l'os del que hi havia: **la suite era
+gairebé tota de codi font, no de comportament.** Els 220 tests haurien passat
+el 16 de setembre igualment, amb el tutor fent seixanta torns sense corregir.
+Un test que mira si una funció retorna el que toca no veu mai una app trencada.
+
+## F.1 Mètode
+
+Fer córrer **el pipeline real de dades** (`update-db.py`, `read-db.py`, l'SM-2
+de debò) sobre setmanes simulades, i fer-li la pregunta que faria un pare: *el
+que encerta deixa de sortir? el que falla torna?* Sense model: el que s'audita
+és la memòria del sistema, no el que diu el tutor.
+
+## F.2 El que funcionava
+
+**L'SM-2 és correcte.** Intervals 1 → 6 → 16 → 45 dies, els ítems encertats
+surten de la cua diària i tornen espaiats. La columna vertebral del sistema
+està bé.
+
+## F.3 El que no — i és exactament el símptoma que fa por
+
+**`mistakes-db.error_patterns[].mastery_level` no pujava mai.** Els ítems SM-2
+sí que pugen de mestria (`update_spaced_repetition`); els patrons d'error, que
+són el que el tutor llegeix a través de `read-db.py`, no els tocava ningú. Ja
+constava com a deute obert; ara està mesurat:
+
+> Tres paraules encertades tres vegades cadascuna, intervals creixent
+> correctament — i el dia 12 les tres encara a `mastery_level: 0`, encara
+> ofertes com els punts més febles de l'alumna.
+
+I això no és cosmètic. Amb la cua SM-2 buida, la Lliçó omple els exercicis que
+falten **amb els patrons febles**. O sigui: el tutor torna a fer les mateixes
+tres paraules. Cada dia. Per sempre. Vist des de l'altra banda de la pantalla
+és un tutor que repeteix sempre les mateixes preguntes — el mateix símptoma del
+16, per un camí completament diferent.
+
+## F.4 Correccions
+
+| # | Canvi | Fitxers |
+|---|---|---|
+| 18 | **`heal_patterns()`** — un encert puja la mestria del patró un pas (màx. 5); una fallada la baixa un pas i reinicia la ratxa. L'ítem SM-2 i el patró ja comparteixen id (punt 19 del lot anterior), així que és un `join` directe | `hooks/update-db.py` |
+| 19 | **`HEALED_MASTERY = 4`** — un patró curat surt de `top_weak_patterns` i es compta a part (`healed_patterns`). `drillMaterial()` tampoc el compta, així que la Lliçó no el fa servir de material | `hooks/read-db.py`, `server/src/pacing.ts` |
+| 20 | **La llargada de la lliçó és del servidor, no de la cua.** El skill tancava la sessió quan s'acabava la cua SM-2 ("Review Session Complete! Reviewed: 2") i deixava la insígnia a 2 de 6. Ara la nota ho prohibeix explícitament i el skill ho diu com a regla | `pacing.ts`, `skills/fluent-review/SKILL.md` |
+| 21 | **L'estat de l'alumne va al system prompt.** *Regressió meva del 16*: en fer que `skipDirectives` funcionés de veritat, el bloc amb nom, nivell, cua i patrons quedava només al primer missatge — i `pruneHistory` esborra els més antics primer. En una sessió llarga desapareixia, mentre el command següent deia "és a l'historial, no el recarreguis". Ara és al system prompt, on la poda no arriba | `commands.ts`, `agent.ts` |
+
+## F.5 Trajectòria després de les correccions
+
+Simulació de 30 dies, tres errors el primer dia i respostes correctes després:
+
+| dia | acció | intervals | mestria | febles | curats |
+|---|---|---|---|---|---|
+| 1 | 3 errors | 1 · 1 · 1 | 0 · 0 · 0 | 3 | 0 |
+| 2 | 3 bé | 1 · 1 · 1 | 1 · 1 · 1 | 3 | 0 |
+| 3 | 3 bé | 6 · 6 · 6 | 2 · 2 · 2 | 3 | 0 |
+| 9 | 3 bé | 16 · 16 · 16 | 3 · 3 · 3 | 3 | 0 |
+| 25 | 3 bé | 45 · 45 · 45 | 4 · 4 · 4 | **0** | **3** |
+
+I la recaiguda: una sola fallada de `welcome` → mestria 4 → 3, torna a
+`top_weak_patterns`, i l'ítem torna a la cua **de demà** amb interval 1.
+
+## F.6 La suite, ara
+
+`tests/test_progress_is_real.py` — cinc comprovacions que fan córrer el
+pipeline real sobre setmanes simulades, escrites com les preguntes d'un pare i
+no com les d'un programador:
+
+- el que encerta deixa de sortir (30 dies → mestria ≥ 4, cap patró feble)
+- l'espaiat s'eixampla de veritat (interval > 20 dies)
+- el que oblida torna **demà**
+- una setmana fallant-ho tot no fa explotar la cua (3 errors = 3 ítems, sempre)
+- res no es clava mai a la falta d'ortografia de l'alumna
+
+**227/227 · `tsc --noEmit` net · harness de rèplica: 57/57.**
+
+## F.7 El que aquesta auditoria NO cobreix
+
+El model. Tot l'anterior és la memòria del sistema: què es desa, què es
+recupera, què s'ofereix al tutor. **Que el tutor faci bon ús del que rep només
+es pot comprovar en viu** ([`PROVES.md` § 22](PROVES.md)), i el criteri de
+validació no és cap test: és una sessió sencera que a l'Albert li sembli
+raonable.
+
+---
+
+# G. La prova amb el model, i els guards (2026-09-19, tarda)
+
+## G.1 El que faltava
+
+Tota la resta comprova el codi. **Res no feia parlar el tutor.** El 16/09 la
+suite era verda mentre el tutor feia seixanta torns sense corregir, perquè el
+que es va trencar era el que el model rebia, i cap test unitari ha llegit mai
+la resposta d'un model.
+
+`scripts/fluent-e2e.py` obre sessió per l'API igual que el navegador, prem els
+botons, contesta, i **llegeix el que respon**. `scripts/fluent-seed.py` li dona
+passat al perfil amb el pipeline real, dia a dia, perquè la cua SM-2 tingui
+alguna cosa a fer.
+
+## G.2 La regla que va sortir d'aquí
+
+> **O funciona, o hi posem un guard on toqui.**
+
+El marcador es va demanar **tres vegades** al skill (`Score: 0/10 🟢` seguia
+sortint a totes les respostes) i es va arreglar en una línia el dia que el
+servidor va deixar de demanar-ho i el va corregir ell. A partir d'aquí, tot el
+que importa s'imposa:
+
+| Guard | Què fa |
+|---|---|
+| `alignMarkersToScore()` | 🔴 per 0-4, 🟡 per 5-7, 🟢 per 8-10. La nota ja està escrita a la mateixa frase |
+| `alignLessonHeader()` | "Review 7/6" → "Review 4/6". El tutor perd el compte quan l'alumna marxa i torna; el servidor no |
+| `turnGuard()` + `enforceTurn()` | Si el torn tanca amb exercicis pendents, repeteix una pregunta d'avui, o corregeix sense preguntar res → **el fa reescriure el torn**, una vegada. Mesurat: 6 intents de repetir, 6 reescriptures, zero repeticions a la pantalla |
+| `plan.credited` | Un exercici es compta un sol cop, per molt que es qualifiqui dues vegades |
+| `deriveRecord()` | Si el tutor no crida `fluent_record_answer` (no ho fa mai), el servidor treu el registre del seu propi text |
+
+## G.3 Instruments
+
+- **`build stamp`** — el servidor imprimeix el hash de `server/src` a l'arrencada
+  i el serveix a `/api/global/health`; l'e2e **es nega a jutjar** un servidor que
+  no corre el codi del disc. Dues execucions es van discutir per això: els skills
+  es rellegeixen cada torn i el TypeScript no, així que mitja reparació hi és i
+  mitja no.
+- **`<perfil>/.metrics/guards.jsonl`** — una línia per actuació del guard, al
+  costat de les mètriques del torn. El log del servidor viu a `/tmp` i
+  desapareix.
+- **`fluent-check.py lliço`** — veredicte de vuit línies sobre la lliçó d'avui.
+
+## G.4 Estat de la prova de navegació
+
+`--scenario wander`: Lliçó → 2 exercicis → 📚 Vocabulary → 2 → 🎓 Lesson → 2 →
+📚 Vocabulary → 2. **22 de 23**, i la que faltava era una etiqueta de log mal
+posada, no un defecte.
+
+```
+✅ en tornar a Lesson no saluda ni mostra menú   "## Review 5/6 — moderate"
+✅ la lliçó reprèn on era, no de zero
+✅ la lliçó no repeteix el que ja havia preguntat
+✅ el que fa a Vocabulary queda desat            graded 11 → 14
+✅ i no compta com a exercici de la lliçó        lesson 5 → 5
+✅ en tornar a Vocabulary no repeteix paraules
+✅ cada resposta rep marcador, versió correcta i nota   8/8
+✅ les respostes arriben a .records/             15 línies
+```
+
+## G.5 El que encara no s'ha provat
+
+- **`--scenario full`**: el tancament de la lliçó i els dos torns de després.
+  Cap execució hi ha arribat mai.
+- **Dos dies seguits**: que el que contesta avui torni demà com toca. Ara es pot,
+  perquè els registres ja s'escriuen.
+- **Un perfil real** (`nes-en`), sense `--reset`.
+- **`--scenario marathon`** i la prova de dos dies amb `fluent-advance-day.py`.
+
+## G.6 L'`item_id` el posa el servidor (2026-09-19)
+
+`fluent_record_answer` demanava al tutor l'`item_id` «copiat literalment de la
+llista d'ítems per repassar». Al tutor no se li ensenya aquesta llista: la nota
+de ritme li dóna el **contingut** de l'ítem i res més, a posta, perquè un id
+inventat fa avançar la programació equivocada sense dir-ho. Així que cap registre
+escrit pel tutor duia `item_id`; els únics que en duien eren els que el servidor
+derivava quan el tutor s'oblidava de cridar l'eina.
+
+El resultat és el pitjor possible: arreglar les crides a l'eina **buida** la
+programació de repàs.
+
+    sweep 1   12 ítems · 3 per repassar  → 9 registres, 9 amb item_id
+    sweep 2   15 ítems · 0 per repassar  → 8 registres, 0 amb item_id
+
+La regla de sempre: **el que el model ha de reportar, el servidor ho dedueix.**
+L'ítem que hi havia a la pantalla és un fet del servidor (`gradingItem`), i ara
+l'eina l'adjunta ella mateixa quan el tutor no en dóna cap — validat contra la
+cua igualment, i esborrat en sortir de la lliçó perquè una assignació caducada
+no faci avançar un repàs que ningú ha demanat.
+
+Harness: `server/test/record-item.test.ts` (7 comprovacions).
+
+## G.7 El servidor també tria què es repassa (2026-09-19)
+
+Sis execucions amb el punt de partida igual, i amb tot el que havia fallat tota
+la tarda en verd: marcador, versió correcta, nota, comptador, registres,
+`item_id`. El que quedava era **repetició**, i quedava sencera:
+
+    "An ___ is a fruit."            × 4
+    "She ___ to school every day."  × 3
+    "I need to write a letter in ___." × 3
+
+    58 intervencions del guard, 14 de les quals «rewrite rejected: feedback lost»
+
+La nota deia què NO es podia tornar a preguntar («Already asked today — not
+again, in any form: …») i deixava l'elecció al tutor. Un 14B triant sota una
+llista de prohibicions que creix torna a la mateixa frase; i quan el guard el fa
+reescriure, una de cada tres reescriptures es carrega la correcció i s'ha de
+llençar.
+
+La regla de sempre, aplicada un cop més: **una prohibició és una cosa a obeir;
+una assignació és una cosa a fer.** El servidor ja reparteix l'ítem de la cua
+d'un en un; ara, quan no hi ha res vençut, també tria el patró feble que toca
+(`nextDrill`, el de mestria més baixa i més freqüent, amb l'error real de
+l'alumna adjuntat) i el manté uns quants torns abans de retirar-lo — una errada
+mereix un segon exercici, no un tema nou. L'ítem de la cua continua manant: dos
+subjectes en un mateix torn és com va descarrilar la lliçó del 16/09.
+
+Harness: `server/test/lesson-note.test.ts` (10 comprovacions noves).
+
+## G.8 Una nota sense resposta al darrere no és una nota (2026-09-19)
+
+El pla del dia va sortir així abans de la primera pregunta:
+
+    {"total": 6, "done": 1, "credited": []}
+
+`done` puja encara que l'exercici no es pugui identificar — és volgut, una
+errada d'empremta no li pot costar el progrés a l'alumna. El que no és volgut és
+que pugi **sense que ningú hagi contestat**. Un torn obert amb un BOTÓ (🎓
+Lesson, 📚 Vocabulary) no porta resposta, i quan el tutor va decorar la seva
+resposta d'obertura amb un «Score: 2/10», el servidor va comptar un exercici que
+encara no s'havia preguntat.
+
+Al banc de proves va avortar quatre de sis execucions. A una alumna li menja un
+exercici a dalt de cada lliçó, en silenci.
+
+Ara, si no hi ha resposta de l'alumna al darrere, no es compta ni se'n deriva
+registre — queda registrat com a event de guard (`graded with no answer`). I la
+resposta es **consumeix** en comptar-la, perquè un segon torn sense resposta
+pròpia no la pugui tornar a comptar.
+
+Al costat, al banc: la comprovació de «la lliçó ja estava començada» llegia el
+pla **després** de la salutació i del torn que obre la lliçó, o sigui que també
+comptava el que aquells dos torns havien acreditat. Ara llegeix el dia que
+l'execució **hereta**, abans del primer torn.
+
+
+## G.9 Go, Writing i els exercicis tancats (2026-09-23)
+
+**Decisió (Albert):** els exercicis es separen per tipus, no per botó.
+
+- **Tancats** — un buit, una sola resposta correcta. Viuen a 🎲 **Go**
+  (gramàtica i vocabulari del camí del currículum) i a 🎓 **Review**. Són els que
+  passaran a JSON + comprovació a cegues (`comprova(frase, resposta)`): la
+  propera feina, i la resposta a exercicis ambigus com «The car is ___.».
+- **Oberts** — l'alumna escriu o diu les seves paraules. 📝 **Writing**,
+  🗣️ Speaking, 📖 Reading. Es corregeixen en prosa; no hi ha resposta única a
+  comprovar.
+
+**Per què.** Writing s'havia convertit en «demanar frases amb forats i prou»:
+Go amb un altre nom, i l'app sense cap lloc on l'alumna produís text propi.
+
+**Què canvia:**
+
+| Peça | Canvi |
+|---|---|
+| `web/index.html` | 📝 Writing torna a ser visible, amb badge diari. Go: «grammar & vocabulary from your path». |
+| `web/app.js` | `writingBtn` amb el mateix `renderSkillBadge` que Speaking; entra a `TRACKED_MODE_CMDS`. |
+| `server/src/daily.ts` | Comptador diari `writing`, com `speaking` / `reading`. |
+| `server/src/agent.ts` | `inWriting` → `bumpDaily({writing: 1})`; `sessionProgress.writing`; `writingFrameFor()`. |
+| `server/src/pacing.ts` | `writingLengthNote`: A1 1-2 frases pròpies amb «Use: …», A2 3-5; **mai un buit**. `writingBlankGuard`: un `___` o «complete the sentence» a Writing es reescriu. |
+| `hooks/curriculum.py` | `next --writing` → `writing_frame()`: l'estructura de gramàtica activa (la que Go treballa), només lectura, perquè l'alumna la faci servir en text lliure. |
+| `skills/fluent-writing` | A1/A2: una tasca curta cada cop (tema + «Use:»), corregida, i la següent. B1+: un escenari per sessió, com abans. |
+| totes les skills | La llista de botons del final inclou 📝 Writing. |
+
+**Obligatori un cop al dia**, igual que Speaking (i que Reading per sobre de
+l'A1): el badge avisa, mai bloqueja. Writing no té bloqueig de nivell.
+
+Proves: `server/test/writing.test.ts` (8), `tests/test_curriculum.py` (+2).
+
+## G.10 Un buit de vocabulari ha de dir quina paraula hi va (2026-09-23)
+
+**Cas:** `a1.vocab_colors_adjectives` → «Sentence: The car is ___.» Encara que
+l'alumna sàpiga que la lliçó és de colors, qualsevol color hi encaixa, i només
+pot endevinar. El guard dels números (`openBlankGuard`) era el primer cas
+d'aquest problema; aquest n'és la regla general per a qualsevol llista de
+paraules.
+
+**Regla:** a una competència de vocabulari, si la targeta té un buit, la línia
+del buit porta la paraula **en la llengua de l'alumna, entre parèntesis**:
+«The car is ___ (vermell).». Això fixa la resposta sense regalar l'anglès. No
+valen com a pista:
+
+- una categoria: «(colour)», «(adjective)», «(animal)»…
+- la paraula anglesa de la llista;
+- una tria entre paraules de la llista: «(red/blue)».
+
+Una targeta de traducció o de definició no té buit i ja queda fixada per com
+està feta, així que el guard no hi entra. Els números continuen amb el seu
+guard propi.
+
+**Com s'aplica:**
+
+- `vocabBlankGuard` (`pacing.ts`) actua al mateix punt que la resta de guards
+  i fa reescriure el torn un cop.
+- Si la reescriptura continua sense la paraula, es registra a `guards.jsonl`
+  com a «vocab gap still open after rewrite». No hi ha pedaç automàtic perquè
+  el servidor no sap la paraula en català, i aquest número és el que dirà si
+  cal més.
+- La nota de `curriculum.py` diu el mateix en una línia i substitueix el
+  paràgraf llarg d'abans.
+
+Gramàtica **no** hi entra: amb el context de la competència, la majoria de
+buits ja tenen una resposta clara (Albert).
+
+Proves: `server/test/vocab-gap.test.ts` (9).
+
+## G.11 La porta de repàs segrestava Writing (2026-09-24)
+
+**Cas (`nes-en`):** va acabar la lliçó (14 de 14), va prémer 📝 Writing, i el
+tutor li va servir «Review 1/6 — critical … Correct the sentence: "There is a pen
+on the desk"». La nota que va rebre el tutor en aquell torn de Writing era:
+
+    Spaced-repetition gate: 0 of 6 due review items done in this session.
+    Before introducing NEW material, work through the remaining 6 …
+
+Hi havia tres errors:
+
+1. La porta es decidia segons **la primera ordre de la sessió**
+   (`sessionOpenedWith`), no segons la pràctica en pantalla. Una sessió que havia
+   passat per Review la duia a tots els botons de després.
+2. Comptava «0 de 6» just després de 14 de 14: no reconeix els ítems que la
+   lliçó acaba de repassar.
+3. S'avalua abans que la nota de Writing, així que Writing no rebia les seves
+   instruccions.
+
+**Arreglo:** la porta es decideix amb `currentCommand`. Només 🎓 Review la porta,
+i dins de Review el pla de la lliçó ja decideix què toca, així que a la pràctica
+ja no s'obre enlloc. Review es deu pel seu badge, mai segrestant una altra
+pràctica. La porta queda inert: s'esborra a la fase 5 de
+`PLA-EXERCICIS-TANCATS.md`.
+
+Prova: `server/test/pacing.test.ts`.
+
+**Proves posades al dia (2026-09-24).** 11 fallades, cap de lògica trencada:
+
+- `test_curriculum`: els llindars 10/20/30 ara es llegeixen de `DEPTH`, no van
+  escrits a mà. La còpia «mecànica» del currículum no porta profunditat, perquè
+  `cfg_for` ja no deixa que un cfg petit substitueixi el de `normal`.
+- Tutor simulat: triava paraules fora de la llista.
+- `lesson-note`: quatre comprovacions buscaven textos antics d'`agent.ts`.
+- El renderitzador de skills ara també omple `{native_language}` i
+  `{target_language}`, que el model copiava literalment.
+
+445/445.
+
+## G.12 Review sobre el banc (2026-09-24)
+
+Fase 4 de `PLA-EXERCICIS-TANCATS.md`, opció C per als patrons antics de la cua.
+`tryBankReviewTurn` (`agent.ts`) i `review_pick` / `legacy_competence`
+(`curriculum.py`). Mateix interruptor que Go (`exercises.bank`). Si no hi ha
+cap ítem, Review torna al camí del model, com abans.
+
+Tres coses al servidor:
+
+- **`creditBankAnswer`:** una resposta del banc suma al dia i, a Review, a la
+  lliçó. Abans, cap resposta del banc arribava al comptador.
+- **Els ítems del banc van lligats a la seva pràctica:** en canviar de Go a
+  Review, o a l'inrevés, l'ítem que hi havia a la pantalla s'oblida.
+- **El registre d'un exercici de Review porta l'`item_id` de la cua** i una
+  qualitat SM-2 (`floor(nota/2)`), així que la cua avança sola.
+
+Proves: `tests/test_bank_review.py` (col·locació segura, ordre de Review, retirada,
+corrector, banc sencer) · `server/test/bank.test.ts`.
+
+## G.13 Fase 5 i ajustos posteriors (2026-09-24)
+
+**Fase 5:** fora els guards que el banc ha deixat sense res a vigilar
+(`openBlankGuard`, `patchOpenBlank`, `vocabBlankGuard`), els «drills» del model
+(`nextDrill`), la porta de repàs sencera i els paràgrafs de la nota del
+currículum. Resultat: −282 línies a `pacing.ts` i −102 a `agent.ts`. El que també
+fan servir Writing, Speaking i Reading es manté (`deriveRecord`, `turnGuard`, i
+els guards d'imatges i de direcció de llengua).
+
+**Prova de nivell:** surt del banc revisat
+(`_bank_checkpoint_items`, `curriculum.py`) i la corregeix `bank.grade`.
+
+**Corrector del banc:** «gairebé» també a «Correct», paraula per paraula.
+`_is_inflection` evita que una altra forma del mateix mot (plays/play) compti
+com a errada de lletra.
+
+**Banc que s'esgota:** `bank_left` (`bank.py`) alimenta un punt tènue a la vista
+del camí de l'alumna (`bank_low`) i la columna «Banc nous» a la vista del
+docent.
+
+**Mètriques:** `turns.jsonl` guarda `command`.
+
+463/463.

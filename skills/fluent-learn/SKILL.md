@@ -3,6 +3,7 @@ name: fluent-learn
 description: Main adaptive language-learning session that mixes skills (writing, speaking, vocabulary, reading) and exercise types based on the learner's current level, weak patterns, and due reviews. Triggered only when the learner types /fluent-learn. Greets the learner, shows today's plan, asks what to practice, runs interleaved exercises one at a time, and updates all databases at the end.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
+requires: [fluent-feedback-formatter]
 ---
 
 # Main Adaptive Learning Session
@@ -70,20 +71,11 @@ Never French (Bonjour), Spanish (Hola), or the native language.
 - 🔥 Streak: {X} {day/days}
 - 📚 Review items due: {Y}
 - 🎯 Focus area: {weakest skill or top weak pattern}
-- ⭐ Level: {current} → {target} ({progress}%)
-
-**What would you like to practice today?**
-
-1. 📝 Writing (emails, letters, forms)
-2. 🗣️ Speaking (typed conversation)
-3. 📖 Vocabulary (flashcard drills)
-4. 👀 Reading (comprehension)
-5. 🔄 Spaced Review (today's due items)
-6. 🎲 Surprise me! (adaptive mix)
-
-**Type a number or skill name:**
+- ⭐ Level: {current} → {target}{ (curriculum.pct% toward the level test) ONLY if `curriculum` is present in the preloaded state — read `curriculum.pct` verbatim, never estimate it. Omit the parenthesis entirely when `curriculum` is null (no course file for this level yet) or the field is missing. A number you made up here is worse than none: measured live, 2026-09-22, a brand-new profile with zero records was greeted with "65% progress" out of nowhere.}
 
 {If `preferences.tutor_style == "friend"`: append one warm callback line citing `session_log.last_session` concretely (e.g. "P.S. Last time you nailed X — let's build on it 🌱"). Otherwise end here.}
+
+End the greeting here — do NOT list practice options or ask the learner to type anything. The buttons at the top of the app (🎲 Surprise me!, 🔁 Review, 📚 Vocabulary, 📝 Writing, 🗣️ Speaking, 📖 Reading, 📊 Progress) are how they choose; naming a numbered menu here just duplicates them and invites typing, which the shared rules already forbid.
 ```
 
 ### 4. Route (read this FIRST on every turn — it decides start vs continue)
@@ -139,12 +131,56 @@ elif mastery_level >= 4:
 
 ### 7. Exercise types by skill
 
-**Writing**: sentence completion, translation, error correction, full email, reordering.
+This app is text-only: never write an exercise that refers to a picture, photo, image or diagram ("Look at the picture below", "Describe what you see", etc.) in ANY exercise type — Grammar, Writing, Speaking, Vocabulary, whatever. There is nothing to show; a Grammar exercise was measured inventing "Look at the picture below" with nothing behind it (2026-09-22).
 
-**Speaking**: personal Qs, picture description, role-play, phonetic typing.
-Production prompts ("How would you say … in {target_language}") ALWAYS carry
-the source sentence in the NATIVE language — never in the target language
-itself (circular, zero learning value).
+**Writing**: sentence completion, translation, error correction, full email, reordering.
+For sentence completion, translation and error correction — one sentence,
+one thing to fix or fill — use this closed format (copy exactly, fill the
+slots), the same discipline Vocabulary already uses below. It exists because
+free-form Writing exercises kept landing in a different shape every time —
+`**Sentence:**`, or `Context:`/`Question:` with no `**Sentence:**` at all —
+and each new shape was one the server's exercise tracker did not recognise,
+so it could not tell a repeat from a new one (measured live, 2026-09-23:
+"They ___ (not/like) cheese." asked three times in one session, unnoticed).
+One line the tracker always reads, `**Sentence:**`, ends that:
+
+```markdown
+## Exercise {N}: Writing ({Easy|Medium|Hard}) {competence_id}
+
+**Sentence:** {the sentence — "___" for what is missing, or the sentence
+with its mistake still in it for error-correction}
+
+**Type your answer (just the missing word):**
+```
+
+or, when a correct answer has to be a full sentence (see
+`fluent-feedback-formatter`'s blank-marker rule — the choice is about the
+ANSWER, not that it says "Writing"):
+
+```markdown
+## Exercise {N}: Writing ({Easy|Medium|Hard}) {competence_id}
+
+**Sentence:** {the sentence — "___" may still show where it goes}
+
+**Type your answer (the complete sentence):**
+```
+
+A "Context:" line is OPTIONAL — only add one when it truly helps, placed
+BEFORE `**Sentence:**`, and when you do it must describe a scene the
+Sentence is actually about. Measured 2026-09-22: "Context: You are at a zoo
+and see some animals." above "___ the door, please. It's cold in here." — a
+generic scene copied from one exercise to unrelated ones, in a row (park,
+zoo...), matching nothing in the sentence. If the sentence stands on its own
+(most do), skip the Context line entirely rather than bolt on a scene that
+does not fit.
+A full email or a reordering task does not reduce to one Sentence line — use
+`**Scenario:**` for those instead (the tracker reads that one too), and
+write the instruction under it as usual.
+
+**Speaking**: personal Qs, role-play, phonetic typing (no picture description
+— see the note above). Production prompts ("How would you say … in {target_language}")
+ALWAYS carry the source sentence in the NATIVE language — never in the target
+language itself (circular, zero learning value).
 
 **Vocabulary**: recognition, production, cloze, associations, synonym matching.
 In "What is the {language} word for …" prompts, the questioned word MUST be in
@@ -207,7 +243,7 @@ Now type the correct version yourself: "{correct_sentence}"
 ### 🚀 Keep going?
 {one concrete next step, e.g. "One more round on [weakest point of this session] would lock it in."}
 
-Use the buttons at the top (🎲 🔁 📚 📝 🗣️ 📖) to continue, or ↺ for a brand-new session. What shall we do next?
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.

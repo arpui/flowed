@@ -8,7 +8,7 @@ agent: tutor-fast
 > This interview stays available for an admin who prefers to do it in the chat.
 
 Execute /fluent-setup now:
-1. Load the `fluent-setup` skill via the skill tool and follow it EXACTLY.
+1. The `fluent-setup` instructions are already in your system prompt. Follow them EXACTLY. Do NOT call the skill tool for them — the server loads them for you, on every turn, whether this is the first command of the session or the fifth.
 2. Ask one question at a time; use the question tool for structured choices where the skill suggests them.
 3. Collect: name, target language, native language, current level, target level, timeline, daily minutes, goals.
 4. At the end, save everything with ONE `fluent_setup_profile` call (the skill has the exact fields). Do not write files and do not run scripts: in this runtime you have no way to, and the 6 databases already exist.

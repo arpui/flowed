@@ -8,8 +8,15 @@
 // Two numbers per day, in one small file per day under <profile>/.daily/:
 //   graded — every answer the tutor scored, wherever it came from (free play
 //            included). This is the "✏️ 15 🤩" number.
-//   lesson — answers given inside the guided Lesson. This is what empties the
+//   lesson — answers given inside the guided Review. This is what empties the
 //            badge on the 🎓 button.
+//   speaking / reading — answers given inside those buttons specifically
+//            (not credited by an equivalent exercise surfacing in Mix — same
+//            principle as `lesson`, which only counts inside 🎓 Review too).
+//            Each empties its own badge once ≥1 for the day: mix keeps
+//            choosing whatever exercise types it likes on its own, this is
+//            only a "did you also do one of these today" reminder, never a
+//            gate (2026-09-22, Albert).
 //
 // Kept free of Bun imports so server/test/*.test.ts can exercise it under node.
 
@@ -20,6 +27,9 @@ export interface DailyCounts {
   date: string;
   graded: number;
   lesson: number;
+  speaking: number;
+  reading: number;
+  writing: number;
 }
 
 export function today(now = new Date()): string {
@@ -34,9 +44,16 @@ export function readDaily(dataDir: string, date = today()): DailyCounts {
   try {
     const raw = JSON.parse(fs.readFileSync(dailyFile(dataDir, date), "utf8")) as Partial<DailyCounts>;
     const n = (v: unknown) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
-    return { date, graded: n(raw.graded), lesson: n(raw.lesson) };
+    return {
+      date,
+      graded: n(raw.graded),
+      lesson: n(raw.lesson),
+      speaking: n(raw.speaking),
+      reading: n(raw.reading),
+      writing: n(raw.writing),
+    };
   } catch {
-    return { date, graded: 0, lesson: 0 };
+    return { date, graded: 0, lesson: 0, speaking: 0, reading: 0, writing: 0 };
   }
 }
 
@@ -61,6 +78,11 @@ export interface LessonPlan {
   covered: string[];
   slot: string | null;
   slot_done: boolean;
+  /** Exercises already counted towards `done`. Without it, six gradings of the
+   *  SAME question took the badge to 6 of 6 while one single exercise had been
+   *  asked — observed live on 2026-09-19. A lesson counts questions answered,
+   *  not keystrokes. */
+  credited?: string[];
 }
 
 function planFile(dataDir: string, date: string): string {
@@ -78,6 +100,11 @@ export function readPlan(dataDir: string, date = today()): LessonPlan | null {
       covered: Array.isArray(raw.covered) ? raw.covered.map(String) : [],
       slot: typeof raw.slot === "string" ? raw.slot : null,
       slot_done: raw.slot_done === true,
+      // Rebuilding the plan field by field means a field added later is silently
+      // dropped on every read. `credited` was: written on each turn, gone by the
+      // next one, so the guard against counting one exercise twice only ever
+      // held the current turn and protected nothing.
+      credited: Array.isArray(raw.credited) ? raw.credited.map(String) : [],
     };
   } catch {
     return null;
@@ -136,7 +163,7 @@ export function creditLesson(dataDir: string, date = today()): LessonTally {
 
 export function bumpDaily(
   dataDir: string,
-  delta: { graded?: number; lesson?: number },
+  delta: { graded?: number; lesson?: number; speaking?: number; reading?: number; writing?: number },
   date = today()
 ): DailyCounts {
   const current = readDaily(dataDir, date);
@@ -144,6 +171,9 @@ export function bumpDaily(
     date,
     graded: Math.max(0, current.graded + (delta.graded ?? 0)),
     lesson: Math.max(0, current.lesson + (delta.lesson ?? 0)),
+    speaking: Math.max(0, current.speaking + (delta.speaking ?? 0)),
+    reading: Math.max(0, current.reading + (delta.reading ?? 0)),
+    writing: Math.max(0, current.writing + (delta.writing ?? 0)),
   };
   try {
     const file = dailyFile(dataDir, date);

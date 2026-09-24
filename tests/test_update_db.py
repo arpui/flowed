@@ -503,5 +503,69 @@ class UpdateDbIdempotencyTest(unittest.TestCase):
                              msg=f"growing-then-full and single-full diverged in {k}")
 
 
+class ErrorTwinsTest(unittest.TestCase):
+    """One sentence, one item — whatever the tutor called the slip."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-twin-"))
+        (self.tmp / "data").mkdir()
+        make_fixtures(self.tmp / "data")
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _run(self, payload):
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("FLUENT_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")}
+        p = subprocess.run(["python3", str(SCRIPT)], input=json.dumps(payload).encode(),
+                           cwd=str(self.tmp), capture_output=True, env=env)
+        self.assertEqual(p.returncode, 0, p.stderr)
+
+    def _items(self):
+        return json.loads((self.tmp / "data" / "spaced-repetition.json").read_text())["items"]
+
+    def _err(self, pid, category, wrong, right):
+        return {"session_id": "session-t", "date": "2026-04-24", "duration_minutes": 5,
+                "errors": [{"pattern_id": pid, "category": category, "your_answer": wrong,
+                            "correct_answer": right, "context": "", "severity": "moderate"}],
+                "new_vocabulary": [], "review_results": []}
+
+    def test_the_same_sentence_under_another_category_is_not_a_second_item(self):
+        self._run(self._err("capitalization_i_speak_english_on_mondays", "capitalization",
+                            "i speak english on mondays", "I speak English on Mondays"))
+        before = set(self._items())
+        payload = self._err("grammar_I_speak_English_on_M", "grammar",
+                            "i speak english on mondays", "I speak English on Mondays")
+        payload["session_id"] = "session-u"
+        self._run(payload)
+        self.assertEqual(set(self._items()), before)
+
+    def test_a_capital_in_the_id_is_not_a_second_item(self):
+        self._run(self._err("agreement_she_goes_to_school", "agreement", "She go to school",
+                            "She goes to school"))
+        before = set(self._items())
+        payload = self._err("agreement_She_goes_to_school", "agreement", "She go to school",
+                            "She goes to school.")
+        payload["session_id"] = "session-u"
+        self._run(payload)
+        self.assertEqual(set(self._items()), before)
+
+    def test_different_sentences_stay_different(self):
+        self._run(self._err("agreement_she_goes_to_school", "agreement", "She go to school",
+                            "She goes to school"))
+        payload = self._err("agreement_he_has_two_brothers", "agreement", "He have two brothers",
+                            "He has two brothers")
+        payload["session_id"] = "session-u"
+        self._run(payload)
+        self.assertIn("agreement_he_has_two_brothers", self._items())
+
+    def test_short_forms_are_never_merged(self):
+        self._run(self._err("articles_an", "articles", "a", "an"))
+        payload = self._err("prepositions_an", "prepositions", "on", "an")
+        payload["session_id"] = "session-u"
+        self._run(payload)
+        self.assertIn("prepositions_an", self._items())
+
+
 if __name__ == "__main__":
     unittest.main()

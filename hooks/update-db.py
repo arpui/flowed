@@ -164,13 +164,27 @@ def backup_all(tag: str):
 STATE_DIR_NAME = ".update-state"
 
 
-def state_path(session_id: str) -> Path:
-    return DATA_DIR / STATE_DIR_NAME / f"{session_id}.json"
+def state_path(session_id: str, day: str = "") -> Path:
+    """The T0 file for a session, scoped to its DAY.
+
+    The id here is a logical counter — "session-001", "session-002" — and it
+    restarts whenever a profile is emptied. Keyed on that alone, a session today
+    inherited the T0 of a session with the same number from another day, and
+    re-applying it rolled the databases back to that older state. Measured on a
+    real profile: twelve spaced-repetition items became two, because
+    `.update-state/session-002.json` held a snapshot from the night before with
+    one item in it.
+
+    A T0 belongs to one run of one session on one day. The date makes the key
+    say so, and an old file simply stops being found.
+    """
+    stem = f"{session_id}@{day}" if day else session_id
+    return DATA_DIR / STATE_DIR_NAME / f"{stem}.json"
 
 
-def save_state(session_id: str, databases: dict):
+def save_state(session_id: str, databases: dict, day: str = ""):
     """Record the pre-session (T0) snapshot for a session_id (first apply)."""
-    p = state_path(session_id)
+    p = state_path(session_id, day)
     p.parent.mkdir(parents=True, exist_ok=True)
     tmp = p.with_suffix(".tmp")
     with open(tmp, "w", encoding="utf-8") as f:
@@ -180,9 +194,13 @@ def save_state(session_id: str, databases: dict):
     os.replace(str(tmp), str(p))
 
 
-def load_state(session_id: str):
-    """Return the T0 snapshot for a session_id, or None if never applied."""
-    p = state_path(session_id)
+def load_state(session_id: str, day: str = ""):
+    """Return the T0 snapshot for this session ON THIS DAY, or None.
+
+    Deliberately does NOT fall back to the undated file: that fallback is the
+    bug. A snapshot from another day is not this session's past.
+    """
+    p = state_path(session_id, day)
     if not p.exists():
         return None
     with open(p, "r", encoding="utf-8") as f:
@@ -446,6 +464,116 @@ def update_mastery_db(mastery: dict, session: dict, progress: dict, is_new_sessi
     mastery.setdefault("metadata", {})["last_updated"] = today
 
 
+def heal_patterns(mistakes: dict, session: dict, today: str):
+    """An error the learner has fixed has to stop being an error.
+
+    `mistakes-db.error_patterns[].mastery_level` is what the tutor reads to
+    decide what to drill (read-db ranks by it, and the Lesson fills the space
+    the SM-2 queue leaves with it). Nothing in the whole system ever raised it.
+    Measured over a simulated fortnight: three words answered correctly three
+    times each, intervals growing 1 → 6 → 16 exactly as SM-2 should — and all
+    three still sitting at `mastery_level: 0`, still offered as this learner's
+    weakest points on day twelve. With an empty queue and a lesson of six, the
+    tutor drills those same three words again. And again. Which, from the other
+    side of the screen, is a tutor asking the same questions for ever.
+
+    The SM-2 item and the pattern now share an id, so this is a plain join.
+    """
+    patterns = mistakes.setdefault("error_patterns", {})
+    for review in session.get("review_results", []):
+        pat = patterns.get(review.get("item_id"))
+        if not isinstance(pat, dict):
+            continue
+        try:
+            quality = int(review.get("quality", 0) or 0)
+        except (TypeError, ValueError):
+            quality = 0
+        if quality >= 3:
+            pat["consecutive_correct"] = pat.get("consecutive_correct", 0) + 1
+            pat["consecutive_incorrect"] = 0
+            # One step per clean review, and no streak reset. At these
+            # intervals a second correct answer is already days after the
+            # first, so each one is real evidence; resetting the streak on
+            # every bump stretched "healed" out over months, and months is
+            # exactly how long the tutor would go on drilling it.
+            pat["mastery_level"] = min(5, (pat.get("mastery_level") or 0) + 1)
+        else:
+            pat["consecutive_incorrect"] = pat.get("consecutive_incorrect", 0) + 1
+            pat["consecutive_correct"] = 0
+            pat["mastery_level"] = max(0, (pat.get("mastery_level") or 0) - 1)
+        pat["last_reviewed"] = today
+
+
+MIN_TWIN_CHARS = 8
+
+
+def _form(text) -> str:
+    """The form of a correct answer with case, spacing and punctuation gone."""
+    return re.sub(r"[^a-z0-9]+", "", str(text or "").lower())
+
+
+def find_twin(items: dict, error: dict):
+    """The id of an existing error item for the SAME correct form, or None.
+
+    Pattern ids are `category_first-20-chars-of-the-correct-form`, so one sentence
+    gets a different id when the category drifts or when a capital differs from the
+    id the first time it was created. Measured on a five-day run: the same
+    "I speak English on Mondays" three times in one lesson, and 9 items due where 6
+    were seeded. Short forms ("an", "the") are not merged: they are shared by many
+    different exercises."""
+    want = _form(error.get("correct_answer"))
+    if len(want) < MIN_TWIN_CHARS:
+        return None
+    for iid, it in items.items():
+        if not isinstance(it, dict) or it.get("type") != "error_pattern":
+            continue
+        if _form(it.get("answer") or it.get("content")) == want:
+            return iid
+    return None
+
+_NATIVE_RE = re.compile(
+    r"[\u00e0\u00e8\u00f2\u00ed\u00f3\u00fa\u00ef\u00fc\u00e7]"
+    r"|\b(un|una|uns|unes|el|la|els|les|hi|ha|de|amb|per\u00f2|tinc|pomes?|taula|nens?|jugant|s\u00f3n)\b",
+    re.I)
+
+
+def _log_guard(note: str, head: str) -> None:
+    """Same shape as server/src/agent.ts's logGuard: one line per event, next to
+    the turn it belongs to, so the bench's existing guard count picks it up."""
+    try:
+        d = DATA_DIR / ".metrics"
+        d.mkdir(parents=True, exist_ok=True)
+        with open(d / "guards.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({"ts": int(datetime.now().timestamp() * 1000), "session": "update-db",
+                                "note": note[:160], "head": head[:1500]}, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def _language_check(error: dict) -> tuple[bool, str | None]:
+    """(keep it, guard note or None). Two shapes measured live (2026-09-22, test-en):
+
+    1. Nothing in {Target} anywhere \u2014 content/answer/learner_wrote all {Native}
+       (`correct_answer: "Un"`, `your_answer: "Tinc un poma."`): the item teaches
+       nothing about {Target}. Dropped, not filed.
+    2. `correct_answer` in {Native} while `your_answer` is in {Target}
+       (learner correctly wrote "There are children playing on the swings.",
+       `correct_answer: "Hi ha nens jugant a les balduï\u00f1es."` \u2014 not even a
+       real word): a {Native} "correction" the tutor invented cannot be checked here
+       (no dictionary), so it is kept but flagged \u2014 Albert reads guards.jsonl for these.
+    """
+    content = str(error.get("correct_answer") or error.get("content") or "")
+    answer = str(error.get("correct_answer") or "")
+    wrote = str(error.get("your_answer") or "")
+    native_answer = bool(_NATIVE_RE.search(answer))
+    native_wrote = bool(_NATIVE_RE.search(wrote))
+    if native_answer and (native_wrote or not wrote):
+        return False, f"error_pattern dropped, no {{Target}} anywhere: correct_answer={answer!r} your_answer={wrote!r}"
+    if native_answer and not native_wrote:
+        return True, f"error_pattern correct_answer in {{Native}} while your_answer is in {{Target}} (unverified translation): correct_answer={answer!r} your_answer={wrote!r}"
+    return True, None
+
+
 def update_spaced_repetition(sr: dict, session: dict, is_new_session: bool = True):
     today = session["date"]
     items = sr.setdefault("items", {})
@@ -523,13 +651,31 @@ def update_spaced_repetition(sr: dict, session: dict, is_new_session: bool = Tru
                     items[item_id][opt] = vocab[opt]
 
     for error in session.get("errors", []):
+        keep, guard_note = _language_check(error)
+        if guard_note:
+            _log_guard(guard_note, json.dumps(error, ensure_ascii=False))
+        if not keep:
+            continue
         item_id = error["pattern_id"]
+        if item_id not in items and find_twin(items, error) is not None:
+            # The same sentence to learn under another id (the tutor called the
+            # slip "grammar" this time and "capitalization" last time, or the id
+            # differs by a capital). A second item would make the lesson ask it
+            # twice in a row and count it once.
+            continue
         if item_id not in items:
             items[item_id] = {
                 "id": item_id,
+                # `content` is what the item IS ABOUT, and it has to be the
+                # correct form. It used to be `your_answer`, so the item a
+                # learner had to study was their own mistake: content "ben",
+                # and a tutor asking what the English for "ben" is. The slip
+                # is kept separately, as context for building the exercise —
+                # never as the exercise.
                 "type": "error_pattern",
-                "content": error.get("your_answer", ""),
+                "content": error.get("correct_answer", "") or error.get("your_answer", ""),
                 "answer": error.get("correct_answer", ""),
+                "learner_wrote": error.get("your_answer", ""),
                 "category": error.get("category", ""),
                 "difficulty": "",
                 "created_date": today,
@@ -694,7 +840,10 @@ def main():
             sys.exit(2)
 
     sid = session["session_id"]
-    reapply = load_state(sid)
+    # The day the session belongs to, not the day this script happens to run:
+    # a sweeper finalising last night's session must find last night's T0.
+    day = str(session.get("date") or "")
+    reapply = load_state(sid, day)
 
     if reapply is not None:
         # Same session_id already applied before (accumulating). Restore the
@@ -703,7 +852,7 @@ def main():
     else:
         # First application of this session_id: snapshot T0 so a later re-apply
         # can restore it. Never computed against a re-apply state.
-        save_state(sid, originals)
+        save_state(sid, originals, day)
 
     # Work on deep copies so a mid-run exception leaves disk untouched.
     data = {k: copy.deepcopy(v) for k, v in originals.items()}
@@ -718,6 +867,7 @@ def main():
         update_mastery_db(data["mastery"], session, data["progress"], is_new,
                           decay_cfg=decay_config(data["profile"].get("preferences")))
         update_spaced_repetition(data["sr"], session, is_new)
+        heal_patterns(data["mistakes"], session, session["date"])
         streak = data["profile"].get("current_streak_days", 0)
         update_session_log(data["log"], session, streak)
     except Exception as e:

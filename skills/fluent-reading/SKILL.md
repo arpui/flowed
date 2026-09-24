@@ -36,6 +36,16 @@ python3 hooks/read-db.py
 
 Need: `learner-profile` (level, target language, interests), `mastery-db.skills_mastery.reading`.
 
+**The text is in `target_language`, never in `native_language` — read both fields
+from the preloaded state before writing a single word.** A Catalan-native
+learner of English reads an ENGLISH text with ENGLISH questions; nothing in this
+session is in Catalan except, if at all, a gloss the learner explicitly asks
+for. (Seen live, 2026-09-22: `target_language: "English"`, `native_language:
+"Catalan"`, and the tutor opened with "# 👀 Catalan Reading Practice" and wrote
+the whole passage in Catalan — the reverse of every field it had just read. If
+you notice you are about to write a sentence in the learner's native language
+for the main text or a question, stop and check `target_language` again.)
+
 ### 2. Opening
 
 ```markdown
@@ -177,6 +187,16 @@ Type "yes" to add, "no" to skip.
 
 If yes, stage each word for `new_vocabulary[]` in the end-of-session DB update.
 
+**Never skip straight to the summary without showing this table first.**
+(Measured live, 2026-09-22, test-en, A0 profile: a 150-word text, 80% accuracy
+— meaning real unfamiliar words were in play — went straight from the last
+question's feedback to "New Words Added: 0", no table, no yes/no asked. At
+A0 a text of that length is not free of new words; the step was skipped, not
+genuinely empty.) The table can legitimately have zero rows for an advanced
+learner who already knows the text's whole vocabulary — but for anyone below
+B1, assume there ARE unfamiliar words and look for them before concluding
+there are none.
+
 ### 8. Session summary
 
 ```markdown
@@ -204,7 +224,7 @@ If yes, stage each word for `new_vocabulary[]` in the end-of-session DB update.
 ### 🚀 Keep going?
 {one concrete next step, e.g. "More [weakest question type] practice would help."}
 
-Use the buttons at the top (🎲 🔁 📚 📝 🗣️ 📖) to continue, or ↺ for a brand-new session. What shall we do next?
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.

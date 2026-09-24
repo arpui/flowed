@@ -3,7 +3,7 @@ description: Main adaptive learning session (mixed skills, adapts difficulty)
 agent: tutor
 ---
 Execute /fluent-learn now:
-1. Load the `fluent-learn` skill via the skill tool and follow it EXACTLY.
+1. The `fluent-learn` instructions are already in your system prompt. Follow them EXACTLY. Do NOT call the skill tool for them — the server loads them for you, on every turn, whether this is the first command of the session or the fifth.
 2. Current learner state (preloaded by read-db.py):
 !`python3 hooks/read-db.py`
 3. If any database is missing, route the learner to /fluent-setup and stop.

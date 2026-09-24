@@ -22,6 +22,23 @@ const inputEl = $("#input");
 const sendBtn = $("#send");
 const expandBtn = $("#expand");
 const statusEl = $("#status");
+const skillDotEl = $("#skill-dot");
+
+// header is `position: fixed` (2026-09-22, Albert: on some mobile browsers
+// `sticky` let the wrapped nav row of buttons scroll away while only the
+// brand/status line stayed put) — so it no longer reserves its own space in
+// the layout. Keep --header-h in sync with its REAL height (it changes: the
+// pace pill and per-day badges show/hide, and the nav wraps to two lines on
+// narrow screens) so main's top padding always clears it exactly.
+(() => {
+  const headerEl = document.querySelector("header");
+  if (!headerEl || typeof ResizeObserver === "undefined") return;
+  const sync = () => {
+    document.documentElement.style.setProperty("--header-h", `${headerEl.offsetHeight}px`);
+  };
+  new ResizeObserver(sync).observe(headerEl);
+  sync();
+})();
 
 const enc = encodeURIComponent;
 
@@ -243,8 +260,16 @@ function paintSpeakers(el) {
 // parses (```fluent:review_results ... ```). It is data, not conversation:
 // strip it before rendering so the learner never sees it.
 const MACHINE_BLOCK_RE = /```fluent:[a-z_]+[\s\S]*?```/g;
+// The tutor also prints the internal id of a review item ("**Item ID:**
+// agreement_she_goes_to_school") because it sees the queue as JSON. The
+// learner has no use for it and it reads as a bug. Whatever the model prints,
+// the line does not reach the screen; the stored text keeps it.
+const INTERNAL_ID_LINE_RE = /^[ \t]*(?:\*\*)?Item ID:?(?:\*\*)?[^\n]*\n?/gim;
 function stripMachineBlocks(text) {
-  return String(text || "").replace(MACHINE_BLOCK_RE, "").trimEnd();
+  return String(text || "")
+    .replace(MACHINE_BLOCK_RE, "")
+    .replace(INTERNAL_ID_LINE_RE, "")
+    .trimEnd();
 }
 
 // The learner has buttons, not a command line, so a tutor sentence like
@@ -260,6 +285,7 @@ const BUTTON_NAMES = {
   "fluent-speaking": "🗣️ Speaking",
   "fluent-reading": "📖 Reading",
   "fluent-progress": "📊 Progress",
+  "fluent-checkpoint": "🧪 Level test",
   "fluent-end": "🏁 End",
   "fluent-setup": "l'administrador",
   "fluent-use": "l'administrador",
@@ -278,7 +304,28 @@ function renderTutorText(el, text) {
   el.innerHTML = md(clean);
   paintFeedback(el);
   paintExerciseBlocks(el, clean);
+  paintModeLine(el);
   paintSpeakers(el);
+}
+
+// 2026-09-22, Albert: at a glance, "Write the complete sentence" and "Type
+// the missing word" read the same — both just plain text next to a blanked
+// ("___") sentence, so a quick skim misses which one is being asked for and
+// he answers with only the missing word when the whole sentence was wanted.
+// These two lines are always rendered bold by the tutor (fluent-feedback-
+// formatter's own rule — see FULL_SENTENCE_RE above), so marked() turns them
+// into <strong> — find that node by its exact text and give it its own
+// background instead of relying on bold alone to be noticed.
+const MODE_LINE_FULL_RE = /^type your answer \(the complete sentence\):?$/i;
+const MODE_LINE_WORD_RE = /^type your answer \(just the missing word\):?$/i;
+function paintModeLine(el) {
+  if (!el || !el.querySelectorAll) return;
+  for (const s of el.querySelectorAll("strong")) {
+    s.classList.remove("mode-flag", "mode-flag-full", "mode-flag-word");
+    const t = (s.textContent || "").trim();
+    if (MODE_LINE_FULL_RE.test(t)) s.classList.add("mode-flag", "mode-flag-full");
+    else if (MODE_LINE_WORD_RE.test(t)) s.classList.add("mode-flag", "mode-flag-word");
+  }
 }
 
 // Exercise background at paragraph granularity: pure questions tint the
@@ -332,11 +379,41 @@ function errText(e) {
 // actually recorded — the model is not asked to keep score.
 const paceEl = $("#pace");
 
+// 📖 Reading is hard to follow below A1 (fluent-reading's own skill file says
+// so: "skip below A1 mastery 3") — hidden until the learner is past A1, so
+// nobody on a fresh A0 profile finds it and gets a text they can't read
+// (2026-09-22, Albert). `p.lesson.level` already carries the learner's
+// current CEFR level (lessonState() reads it from learner-profile.json), so
+// no new server field is needed. Level unknown → stays hidden (fails safe).
+const CEFR_ORDER = ["A0", "A1", "A2", "B1", "B2", "C1", "C2"];
+function readingUnlocked(level) {
+  const i = CEFR_ORDER.indexOf(String(level || "").toUpperCase());
+  return i > CEFR_ORDER.indexOf("A1");
+}
+
+// The button ring is a client-side memory of the last mode button clicked —
+// it has no idea the server is already in a mode after a reload or a resumed
+// session (2026-09-22, Albert: lost the Go ring after nothing but a reload).
+// session-progress now ships the server's own `mode`; sync the ring to it
+// whenever it disagrees, instead of only setting it from local clicks.
+function syncModeFromServer(mode) {
+  if (typeof mode === "undefined") return;
+  const m = mode || null;
+  if (m === currentMode) return;
+  currentMode = m;
+  updateActiveModeButton();
+}
+
 function renderPace(p) {
+  syncModeFromServer(p && p.mode);
   if (!paceEl) return;
   if (!p || typeof p.graded !== "number") {
     paceEl.hidden = true;
     renderLessonBadge(null);
+    renderSkillBadge(speakingBtn, speakingWasPending, (v) => (speakingWasPending = v), null, "");
+    renderSkillBadge(readingBtn, readingWasPending, (v) => (readingWasPending = v), null, "");
+    renderSkillBadge(writingBtn, writingWasPending, (v) => (writingWasPending = v), null, "");
+    if (readingBtn) readingBtn.hidden = true;
     return;
   }
   // The day's effort, with a face that climbs to the goal. No target line and
@@ -352,6 +429,13 @@ function renderPace(p) {
     : `${p.graded} exercicis avui`;
   paceEl.hidden = false;
   renderLessonBadge(p.lesson);
+  renderSkillBadge(speakingBtn, speakingWasPending, (v) => (speakingWasPending = v),
+    p.speaking, "Speaking d'avui");
+  renderSkillBadge(readingBtn, readingWasPending, (v) => (readingWasPending = v),
+    p.reading, "Reading d'avui");
+  renderSkillBadge(writingBtn, writingWasPending, (v) => (writingWasPending = v),
+    p.writing, "Writing d'avui");
+  if (readingBtn) readingBtn.hidden = !readingUnlocked(p.lesson && p.lesson.level);
 }
 
 // The badge on 🎓 Lesson. Amber while there is work, a green tick for a moment
@@ -399,7 +483,121 @@ function renderLessonBadge(lesson) {
   }
 }
 
+// The same "1 pending today" reminder on 🗣️ Speaking and 📖 Reading — same
+// principle as 🎓 Review (a daily badge, cleared only by using that button,
+// never by an equivalent exercise surfacing on its own in Mix), but with
+// none of Review's own complexity: always a fixed target of 1, so this is a
+// small generic version reused for both buttons rather than duplicating
+// `renderLessonBadge`'s richer (due/slot) logic. Never a gate — Mix keeps
+// choosing whatever it likes; this only says "you haven't done one of these
+// today" (2026-09-22, Albert).
+const speakingBtn = document.querySelector('#commands button[data-cmd="fluent-speaking"]');
+const readingBtn = document.querySelector('#commands button[data-cmd="fluent-reading"]');
+// 📝 Writing joined them on 2026-09-23 (Albert): the one practice where she writes her
+// own words, owed once a day at every level — like Speaking, unlike Reading (> A1).
+const writingBtn = document.querySelector('#commands button[data-cmd="fluent-writing"]');
+let speakingWasPending = false;
+let readingWasPending = false;
+let writingWasPending = false;
+
+function renderSkillBadge(btn, wasPending, setWasPending, view, label) {
+  if (!btn) return;
+  const badge = btn.querySelector(".badge");
+  if (!badge) return;
+  if (!view || !view.total) {
+    btn.classList.remove("pending", "done");
+    badge.hidden = true;
+    return;
+  }
+  const pending = view.pending || 0;
+  if (pending > 0) {
+    setWasPending(true);
+    badge.textContent = String(pending);
+    badge.hidden = false;
+    btn.classList.add("pending");
+    btn.classList.remove("done");
+    btn.title = `${label}: encara no fet`;
+    return;
+  }
+  btn.classList.remove("pending");
+  btn.title = `${label} fet ✓`;
+  if (wasPending) {
+    setWasPending(false);
+    badge.textContent = "✓";
+    badge.hidden = false;
+    btn.classList.add("done");
+    setTimeout(() => {
+      badge.hidden = true;
+      btn.classList.remove("done");
+    }, 4000);
+  } else {
+    badge.hidden = true;
+    btn.classList.remove("done");
+  }
+}
+
+// Small bar in the header: opens the panel. Hidden when the profile's level
+// has no curriculum.
+const pathMiniEl = $("#path-mini");
+let pathAt = 0;
+
+const courseOverlay = $("#course-overlay");
+const courseBody = $("#course-body");
+let courseNoticeShown = false;
+
+function showCourseNotice(n) {
+  if (!courseOverlay || courseNoticeShown || !n) return;
+  const html = renderCourseNotice(n);
+  if (!html) return;
+  courseNoticeShown = true;
+  courseBody.innerHTML = html;
+  courseOverlay.hidden = false;
+}
+
+if (courseOverlay) {
+  $("#course-ok").addEventListener("click", async () => {
+    courseOverlay.hidden = true;
+    try { await api("/fluent/path/seen", { method: "POST" }); } catch { /* it will be shown again: harmless */ }
+    courseNoticeShown = false;
+  });
+}
+
+const checkpointBtn = document.querySelector('#commands button[data-cmd="fluent-checkpoint"]');
+
+function renderPathMiniBar(p) {
+  if (p && p.notice) showCourseNotice(p.notice);
+  if (checkpointBtn) {
+    const offer = pathCheckpointOffer(p);
+    checkpointBtn.hidden = !offer;
+    if (offer) checkpointBtn.title = offer.label;
+  }
+  if (!pathMiniEl) return;
+  const m = renderPathMini(p);
+  if (!m) {
+    pathMiniEl.hidden = true;
+    return;
+  }
+  pathMiniEl.innerHTML = m.html;
+  pathMiniEl.title = m.title;
+  pathMiniEl.hidden = false;
+}
+
+async function refreshPath(force = false) {
+  if (!pathMiniEl) return;
+  if (!force && Date.now() - pathAt < 1500) return;
+  pathAt = Date.now();
+  try {
+    const res = await api("/fluent/path");
+    renderPathMiniBar(res && res.ok ? res.data : null);
+  } catch {
+    /* the bar is never worth an error */
+  }
+}
+
+if (pathMiniEl) pathMiniEl.addEventListener("click", openProgress);
+
 async function refreshPace() {
+  refreshPath();
   if (!sessionId) {
     renderPace(null);
     return;
@@ -533,7 +731,7 @@ function userBubbleHTML(text) {
   const m = /^Execute\s+\/(fluent-[a-z0-9-]+)/im.exec(text || "");
   if (m) {
     const key = m[1].slice("fluent-".length);
-    const icons = { learn: "🎲", review: "🔄", vocab: "📖", writing: "📝", speaking: "🗣️", reading: "👀", progress: "📊", setup: "⚙️" };
+    const icons = { learn: "🎲", checkpoint: "🧪", review: "🔄", vocab: "📖", writing: "📝", speaking: "🗣️", reading: "👀", progress: "📊", setup: "⚙️" };
     // Learner view: icon only (the command text adds nothing for the learner).
     // Debug mode reveals which command was started.
     const label = DEBUG ? ` /fluent-${esc(key)}` : "";
@@ -713,10 +911,38 @@ function showError(e) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
 }
 
+// TurnOutcome.debug (agent.ts) — server-only, never written by the model.
+// Green: skill loaded, context comfortable. Amber: context over 80% of the
+// model's window (getting close to the point where llama.cpp starts
+// trimming from the front, where the rules live). Red: the skill is not
+// loaded for this session right now — grading and exercise rules are gone
+// and the tutor is improvising, however normal its reply reads. Measured
+// live 2026-09-23: exactly this, 20+ turns, nothing in the chat showed it.
+function updateSkillStatus(debug) {
+  if (!skillDotEl) return;
+  if (!debug) {
+    skillDotEl.hidden = true;
+    return;
+  }
+  skillDotEl.hidden = false;
+  skillDotEl.classList.remove("warn", "err");
+  const pct = debug.ctxRatio != null ? Math.round(debug.ctxRatio * 100) : null;
+  if (!debug.skillLoaded) {
+    skillDotEl.classList.add("err");
+    skillDotEl.title = "Skill no carregat en aquesta sessió — el tutor no té el contracte de correcció ni les regles d'exercici. Prova de prémer un botó de pràctica.";
+  } else if (pct != null && pct >= 80) {
+    skillDotEl.classList.add("warn");
+    skillDotEl.title = `Skill carregat (${debug.skillName || "?"}) — context al ${pct}% del límit (${debug.promptTokens}/${debug.ctxLimit} tok).`;
+  } else {
+    skillDotEl.title = `Skill carregat (${debug.skillName || "?"})${pct != null ? ` — context al ${pct}%` : ""}.`;
+  }
+}
+
 // The blocking POST returns { info: AssistantMessage, parts: Part[] }. Render it unless
 // SSE already did; if the shape is unexpected, fall back to a full re-render.
 async function appendAssistant(res) {
   lastActivity = Date.now();
+  updateSkillStatus(res && res.debug);
   const info = res && res.info;
   if (!info || !info.id) {
     await refresh().catch(() => {});
@@ -810,9 +1036,24 @@ async function send(text) {
   setBusy(false);
 }
 
+// "Where am I" marker on the nav — only the modes that stay open-ended long
+// enough for it to matter (Go, Review, Reading, Speaking; 2026-09-22, Albert:
+// "només dels tres modes, quatre sumant reading" — Writing/Vocab are hidden
+// anyway and Stats/End are one-shot, not a place you stay). A plain ring, not
+// a color, so it never collides with the pending (amber) / done (green)
+// meaning those three buttons already carry.
+const TRACKED_MODE_CMDS = ["fluent-learn", "fluent-review", "fluent-reading", "fluent-speaking", "fluent-writing"];
+function updateActiveModeButton() {
+  for (const cmd of TRACKED_MODE_CMDS) {
+    const btn = document.querySelector(`#commands button[data-cmd="${cmd}"]`);
+    if (btn) btn.classList.toggle("current-mode", cmd === currentMode);
+  }
+}
+
 async function runCommand(cmd) {
   if (busy) return;
   currentMode = cmd;
+  updateActiveModeButton();
   inputEl.placeholder = MODE_PLACEHOLDERS[cmd] || DEFAULT_PLACEHOLDER;
   setBusy(true);
   showThinkingTip();
@@ -854,9 +1095,10 @@ function showSetupNotice() {
   messagesEl.appendChild(el);
 }
 
-async function newSession() {
-  if (busy) return;
-  if (!confirm("Tancar aquesta sessió i en començar una de nova?")) return;
+async function newSession(opts) {
+  const skipConfirm = !!(opts && opts.skipConfirm);
+  if (busy && !skipConfirm) return;
+  if (!skipConfirm && !confirm("Tancar aquesta sessió i en començar una de nova?")) return;
   sessionId = null;
   localStorage.removeItem("fluent.session");
   messagesEl.innerHTML = "";
@@ -867,6 +1109,7 @@ async function newSession() {
   exerciseMsgId = null;
   exerciseCard.hidden = true;
   currentMode = null;
+  updateActiveModeButton();
   inputEl.placeholder = DEFAULT_PLACEHOLDER;
   await ensureSession();
   // The count is the DAY's, not the session's — a new session does not reset it.
@@ -876,6 +1119,28 @@ async function newSession() {
     if (cmd) runCommand(cmd);
     else showSetupNotice();
   }
+}
+
+// The server decided THIS session is no longer reliable (context had to be
+// trimmed to fit, or several answers in a row went ungraded — see
+// bounceReason in pacing.ts) and told us to bounce it: a short, plain notice
+// — never the raw reason code — then straight into a clean session, no
+// confirm() (there is nothing left worth keeping in this one).
+const BOUNCE_REASON_TEXT = {
+  "context-full": "Aquesta sessió ha crescut massa i el model ha començat a perdre el fil.",
+  "not-grading": "El model ha deixat de puntuar els exercicis.",
+};
+
+async function handleSessionBounce(reason) {
+  const el = document.createElement("div");
+  el.className = "msg assistant";
+  const why = BOUNCE_REASON_TEXT[reason] || "Aquesta sessió ha deixat de funcionar bé.";
+  el.innerHTML =
+    `<div class="bubble">⚠️ ${why} Començo una sessió nova automàticament.</div>`;
+  messagesEl.appendChild(el);
+  scrollIfNear(null);
+  await new Promise((r) => setTimeout(r, 1600));
+  await newSession({ skipConfirm: true });
 }
 
 function autosize() {
@@ -926,6 +1191,11 @@ function openSSE() {
 function handleEvent(d) {
   const t = d && d.type;
   const p = (d && d.properties) || {};
+  if (t === "session.bounce") {
+    if (!p.sessionID || p.sessionID !== sessionId) return;
+    handleSessionBounce(p.reason);
+    return;
+  }
   if (t === "message.updated") {
     const info = p.info;
     if (!info || info.sessionID !== sessionId) return;
@@ -963,6 +1233,13 @@ function handleEvent(d) {
     if (p.sessionID === sessionId) renderPace(p);
   } else if (t === "session.idle") {
     if (p.sessionID === sessionId && busy) setBusy(false);
+    // A course can close on THIS turn (the level test's last answer). Without
+    // this, the "course finished / welcome to A2" notice only showed up once
+    // the learner happened to open Progress by hand — nothing told them a
+    // turn had changed anything, so pressing Lesson right after (which is
+    // already the new course, `find_curriculum` skips the certified one) felt
+    // like a coin flip instead of a clear "you're done, here's what's next".
+    if (p.sessionID === sessionId) refreshPath(true);
   } else if (t === "session.error") {
     if (p.sessionID === sessionId) {
       const msg = p.error && p.error.message ? p.error.message : String(p.error || "error de sessió");
@@ -1078,6 +1355,122 @@ function prettyId(id) {
   return String(id || "").replace(/_/g, " ");
 }
 
+// ---- the learner's path (bar towards the level) ------------------------------
+// Data from /api/fluent/path (hooks/curriculum.py json). The learner sees a
+// plain view: bar, what is being worked on, states in words. What could
+// discourage (stalled, forgotten, per-competence accuracy) sits in a folded
+// "Detall (docent)" block. Pure functions: no DOM, no fetch.
+function pathBarPct(it) {
+  if (!it) return 0;
+  // Server-computed continuous score (hooks/curriculum.py display_score):
+  // grows with real same-day effort but stays capped below full until
+  // practice is spread over enough days -- falls back to the old n/need
+  // ratio only for a payload that predates this field.
+  if (typeof it.pct === "number") return Math.max(0, Math.min(100, Math.round(it.pct)));
+  if (it.state === "consolidated" || it.state === "mastered") return 100;
+  if (it.state === "unseen" || !(it.need > 0)) return 0;
+  return Math.max(0, Math.min(99, Math.round((100 * (Number(it.n) || 0)) / it.need)));
+}
+
+function pathCheckpointText(p) {
+  if (p.checkpoint === "promoted" && p.promotion) {
+    const c = p.promotion.carried ? ` · ${p.promotion.carried} competències per reforçar` : "";
+    return `🎉 Nivell ${esc(p.promotion.achieved)} assolit el ${esc(p.promotion.date)}${c}`;
+  }
+  if (p.checkpoint === "ready") return `✅ Ja pots fer la prova de nivell ${esc(p.level)}`;
+  const n = Number(p.checkpoint_pending) || 0;
+  return n > 0
+    ? `Prova de nivell: encara hi ha ${n} competències bàsiques per començar a practicar`
+    : "Prova de nivell: falta consolidar el que has començat";
+}
+
+// The course is over: the level is certified and a new course starts. Said once.
+function renderCourseNotice(n) {
+  if (!n || n.type !== "course_completed") return "";
+  const pct = typeof n.pct === "number" ? ` Resultat de la prova: <strong>${esc(Math.round(n.pct))}%</strong>.` : "";
+  const next = n.next_level
+    ? `<p>Comença un curs nou: <strong>${esc(n.level)} → ${esc(n.next_level)}</strong>. La barra torna a zero i no es pot tornar enrere. El que has après es manté i el repàs d'errades continua.</p>`
+    : "<p>Has arribat al teu objectiu.</p>";
+  const weak = Array.isArray(n.weak) && n.weak.length
+    ? `<p class="path-line">Per reforçar: ${n.weak.map((w) => esc(prettyId(w))).join(" · ")}</p>` : "";
+  return `<h2 id="course-title">🎉 Has assolit el nivell ${esc(n.level)}</h2><p>${pct.trim()}</p>${next}${weak}`;
+}
+
+// The level test is offered when the server says the learner is ready (or one is running).
+function pathCheckpointOffer(p) {
+  if (!p || !p.available || p.checkpoint === "promoted") return null;
+  const run = p.checkpoint_run || {};
+  if (run.active) return { label: `Continua la prova de nivell (pregunta ${run.i}/${run.total})` };
+  if (p.checkpoint === "ready" && !(p.checkpoint_wait_until && p.checkpoint_wait_until > (p.as_of || ""))) {
+    return { label: `Fes la prova de nivell ${p.level}` };
+  }
+  return null;
+}
+
+function renderPathMini(p) {
+  if (!p || !p.available) return null;
+  const pct = Math.max(0, Math.min(100, Number(p.pct) || 0));
+  return {
+    html: `<span class="path-mini-bar"><i style="width:${pct}%"></i></span>${esc(Math.round(pct))}%`,
+    title: `Camí cap al ${p.level}: ${Math.round(pct)}% · ${p.core_done}/${p.core_total} competències assolides`,
+  };
+}
+
+function renderPathAdmin(a) {
+  if (!a) return "";
+  const eta = typeof a.eta_days === "number" ? `~${a.eta_days} dies al ritme actual` : "sense estimació encara";
+  const alerts = Array.isArray(a.alerts) && a.alerts.length
+    ? `<ul class="path-alerts">${a.alerts.map((x) => `<li>⚠️ ${esc(x)}</li>`).join("")}</ul>`
+    : '<p class="p-empty">Cap alerta (res estancat ni oblidat).</p>';
+  const hist = Array.isArray(a.history) && a.history.length
+    ? a.history.map((h) => `<div class="week-row"><span>${shortDate(h.day)}</span><span class="wm">${esc(h.pct)}%</span></div>`).join("")
+    : '<p class="p-empty">Encara no hi ha evolució.</p>';
+  const rows = (Array.isArray(a.rows) ? a.rows : []).map((r) =>
+    `<tr><td>${esc(r.name)}</td><td>${esc(r.state)}</td><td>${esc(r.n)}/${esc(r.need)}</td>` +
+    `<td>${r.acc_all == null ? "—" : esc(r.acc_all) + "%"}</td><td>${r.acc_recent == null ? "—" : esc(r.acc_recent) + "%"}</td>` +
+    `<td>${shortDate(r.last_day)}</td><td>${esc(r.depth)}·${esc(r.weight)}</td>` +
+    `<td>${r.bank_total == null ? "—" : `${r.bank_unseen <= (a.bank_low_at ?? 3) ? "⚠️ " : ""}${esc(r.bank_unseen)}/${esc(r.bank_total)}`}</td></tr>`).join("");
+  const cps = Array.isArray(a.checkpoints) && a.checkpoints.length
+    ? a.checkpoints.map((c) => `<div class="week-row"><span>${esc(c.date || "—")}</span><span class="wm">${esc(c.pct ?? "—")}% · ${esc(c.result || "—")}</span></div>`).join("")
+    : '<p class="p-empty">Cap prova de nivell feta.</p>';
+  return `<details class="path-admin"><summary>Detall (docent)</summary>
+    <p class="path-line">Estimació per arribar al nivell: <strong>${esc(eta)}</strong></p>
+    ${alerts}
+    <h4>Evolució (setmanal)</h4>${hist}
+    <h4>Per competència</h4>
+    <div class="path-scroll"><table class="path-table"><thead><tr><th>Competència</th><th>Estat</th><th>Resp.</th><th>Encert</th><th>Recent</th><th>Últim</th><th>Prof.·pes</th><th title="Exercicis del banc que encara no ha vist / total">Banc nous</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <h4>Proves de nivell</h4>${cps}
+  </details>`;
+}
+
+function renderPath(p) {
+  if (!p || !p.available) return "";
+  const pct = Math.max(0, Math.min(100, Number(p.pct) || 0));
+  const names = (xs) => xs.map((x) => esc(x.name)).join(" · ");
+  const now = Array.isArray(p.now) && p.now.length
+    ? `<p class="path-line">🎯 Ara treballes: <strong>${names(p.now)}</strong></p>` : "";
+  const review = Array.isArray(p.review) && p.review.length
+    ? `<p class="path-line">🔁 Per repassar: ${names(p.review)}</p>` : "";
+  const groups = (Array.isArray(p.sections) ? p.sections : []).map((s) => `
+    <div class="path-group"><h4>${esc(s.name)}</h4>${(s.items || []).map((it) => `
+      <div class="path-item st-${esc(it.state)}${it.resting ? " resting" : ""}${it.bank_low ? " bank-low" : ""}"${it.bank_low ? ' title="Queden pocs exercicis nous d\'aquest tema"' : ""}>
+        <span class="path-name">${esc(it.name)}${it.core ? "" : ' <span class="chip">extra</span>'}</span>
+        <span class="path-state">${esc(it.label)}${it.resting ? " · ⏸ avui" : ""}</span>
+        <div class="bar"><i style="width:${pathBarPct(it)}%"></i></div>
+      </div>`).join("")}</div>`).join("");
+  return `<section class="path">
+    <h3>El teu camí cap al ${esc(p.level)}</h3>
+    ${Array.isArray(p.certified) && p.certified.length ? `<p class="path-line path-levels">${p.certified.map((c) => `<span class="chip">${esc(c.level)} ✓</span>`).join(" ")} <span class="chip">${esc(p.level)} en curs</span></p>` : ""}
+    <div class="path-head"><div class="bar big"><i style="width:${pct}%"></i></div><strong>${esc(Math.round(pct))}%</strong></div>
+    <p class="path-line">Assolides <strong>${esc(p.core_done)}</strong> de ${esc(p.core_total)} · en curs ${esc(p.in_progress)} · per començar ${esc(p.unseen)}</p>
+    ${now}${review}
+    <p class="path-line path-check">${pathCheckpointText(p)}</p>
+    ${pathCheckpointOffer(p) ? `<p><button class="primary" data-start-checkpoint>🧪 ${esc(pathCheckpointOffer(p).label)}</button></p>` : ""}
+    ${groups}
+    ${renderPathAdmin(p.admin)}
+  </section>`;
+}
+
 function openProgress() {
   progressOverlay.hidden = false;
   loadProgress();
@@ -1090,11 +1483,16 @@ function closeProgress() {
 async function loadProgress() {
   progressBody.innerHTML = '<p class="p-loading">Carregant el progrés…</p>';
   try {
-    const res = await api("/fluent/progress");
+    const [res, path] = await Promise.all([
+      api("/fluent/progress"),
+      api("/fluent/path").catch(() => null), // the path is a bonus: never blocks the panel
+    ]);
     if (!res || !res.ok || !res.data) {
       throw new Error((res && res.error) || "resposta buida del servidor");
     }
-    progressBody.innerHTML = renderProgress(res.data);
+    const pathData = path && path.ok ? path.data : null;
+    renderPathMiniBar(pathData);
+    progressBody.innerHTML = renderPath(pathData) + renderProgress(res.data);
   } catch (e) {
     progressBody.innerHTML =
       `<div class="p-error">⚠️ No s'ha pogut carregar el progrés: ${esc(errText(e))}</div>`;
@@ -1201,6 +1599,12 @@ function renderProgress(d) {
     <section><h3>Fites i assoliments</h3>${fameHtml}</section>`;
 }
 
+progressBody.addEventListener("click", (e) => {
+  if (e.target.closest && e.target.closest("[data-start-checkpoint]")) {
+    closeProgress();
+    runCommand("fluent-checkpoint");
+  }
+});
 $("#progress-close").addEventListener("click", closeProgress);
 $("#progress-refresh").addEventListener("click", loadProgress);
 progressOverlay.addEventListener("click", (e) => {
@@ -1221,6 +1625,7 @@ const MODE_PLACEHOLDERS = {
   "fluent-writing": "Escriu el teu text en l'idioma meta…",
   "fluent-speaking": "Respon com en una conversa real…",
   "fluent-reading": "Respon segons el text…",
+  "fluent-checkpoint": "Escriu la teva resposta…",
 };
 let currentMode = null;
 
@@ -1372,6 +1777,35 @@ function lastTutorText() {
   return text ? { mid: last.mid, entry: last.entry, text } : null;
 }
 
+// The tutor is SUPPOSED to end a blanked ("___") exercise with one of these
+// two exact lines (fluent-feedback-formatter's blank-marker rule) — the
+// ONLY reliable ground truth. Measured live, 2026-09-22: "Type: writing"
+// does NOT reliably mean "write the whole sentence" — a writing-skill
+// item can still just blank a single word (e.g. "What time ___ it?" /
+// skill "Telling the time" wanted just "is"). So there is no safe
+// fallback to guess "full" from the Type line; guessing was producing
+// wrong hints. Absent the marker line, mode is unknown and no hint is
+// shown, rather than a wrong one.
+const FULL_SENTENCE_RE = /\*\*Type your answer \(the complete sentence\):?\*\*/i;
+const MISSING_WORD_RE = /\*\*Type your answer \(just the missing word\):?\*\*/i;
+
+function blankExerciseMode(text) {
+  if (FULL_SENTENCE_RE.test(text)) return "full";
+  if (MISSING_WORD_RE.test(text)) return "word";
+  return null;
+}
+
+// Measured live, 2026-09-22: a separate badge/color easily goes unseen.
+// Simplest reliable signal — put the hint as plain text right on the
+// "Skill:" line itself, since that line is always visible in the card.
+const SKILL_LINE_RE = /^(\s*\*{0,2}skill:?\*{0,2}\s*[^\n]*)$/im;
+function injectModeHint(text, mode) {
+  const hint =
+    mode === "full" ? " — ✍️ ESCRIU LA FRASE SENCERA!" : mode === "word" ? " — 🔤 NOMÉS LA PARAULA" : "";
+  if (!hint || !SKILL_LINE_RE.test(text)) return text;
+  return text.replace(SKILL_LINE_RE, (m) => m + hint);
+}
+
 function refreshExerciseCard(snap = true) {
   if (!EXERCISE_CARD_ENABLED) {
     exerciseCard.hidden = true;
@@ -1381,8 +1815,26 @@ function refreshExerciseCard(snap = true) {
   const split = last ? splitFeedbackQuestion(last.text) : { question: "" };
   if (split.question) {
     exerciseMsgId = last.mid;
-    exerciseBody.innerHTML = md(humanizeCommands(split.question));
+    const mode = blankExerciseMode(split.question);
+    exerciseBody.innerHTML = md(humanizeCommands(injectModeHint(split.question, mode)));
     exerciseCard.hidden = false;
+    const fullSentence = mode === "full";
+    const missingWord = mode === "word";
+    exerciseCard.classList.toggle("ex-full-sentence", fullSentence);
+    const badge = $("#ex-mode-badge");
+    const label = $("#ex-head-label");
+    if (badge) {
+      if (fullSentence) {
+        badge.textContent = "✍️ Escriu la frase sencera";
+        badge.hidden = false;
+      } else if (missingWord) {
+        badge.textContent = "🔤 Només la paraula";
+        badge.hidden = false;
+      } else {
+        badge.hidden = true;
+      }
+    }
+    if (label) label.textContent = fullSentence ? "✍️ Exercici" : "✏️ Exercici";
     if (ttsReady) {
       const head = $("#ex-speak");
       if (head) {
@@ -1471,7 +1923,7 @@ $("#new-session").addEventListener("click", newSession);
   if (brand) {
     let clicks = 0, timer = 0;
     brand.style.cursor = "pointer";
-    brand.title = "Fluent (triple-clic: mode debug)";
+    brand.title = "FlowEd (triple-clic: mode debug)";
     brand.addEventListener("click", () => {
       clicks++;
       clearTimeout(timer);

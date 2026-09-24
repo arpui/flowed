@@ -121,5 +121,36 @@ class CloseOldSessionsTest(unittest.TestCase):
         self.assertIn("1 dia", r.stderr + r.stdout)
 
 
+class IncludeTodayIsForTheRigOnly(unittest.TestCase):
+    """The day guard exists so a learner's live session is never closed.
+
+    The rig needs the opposite: after blanking a scratch profile, today's own
+    sessions must be closed too, or the 30-minute sweeper finalises one of them
+    and rebuilds mistakes-db from a stale transcript. Measured: a profile reset
+    at 13:04 came back holding `vocabulary_banana` — a wrong answer from a run
+    forty-five minutes earlier.
+    """
+
+    def _run(self, *args):
+        return subprocess.run(
+            [sys.executable, str(REPO_ROOT / "scripts" / "close-old-sessions.py"), *args],
+            capture_output=True, text=True, cwd=REPO_ROOT)
+
+    def test_zero_days_still_needs_the_flag(self):
+        p = self._run("--profile", "test-en", "--older-than", "0", "--dry-run")
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("1 dia com a mínim", p.stderr)
+
+    def test_a_real_profile_is_refused_even_with_it(self):
+        p = self._run("--profile", "naia-en", "--older-than", "0",
+                      "--include-today", "--dry-run")
+        self.assertNotEqual(p.returncode, 0)
+        self.assertIn("només en perfils de proves", p.stderr)
+
+    def test_and_it_never_combines_with_all(self):
+        p = self._run("--all", "--older-than", "0", "--include-today", "--dry-run")
+        self.assertNotEqual(p.returncode, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

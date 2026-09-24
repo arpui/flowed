@@ -102,6 +102,10 @@ class LessonPlanTest(unittest.TestCase):
     def setUp(self):
         self.agent = (REPO_ROOT / "server" / "src" / "agent.ts").read_text()
         self.daily = (REPO_ROOT / "server" / "src" / "daily.ts").read_text()
+        self.review_skill = (REPO_ROOT / "skills" / "fluent-review" / "SKILL.md").read_text()
+        # The note itself is Bun-free and lives in pacing.ts, so it can be run
+        # for real by server/test/lesson-note.test.ts instead of grepped.
+        self.pacing = (REPO_ROOT / "server" / "src" / "pacing.ts").read_text()
 
     def test_the_plan_is_persisted(self):
         self.assertIn("readPlan", self.daily)
@@ -115,8 +119,38 @@ class LessonPlanTest(unittest.TestCase):
         self.assertIn("if (existing) return existing", body)
 
     def test_coming_back_continues_instead_of_restarting(self):
-        self.assertIn("CONTINUATION, not a new lesson", self.agent)
-        self.assertIn("never repeat one", self.agent)
+        # The wording moved: the note used to ORDER the tutor to continue
+        # ("This is a CONTINUATION ... Present exercise N of M now, and nothing
+        # else"), which out-ranked the command's own instructions and, once the
+        # counter froze, repeated itself unchanged for twenty-five turns. It now
+        # states the progress and lets the skill run the exercise.
+        self.assertIn("Lesson progress: ${lesson.done} of ${lesson.total} done", self.pacing)
+        self.assertIn("continue it rather than starting it again", self.pacing)
+        self.assertIn("lessonNote(", self.agent)
+        self.assertIn("this.lessonPlan().covered", self.agent)
+
+    def test_the_note_never_dictates_which_exercise_to_present(self):
+        # The exact sentence that pinned the tutor in place. It must not come
+        # back in any form: the server says where the lesson is, never what to
+        # ask next.
+        emitted = "\n".join(
+            l
+            for l in (self.agent + "\n" + self.pacing).splitlines()
+            if not l.lstrip().startswith("//") and not l.lstrip().startswith("*")
+        )
+        self.assertNotIn("and nothing else", emitted)
+        self.assertNotIn("Present exercise", emitted)
+        self.assertNotIn("CONTINUATION, not a new lesson", emitted)
+
+    def test_a_stalled_lesson_is_reported(self):
+        # An unchanging note means the lesson is not advancing. On 2026-09-16
+        # that state lasted twenty-five turns and surfaced nowhere.
+        self.assertIn("noteStall", self.agent)
+        self.assertIn("has not changed in 4 turns", self.agent)
+
+    def test_a_repeated_exercise_is_reported(self):
+        self.assertIn("lastAsked", self.agent)
+        self.assertIn("same exercise twice in a row", self.agent)
 
     def test_progress_is_credited_against_the_plan(self):
         self.assertIn("plan.done < plan.total", self.agent)
@@ -129,8 +163,21 @@ class LessonPlanTest(unittest.TestCase):
         self.assertIn("Do NOT present another exercise", self.agent)
 
     def test_the_lesson_does_not_repeat_one_shape_for_ever(self):
-        # Every exercise came out as "Rewrite this sentence correctly."
-        self.assertIn("do not use the same shape", self.agent)
+        # Every exercise came out as "Rewrite this sentence correctly". Varying
+        # the shape is the skill's job now — one voice, one place — and the
+        # server contributes what the skill cannot know: what was already asked
+        # today and what was asked last turn.
+        self.assertIn("vary the exercise", self.review_skill.lower())
+        self.assertIn("Already answered correctly today", self.pacing)
+        self.assertIn("Your previous exercise was", self.pacing)
+
+    def test_the_counter_accepts_structured_evidence(self):
+        # Measured: four fluent_record_answer calls, no "Score: N/10" in the
+        # text, counter stuck at 0 of 12 while thirteen exercises were answered.
+        self.assertIn("recordsBefore", self.agent)
+        body = self.agent.split("const gradedNow =")[1][:260]
+        self.assertIn("countGradedInText", body)
+        self.assertIn("recordCount(sessionId) > recordsBefore", body)
 
     def test_free_play_has_no_hidden_ceiling(self):
         # Agreed design: the Lesson ends, the day does not. A session stop at 12

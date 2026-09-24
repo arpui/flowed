@@ -3,7 +3,7 @@ description: Reading comprehension (short text + questions)
 agent: tutor
 ---
 Execute /fluent-reading now:
-1. Load the `fluent-reading` skill via the skill tool and follow it EXACTLY.
+1. The `fluent-reading` instructions are already in your system prompt. Follow them EXACTLY. Do NOT call the skill tool for them — the server loads them for you, on every turn, whether this is the first command of the session or the fifth.
 2. Current learner state (preloaded by read-db.py):
 !`python3 hooks/read-db.py`
 3. Present the text, wait for the learner to read it, then ask questions ONE AT A TIME with immediate feedback (use the `fluent-feedback-formatter` skill).

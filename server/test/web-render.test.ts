@@ -57,6 +57,11 @@ const { quotedIn, SPEAKABLE_LABEL_RE } = new Function(
   `${quoteBlock}; return { quotedIn, SPEAKABLE_LABEL_RE };`
 )() as { quotedIn: (t: string) => string; SPEAKABLE_LABEL_RE: RegExp };
 
+const machineBlock = slice("const MACHINE_BLOCK_RE", "// The learner has buttons, not a command line");
+const { stripMachineBlocks } = new Function(
+  `${machineBlock}; return { stripMachineBlocks };`
+)() as { stripMachineBlocks: (t: string) => string };
+
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown) {
   if (cond) console.log(`  ok   ${name}`);
@@ -196,6 +201,94 @@ check("ordinary text is untouched",
   check("no quotes, nothing to speak", quotedIn("You could also say it differently") === "");
   check("an empty block does not throw", quotedIn("") === "");
 }
+
+// --- the learner never sees an internal id ---------------------------------------
+{
+  const CARD = `## Exercise 1: Spaced Review (High Priority)
+**Item ID:** agreement_she_goes_to_school
+**Sentence:** She go to school
+**Question:** What is the correct form of the sentence?`;
+  const out = stripMachineBlocks(CARD);
+  check("the bolded Item ID line is gone", !/Item ID/i.test(out) && !out.includes("agreement_she"), out);
+  check("the rest of the exercise stays",
+    out.includes("**Sentence:** She go to school") && out.includes("**Question:**"));
+  check("a plain 'Item ID: x' line goes too",
+    !/Item ID/.test(stripMachineBlocks("Exercise 1\nItem ID: agreement_she_goes_to_school\nSentence: She go")));
+  check("a sentence that merely mentions an item is left alone",
+    stripMachineBlocks("Every item ID is private.") === "Every item ID is private.");
+  check("the machine block is still stripped",
+    stripMachineBlocks('Bé!\n```fluent:review_results\n[{"item_id":"x"}]\n```') === "Bé!");
+}
+
+
+// --- the learner's path: plain view for her, details folded for the teacher ---------
+{
+  const pathBlock = slice("// ---- the learner's path", "function openProgress");
+  const { renderPath, renderPathMini, pathBarPct, renderCourseNotice, pathCheckpointOffer } = new Function(
+    `const esc = (x) => String(x ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+     const shortDate = (d) => String(d || "—");
+     const prettyId = (id) => String(id || "").replace(/_/g, " ");
+     ${pathBlock}; return { renderPath, renderPathMini, pathBarPct, renderCourseNotice, pathCheckpointOffer };`
+  )() as {
+    renderCourseNotice: (n: unknown) => string;
+    pathCheckpointOffer: (p: unknown) => { label: string } | null;
+    renderPath: (p: unknown) => string;
+    renderPathMini: (p: unknown) => { html: string; title: string } | null;
+    pathBarPct: (it: unknown) => number;
+  };
+  const P = {
+    available: true, language: "English", level: "A2", pct: 30.9, core_done: 0, core_total: 16,
+    in_progress: 11, unseen: 5, mastered: 0, promotion: null, checkpoint: "pending", checkpoint_pending: 6,
+    now: [{ id: "a", name: "Past simple" }], review: [{ id: "b", name: "Greetings <b>" }],
+    sections: [{ name: "Gramàtica", items: [
+      { id: "a", name: "Past simple", core: true, state: "practicing", label: "en pràctica", n: 5, need: 20, depth: "deep" },
+      { id: "c", name: "Numbers", core: true, state: "consolidated", label: "consolidada", n: 12, need: 12, depth: "normal" },
+      { id: "d", name: "Weather", core: false, state: "unseen", label: "per començar", n: 0, need: 12, depth: "light" },
+    ] }],
+    admin: { history: [{ day: "2026-09-14", pct: 5.2 }], eta_days: 31, alerts: ["Estancada: X"],
+      rows: [{ name: "Past simple", state: "en pràctica", n: 5, need: 20, acc_all: 80, acc_recent: null, last_day: "2026-09-15", weight: 3, depth: "deep" }],
+      checkpoints: [] },
+  };
+  const html = renderPath(P);
+  check("path: nothing when there is no curriculum", renderPath({ available: false }) === "" && renderPath(null) === "");
+  check("path: bar and % for the learner", html.includes("31%") && html.includes("width:30.9%"), html.slice(0, 200));
+  check("path: what she is working on and what to review", html.includes("Ara treballes") && html.includes("Per repassar"));
+  check("path: names are escaped", html.includes("Greetings &lt;b&gt;") && !html.includes("<b>"));
+  check("path: competences by section with state in words", html.includes("Gramàtica") && html.includes("en pràctica") && html.includes("consolidada"));
+  check("path: a non-core competence is marked extra", html.includes("extra"));
+  check("path: teacher block is folded and holds the alerts",
+    /<details class="path-admin">/.test(html) && html.indexOf("<details") < html.indexOf("Estancada"));
+  check("path: nothing discouraging outside the folded block",
+    !html.slice(0, html.indexOf("<details")).includes("Estancada") && !html.slice(0, html.indexOf("<details")).includes("Encert"));
+  check("path: promotion shows the level reached",
+    renderPath({ ...P, checkpoint: "promoted", promotion: { achieved: "A2", date: "2026-10-01", carried: 2 } }).includes("assolit el 2026-10-01"));
+  check("path: ready checkpoint", renderPath({ ...P, checkpoint: "ready" }).includes("Ja pots fer la prova"));
+  check("path: mini bar for the header", (renderPathMini(P) as { html: string }).html.includes("31%") && renderPathMini({ available: false }) === null);
+  check("path: item bars", pathBarPct(P.sections[0].items[0]) === 25 && pathBarPct(P.sections[0].items[1]) === 100 && pathBarPct(P.sections[0].items[2]) === 0);
+  check("path: a full n/need but not consolidated never shows 100%",
+    pathBarPct({ state: "practicing", n: 30, need: 20 }) === 99);
+  const notice = renderCourseNotice({ type: "course_completed", level: "A1", pct: 87.5, next_level: "A2", weak: ["there_is_are"] });
+  check("course: says the level reached, the result and the new course",
+    notice.includes("nivell A1") && notice.includes("88%") && notice.includes("A1 → A2") && notice.includes("no es pot tornar enrere"), notice);
+  check("course: the weak ones are named without ids", notice.includes("there is are"));
+  check("course: at the end of the target there is no new course",
+    renderCourseNotice({ type: "course_completed", level: "A2", pct: 95, next_level: null, weak: [] }).includes("objectiu"));
+  check("course: nothing for a notice of another kind", renderCourseNotice({ type: "x" }) === "" && renderCourseNotice(null) === "");
+  check("course: certified levels are shown in the path",
+    renderPath({ ...P, certified: [{ level: "A1", date: "2026-10-01" }] }).includes("A1 ✓"));
+  check("test: not offered while the level is not ready", pathCheckpointOffer(P) === null);
+  check("test: offered when ready", (pathCheckpointOffer({ ...P, checkpoint: "ready", as_of: "2026-09-25" }) || { label: "" }).label.includes("A2"));
+  check("test: not offered on the days she has to wait", pathCheckpointOffer({ ...P, checkpoint: "ready", as_of: "2026-09-25", checkpoint_wait_until: "2026-09-28" }) === null);
+  check("test: a running one is offered to continue, with its question number",
+    (pathCheckpointOffer({ ...P, checkpoint_run: { active: true, i: 4, total: 24 } }) || { label: "" }).label.includes("4/24"));
+  check("test: nothing once the level is certified", pathCheckpointOffer({ ...P, checkpoint: "promoted" }) === null);
+  check("test: the panel has the button when ready",
+    renderPath({ ...P, checkpoint: "ready", as_of: "2026-09-25" }).includes("data-start-checkpoint") && !renderPath(P).includes("data-start-checkpoint"));
+  check("path: the server serves it (/api/fluent/path -> curriculum.py json)",
+    /"\/api\/fluent\/path"/.test(fs.readFileSync(path.join(repo, "server", "src", "http.ts"), "utf8")) &&
+    fs.readFileSync(path.join(repo, "server", "src", "http.ts"), "utf8").includes('"json", "--auto"'));
+}
+
 
 console.log(failures === 0 ? "web-render: all checks passed" : `web-render: ${failures} failure(s)`);
 process.exit(failures === 0 ? 0 : 1);

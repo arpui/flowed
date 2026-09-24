@@ -174,7 +174,7 @@ Use this exact structure. Fill in values from the databases; compute percentages
 2. {skill not practiced recently}
 3. {due review count if > 0}
 
-Use the buttons at the top (🎲 🔁 📚 📝 🗣️ 📖) to act on this now, or ↺ for a brand-new session. What shall we do next?
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End) to act on this now.
 
 ---
 

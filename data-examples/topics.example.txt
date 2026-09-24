@@ -1,0 +1,35 @@
+# topics.txt — temes que vols que el tutor practiqui amb aquest alumne.
+#
+# On va:     ~/.fluent/<perfil>/topics.txt     (un fitxer per perfil)
+# Format:    una línia = un tema, text lliure, en anglès o en català. Les línies buides
+#            i les que comencen per # s'ignoren; les vinyetes (- * 1.) també.
+# Efecte:    s'aplica al torn següent, sense reiniciar. Esborra el fitxer i s'atura.
+# Prioritat: el que toca repassar (la cua) mana SEMPRE; els temes només omplen el que
+#            el tutor escull ell mateix: Mix, Writing, Speaking, Reading, Vocabulary i
+#            els exercicis de la Lliçó sense ítem ni patró assignat.
+#
+# Tipus de temes que funcionen (tots s'entenen sense més context):
+#
+# 1. Estructura gramatical
+present perfect (have / has + past participle)
+there is / there are
+comparatives and superlatives: taller than, the tallest
+first conditional: if it rains, I will stay at home
+used to + verb
+# 2. Estructura amb pistes de com volem que es faci servir
+past simple vs present perfect: yesterday / last week vs ever / already / yet
+countable and uncountable nouns with much / many / some / any
+# 3. Temàtic (el vocabulari i la situació vénen del tema)
+food and restaurants
+the house and the furniture
+health: at the doctor's, symptoms
+travel: at the airport, booking a hotel
+# 4. Funció comunicativa
+asking for directions
+introducing yourself and other people
+making suggestions: let's..., why don't we...
+# 5. Tema de l'escola (el que fan a classe aquest trimestre)
+unit 4: describing people (appearance and personality)
+# 6. Vocabulari o construcció concreta que et preocupa
+irregular past participles
+prepositions of time: at, on, in

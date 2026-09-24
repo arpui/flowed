@@ -25,7 +25,7 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-CHECKS = ("profile", "sm2", "patterns", "mastery", "records", "metrics", "sessions", "tts", "sortida", "historial")
+CHECKS = ("profile", "sm2", "patterns", "mastery", "records", "metrics", "sessions", "tts", "sortida", "historial", "lliço")
 
 
 def load(path: Path):
@@ -529,6 +529,115 @@ def check_tts(d: Path):
           f" (límit {tts.get('cache_max_mb', 200)} MB)")
 
 
+def check_lesson(d: Path):
+    """Veredicte d'una sola pantalla sobre la lliçó d'avui.
+
+    Escrita arran del 16/09/2026, quan una lliçó sencera va córrer sense el
+    skill `fluent-review` carregat: cap correcció a la pantalla, el comptador
+    clavat a 0 de 12 amb tretze exercicis contestats, i el mateix exercici
+    vint-i-cinc vegades. Cap dels checks que ja hi havia ho deia en una línia.
+    Aquest sí: mira les quatre coses que van fallar aquell dia i diu PASSA o
+    FALLA per a cadascuna.
+    """
+    head("la lliçó d'avui — veredicte")
+    today = date.today().isoformat()
+    verdicts = []
+
+    def verdict(ok, label, detail=""):
+        verdicts.append(ok)
+        print(f"  {'✅ PASSA' if ok else '❌ FALLA'}  {label}" + (f"  — {detail}" if detail else ""))
+
+    # 1. El tutor corregeix. Els tres senyals que l'app necessita del text.
+    texts = _recent_tutor_texts(d, limit=12)
+    if not texts:
+        print("  (cap missatge del tutor encara — fes uns quants exercicis primer)")
+        return
+    marked = sum(1 for t in texts if re.search(r"[🟢🟡🔴✅❌]", t))
+    corrected = sum(1 for t in texts if "Correct version:" in t)
+    scored = sum(1 for t in texts if re.search(r"\b\d{1,2}\s*/\s*10\b", t))
+    # El llistó: un terç dels últims missatges. En una lliçó sana gairebé cada
+    # torn del tutor qualifica una resposta; els que no ho fan són el menú i el
+    # resum. Un 0/8 o un 2/8 és el símptoma del 16/09, no soroll estadístic.
+    floor = max(1, len(texts) // 3)
+    verdict(marked >= floor, "el tutor marca les respostes", f"{marked}/{len(texts)} missatges")
+    verdict(corrected >= floor, "ensenya la versió correcta", f"{corrected}/{len(texts)} missatges")
+    verdict(scored >= floor, "posa nota", f"{scored}/{len(texts)} missatges")
+
+    # 2. Hi ha registres estructurats (el que alimenta SM-2).
+    rec_dir = d / ".records"
+    lines = 0
+    if rec_dir.is_dir():
+        for f in rec_dir.glob("*.jsonl"):
+            lines += sum(1 for line in f.read_text().splitlines() if line.strip())
+    verdict(lines > 0, "hi ha respostes registrades (.records/)", f"{lines} línies")
+
+    # 3. El comptador de la lliçó es mou.
+    plan = load(d / ".daily" / f"lesson-{today}.json")
+    if not plan:
+        print("  ⚠  encara no hi ha pla de lliçó per avui (prem 🎓 Lesson)")
+    else:
+        done, total = plan.get("done", 0), plan.get("total", 0)
+        verdict(done > 0, "el comptador de la lliçó avança", f"{done} de {total}")
+        cov = plan.get("covered", [])
+        verdict(len(cov) >= done, "queda constància del que s'ha preguntat",
+                f"{len(cov)} exercicis anotats")
+        junk = [c for c in cov if c in ("critical", "easy", "medium", "hard")]
+        verdict(not junk, "cap etiqueta de brossa a la llista", ", ".join(junk) or "neta")
+
+    # 4. Cap pregunta repetida. El 16/09 el mateix bloc va sortir vint-i-cinc
+    # vegades seguides; dues ja són sospitoses, tres són el bucle.
+    counts = collections.Counter(t.strip() for t in texts)
+    worst, times = counts.most_common(1)[0]
+    verdict(times < 3, "cap resposta del tutor repetida",
+            f"la més repetida surt {times} cop(s) dels últims {len(texts)}")
+    if times >= 3:
+        print(f"       ↳ «{worst.splitlines()[0][:70]}»")
+
+    print()
+    if all(verdicts):
+        print("  → tot correcte. El skill ha arribat al model.")
+    else:
+        print("  → alguna cosa no hi és. Mira `sortida` per veure el text literal:")
+        print(f"     python3 scripts/fluent-check.py sortida --dir {d}")
+
+
+def _recent_tutor_texts(d: Path, limit: int = 8) -> list[str]:
+    """Els últims missatges del tutor, el més recent primer."""
+    db = d / "sessions" / "sessions.db"
+    if not db.exists():
+        return []
+    try:
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        rows = conn.execute(
+            "SELECT id, data FROM message ORDER BY time_created DESC LIMIT 80"
+        ).fetchall()
+        out = []
+        for mid, data in rows:
+            try:
+                if json.loads(data or "{}").get("role") != "assistant":
+                    continue
+            except ValueError:
+                continue
+            body = []
+            for (pd,) in conn.execute(
+                "SELECT data FROM part WHERE message_id = ? ORDER BY time_created", (mid,)
+            ):
+                try:
+                    part = json.loads(pd or "{}")
+                except ValueError:
+                    continue
+                if part.get("type") == "text" and str(part.get("text", "")).strip():
+                    body.append(str(part["text"]))
+            if body:
+                out.append("\n".join(body))
+            if len(out) >= limit:
+                break
+        conn.close()
+        return out
+    except sqlite3.Error:
+        return []
+
+
 RUNNERS = {
     "profile": check_profile,
     "sm2": check_sm2,
@@ -540,6 +649,7 @@ RUNNERS = {
     "tts": check_tts,
     "sortida": check_sortida,
     "historial": check_historial,
+    "lliço": check_lesson,
 }
 
 
