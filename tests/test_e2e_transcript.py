@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location("fluent_e2e", REPO / "scripts" / "fluent-e2e.py")
+_spec = importlib.util.spec_from_file_location("fluent_e2e", REPO / "scripts" / "flowed-e2e.py")
 e2e = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(e2e)
 
@@ -200,14 +200,14 @@ class JourneyScenarioTest(unittest.TestCase):
         self.assertEqual(e2e.free_vocab_answer("right", None), "no ho sé")
 
     def test_the_scenario_exists_in_the_cli_and_the_bench(self):
-        src = (REPO / "scripts" / "fluent-e2e.py").read_text()
-        bench = "\n".join(l for l in (REPO / "scripts" / "fluent-bench.sh").read_text().splitlines()
+        src = (REPO / "scripts" / "flowed-e2e.py").read_text()
+        bench = "\n".join(l for l in (REPO / "scripts" / "flowed-bench.sh").read_text().splitlines()
                           if not l.lstrip().startswith("#"))
         self.assertIn('"journey"', src)
         self.assertIn("--journey", bench)
 
     def test_the_closing_replies_are_not_counted_as_insisting(self):
-        src = (REPO / "scripts" / "fluent-e2e.py").read_text()
+        src = (REPO / "scripts" / "flowed-e2e.py").read_text()
         self.assertIn("closed_early_at <= i < resume_at", src)
 
     def test_the_bank_knows_the_words_the_tutor_picks_on_its_own(self):
@@ -216,7 +216,7 @@ class JourneyScenarioTest(unittest.TestCase):
             self.assertIsNotNone(item, ca)
 
     def test_writing_and_unanswered_words_are_not_read_as_insisting_or_repeating(self):
-        src = (REPO / "scripts" / "fluent-e2e.py").read_text()
+        src = (REPO / "scripts" / "flowed-e2e.py").read_text()
         self.assertIn("if i in writing_replies:", src)
         self.assertIn("for i in answer_idx if phase[\"vocab_a\"][0] <= i < phase[\"vocab_a\"][1]", src)
 
@@ -360,10 +360,10 @@ class DaysScenarioTest(unittest.TestCase):
         self.assertFalse(any("equivocada" in r[1] for r in ok))
 
     def test_the_scenario_is_wired_in(self):
-        src = (REPO / "scripts" / "fluent-e2e.py").read_text(encoding="utf-8")
+        src = (REPO / "scripts" / "flowed-e2e.py").read_text(encoding="utf-8")
         self.assertIn('if args.scenario == "days":', src)
         self.assertIn('"days", "noisy"', src)
-        self.assertIn("--days", (REPO / "scripts" / "fluent-bench.sh").read_text(encoding="utf-8"))
+        self.assertIn("--days", (REPO / "scripts" / "flowed-bench.sh").read_text(encoding="utf-8"))
 
 
 class NoisyAnswersTest(unittest.TestCase):
@@ -429,10 +429,10 @@ class NoisyAnswersTest(unittest.TestCase):
         self.assertEqual(e2e.noisy_answer("dot", None), ("no ho sé", "wrong"))
 
     def test_the_scenario_is_wired_in(self):
-        src = (REPO / "scripts" / "fluent-e2e.py").read_text(encoding="utf-8")
+        src = (REPO / "scripts" / "flowed-e2e.py").read_text(encoding="utf-8")
         self.assertIn('"noisy")', src)
         self.assertIn("una errada d'una lletra és una errada petita", src)
-        self.assertIn("--noisy", (REPO / "scripts" / "fluent-bench.sh").read_text(encoding="utf-8"))
+        self.assertIn("--noisy", (REPO / "scripts" / "flowed-bench.sh").read_text(encoding="utf-8"))
 
 
 class TopicsScenarioTest(unittest.TestCase):
@@ -446,6 +446,6 @@ class TopicsScenarioTest(unittest.TestCase):
         self.assertFalse(e2e.LEAK.search("Great job! Here is your next exercise."))
 
     def test_wired_in(self):
-        self.assertIn("--topics", (REPO / "scripts" / "fluent-bench.sh").read_text(encoding="utf-8"))
+        self.assertIn("--topics", (REPO / "scripts" / "flowed-bench.sh").read_text(encoding="utf-8"))
         self.assertIn('run_topics(args, cli, prof_dir, rep, quiet)',
-                      (REPO / "scripts" / "fluent-e2e.py").read_text(encoding="utf-8"))
+                      (REPO / "scripts" / "flowed-e2e.py").read_text(encoding="utf-8"))

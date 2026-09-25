@@ -23,7 +23,7 @@ class TtsConfigTest(unittest.TestCase):
         self.assertIn("tts", self.config, "config/fluent.json has no tts block")
 
     def test_enabled_never_means_enabled_without_a_voice(self):
-        # config/fluent.json is a working file: scripts/fluent-tts.sh flips
+        # config/fluent.json is a working file: scripts/flowed-tts.sh flips
         # `enabled` when it installs a voice, so asserting it is False would
         # fail on any machine that actually has audio. The invariant that
         # matters is the one that prevents buttons which 503 on every click:
@@ -34,7 +34,7 @@ class TtsConfigTest(unittest.TestCase):
         voices = tts.get("voices") or {}
         self.assertTrue(voices, "tts.enabled is true but no voice is configured")
         # Whether the .onnx is actually on THIS disk is machine state, not a
-        # repository invariant — `scripts/fluent-check.py tts <perfil>` reports
+        # repository invariant — `scripts/flowed-check.py tts <perfil>` reports
         # that, and the server refuses with 503 rather than guessing a voice.
 
     def test_it_carries_the_limits(self):
@@ -44,7 +44,7 @@ class TtsConfigTest(unittest.TestCase):
 
 
 class TtsScriptTest(unittest.TestCase):
-    script = REPO_ROOT / "scripts" / "fluent-tts.sh"
+    script = REPO_ROOT / "scripts" / "flowed-tts.sh"
 
     def test_it_exists_and_is_executable(self):
         self.assertTrue(self.script.exists())

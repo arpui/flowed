@@ -140,7 +140,7 @@ fort, menys. El generador és qualsevol model per `--url`.
 
 1. **Extreure el que va al buit:** si escriu la frase sencera, se'n treu la part
    del buit (la lògica de `only_the_gap`).
-2. **`canon`**, el de `fluent-modelbench.py`: minúscules, contraccions
+2. **`canon`**, el de `flowed-modelbench.py`: minúscules, contraccions
    (aren't = are not), xifres (20 = twenty), apòstrofs, «o'clock».
 3. **Veredicte:**
    - igual a `answer` o a una `also_accept` → ✅ 10/10;
@@ -268,7 +268,7 @@ El retorn té el format de sempre (marcador, correccions, versió correcta,
 |---|---|---|
 | **1 · Pilot** | `bench → bank`: generar, validar (V1–V11, jutge), revisar. Banc per a **dues competències**: `a1.present_simple` (gramàtica, la que ha donat més bugs) i `a1.vocab_colors_adjectives` (vocabulari, el cas «The car is ___»). Repartiment, targeta, correcció determinista. Rere l'interruptor `exercises.bank` a `config/fluent.json`. Una competència sense banc continua pel camí actual. | Prova de concepte en l'app real |
 | **2 · A1 sencer** | Les 18 competències × ~40 ítems revisats. Arreglar de passada els `Check:` del currículum que no passen V10. | Banc A1 |
-| **3 · Mesura** | `fluent-bench.sh --repeat 6` amb l'interruptor apagat i encès. | Decisió d'encendre'l per defecte |
+| **3 · Mesura** | `flowed-bench.sh --repeat 6` amb l'interruptor apagat i encès. | Decisió d'encendre'l per defecte |
 | **4 · Review** | Els ítems fallats entren a la cua amb l'id del banc; Review els repeteix tal qual. S'elimina la generació en directe de Review. | Review sobre el banc |
 | **5 · Neteja** | Fora els guards i les notes que ja no tenen res a vigilar (llista a sota). Els prompts de Go i Review es redueixen. | Menys codi, prompt petit |
 
@@ -331,9 +331,9 @@ fan guards nous per al bug 3: la fase 5 el resol de soca-rel.
 ## Fitxers
 
 **Nous:** `curriculum/bank/en-A1/*.json` · l'ordre `bank` a
-`scripts/fluent-modelbench.py` (generar → validar → escriure) ·
+`scripts/flowed-modelbench.py` (generar → validar → escriure) ·
 `server/src/bank.ts` (triar, pintar, corregir).
 **Canvien:** `server/src/agent.ts` (Go/Review: banc si n'hi ha) ·
 `hooks/curriculum.py` (només arreglar `Check:`, la tria de competència no
-canvia) · `config/fluent.json` (`exercises.bank`) · `scripts/fluent-e2e.py`
+canvia) · `config/fluent.json` (`exercises.bank`) · `scripts/flowed-e2e.py`
 (comparació banc / directe).

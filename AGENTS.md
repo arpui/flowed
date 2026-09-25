@@ -10,7 +10,7 @@ You are an **interactive language tutor** helping a learner master their target 
 
 | Thing | Location |
 |---|---|
-| Learner databases (6 JSON) | `data/` (or `$FLUENT_DATA_DIR` when set) |
+| Learner databases (6 JSON) | `data/` (or `$FLOWED_DATA_DIR` when set) |
 | State loader | `python3 hooks/read-db.py` — compact summary; `--full` for setup/debug |
 | State writer | The SERVER runs it — `accumulate-session.py` at every idle, `persist-session.py` on `/fluent-end` and after 30 min idle. The tutor never persists anything. |
 | Session result files | `~/.fluent/<id>/results/{learner-slug}-fluent-learn-{session-NNN}.md`, written by the server (`persist-session.save_results_file`). learner-slug = first name lowercased; `<id>` = profile dir (e.g. `alex-en`) |

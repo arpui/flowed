@@ -94,7 +94,7 @@ DEPTH = {
 # railab-only .env (never .env in the repo root, never anything synced to
 # llvm) to force every competence's min_span_days to that value regardless of
 # depth, for exactly as long as that shell has it exported.
-_MIN_SPAN_DAYS_OVERRIDE = os.environ.get("FLUENT_TEST_MIN_SPAN_DAYS")
+_MIN_SPAN_DAYS_OVERRIDE = os.environ.get("FLOWED_TEST_MIN_SPAN_DAYS")
 
 
 def cfg_for(cfg: dict, depth: str | None) -> dict:
@@ -1006,12 +1006,12 @@ def _learner(data_dir) -> dict:
 
 
 def find_curriculum(root: str | os.PathLike, data_dir: str | os.PathLike | None = None) -> Path | None:
-    """The curriculum of this learner's CURRENT course: $FLUENT_CURRICULUM, else — among the
+    """The curriculum of this learner's CURRENT course: $FLOWED_CURRICULUM, else — among the
     curricula of the profile's target_language up to its target_level — the lowest level that has
     not been certified yet (the declared current level is not trusted: it is certified by a
     checkpoint). When every level up to the target is certified, the last one (goal reached).
     None when there is no curriculum."""
-    env = os.environ.get("FLUENT_CURRICULUM")
+    env = os.environ.get("FLOWED_CURRICULUM")
     if env:
         p = Path(env).expanduser()
         p = p if p.is_absolute() else Path(root) / p
@@ -1240,7 +1240,7 @@ def next_target(cur: dict, data_dir: str | os.PathLike, today: str | None = None
     first, then maintenance). That naturally round-robins through the whole
     pool, however long the session runs, and never repeats one before every
     other candidate has had an equal turn. `quota()` itself is untouched --
-    other callers (fluent-e2e.py, fluent-sim-path.py, its own tests) still use
+    other callers (flowed-e2e.py, flowed-sim-path.py, its own tests) still use
     it for their own simulated pacing.
 
     `only_vocab`: the Vocabulary practice asks one word at a time, so it is only handed
@@ -1677,17 +1677,17 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     rp = sub.add_parser("report", help="text report of the learner path")
     rp.add_argument("--curriculum", required=True)
-    rp.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    rp.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     rp.add_argument("--admin", action="store_true")
     rp.add_argument("--today", default=date.today().isoformat())
     rp.add_argument("--rebuild", action="store_true", help="rebuild learner-path.json from the records first")
     bp = sub.add_parser("rebuild", help="rebuild learner-path.json from the recorded answers")
-    bp.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    bp.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     bp.add_argument("--curriculum", default="")
-    bp.add_argument("--auto", action="store_true", help="pick the curriculum from the profile (or $FLUENT_CURRICULUM); do nothing if none")
+    bp.add_argument("--auto", action="store_true", help="pick the curriculum from the profile (or $FLOWED_CURRICULUM); do nothing if none")
     bp.add_argument("--quiet", action="store_true")
     np_ = sub.add_parser("next", help="JSON: the competence the next free-practice exercise should be about")
-    np_.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    np_.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     np_.add_argument("--curriculum", default="")
     np_.add_argument("--auto", action="store_true")
     np_.add_argument("--last", default="", help="id of the competence asked last")
@@ -1696,28 +1696,28 @@ def main(argv: list[str] | None = None) -> int:
     np_.add_argument("--writing", action="store_true",
                      help="the structure a Writing task should use (read-only frame, not an exercise)")
     jp = sub.add_parser("json", help="the learner's path as JSON, for the web (nothing available -> {\"available\": false})")
-    jp.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    jp.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     jp.add_argument("--curriculum", default="")
     jp.add_argument("--auto", action="store_true")
     jp.add_argument("--today", default=date.today().isoformat())
     clp = sub.add_parser("close", help="certify and close the CURRENT course by hand (teacher / tests): archive, certificate, next course")
-    clp.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    clp.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     clp.add_argument("--curriculum", default="")
     clp.add_argument("--auto", action="store_true")
     clp.add_argument("--day", default=date.today().isoformat())
     ck = sub.add_parser("checkpoint", help="the level test: start | answer | status (JSON out)")
     ck.add_argument("action", choices=("start", "answer", "status"))
-    ck.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    ck.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     ck.add_argument("--auto", action="store_true")
     ck.add_argument("--curriculum", default="")
     ck.add_argument("--today", default=date.today().isoformat())
     ck.add_argument("--text", default="")
     ck.add_argument("--force", action="store_true", help="teacher: open the test even if the learner is not ready")
     nq = sub.add_parser("notice", help="JSON: the course notices the learner has not seen yet; --seen marks them seen")
-    nq.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    nq.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     nq.add_argument("--seen", action="store_true")
     cp = sub.add_parser("coverage", help="how many recorded answers could be assigned to a competence, and why not")
-    cp.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    cp.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     cp.add_argument("--curriculum", required=True)
     vp = sub.add_parser("validate", help="check a curriculum file")
     vp.add_argument("--curriculum", required=True)
@@ -1727,7 +1727,7 @@ def main(argv: list[str] | None = None) -> int:
     bkp.add_argument("--used", default="", help="review-pick: queue ids already used this session, comma-separated")
     bkp.add_argument("--last", default="", help="review-pick: competence asked last")
     bkp.add_argument("--dry-run", action="store_true", help="review-pick: retire nothing, just say what would happen")
-    bkp.add_argument("--data", default=os.environ.get("FLUENT_DATA_DIR", "data"))
+    bkp.add_argument("--data", default=os.environ.get("FLOWED_DATA_DIR", "data"))
     bkp.add_argument("--curriculum", default="")
     bkp.add_argument("--auto", action="store_true")
     bkp.add_argument("--today", default=date.today().isoformat())

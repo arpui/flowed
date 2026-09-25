@@ -9,7 +9,7 @@
 
 ### Entry Point
 
-`scripts/fluent-web.sh --app <profile-id>` → `server/src/index.ts` (servidor Bun/TypeScript standalone)
+`scripts/flowed-web.sh --app <profile-id>` → `server/src/index.ts` (servidor Bun/TypeScript standalone)
 
 ### Stack tecnològic
 

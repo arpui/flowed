@@ -56,10 +56,10 @@ cd fluent_dev/server && bun install && cd ..
 
 cp .env.railab .env          # o .env.rapve — plantilla per màquina
 scripts/new-user.sh alex-en  # crea el perfil
-python3 scripts/fluent-profile.py alex-en \
+python3 scripts/flowed-profile.py alex-en \
   --name Alex --native Catalan --target English --level A2 --goal B1
 
-scripts/fluent-start.sh      # puja el model i una web per alumne
+scripts/flowed-start.sh      # puja el model i una web per alumne
 ```
 
 `docs/MANUAL.md` té el detall, i `docs/ARQUITECTURA.md` explica per què cada
@@ -68,9 +68,9 @@ cosa és on és.
 ## Comprovar què està passant
 
 ```bash
-python3 scripts/fluent-check.py all alex-en       # perfil, SM-2, patrons, sessions
-python3 scripts/fluent-check.py sortida alex-en   # els últims missatges del tutor
-python3 scripts/fluent-check.py metrics alex-en   # temps i tokens per torn
+python3 scripts/flowed-check.py all alex-en       # perfil, SM-2, patrons, sessions
+python3 scripts/flowed-check.py sortida alex-en   # els últims missatges del tutor
+python3 scripts/flowed-check.py metrics alex-en   # temps i tokens per torn
 python3 -m unittest discover -s tests -q          # la suite
 ```
 

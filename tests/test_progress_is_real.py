@@ -42,7 +42,7 @@ class LearnerProgressTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
 
     def _env(self):
-        return {**os.environ, "FLUENT_DATA_DIR": str(self.dir), "FLUENT_ROOT": str(REPO_ROOT)}
+        return {**os.environ, "FLOWED_DATA_DIR": str(self.dir), "FLOWED_ROOT": str(REPO_ROOT)}
 
     def _update(self, payload):
         p = subprocess.run([sys.executable, str(REPO_ROOT / "hooks" / "update-db.py")],

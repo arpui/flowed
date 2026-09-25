@@ -7,7 +7,7 @@ per més endavant.*
 
 Per decidir amb números si un altre model fa millor la feina que Fluent li
 demana. **No mesura la qualitat general del model**, només els tipus
-d'exercici de l'app, i no substitueix el banc de l'app (`fluent-bench.sh`): el
+d'exercici de l'app, i no substitueix el banc de l'app (`flowed-bench.sh`): el
 modelbench serveix per **triar** el model, l'e2e per **confirmar** que funciona
 dins l'app.
 
@@ -45,18 +45,18 @@ el jutge en una altra màquina (`--judge-url`).
 
 ```bash
 # 0. la línia base: el model actual (per defecte fa servir el port 12322)
-python3 scripts/fluent-modelbench.py --name qwen3-14b-q4 learner
-python3 scripts/fluent-modelbench.py --name qwen3-14b-q4 generate
+python3 scripts/flowed-modelbench.py --name qwen3-14b-q4 learner
+python3 scripts/flowed-modelbench.py --name qwen3-14b-q4 generate
 
 # 1. aixecar un candidat (qualsevol GGUF) en un port de proves
 scripts/models/llama-deep.sh --model ~/aidev/models/<candidat>.gguf --port 12330
 
 # 2. passar-li el banc
-python3 scripts/fluent-modelbench.py --url http://127.0.0.1:12330/v1/chat/completions --name <candidat> learner
-python3 scripts/fluent-modelbench.py --url http://127.0.0.1:12330/v1/chat/completions --name <candidat> generate
+python3 scripts/flowed-modelbench.py --url http://127.0.0.1:12330/v1/chat/completions --name <candidat> learner
+python3 scripts/flowed-modelbench.py --url http://127.0.0.1:12330/v1/chat/completions --name <candidat> generate
 
 # 3. la taula
-python3 scripts/fluent-modelbench.py compare
+python3 scripts/flowed-modelbench.py compare
 ```
 
 Opcions: `--curriculum curriculum/en-A2.md` (un altre nivell), `generate --per 3`
@@ -94,6 +94,6 @@ per veure diferències grans, no per a diferències de 2–3 punts.
 
 ## Decisió
 
-Un candidat només passa a l'e2e de l'app (`fluent-bench.sh --repeat 6`) si
+Un candidat només passa a l'e2e de l'app (`flowed-bench.sh --repeat 6`) si
 iguala o supera la línia base en **tutor just** sense perdre velocitat de manera
 que es noti a classe. L'e2e té l'última paraula.

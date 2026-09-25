@@ -30,6 +30,8 @@ import sys
 import re
 from datetime import datetime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 CURRENT_REL = Path("sessions") / "sessions.db"
 LEGACY_REL = Path(".opencode") / "opencode" / "opencode.db"
@@ -41,9 +43,9 @@ def profile_dirs(args) -> list[Path]:
     if args.dir:
         out.append(Path(args.dir).expanduser())
     if args.profile:
-        out.append(Path.home() / ".fluent" / args.profile)
+        out.append(profiles_root() / args.profile)
     if args.all:
-        root = Path.home() / ".fluent"
+        root = profiles_root()
         out += sorted(p for p in root.iterdir()
                       if p.is_dir() and (p / "learner-profile.json").exists())
     return out
@@ -100,7 +102,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         description="Marca sessions velles com a tancades, sense processar-les",
         formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
-    ap.add_argument("--profile", help="id del perfil sota ~/.fluent/")
+    ap.add_argument("--profile", help="id del perfil sota ~/.flowed/")
     ap.add_argument("--dir", help="directori de perfil explícit")
     ap.add_argument("--all", action="store_true", help="tots els perfils")
     ap.add_argument("--older-than", type=int, default=DEFAULT_OLDER_THAN_DAYS,

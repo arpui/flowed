@@ -24,7 +24,7 @@ from tempfile import TemporaryDirectory
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location(
-    "fluent_memories", REPO_ROOT / "scripts" / "fluent-memories.py")
+    "fluent_memories", REPO_ROOT / "scripts" / "flowed-memories.py")
 mem = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mem)
 

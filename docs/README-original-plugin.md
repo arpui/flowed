@@ -168,14 +168,14 @@ Two modes, one launcher:
 
 ```bash
 # standard opencode web UI (power user: full UI, /fluent-* commands work)
-scripts/fluent-web.sh --web [--port 4097] [profile-id]
+scripts/flowed-web.sh --web [--port 4097] [profile-id]
 
 # locked-down Fluent UI (end user: chat + practice buttons only,
 # pinned to the restricted "learner" agent)
-scripts/fluent-web.sh --app [--port 4100] [profile-id]
+scripts/flowed-web.sh --app [--port 4100] [profile-id]
 
 # stop
-scripts/fluent-web.sh --stop [--port N]
+scripts/flowed-web.sh --stop [--port N]
 ```
 
 Then open `http://fluent.local:<port>` (mDNS, same LAN) or
@@ -187,7 +187,7 @@ keeps running untouched alongside.
 
 - `--web` = the official opencode web UI (agent/model switchers visible).
 - `--app` = custom frontend over `opencode serve` + a one-port Bun proxy
-  (`web/`, `scripts/fluent-web-proxy.mjs`): no agent/model/file UI, and the
+  (`web/`, `scripts/flowed-web-proxy.mjs`): no agent/model/file UI, and the
   `learner` agent's permissions restrict it to the Fluent scripts,
   `data/`/`results/` writes and `fluent-*` skills only.
 - Full details (architecture, security model, port map, troubleshooting):

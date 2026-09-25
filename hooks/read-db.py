@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fluent_paths import data_dir, force_utf8_io  # noqa: E402
+from main_paths import data_dir, force_utf8_io  # noqa: E402
 from db_schema import CURRENT_SCHEMA_VERSION, get_schema_version, decay_config  # noqa: E402
 
 force_utf8_io()

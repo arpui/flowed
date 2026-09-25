@@ -4,7 +4,7 @@ agent: tutor-fast
 ---
 > **Admin path.** The web app no longer sends learners here: a profile is
 > provisioned by the system owner with `scripts/new-user.sh <id>` and filled in
-> with `scripts/fluent-profile.py <id> --name … --native … --target … --level …`.
+> with `scripts/flowed-profile.py <id> --name … --native … --target … --level …`.
 > This interview stays available for an admin who prefers to do it in the chat.
 
 Execute /fluent-setup now:

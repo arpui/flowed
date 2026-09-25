@@ -155,12 +155,12 @@ class UpdateDbSmokeTest(unittest.TestCase):
 
     def _run(self, payload: dict):
         # Drop host env that would redirect data-dir resolution away from the
-        # tmp fixtures (e.g. FLUENT_DATA_DIR / CLAUDE_PROJECT_DIR from a running
+        # tmp fixtures (e.g. FLOWED_DATA_DIR / CLAUDE_PROJECT_DIR from a running
         # opencode session).
         env = {
             k: v
             for k, v in os.environ.items()
-            if k not in ("FLUENT_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")
+            if k not in ("FLOWED_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")
         }
         proc = subprocess.run(
             ["python3", str(SCRIPT)],
@@ -439,7 +439,7 @@ class UpdateDbIdempotencyTest(unittest.TestCase):
 
     def _run(self, payload: dict):
         env = {k: v for k, v in os.environ.items()
-               if k not in ("FLUENT_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")}
+               if k not in ("FLOWED_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")}
         return subprocess.run(
             ["python3", str(SCRIPT)], input=json.dumps(payload).encode(),
             cwd=str(self.tmp), capture_output=True, env=env)
@@ -516,7 +516,7 @@ class ErrorTwinsTest(unittest.TestCase):
 
     def _run(self, payload):
         env = {k: v for k, v in os.environ.items()
-               if k not in ("FLUENT_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")}
+               if k not in ("FLOWED_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")}
         p = subprocess.run(["python3", str(SCRIPT)], input=json.dumps(payload).encode(),
                            cwd=str(self.tmp), capture_output=True, env=env)
         self.assertEqual(p.returncode, 0, p.stderr)

@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Fluent text-to-speech setup — installs piper and one voice, then wires it into
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR: where the profiles live
+# Flowed text-to-speech setup — installs piper and one voice, then wires it into
 # config/fluent.json so the 🔊 buttons appear in the web.
 #
 # Why a script and not an automatic download: the server must never fetch
-# anything at runtime, and the machines that run Fluent are not always online.
+# anything at runtime, and the machines that run Flowed are not always online.
 # This is a deliberate, one-off, admin step.
 #
 # Usage:
-#   scripts/fluent-tts.sh install en_GB-alba-medium   # binary + voice + config
-#   scripts/fluent-tts.sh voice   de_DE-thorsten-low  # one more voice
-#   scripts/fluent-tts.sh status                      # what is installed
-#   scripts/fluent-tts.sh say "Good morning"          # try it from the terminal
+#   scripts/flowed-tts.sh install en_GB-alba-medium   # binary + voice + config
+#   scripts/flowed-tts.sh voice   de_DE-thorsten-low  # one more voice
+#   scripts/flowed-tts.sh status                      # what is installed
+#   scripts/flowed-tts.sh say "Good morning"          # try it from the terminal
 #
 # Voices: https://huggingface.co/rhasspy/piper-voices  (browse, then pass the
 # name — e.g. en_US-lessac-medium, ca_ES-upc_ona-medium).
@@ -18,7 +19,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
-TTS_DIR="${FLUENT_TTS_DIR:-$HOME/.fluent/_tts}"
+TTS_DIR="${FLOWED_TTS_DIR:-$FLOWED_HOME_DIR/_tts}"
 BIN="$TTS_DIR/piper/piper"
 CONFIG="$ROOT/config/fluent.json"
 PIPER_VERSION="${PIPER_VERSION:-2023.11.14-2}"
@@ -136,17 +137,17 @@ for lang, model in (tts.get('voices') or {}).items():
 
 case "${1:-}" in
   install)
-    [[ -n "${2:-}" ]] || die "usage: scripts/fluent-tts.sh install <voice>  (e.g. en_GB-alba-medium)"
+    [[ -n "${2:-}" ]] || die "usage: scripts/flowed-tts.sh install <voice>  (e.g. en_GB-alba-medium)"
     install_binary
     install_voice "$2"
     ;;
   voice)
-    [[ -n "${2:-}" ]] || die "usage: scripts/fluent-tts.sh voice <voice>"
+    [[ -n "${2:-}" ]] || die "usage: scripts/flowed-tts.sh voice <voice>"
     [[ -x "$BIN" ]] || die "piper is not installed yet — run 'install' first"
     install_voice "$2"
     ;;
   say)
-    [[ -n "${2:-}" ]] || die "usage: scripts/fluent-tts.sh say \"text\""
+    [[ -n "${2:-}" ]] || die "usage: scripts/flowed-tts.sh say \"text\""
     [[ -x "$BIN" ]] || die "piper is not installed yet"
     voice="$(ls -1 "$TTS_DIR/voices/"*.onnx 2>/dev/null | head -1)"
     [[ -n "$voice" ]] || die "no voice installed"

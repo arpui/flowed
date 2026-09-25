@@ -41,7 +41,7 @@ docs/opencode-migration/*.json
 .env
 !.env.railab
 !.env.rapve
-.fluent-active
+.flowed-active
 .web-password
 .web-password-default
 

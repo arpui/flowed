@@ -50,7 +50,7 @@ python3 hooks/read-db.py
 *(Claude Code plugin mode, where the repo is not the working directory:
 `python3 "$CLAUDE_PLUGIN_ROOT/hooks/read-db.py"`.)*
 
-If the helper is unavailable, resolve `<data_dir>` via `fluent_paths.data_dir()` then read:
+If the helper is unavailable, resolve `<data_dir>` via `main_paths.data_dir()` then read:
 
 - `<data_dir>/spaced-repetition.json`
 - `<data_dir>/mistakes-db.json`

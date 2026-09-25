@@ -52,7 +52,7 @@ del disseny original: **canviar com ensenya no requereix tocar codi**.
 | `prompts/agents/` | Definició dels agents: `learner.md` (web, restringit), `tutor.md`, `tutor-fast.md`, i `rules.md` (regles de comportament compartides, font única). Fins al 2026-09-13, `.opencode/agent/` |
 | `prompts/commands/` | Les 10 comandes `/fluent-*` en Markdown, amb *frontmatter* (`agent:`) i directives `` !`cmd` `` que precarreguen l'estat de l'alumne |
 | `obsolet/opencode-runtime/` | El que era específic d'opencode: el seu plugin, `opencode.json` i el llançador de models gratuïts |
-| `scripts/` | Orquestració: `fluent-start.sh`, `fluent-stop.sh`, `fluent-web.sh`, `new-user.sh`, `fluent-friend.sh`, `migrate-db.py`, `reset-session.py`, `models/` (6 llançadors, inclòs `docker-llama.sh`) |
+| `scripts/` | Orquestració: `flowed-start.sh`, `flowed-stop.sh`, `flowed-web.sh`, `new-user.sh`, `flowed-friend.sh`, `migrate-db.py`, `reset-session.py`, `models/` (6 llançadors, inclòs `docker-llama.sh`) |
 | `config/fluent.json` | Configuració canònica i **única font**: models (port, ctx, mostreig), backend, webs, camins |
 | `.env` / `.env.railab` / `.env.rapve` | Configuració viva per màquina (model, port, GPU, ctx, backend, llista de webs) |
 | `tests/` | 7 fitxers de test (unittest) sobre els hooks Python, inclòs un *golden test* de SM-2 |
@@ -116,7 +116,7 @@ directori té un `README.md` que ho explica.
 > nou neix directament amb la ruta nova, i
 > `scripts/migrate-sessions-db.py` copia la vella a la nova (amb l'API de
 > *backup* d'SQLite, no `cp`: amb WAL una còpia plana pot sortir incompleta).
-> Override puntual: `FLUENT_SESSIONS_DB`.
+> Override puntual: `FLOWED_SESSIONS_DB`.
 
 La decisió arquitectònica més important de `fluent_dev2` és que el servidor
 propi **reprodueix l'esquema `session`/`message`/`part` d'opencode.db**
@@ -149,7 +149,7 @@ runtime sense reescriure el backend de dades.
   `role:"tool"` → repetir fins a text pla (màx. 6 voltes). `stream:false`.
 - **`tools.ts`** — tres eines: `skill` (carrega un `SKILL.md`, només `fluent-*`),
   `bash` (5 patrons permesos: `read-db.py`, `update-db.py`,
-  `list-profiles.py`, llegir i esborrar `.fluent-active`),
+  `list-profiles.py`, llegir i esborrar `.flowed-active`),
   `fluent_deep_evaluate` (delega l'avaluació d'una resposta lliure al deep amb
   una rúbrica pròpia i context net, amb `enable_thinking:false`). Inclou
   guàrdies contra bucles: rebuig de respostes-placeholder, una sola avaluació
@@ -183,9 +183,9 @@ caiguda automàtica al deep. Les comandes trien agent al seu *frontmatter*
 Un sol esquema parametritzable serveix per a railab (4090 + 3090, backend
 `native`) i per a la màquina rapve (4060 Ti, backend `docker`):
 `cp .env.railab .env` o `cp .env.rapve .env`. Variables: model/port/GPU/ctx del
-deep, `FLUENT_DEEP_BACKEND` (`native|docker`), `FLUENT_DEEP_MANAGED` (si Fluent
+deep, `FLOWED_DEEP_BACKEND` (`native|docker`), `FLOWED_DEEP_MANAGED` (si Fluent
 ha de llançar el model o només comprovar-lo), face on/off, i
-`FLUENT_WEBS="alex-en:4100 sam-en:4101 demo-en:4102"` (perfil:port). L'entorn i
+`FLOWED_WEBS="alex-en:4100 sam-en:4101 demo-en:4102"` (perfil:port). L'entorn i
 la CLI manen sempre sobre el fitxer.
 
 ### Docker (només el model)
@@ -194,13 +194,13 @@ la CLI manen sempre sobre el fitxer.
 amb `--gpus all`, els models muntats en només-lectura, `-c 32768 -ngl 99 -fa 1
 --parallel 1 -b 4096 -ub 1024 --jinja --reasoning off`, publica el port del
 contenidor 8080 al port host del rol, i espera `/health` fins a 120 s. Llegeix
-la mateixa font de veritat (`FLUENT_DEEP_*` de l'`.env`).
+la mateixa font de veritat (`FLOWED_DEEP_*` de l'`.env`).
 
 Peces fines d'aquesta part, que val la pena no perdre:
 
 - **Swap 1:1 de port.** Si el port del deep ja està ocupat per un model
-  "d'ús general", `fluent-start.sh` l'atura via `FLUENT_DEFAULT_MANAGER`
-  (interfície `start|stop|status`), puja el de Fluent, i `fluent-stop.sh`
+  "d'ús general", `flowed-start.sh` l'atura via `FLOWED_DEFAULT_MANAGER`
+  (interfície `start|stop|status`), puja el de Fluent, i `flowed-stop.sh`
   restaura el default. Mai roba ports sense manager declarat.
 - **Estat, no heurística.** `/tmp/fluent-deep-docker.state` distingeix "el
   contenidor sa d'aquest port és el nostre" de "és d'un altre" — un `/health`
@@ -217,14 +217,14 @@ Peces fines d'aquesta part, que val la pena no perdre:
 
 ### Exposició i multi-usuari
 
-`scripts/fluent-web.sh --app <perfil> --port N` llança una instància del
+`scripts/flowed-web.sh --app <perfil> --port N` llança una instància del
 servidor propi per alumne (`nohup` + pidfile a `/tmp/fluent-web-N.pid`), amb:
 
-- `FLUENT_DATA_DIR=~/.fluent/<id>` → aïllament total de dades,
+- `FLOWED_DATA_DIR=~/.fluent/<id>` → aïllament total de dades,
 - el servidor obre `~/.fluent/<id>/sessions/sessions.db` (i llegeix la ruta
   antiga si el perfil encara no s'ha migrat),
 - contrasenya estable per perfil (`.web-password`, mode 600) o generada,
-- sanejament d'entorn (`env -u OPENCODE_CLIENT -u XDG_STATE_HOME FLUENT_DEV=0`)
+- sanejament d'entorn (`env -u OPENCODE_CLIENT -u XDG_STATE_HOME FLOWED_DEV=0`)
   perquè una instància llançada des d'un shell de l'app d'escriptori no acabi en
   mode dev sense el prompt del tutor,
 - *preflight* (bun, python3, openssl, port lliure) per fallar en 1 s amb causa
@@ -288,7 +288,7 @@ sobre SM-2 més avall). La Capa B, avui, és "re-parseig complet + durada".
   `validate-data.py` (hook PostToolUse) valida JSON i fa còpia amb marca de
   temps a cada edició.
 - **Resolució de directori de dades** amb precedència clara i pura
-  (`fluent_paths.py`): `$FLUENT_DATA_DIR` → `$CLAUDE_PROJECT_DIR/data` →
+  (`fluent_paths.py`): `$FLOWED_DATA_DIR` → `$CLAUDE_PROJECT_DIR/data` →
   `./data` → `~/.claude/fluent-data`, i només si hi ha `learner-profile.json`.
 
 ## A.6 La web
@@ -323,7 +323,7 @@ tendència de precisió, patrons febles, sessions recents, fites, assoliments).
   5 patrons, escriptura només dins `~/.fluent/**`, només skills `fluent-*`, ni
   web ni *fetch* ni tasques; i instruccions explícites de no investigar el
   sistema (cada rebuig de permís infla el context i pot matar la sessió).
-- **Mode friend** (`scripts/fluent-friend.sh <id> on|off|status`): flag
+- **Mode friend** (`scripts/flowed-friend.sh <id> on|off|status`): flag
   `preferences.tutor_style` + `interests[]` + `about`. El tutor cita l'última
   sessió i usa els interessos als exemples. `off` deixa el perfil byte-idèntic
   a l'original. Cost ~250 tokens/torn, 0 VRAM. Lliçó documentada: els blocs
@@ -339,7 +339,7 @@ Tres camins coexisteixen, i això és una virtut del disseny:
 2. **Clone amb opencode** — ARXIVAT el 2026-09-13: el que en quedava és a
    `obsolet/opencode-runtime/`. Restaurar-ho vol dir desfer el renombrat de
    `prompts/`.
-3. **Servei standalone** (el camí principal avui) — `fluent-start.sh` puja
+3. **Servei standalone** (el camí principal avui) — `flowed-start.sh` puja
    models i una web per alumne; l'alumne només veu una URL i un login.
 
 Per portar el codi a una altra màquina hi ha procediment documentat
@@ -357,7 +357,7 @@ d'esquema és el que ha de protegir aquestes còpies a futur.
 | Model | Claude (núvol) | **LLM local** llama.cpp, arquitectura **dual deep/face** amb *fallback* automàtic |
 | Avaluació | El mateix model del xat | Eina **`fluent_deep_evaluate`** amb rúbrica i context net + guàrdies anti-bucle |
 | Interfície | Terminal | **Web pròpia** mòbil-first, botons de pràctica, panell de progrés, SSE |
-| Multi-usuari | Un directori de dades | **Un perfil, un port, una contrasenya, una instància** per alumne (`FLUENT_WEBS`) |
+| Multi-usuari | Un directori de dades | **Un perfil, un port, una contrasenya, una instància** per alumne (`FLOWED_WEBS`) |
 | Provisió | `/fluent-setup` manual | `new-user.sh` + auto-arrencada de `/fluent-setup` (`setup_complete`) |
 | Persistència | El tutor havia de cridar-la al final | **Dues capes**: acumulació automàtica a cada `idle` + finalització (comanda o *sweeper* de 30 min), idempotent per `session_id` amb instantània T0 |
 | Sessions | — | **Pont SQLite** amb esquema compatible opencode.db (frontera estable TS↔Python) |
@@ -614,7 +614,7 @@ segment es tanca (`flushStream`), també si pel mig hi ha una crida d'eina o un
 error: així la transcripció del disc coincideix amb el que l'alumne ha vist,
 sense una escriptura a SQLite per token.
 
-**Està desactivat per defecte**: `FLUENT_STREAM=1` (o `server.stream` a
+**Està desactivat per defecte**: `FLOWED_STREAM=1` (o `server.stream` a
 `config/fluent.json`). No l'he pogut executar contra un model real des d'aquí —
 en aquesta màquina no hi ha ni bun ni GPU — així que la primera prova amb
 `test-en` és obligatòria abans d'activar-lo per a ningú més.
@@ -666,15 +666,15 @@ un ordre de precedència de 5 capes a `index.ts:loadModels`.
 *Fet:* `config/fluent.json` és la configuració canònica del projecte (models,
 ports, GPU, ctx, backend, llista de webs, camins). Tres capes amb precedència
 declarada i provada: **config/fluent.json < `.env` < entorn/CLI**.
-`scripts/fluent-config.py` la resol i l'emet com a JSON (`--json`) o com a
+`scripts/flowed-config.py` la resol i l'emet com a JSON (`--json`) o com a
 exports de shell (`--sh --missing-only`), que és com la consumeixen
-`fluent-start.sh`, `fluent-stop.sh` i `docker-llama.sh` *després* del seu propi
+`flowed-start.sh`, `flowed-stop.sh` i `docker-llama.sh` *després* del seu propi
 bucle d'`.env` — així el projecte arrenca sense `.env` i, si n'hi ha, mana ell.
 El servidor llegeix la mateixa secció `models` com a capa de sota
 (`server/src/index.ts`). *(Aquí es va deixar `config/fluent-models.json` com a
 capa d'override heretada; el 2026-09-20 es va retirar: repetia `fluent.json`
 valor per valor però hi guanyava, i una temperatura editada a `fluent.json` no
-arribava mai al servidor. Ara només `FLUENT_MODELS_FILE`, explícit, hi pot anar
+arribava mai al servidor. Ara només `FLOWED_MODELS_FILE`, explícit, hi pot anar
 al damunt.)* De passada: el servidor ignorava `max_tokens` dels fitxers
 de config (només llegia `maxTokens`); ara accepta les dues formes.
 
@@ -698,7 +698,7 @@ deia una cosa que ja no era certa: qui els llegeix és el servidor propi.
 
 Actualitzat tot el que hi apuntava: `agent.ts`, `commands.ts`, l'allowlist de
 `bash` a `tools.ts`, `learner.md`, `fluent-use.md`, els dos skills que remeten a
-`rules.md`, i els documents. El mode `--web` de `fluent-web.sh` (la UI
+`rules.md`, i els documents. El mode `--web` de `flowed-web.sh` (la UI
 d'opencode) ara falla amb un missatge explicant on ha anat, en lloc d'arrencar
 una cosa trencada. Nou `prompts/README.md` amb el contingut i la història del
 nom. El camp `model:` del *frontmatter* dels agents (que només llegia opencode i
@@ -819,8 +819,8 @@ Tres decisions que valen la pena recordar:
 Instal·lació (una vegada, per màquina, i cal internet):
 
 ```bash
-scripts/fluent-tts.sh install en_GB-alba-medium
-python3 scripts/fluent-check.py tts demo-en
+scripts/flowed-tts.sh install en_GB-alba-medium
+python3 scripts/flowed-check.py tts demo-en
 ```
 
 Seguretat: piper s'executa amb una llista d'arguments i el text va per stdin —
@@ -1074,50 +1074,51 @@ auto-invocació només tenen sentit a Claude Code.
 | P0 5 | Marcador de finalització durable per sessió (`session.metadata.capa_b_done`) + finestra de 24 h al *sweeper*: evita repetir la Capa B cada minut sobre sessions velles | `db.ts`, `index.ts`, `agent.ts` |
 | P0 6 | La Capa B deixa d'esborrar els patrons d'error i els ítems SM-2 de la Capa A (`errors` vs `error_patterns`) · `learner_slug` amb *fallback* al perfil | `persist-session.py`, `tests/test_capa_a_b.py` |
 | P1-5 | Eina `fluent_record_answer`: el tutor declara cada resposta qualificada (nota, correccions amb categoria validada, `item_id` + qualitat) · registres a `.records/<ses>.jsonl` com a autoritat, prosa com a xarxa de seguretat, avís de divergència | `tools.ts`, `persist-session.py`, `accumulate-session.py`, `AGENTS.md`, `fluent-feedback-formatter`, tests |
-| P1-9 | `config/fluent.json` canònic + `scripts/fluent-config.py` (3 capes amb precedència provada) · scripts i servidor el llegeixen · `max_tokens` deixa de ser ignorat | `config/fluent.json`, `fluent-config.py`, `fluent-start/stop.sh`, `docker-llama.sh`, `index.ts`, tests |
-| P1-6 | *Streaming* de tokens darrere `FLUENT_STREAM` (off per defecte): acumulador pur amb recomposició de `tool_calls` fragmentats, deltes cap a l'event que la web ja entenia, part desada un sol cop | `llm.ts`, `agent.ts`, `db.ts`, `index.ts`, `config/fluent.json` |
+| P1-9 | `config/fluent.json` canònic + `scripts/flowed-config.py` (3 capes amb precedència provada) · scripts i servidor el llegeixen · `max_tokens` deixa de ser ignorat | `config/fluent.json`, `flowed-config.py`, `fluent-start/stop.sh`, `docker-llama.sh`, `index.ts`, tests |
+| P1-6 | *Streaming* de tokens darrere `FLOWED_STREAM` (off per defecte): acumulador pur amb recomposició de `tool_calls` fragmentats, deltes cap a l'event que la web ja entenia, part desada un sol cop | `llm.ts`, `agent.ts`, `db.ts`, `index.ts`, `config/fluent.json` |
 | P1-7 | Mètriques per torn (tokens, temps, *roundtrips*, eines) al log i a `.metrics/turns.jsonl` · deixar de reinjectar el bloc d'estat a la 2a i 3a comanda d'una sessió | `llm.ts`, `agent.ts`, `commands.ts` |
 | P1-11 | Primer test del servidor executable sense bun (`node --experimental-strip-types`), integrat a la suite | `server/test/stream-parser.test.ts`, `tests/test_server_stream.py` |
 | P1-10 | READMEs explicant cada directori de prompts | `.claude/README.md`, `prompts/README.md` |
 | Ritme | **Indicador de progrés**: el servidor compta les respostes registrades i les envia per SSE (`session.progress`) i per `GET /api/fluent/session-progress`; la web mostra `✏️ 3/8` amb barra i percentatge, i es recupera en recarregar. Llargada de sessió: `preferences.session_length` al perfil (12 per defecte, `0` l'apaga) i **el servidor** demana tancar en arribar-hi — per defecte **oferint** (`session_stop: "soft"`), o tallant si es configura `"hard"`. Escriptura i lectura queden exemptes (un escenari / un text). També: `daily_limits` existeix per fi a la plantilla — el "20 per defecte" dels skills de vocab i review no era enlloc de les dades | `pacing.ts`, `agent.ts`, `read-db.py`, plantilles, 3 skills, `server/test/pacing.test.ts` |
-| Eines | `scripts/fluent-check.py`: comprovacions de només lectura d'un perfil (perfil, SM-2, patrons, mestria, registres, mètriques, BD de sessions). Neix d'una revisió del pla de proves: els fragments de Python enganxats al document petaven per la indentació i no distingien "encara no hi ha res" d'un error | `fluent-check.py`, `PROVES.md`, `tests/test_repo_layout.py` |
+| Eines | `scripts/flowed-check.py`: comprovacions de només lectura d'un perfil (perfil, SM-2, patrons, mestria, registres, mètriques, BD de sessions). Neix d'una revisió del pla de proves: els fragments de Python enganxats al document petaven per la indentació i no distingien "encara no hi ha res" d'un error | `flowed-check.py`, `PROVES.md`, `tests/test_repo_layout.py` |
 | P2-12 | Decaïment de mestria (absolut, configurable per alumne, `mastery_level_earned`) · ranquing de patrons d'error amb pes que decau i `days_since_seen` | `db_schema.py`, `update-db.py`, `read-db.py`, `tests/test_mastery_decay.py` |
 | S14 | Eina `fluent_setup_profile`: l'entrevista de `/fluent-setup` ja es pot desar (validació, còpia de seguretat, escriptura atòmica, `setup_complete`) · skill i comanda reescrits · el reset de progrés deixa de ser cosa del tutor | `tools.ts`, `fluent-setup` (skill i comanda), `server/test/setup-profile.test.ts` |
 | S8 | Condicional mort i franja de dificultat unificada a les tres fonts | `fluent-learn` |
-| Dades | Ruta de la BD de sessions: `<perfil>/.opencode/opencode/opencode.db` → **`<perfil>/sessions/sessions.db`**, amb lectura de totes dues i sense esborrar res · `scripts/migrate-sessions-db.py` (còpia verificada amb l'API de backup) · `FLUENT_SESSIONS_DB` per forçar-la | `index.ts`, `db.ts`, `persist-session.py`, `accumulate-session.py`, `fluent-web.sh`, `new-user.sh`, tests |
+| Dades | Ruta de la BD de sessions: `<perfil>/.opencode/opencode/opencode.db` → **`<perfil>/sessions/sessions.db`**, amb lectura de totes dues i sense esborrar res · `scripts/migrate-sessions-db.py` (còpia verificada amb l'API de backup) · `FLOWED_SESSIONS_DB` per forçar-la | `index.ts`, `db.ts`, `persist-session.py`, `accumulate-session.py`, `flowed-web.sh`, `new-user.sh`, tests |
 | Extra | `scripts/models/llama-omnicoder.sh` (llançador face antic) tenia un bloc orfe i **no passava `bash -n`**: hauria fallat el dia que algú el cridés. Bloc duplicat eliminat | `llama-omnicoder.sh` |
-| P1-10b | Renombrat `.opencode/{agent,commands}` → `prompts/{agents,commands}` · helper a `scripts/` · plugin, `opencode.json` i llançador free a `obsolet/opencode-runtime/` · `--web` arxivat · test d'estructura | `agent.ts`, `commands.ts`, `tools.ts`, `fluent-web.sh`, prompts, skills, `README.md`, `MANUAL.md`, `tests/test_repo_layout.py` |
+| P1-10b | Renombrat `.opencode/{agent,commands}` → `prompts/{agents,commands}` · helper a `scripts/` · plugin, `opencode.json` i llançador free a `obsolet/opencode-runtime/` · `--web` arxivat · test d'estructura | `agent.ts`, `commands.ts`, `tools.ts`, `flowed-web.sh`, prompts, skills, `README.md`, `MANUAL.md`, `tests/test_repo_layout.py` |
 | SM-2 | Bloc `fluent:review_results`: el tutor declara quins ítems de la cua ha repassat i amb quina qualitat · parser + validació contra la cua · ocultació a la UI · prompts | `persist-session.py`, `accumulate-session.py`, `web/app.js`, `fluent-review`, `fluent-vocab`, 2 comandes, `AGENTS.md`, `docs/MANUAL.md` |
 | S1+S2+S3 | El tutor deixa de tocar infraestructura (carregar estat, escriure fitxers, persistir) | `AGENTS.md`, 3 agents, 7 comandes, 8 skills |
 | S9+S13 | Format de correcció parsejable a `fluent-writing` · taxonomia única de categories amb normalització | `db_schema.py`, `persist-session.py`, `tools.ts`, `fluent-writing`, `fluent-feedback-formatter`, `feedback-template.md`, test nou |
 | S6+S7 | Fora el neerlandès de plantilles i exemples · regles dures només a `rules.md` | 9 skills, 3 agents, 2 references |
 | Ordre | **Porta de repetició espaiada.** L'única regla d'ordre que el servidor pot verificar: si la sessió comença amb 🎲 o 🔁, els ítems vençuts d'avui es fan abans del contingut nou. El servidor coneix la cua (`spaced-repetition.json`) i sap quins `item_id` han tornat per `fluent_record_answer`; la nota al prompt es repeteix mentre la porta és oberta i calla quan es tanca. Topall: com a molt **mitja sessió** (`ceil(session_length/2)`), o el `daily_limits.review_items_per_day`, el que sigui més petit — un endarreriment gran no es menja el dia. Negociable **només a l'inici**: començar directament en 📝/🗣️/📚/📖 és l'alumne triant el dia i no activa la porta; `preferences.review_gate: false` l'apaga per alumne. La web ho mostra com `🔁 2/5 · ✏️ 3/8` | `pacing.ts`, `agent.ts`, `web/`, `fluent-learn`, `server/test/pacing.test.ts` |
-| Superfície | **Les comandes són botons, no comandes.** L'alumne no escriu mai `/fluent-…`: nou botó **🏁 Acaba** (tanca la sessió i dispara la Capa B), i `/fluent-setup` surt del camí de l'alumne — la web ja no hi arrenca mai, mostra un avís curt si el perfil no està configurat. L'alta la fa l'administrador amb `scripts/new-user.sh` + **`scripts/fluent-profile.py`** (mateixa validació que l'eina `fluent_setup_profile`, i també escriu `session_length` / `session_stop` / `review_gate`). L'entrevista `/fluent-setup` queda per a l'admin que la prefereixi | `web/index.html`, `web/app.js`, `web/style.css`, `fluent-profile.py`, `fluent-check.py`, comanda `fluent-setup`, `tests/test_fluent_profile.py` |
+| Superfície | **Les comandes són botons, no comandes.** L'alumne no escriu mai `/fluent-…`: nou botó **🏁 Acaba** (tanca la sessió i dispara la Capa B), i `/fluent-setup` surt del camí de l'alumne — la web ja no hi arrenca mai, mostra un avís curt si el perfil no està configurat. L'alta la fa l'administrador amb `scripts/new-user.sh` + **`scripts/flowed-profile.py`** (mateixa validació que l'eina `fluent_setup_profile`, i també escriu `session_length` / `session_stop` / `review_gate`). L'entrevista `/fluent-setup` queda per a l'admin que la prefereixi | `web/index.html`, `web/app.js`, `web/style.css`, `flowed-profile.py`, `flowed-check.py`, comanda `fluent-setup`, `tests/test_fluent_profile.py` |
 | Sessions | **Una sessió acabada ja no es reprèn.** Tancar el navegador no fa res al servidor, i `web/app.js` guarda l'id a `localStorage`: tornar-hi hores després reprenia la MATEIXA sessió — inclosa una que el sweeper ja havia finalitzat, de manera que tot el que es fes després arribava a les BD només per Capa A (sense resum, sense fitxer de resultats, sense `review_results`). Vist en viu: `ses_9073d7bb` finalitzada a les 10:15 i amb un torn nou a les 16:09. Ara `GET /api/fluent/session-state` decideix (finalitzada o >30 min inactiva → no es reprèn) i el client n'obre una de nova. La ratxa i el progrés viuen a les BD, no a la sessió | `http.ts`, `web/app.js`, `tests/test_fluent_profile.py` |
+| Sessions | **Una sessió d'abans d'un reinici del servidor tampoc es reprèn** (2026-09-25). L'exercici pendent (targeta, pràctica, skill) només viu a la memòria del procés: en reprendre-la es veia la pregunta, però la resposta no es corregia i sortia una pregunta nova. `resumeState()` (session.ts) hi afegeix el cas `restart` (`last_activity` anterior a l'arrencada del procés): en carregar, el client obre una sessió nova; amb la pàgina oberta, `POST message/command` respon `{bounce:"restart"}` sense cridar el model i el client rebota amb avís. La sessió vella la tanca el sweeper (resum inclòs) | `session.ts`, `http.ts`, `web/app.js`, `server/test/session-resume.test.ts` |
 | Sessions | **`capa_b_done` deixa de ser permanent.** El marcador evitava que el sweeper repetís la Capa B cada minut, però també impedia per sempre tornar-la a executar. Ara cada torn reobre la sessió si estava marcada (BD + `session-draft.json`); `persist-session.py` recalcula des del snapshot T0, així que repetir-ho és segur per disseny | `db.ts` (`reopenIfFinalized`), `agent.ts`, `tests/test_persist_session.py` |
-| Mètriques | **Quines eines, no només quantes.** El log comptava `tool_calls` sense els noms, i per això no es podia respondre "el tutor ha registrat les respostes?". Ara `turns.jsonl` i la línia del log porten la llista, amb `!` davant d'una crida rebutjada (`REJECTED` inclòs, que des de fora semblava un èxit). `fluent-check.py metrics` ho resumeix i avisa si no hi ha cap `fluent_record_answer` | `llm.ts`, `agent.ts`, `fluent-check.py` |
+| Mètriques | **Quines eines, no només quantes.** El log comptava `tool_calls` sense els noms, i per això no es podia respondre "el tutor ha registrat les respostes?". Ara `turns.jsonl` i la línia del log porten la llista, amb `!` davant d'una crida rebutjada (`REJECTED` inclòs, que des de fora semblava un èxit). `flowed-check.py metrics` ho resumeix i avisa si no hi ha cap `fluent_record_answer` | `llm.ts`, `agent.ts`, `flowed-check.py` |
 | Veu | **On es pot llegir en veu alta, i com se sap.** La primera versió posava el 🔊 a la targeta d'exercici (`#exercise-card`), que està desactivada des d'abans (`EXERCISE_CARD_ENABLED = false`): **el botó no es va dibuixar mai**. I posar-lo a l'exercici tal qual tampoc serveix — un exercici no és fiablement en la llengua meta ("Translate into English: *Ahir vaig anar al mercat*" és català, i una veu anglesa llegint-ho ensenya el contrari). Endevinar la llengua és una heurística que **falla sorolloionaent**. Solució: dues fonts, totes dues segures — la frase corregida (llengua meta per definició, sense tocar cap prompt) i un marcador explícit `[[say]]…[[/say]]` que el tutor posa. Si el model se n'oblida, es perd un botó; el fracàs és silenciós, que és la direcció correcta. El marcador no arriba mai als ulls de l'alumne | `web/app.js`, `style.css`, `rules.md`, `fluent-feedback-formatter`, `server/test/web-render.test.ts`, `tests/test_tts.py` |
-| Veu | **Piper deixa de dependre del `.bashrc`.** El binari porta les seves `libespeak-ng` i `libonnxruntime` al costat, i el carregador hi ha d'apuntar. Arreglat en un perfil de shell, funciona al terminal i **falla en silenci** (503, sense res al log) el dia que el servidor l'arrenqui systemd, un cron o una altra màquina — que és preciionaent el P1-8 que tenim pendent. Ara `ttsEnv()` deriva `LD_LIBRARY_PATH` i `ESPEAK_DATA_PATH` del directori del binari, i l'script fa el mateix; `status` ho comprova. Mesurat a railab: RTF **0,049** (20× més ràpid que temps real) | `tts.ts`, `fluent-tts.sh`, `server/test/tts.test.ts` |
-| VRAM | **`kv_type` configurable i context a 49152.** `q8_0` parteix la KV per la meitat (necessita `-fa 1`, que ja hi era), així que 48k de context previstos en **~12.600 MiB** — menys que els 13.938 mesurats a 32k. 48k i no 64k perquè el motiu ja no és la VRAM (la 4060 Ti és una VM dedicada): més context del que cal encareix el prefill, convida l'historial a créixer i un 14B raona pitjor a contextos llargs; la causa real de l'incident ja està atacada amb les sessions noves. **Trampa trobada pel camí:** `FLUENT_DEEP_CTX=32768` als tres `.env`, i l'`.env` mana sobre el config — canviar `config/fluent.json` no hauria servit de res. Comentat als tres. **Cap d'aquests números està mesurat**: bloc 18 de PROVES | `config/fluent.json`, `fluent-config.py`, els dos llançadors, els tres `.env`, `model-qwen14b-q4.md` |
+| Veu | **Piper deixa de dependre del `.bashrc`.** El binari porta les seves `libespeak-ng` i `libonnxruntime` al costat, i el carregador hi ha d'apuntar. Arreglat en un perfil de shell, funciona al terminal i **falla en silenci** (503, sense res al log) el dia que el servidor l'arrenqui systemd, un cron o una altra màquina — que és preciionaent el P1-8 que tenim pendent. Ara `ttsEnv()` deriva `LD_LIBRARY_PATH` i `ESPEAK_DATA_PATH` del directori del binari, i l'script fa el mateix; `status` ho comprova. Mesurat a railab: RTF **0,049** (20× més ràpid que temps real) | `tts.ts`, `flowed-tts.sh`, `server/test/tts.test.ts` |
+| VRAM | **`kv_type` configurable i context a 49152.** `q8_0` parteix la KV per la meitat (necessita `-fa 1`, que ja hi era), així que 48k de context previstos en **~12.600 MiB** — menys que els 13.938 mesurats a 32k. 48k i no 64k perquè el motiu ja no és la VRAM (la 4060 Ti és una VM dedicada): més context del que cal encareix el prefill, convida l'historial a créixer i un 14B raona pitjor a contextos llargs; la causa real de l'incident ja està atacada amb les sessions noves. **Trampa trobada pel camí:** `FLOWED_DEEP_CTX=32768` als tres `.env`, i l'`.env` mana sobre el config — canviar `config/fluent.json` no hauria servit de res. Comentat als tres. **Cap d'aquests números està mesurat**: bloc 18 de PROVES | `config/fluent.json`, `flowed-config.py`, els dos llançadors, els tres `.env`, `model-qwen14b-q4.md` |
 | Context | **Poda de l'historial — ja no és opcional.** En producció: `request (41808 tokens) exceeds the available context size (40960)`. El torn **falla**: l'alumna rep un error en comptes d'un exercici. I abans de fallar, es degrada — mesurat sobre 120 torns reals: de 1,9 s a **19,8 s** per torn (10×), tot dins el model, amb el prompt passant de 25.650 a 31.946 tokens i un màxim de 69.484. Ara cada torn es reté a un pressupost (context − sistema − sortida − 10% de marge), descartant els missatges **més antics**; el prompt de sistema no es toca mai i l'últim missatge de l'alumna tampoc. **Es podia fer perquè ja no cal l'historial complet**: el `covered` del servidor és qui recorda què s'ha preguntat, i `rules.md` ara ho diu explícitament | `pacing.ts`, `agent.ts`, `rules.md`, `server/test/pacing.test.ts` |
 | Context | **`ctx: 36864` + `f16`** (2026-09-14). ~14.600 MiB previstos: ~1,7 GB de marge a la 4060 Ti, i un 12% més de context sense tocar la KV. El sostre del model segueix sent 40960, inabastable en f16 sobre 16 GB | `config/fluent.json` |
-| Repo | **Desmarcat i llest per a git** (2026-09-14). `.claude/{hooks,skills,references}` → `hooks/`, `skills/`, `references/` a l'arrel, com ja hi era `prompts/`; `CLAUDE.md`, `.claude-plugin/`, `settings.json` i `hooks.json` retirats a `obsolet/claude-code-plugin/` — el camí d'instal·lació com a plugin s'abandona. `CLAUDE_PROJECT_DIR`/`CLAUDE_PLUGIN_ROOT` → `FLUENT_PROJECT_DIR`/`FLUENT_ROOT`, **llegint encara els noms antics** per compatibilitat. Els noms reals de les alumnes surten de tot el codi i els docs (exemples neutres: `alex-en`, `sam-en`, `demo-en`) i el mapa perfil→port passa de `config/fluent.json` a l'`.env`, que no es publica. `README.md` reescrit; l'original de l'etapa plugin a `docs/README-original-plugin.md`. **La història no es toca**: CHANGELOG i docs de migració es queden com estaven | tot el repo, `.gitignore`, `.github/workflows/ci.yml` |
+| Repo | **Desmarcat i llest per a git** (2026-09-14). `.claude/{hooks,skills,references}` → `hooks/`, `skills/`, `references/` a l'arrel, com ja hi era `prompts/`; `CLAUDE.md`, `.claude-plugin/`, `settings.json` i `hooks.json` retirats a `obsolet/claude-code-plugin/` — el camí d'instal·lació com a plugin s'abandona. `CLAUDE_PROJECT_DIR`/`CLAUDE_PLUGIN_ROOT` → `FLOWED_PROJECT_DIR`/`FLOWED_ROOT`, **llegint encara els noms antics** per compatibilitat. Els noms reals de les alumnes surten de tot el codi i els docs (exemples neutres: `alex-en`, `sam-en`, `demo-en`) i el mapa perfil→port passa de `config/fluent.json` a l'`.env`, que no es publica. `README.md` reescrit; l'original de l'etapa plugin a `docs/README-original-plugin.md`. **La història no es toca**: CHANGELOG i docs de migració es queden com estaven | tot el repo, `.gitignore`, `.github/workflows/ci.yml` |
 | Repo | **`.gitignore`**: fora `obsolet/` (63 MB), les dues transcripcions de sessions reals (4,5 MB amb noms de menors), els backups de perfils, `.env`, `node_modules`, `__pycache__` i tot el que és dades d'alumne (`results/`, `.records/`, `.metrics/`, `.daily/`, `.memories/`, `sessions/*.db`). El repositori queda en **1,3 MB i 150 fitxers** | `.gitignore` |
 | Dades | **Les sessions es daten pel dia que van passar.** `build_report` posava `datetime.now()`, que és correcte per a una sessió tancada el mateix dia i fals per a totes les altres. Vist en viu: el sweeper va reprocessar sessions del 3 i del 9 de setembre i les va estampar totes dues el **14**, així que `session-log.json` deia que dues nenes havien practicat un dia que ningú havia obert l'app. Els números no eren erronis (update-db restaura el snapshot T0 abans de reaplicar), però l'historial explicava una ficció — i l'historial és el que el tutor cita en mode friend. Ara surt de `time_created` de la sessió, amb `last_activity` i `time_updated` com a alternatives i `avui` només si no hi ha res | `persist-session.py`, `tests/test_persist_session.py` |
-| Eines | **`fluent-check.py historial`**: contrasta la BD de sessions amb `results/` i `session-log.json`, que són tres traces independents, i llista les entrades per data. Neix de "la Sam segur que ha fet més sessions" — i va servir per veure que no en faltaven, sinó que dues entrades estaven mal datades. *La primera versió comparava els ids del log (`session-005`) amb els de la BD (`ses_…`), que són espais de noms diferents, i marcava totes les entrades com a perdudes: soroll, no diagnòstic. Corregit* | `fluent-check.py` |
-| Memòria | **`scripts/fluent-memories.py` — experiment, desconnectat del tutor.** Lot de nit que busca als torns del dia coses que l'alumna hagi dit sobre ella i les deixa a `<perfil>/.memories/pending.jsonl`. **No arriba al prompt**: connectar-ho és una decisió posterior, i la idea és mirar una setmana què en surt abans de construir res. Tres decisions de disseny: (a) **offline** — ningú espera, així que la mida del model deixa de ser un compromís; (b) **intersecció de dos models** — exigir acord costa una segona passada i elimina l'error segur d'un sol model, que és el que importa; (c) **la cita literal es verifica** contra el que va escriure, i si no hi és el candidat es descarta. La part difícil no és extreure, és **abstenir-se**: la majoria de torns són respostes d'exercici, i "I have a dog" com a traducció no és un fet sobre ella — per això se li passa l'exercici com a context. El tutor no escriu mai aquí | `fluent-memories.py`, `tests/test_fluent_memories.py` |
+| Eines | **`flowed-check.py historial`**: contrasta la BD de sessions amb `results/` i `session-log.json`, que són tres traces independents, i llista les entrades per data. Neix de "la Sam segur que ha fet més sessions" — i va servir per veure que no en faltaven, sinó que dues entrades estaven mal datades. *La primera versió comparava els ids del log (`session-005`) amb els de la BD (`ses_…`), que són espais de noms diferents, i marcava totes les entrades com a perdudes: soroll, no diagnòstic. Corregit* | `flowed-check.py` |
+| Memòria | **`scripts/flowed-memories.py` — experiment, desconnectat del tutor.** Lot de nit que busca als torns del dia coses que l'alumna hagi dit sobre ella i les deixa a `<perfil>/.memories/pending.jsonl`. **No arriba al prompt**: connectar-ho és una decisió posterior, i la idea és mirar una setmana què en surt abans de construir res. Tres decisions de disseny: (a) **offline** — ningú espera, així que la mida del model deixa de ser un compromís; (b) **intersecció de dos models** — exigir acord costa una segona passada i elimina l'error segur d'un sol model, que és el que importa; (c) **la cita literal es verifica** contra el que va escriure, i si no hi és el candidat es descarta. La part difícil no és extreure, és **abstenir-se**: la majoria de torns són respostes d'exercici, i "I have a dog" com a traducció no és un fet sobre ella — per això se li passa l'exercici com a context. El tutor no escriu mai aquí | `flowed-memories.py`, `tests/test_fluent_memories.py` |
 | Dades | **`scripts/close-old-sessions.py`**: marca com a tancades les sessions del build antic que no ho van arribar a estar, escrivint **només** `capa_b_done` a la metadada de la sessió. No executa la Capa B, no toca les 6 BD, no escriu cap fitxer de resultats i no mou cap número. Avui ja s'ignoren (finestra de 24 h del sweeper); això ho fa explícit perquè un canvi futur d'aquesta finestra no les pugui despertar i sumar-les dues vegades. Deixa còpia `.bak` i té `--dry-run`; per defecte no toca res de menys de 2 dies. Decisió conscient: **no s'incorporen** — les dades per torn ja hi són (Capa A) i reprocessar-les arriscaria doble compte | `close-old-sessions.py`, `tests/test_close_old_sessions.py` |
-| Prompt | **Regressió meva d'ahir:** `fluent-profile.py` va passar a escriure `daily_goal` i esborrar `session_length`, però `read-db.py` només exposava el nom antic — el tutor havia deixat de veure l'objectiu del dia. Ara passa els dos | `read-db.py` |
+| Prompt | **Regressió meva d'ahir:** `flowed-profile.py` va passar a escriure `daily_goal` i esborrar `session_length`, però `read-db.py` només exposava el nom antic — el tutor havia deixat de veure l'objectiu del dia. Ara passa els dos | `read-db.py` |
 | Migració | **`docs/MIGRACIO-LLVM.md`**: portar l'app a **llvm** (la VM de producció a rapve), a `/opt/fluent` amb symlink versionat ara, no al final, per trobar-hi els errors amb temps. Segueix sent copiar el directori i canviar l'`.env` com sempre, **més `bun install`** — el servidor propi amb bun no existia a l'última migració i sense `js-yaml` no arrenca. L'únic pas amb risc real és mesurar 36864/f16 sobre 16 GB, que no s'ha fet mai | `MIGRACIO-LLVM.md` |
 | Context | **Decisió (revisada l'endemà a 36864): `ctx: 32768` + `kv_type: "f16"`** — el que hi havia, mesurat. El desbordament el resol la poda, no el context, així que els tokens extra només retardaven el retall i a canvi hi posaven el q8_0 sense mesurar. Següent pas si algun dia cal: **36864 amb f16** (~14.600 MiB, ~1,7 GB de marge a la 4060 Ti). El `kv_type` queda cablejat i provat per si es vol | `config/fluent.json`, `model-qwen14b-q4.md` |
 | Context | **El sostre real del model és 40960, no 49152.** Qwen3-14B té `max_position_embeddings: 40960` i llama.cpp reté el `-c` al màxim entrenat si no s'activa YaRN — o sigui que el 49152 que vam configurar al migdia **no es va aplicar mai**, i la taula de VRAM, tot i ser correcta, proposava valors inabastables. Corregit a `ctx: 40960` amb `q8_0` (≈11.900 MiB previstos). YaRN es descarta: degrada la qualitat als contextos curts, que és on viu aquesta app | `config/fluent.json`, `model-qwen14b-q4.md` |
 | Sessió | **La no-repetició passa a ser del servidor.** "Never repeat an exercise" era una línia a `rules.md`, i amb quatre patrons febles per treballar el model tornava als mateixos tres enunciats dins la mateixa lliçó. Ara el servidor n'extreu una empremta de cada exercici plantejat (`**Sentence:** X`, `## Exercise N: … (X)`), l'acumula a `plan.covered` i li torna la llista literal amb l'ordre de no reutilitzar-ne cap — i si s'esgoten els patrons, d'inventar-ne un de nou en comptes de reciclar. És el mateix patró que ha funcionat cada vegada avui: el que el model ha de recordar, el recorda el servidor | `pacing.ts`, `agent.ts`, `daily.ts`, `server/test/pacing.test.ts` |
 | Sessió | **La Lliçó ha de tancar-se sola.** Amb el compte exhaurit, `pacingNote()` no retornava res i el tutor seguia presentant exercicis indefinidament — vist en viu amb el badge a 0 i el tutor per l'"Exercise 8", tot amb el mateix enunciat. Afegida la nota de tancament (resum curt + tornar als botons, i si l'alumne insisteix, no obrir cap exercici nou) i la instrucció de **variar la forma** de l'exercici. De passada, retirat el sostre de 12 per sessió: contradeia el que s'havia acordat (la Lliçó acaba, el dia no) i a més llegia `session_length`, que ja no s'escriu — només actua si un admin posa `session_stop: "hard"` | `agent.ts`, `tests/test_tts.py` |
-| Sessió | **La Lliçó del dia substitueix el "12".** El número era un pressupost disfressat de pla: arribar a 15/12 en una sessió real no volia dir res, perquè no hi havia res a completar. Ara són dues coses. **🎓 Lesson** té final — repassos vençuts d'avui completats amb drills fins a un mínim de 6 — i porta un badge ambre amb el que queda; **✏️ N** no en té, compta tot el qualificat i hi posa una cara que puja (😐 · 🙂 · 😄 · 🤩 als terços de l'objectiu, 15 per defecte). **Res es bloqueja**: el badge diu què es deu i l'alumne tria. El comptatge passa a ser **del DIA, no de la sessió** — coherent amb la ratxa, la cua SM-2 i les BD, i immune a tancar la pestanya. Cada 3 lliçons, la Lliçó reserva un exercici per a l'habilitat més abandonada (writing/reading, mai vocabulari), **integrat a dins**, no com a segona obligació | `pacing.ts`, `daily.ts` (nou), `agent.ts`, `web/`, `fluent-profile.py`, `fluent-check.py`, `server/test/pacing.test.ts` |
+| Sessió | **La Lliçó del dia substitueix el "12".** El número era un pressupost disfressat de pla: arribar a 15/12 en una sessió real no volia dir res, perquè no hi havia res a completar. Ara són dues coses. **🎓 Lesson** té final — repassos vençuts d'avui completats amb drills fins a un mínim de 6 — i porta un badge ambre amb el que queda; **✏️ N** no en té, compta tot el qualificat i hi posa una cara que puja (😐 · 🙂 · 😄 · 🤩 als terços de l'objectiu, 15 per defecte). **Res es bloqueja**: el badge diu què es deu i l'alumne tria. El comptatge passa a ser **del DIA, no de la sessió** — coherent amb la ratxa, la cua SM-2 i les BD, i immune a tancar la pestanya. Cada 3 lliçons, la Lliçó reserva un exercici per a l'habilitat més abandonada (writing/reading, mai vocabulari), **integrat a dins**, no com a segona obligació | `pacing.ts`, `daily.ts` (nou), `agent.ts`, `web/`, `flowed-profile.py`, `flowed-check.py`, `server/test/pacing.test.ts` |
 | Dades | **Els patrons d'error es perdien tots.** `parse_error_patterns` descartava qualsevol correcció amb nota ≥ 8 com a "demostració". El tutor puntua generós (8, 9, 10), així que un 9/10 amb un `🟡 "last friday" → **"last Friday"**` no deixava rastre. Mesurat sobre una sessió real: tres respostes, tres correccions, **zero** patrons. Ara la senyal és el marcador (🟡/🔴/❌), no la nota. I la taxonomia: el tutor escriu el terme gramatical (`past tense`), no la nostra categoria, i tot el que no coincidia queia a `grammar` — afegits els àlies reals | `persist-session.py`, `db_schema.py` |
 | Botons | **El tutor deixa de recomanar comandes.** Amb la cua de repàs buida, `fluent-review` imprimia "Try: `/fluent-learn`, `/fluent-vocab`…" — consell que l'alumne no pot seguir, perquè no té línia d'ordres. Corregit als skills (`fluent-review`, `fluent-progress`, `fluent-setup`), fixat com a regla dura a `rules.md`, i **garantit al renderitzat**: `humanizeCommands()` reescriu qualsevol `/fluent-x` en el nom del seu botó abans de pintar-lo, digui el que digui el model | `rules.md`, 3 skills, `web/app.js`, `server/test/web-render.test.ts` |
 | Menús | **Un menú no és un exercici.** El missatge de "cap repàs pendent" (i el menú d'obertura, i el de tancament) es marcava `✏️ Exercici` al flux: convida un nen de vuit anys a respondre una llista d'opcions. `MENU_RE` ampliat + heurística de dos noms de botó. De pas, el camí SSE en viu i el de streaming no passaven per `renderTutorText()`: no treien els blocs màquina ni pintaven l'exercici. Ara hi ha **un sol renderitzador** per al text del tutor | `web/app.js`, `server/test/web-render.test.ts` |
-| Veu | **TTS local (13a).** Botó 🔊 a l'exercici i a la frase corregida; `GET /api/fluent/say` amb cau per hash a `<perfil>/.audio/`, `GET /api/fluent/tts-state` perquè la web sàpiga si dibuixar-los. Motor piper, **CPU pura** (no toca la VRAM del model deep). Ve **apagat**: sense veu instal·lada no es dibuixa cap botó. Mai endevina la llengua ni llegeix la nativa. `speakableText()` treu markdown, emoji, notes i els parèntesis en català abans de sintetitzar. Instal·lació d'admin: `scripts/fluent-tts.sh install <veu>`. Zero canvis de prompt i zero context per torn | `tts.ts`, `http.ts`, `index.ts`, `config/fluent.json`, `web/`, `fluent-tts.sh`, `fluent-check.py`, `server/test/tts.test.ts`, `tests/test_tts.py` |
+| Veu | **TTS local (13a).** Botó 🔊 a l'exercici i a la frase corregida; `GET /api/fluent/say` amb cau per hash a `<perfil>/.audio/`, `GET /api/fluent/tts-state` perquè la web sàpiga si dibuixar-los. Motor piper, **CPU pura** (no toca la VRAM del model deep). Ve **apagat**: sense veu instal·lada no es dibuixa cap botó. Mai endevina la llengua ni llegeix la nativa. `speakableText()` treu markdown, emoji, notes i els parèntesis en català abans de sintetitzar. Instal·lació d'admin: `scripts/flowed-tts.sh install <veu>`. Zero canvis de prompt i zero context per torn | `tts.ts`, `http.ts`, `index.ts`, `config/fluent.json`, `web/`, `flowed-tts.sh`, `flowed-check.py`, `server/test/tts.test.ts`, `tests/test_tts.py` |
 | Skills | **`fluent-session-analyzer` eliminat.** Llegia `results/*.md` amb marcadors per planificar — feina que `read-db.py` ja fa millor i amb dades estructurades (patrons ranquejats per freqüència amb recència, cua SM-2, mestria). Era context per torn a canvi de res. Els `results/*.md` es queden com a registre llegible per una persona. Tanca de retruc S5 (convenció de noms) | `skills/`, `fluent-learn`, `session-file-template.md`, `README.md`, `CLAUDE.md` |
 
 **Verificació:** `tsc --noEmit` net ·
@@ -1127,7 +1128,7 @@ auto-invocació només tenen sentit a Claude Code.
 sessions del mateix alumne.
 
 **No verificat encara (cal fer-ho amb el sistema engegat):** el *streaming*
-(`FLUENT_STREAM=1`) contra un model real, i una sessió real
+(`FLOWED_STREAM=1`) contra un model real, i una sessió real
 d'extrem a extrem amb un perfil de proves (`test-en`) per confirmar que el tutor
 ja no intenta cap ordre denegada i que un exercici d'escriptura deixa el patró
 d'error a `mistakes-db`. És la prova que tanca el lot.
@@ -1224,7 +1225,7 @@ d'exercici fix durant 25 torns. No és el model derivant: és el servidor clavan
 | 9 | Regla de varietat moguda al skill (abans només a la nota) | `skills/fluent-review/SKILL.md` |
 | 10 | **La nota i el bloc de skill surten de `agent.ts` cap a `pacing.ts`** (`lessonNote()`, `skillBlock()`). `pacing.ts` és Bun-free per disseny: és la part que es trenca, i per tant la que ha de poder-se executar en una prova sense model, sense BD i sense GPU | `pacing.ts`, `agent.ts` |
 | 11 | **`"critical"` deixa de ser un exercici.** L'única empremta que es treia d'un ítem de repàs era el parèntesi del títol (`## Exercise 2: Spaced Review (Critical)`), o sigui la dificultat. Al fitxer real del 16/09 hi ha literalment `"critical"` a la llista d'"already asked", fent de tapadora de quinze preguntes diferents. Ara es llegeix `**Exercise:**` / `**Item ID:**`, hi ha una llista de paraules que mai són un exercici, i `**Question:**` només és recurs de darrera hora (perquè sovint és una instrucció genèrica, "Rewrite this sentence correctly", i prohibir-la vetaria tot un tipus d'exercici) | `pacing.ts` |
-| 12 | **`fluent-check.py lliço`** — veredicte de vuit línies sobre la lliçó d'avui. Cap dels checks existents deia en una sola pantalla que el tutor no corregia | `scripts/fluent-check.py` |
+| 12 | **`flowed-check.py lliço`** — veredicte de vuit línies sobre la lliçó d'avui. Cap dels checks existents deia en una sola pantalla que el tutor no corregia | `scripts/flowed-check.py` |
 | 13 | **`skipDirectives` es reenvia de veritat.** Estava declarat a `loadCommand` i no s'passava mai a `expandDirectives`: cada command reexecutava `read-db.py` i reinjectava tot el bloc d'estat, **+2,8k tokens per premuda** (mesurat: 16519 → 19361) | `commands.ts` |
 
 ## E.3bis Segona tanda — el que va sortir en engegar-ho (mateixa tarda)
@@ -1435,8 +1436,8 @@ suite era verda mentre el tutor feia seixanta torns sense corregir, perquè el
 que es va trencar era el que el model rebia, i cap test unitari ha llegit mai
 la resposta d'un model.
 
-`scripts/fluent-e2e.py` obre sessió per l'API igual que el navegador, prem els
-botons, contesta, i **llegeix el que respon**. `scripts/fluent-seed.py` li dona
+`scripts/flowed-e2e.py` obre sessió per l'API igual que el navegador, prem els
+botons, contesta, i **llegeix el que respon**. `scripts/flowed-seed.py` li dona
 passat al perfil amb el pipeline real, dia a dia, perquè la cua SM-2 tingui
 alguna cosa a fer.
 
@@ -1467,7 +1468,7 @@ que importa s'imposa:
 - **`<perfil>/.metrics/guards.jsonl`** — una línia per actuació del guard, al
   costat de les mètriques del torn. El log del servidor viu a `/tmp` i
   desapareix.
-- **`fluent-check.py lliço`** — veredicte de vuit línies sobre la lliçó d'avui.
+- **`flowed-check.py lliço`** — veredicte de vuit línies sobre la lliçó d'avui.
 
 ## G.4 Estat de la prova de navegació
 
@@ -1493,7 +1494,7 @@ posada, no un defecte.
 - **Dos dies seguits**: que el que contesta avui torni demà com toca. Ara es pot,
   perquè els registres ja s'escriuen.
 - **Un perfil real** (`nes-en`), sense `--reset`.
-- **`--scenario marathon`** i la prova de dos dies amb `fluent-advance-day.py`.
+- **`--scenario marathon`** i la prova de dos dies amb `flowed-advance-day.py`.
 
 ## G.6 L'`item_id` el posa el servidor (2026-09-19)
 
@@ -1724,3 +1725,36 @@ docent.
 **Mètriques:** `turns.jsonl` guarda `command`.
 
 463/463.
+
+## G.14 On viuen els perfils: `FLOWED_HOME` (2026-09-24)
+
+La carpeta dels alumnes (`~/.fluent`) estava escrita a mà a 24 fitxers. Ara
+es resol en un sol lloc, amb la mateixa regla a Python i a shell:
+
+- **Python:** `hooks/main_paths.py` (abans `fluent_paths.py`), amb
+  `profiles_root()` i `profile_dir(id)`.
+- **Shell:** `scripts/lib-paths.sh`, que defineix `FLOWED_HOME_DIR`.
+
+Regla:
+
+1. `$FLOWED_HOME`, si està definida;
+2. `~/.flowed`, si existeix, o si encara no existeix cap de les dues;
+3. `~/.fluent`, mentre la carpeta vella no s'hagi mogut.
+
+Així res es trenca abans del canvi. Per passar a `~/.flowed`, amb l'app aturada:
+
+    scripts/flowed-stop.sh            # o aturar cada web
+    mv ~/.fluent ~/.flowed
+    scripts/flowed-start.sh
+
+L'app en marxa no depèn del nom: el servidor i els hooks només fan servir
+`FLOWED_DATA_DIR`, que construeix `flowed-web.sh`.
+
+**Variables d'entorn (2026-09-25).** Totes les `FLUENT_*` s'han reanomenat a
+`FLOWED_*` (mateix sufix: `FLOWED_DATA_DIR`, `FLOWED_DEEP_PORT`,
+`FLOWED_WEBS`…), i el marcador `.fluent-active` a `.flowed-active`. Sense
+compatibilitat amb els noms vells: cal reanomenar-les a cada `.env` de màquina
+i a qualsevol `export` o servei fora del repo.
+
+Proves: `tests/test_main_paths.py`. Comprova que Python i shell donen el mateix
+resultat en els quatre casos.

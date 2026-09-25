@@ -21,10 +21,10 @@ broken:
   * the lesson is not closed before its exercises are done
   * the counter moves, and the answers reach .records/
 
-It needs the server running:  scripts/fluent-web.sh --app --port N <profile>
+It needs the server running:  scripts/flowed-web.sh --app --port N <profile>
 
-  python3 scripts/fluent-e2e.py --port 4103 test-en
-  python3 scripts/fluent-e2e.py --port 4103 test-en --answers 8 --transcript /tmp/t.md
+  python3 scripts/flowed-e2e.py --port 4103 test-en
+  python3 scripts/flowed-e2e.py --port 4103 test-en --answers 8 --transcript /tmp/t.md
 """
 from __future__ import annotations
 
@@ -42,6 +42,8 @@ import urllib.error
 import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 REPO = Path(__file__).resolve().parent.parent
 MARKER = re.compile(r"[🟢🟡🔴✅❌]")
@@ -215,7 +217,7 @@ def snapshot(prof_dir: Path) -> dict[str, str]:
 
 def archive(d: Path) -> int:
     """Move a directory's live files into `_archive/`, once — see the twin of
-    this function in `fluent-seed.py` for the ENAMETOOLONG it replaces. An
+    this function in `flowed-seed.py` for the ENAMETOOLONG it replaces. An
     archive is a place, not a suffix chained onto the name every run."""
     if not d.is_dir():
         return 0
@@ -223,7 +225,7 @@ def archive(d: Path) -> int:
     moved = 0
     stamp = time.strftime("%Y%m%d-%H%M%S")
     for f in d.iterdir():
-        # A day archived by fluent-advance-day.py (".<name>.day-<stamp>") is history of a
+        # A day archived by flowed-advance-day.py (".<name>.day-<stamp>") is history of a
         # run that is over: leaving it makes the next run's "yesterday" checks read it.
         if f.is_dir() or (f.name.startswith(".") and ".day-" not in f.name):
             continue
@@ -405,7 +407,7 @@ def reset_profile(prof_dir: Path) -> None:
 
 
 def run(args, quiet: bool = False) -> Report | int:
-    prof_dir = Path(args.dir).expanduser() if args.dir else Path.home() / ".fluent" / args.profile
+    prof_dir = Path(args.dir).expanduser() if args.dir else profiles_root() / args.profile
     if not (prof_dir / "learner-profile.json").exists():
         print(f"❌ perfil no trobat: {prof_dir}", file=sys.stderr)
         return 2
@@ -415,7 +417,7 @@ def run(args, quiet: bool = False) -> Report | int:
     elif pw_file.exists():
         password = "".join(pw_file.read_text().split())
     else:
-        password = "".join((Path.home() / ".fluent" / ".web-password-default").read_text().split())
+        password = "".join((profiles_root() / ".web-password-default").read_text().split())
 
     cli = Client(args.port, password, args.timeout, args.user)
     rep = Report()
@@ -433,7 +435,7 @@ def run(args, quiet: bool = False) -> Report | int:
         return 2
     except Exception as e:
         print(f"❌ el servidor del port {args.port} no respon: {e}\n"
-              f"   scripts/fluent-web.sh --app --port {args.port} {args.profile}", file=sys.stderr)
+              f"   scripts/flowed-web.sh --app --port {args.port} {args.profile}", file=sys.stderr)
         return 2
 
     # Is the server running the code on disk? Twice a result has been judged
@@ -446,8 +448,8 @@ def run(args, quiet: bool = False) -> Report | int:
         print(f"\n❌ el servidor del port {args.port} corre un build diferent del que hi ha al disc\n"
               f"   servidor: {running}   disc: {on_disk}\n"
               f"   Els skills es rellegeixen cada torn, el TypeScript no. Reinicia'l:\n"
-              f"   scripts/fluent-web.sh --stop --port {args.port}\n"
-              f"   scripts/fluent-web.sh --app --port {args.port} {prof_dir.name}", file=sys.stderr)
+              f"   scripts/flowed-web.sh --stop --port {args.port}\n"
+              f"   scripts/flowed-web.sh --app --port {args.port} {prof_dir.name}", file=sys.stderr)
         return 2
     if running:
         print(f"build {running} (coincideix amb el disc)" if running == on_disk
@@ -503,9 +505,9 @@ def run(args, quiet: bool = False) -> Report | int:
     # red checks and a sweep summary that looks like a catastrophe.
     if not greeting.strip() and time.time() - t0 < 3:
         print("\n❌ el tutor no ha dit res i ha trigat 0s: el model no respon.\n"
-              "   Comprova-ho amb scripts/fluent-web.sh --status --port "
+              "   Comprova-ho amb scripts/flowed-web.sh --status --port "
               f"{args.port} (hauria de dir «model: deep … RUNNING»)\n"
-              "   i arrenca'l amb scripts/fluent-start.sh --models-only.", file=sys.stderr)
+              "   i arrenca'l amb scripts/flowed-start.sh --models-only.", file=sys.stderr)
         return 2
 
     first = tutor_text(cli.command(sid, "fluent-review"))
@@ -528,8 +530,8 @@ def run(args, quiet: bool = False) -> Report | int:
         print(f"\n❌ la lliçó d'avui {done_note} abans d'aquesta execució "
               f"({started} de {total}).\n"
               f"   Continuar-la no mesura una lliçó: mesura el que en quedava. Buida el dia:\n"
-              f"   python3 scripts/fluent-e2e.py {prof_dir.name} --port {args.port} --reset …\n"
-              f"   o, si vols passat, fluent-seed.py (que també buida el dia).", file=sys.stderr)
+              f"   python3 scripts/flowed-e2e.py {prof_dir.name} --port {args.port} --reset …\n"
+              f"   o, si vols passat, flowed-seed.py (que també buida el dia).", file=sys.stderr)
         return 2
 
     replies = [first]
@@ -1124,7 +1126,7 @@ def run(args, quiet: bool = False) -> Report | int:
     #
     # The one thing the whole system is built on: what she answered correctly
     # does not come back tomorrow, and what she missed does. Previous days live
-    # in the archived records that fluent-advance-day.py sets aside.
+    # in the archived records that flowed-advance-day.py sets aside.
     knew, missed = set(), set()
     rec_dir = prof_dir / ".records"
     if rec_dir.is_dir():
@@ -1398,7 +1400,7 @@ def vocab_bank() -> list[tuple[str, str]]:
     global _BANK
     if _BANK is None:
         import importlib.util
-        spec = importlib.util.spec_from_file_location("fluent_seed", Path(__file__).with_name("fluent-seed.py"))
+        spec = importlib.util.spec_from_file_location("fluent_seed", Path(__file__).with_name("flowed-seed.py"))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         _BANK = [(en, ca) for en, ca in mod.VOCAB] + EXTRA_WORDS
@@ -1537,7 +1539,7 @@ def numbered_path(path: str, n: int) -> str:
 # Everything the other scenarios measure is ONE day. What the system is built on
 # is what happens between days: what she answered right does not come back, what
 # she missed comes back tomorrow, and the intervals grow 1 → 6 → 16. Waiting a
-# day per test is not a plan, so the clock is moved (fluent-advance-day.py) and
+# day per test is not a plan, so the clock is moved (flowed-advance-day.py) and
 # the same learner sits the next lesson.
 #
 # The learner: each item has its own number of sightings before she knows it
@@ -1672,7 +1674,7 @@ def run_days(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
     for day in range(1, ndays + 1):
         if day > 1:
             wait_quiet(prof_dir)
-            p = subprocess.run([sys.executable, str(REPO / "scripts" / "fluent-advance-day.py"),
+            p = subprocess.run([sys.executable, str(REPO / "scripts" / "flowed-advance-day.py"),
                                 prof_dir.name, "--dir", str(prof_dir), "--days", "1"],
                                capture_output=True, text=True)
             if p.returncode != 0:
@@ -1841,7 +1843,7 @@ def run_days(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
 # record the path can use, and does the path move the way the answers say.
 #
 # Nothing here judges the model's teaching. The student's ability per competence is
-# a fixed curve (scripts/fluent-sim-path.py); what the model is asked for is the
+# a fixed curve (scripts/flowed-sim-path.py); what the model is asked for is the
 # base: the right kind of question, in order, graded, recorded.
 #
 # Answers: vocabulary from the bench word bank (right or wrong known for certain);
@@ -1984,7 +1986,7 @@ def run_curriculum(args, cli, prof_dir: Path, rep: "Report", quiet: bool, setup:
     ndays = max(2, args.days)
     sys.path.insert(0, str(REPO / "hooks"))
     cu = _load_module("fluent_curriculum", "hooks/curriculum.py")
-    sim = _load_module("fluent_sim_path", "scripts/fluent-sim-path.py")
+    sim = _load_module("fluent_sim_path", "scripts/flowed-sim-path.py")
 
     # The course this scenario tests: A2 (the learner comes with A1 certified by the teacher — a
     # "placement" — so the ladder does not send her back to A1) or A1 (from zero). The scratch
@@ -2140,7 +2142,7 @@ def run_curriculum(args, cli, prof_dir: Path, rep: "Report", quiet: bool, setup:
     for day in range(1, ndays + 1):
         if day > 1:
             wait_quiet(prof_dir)
-            p = subprocess.run([sys.executable, str(REPO / "scripts" / "fluent-advance-day.py"),
+            p = subprocess.run([sys.executable, str(REPO / "scripts" / "flowed-advance-day.py"),
                                 prof_dir.name, "--dir", str(prof_dir), "--days", "1", "--keep-records"],
                                capture_output=True, text=True)
             if p.returncode != 0:
@@ -2316,7 +2318,7 @@ def run_ladder(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
         return 2
     sys.path.insert(0, str(REPO / "hooks"))
     cu = _load_module("fluent_curriculum", "hooks/curriculum.py")
-    sim = _load_module("fluent_sim_path", "scripts/fluent-sim-path.py")
+    sim = _load_module("fluent_sim_path", "scripts/flowed-sim-path.py")
     mode = getattr(args, "test_mode", "pass")
     today = date.today().isoformat()
 
@@ -2577,7 +2579,7 @@ def run_topics(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("profile", nargs="?", default="test-en", help="profile id under ~/.fluent/")
+    ap.add_argument("profile", nargs="?", default="test-en", help="profile id under ~/.flowed/")
     ap.add_argument("--dir", help="explicit profile directory")
     ap.add_argument("--port", type=int, default=4103)
     ap.add_argument("--course", choices=("A1", "A2"), default="A2",
@@ -2612,12 +2614,12 @@ def main() -> int:
     ap.add_argument("--days", type=int, default=5,
                     help="escenari days: quants dies seguits (per defecte 5)")
     ap.add_argument("--student", choices=("fast", "steady", "weak"), default="steady",
-                    help="escenari curriculum: com aprèn l'alumne simulat (fluent-sim-path.py)")
+                    help="escenari curriculum: com aprèn l'alumne simulat (flowed-sim-path.py)")
     ap.add_argument("--seed", type=int, default=1, help="escenari curriculum: llavor de l'alumne simulat")
     ap.add_argument("--vocab", type=int, default=3,
                     help="escenari curriculum: respostes de Vocabulary cada dia (Mix fa --answers)")
     ap.add_argument("--student-url", dest="student_url",
-                    default=os.environ.get("FLUENT_STUDENT_URL", "http://127.0.0.1:12322/v1"),
+                    default=os.environ.get("FLOWED_STUDENT_URL", "http://127.0.0.1:12322/v1"),
                     help="escenari curriculum: model OpenAI-compatible que respon la gramàtica com a "
                          "alumne (per defecte el llama del 12322; pot ser el mateix que el tutor)")
     ap.add_argument("--always-wrong", action="store_true", dest="always_wrong",
@@ -2639,7 +2641,7 @@ def main() -> int:
     # same settings give a different answer each time. What a parameter change
     # has to be judged on is a rate — how OFTEN the guard had to step in, how
     # OFTEN a check failed — not a single screenshot.
-    prof_dir = Path(args.dir).expanduser() if args.dir else Path.home() / ".fluent" / args.profile
+    prof_dir = Path(args.dir).expanduser() if args.dir else profiles_root() / args.profile
     if not RESETTABLE.match(prof_dir.name):
         print("❌ --repeat només en perfils de proves: cada execució ha de tornar el perfil\n"
               "   al punt de partida, i això no es fa en un perfil real.", file=sys.stderr)
@@ -2647,7 +2649,7 @@ def main() -> int:
     if args.reset:
         print("❌ --reset i --repeat no es combinen: el reset tornaria a córrer a cada volta\n"
               "   i esborraria el punt de partida que s'ha de restaurar. Prepara el perfil una\n"
-              "   vegada (--reset o fluent-seed.py) i després llança el --repeat.", file=sys.stderr)
+              "   vegada (--reset o flowed-seed.py) i després llança el --repeat.", file=sys.stderr)
         return 2
     snap = snapshot(prof_dir)
 

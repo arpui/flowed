@@ -30,7 +30,7 @@ LLAMA_FACE_CTX=32768 \
 ### Restart Fluent server (picks up new face on port 12322)
 ```bash
 fuser -k 4890/tcp 2>/dev/null; sleep 1
-FLUENT_DATA_DIR=/tmp/fluent-nes PORT=4890 nohup bun server/src/index.ts > /tmp/fluent-srv-4890.log 2>&1 &
+FLOWED_DATA_DIR=/tmp/fluent-nes PORT=4890 nohup bun server/src/index.ts > /tmp/fluent-srv-4890.log 2>&1 &
 ```
 
 ---
@@ -68,7 +68,7 @@ const faceDefaults = {
 ```bash
 cd /media/albert/railab2/projects/fluent_dev/server && bunx tsc --noEmit
 fuser -k 4890/tcp 2>/dev/null; sleep 1
-FLUENT_DATA_DIR=/tmp/fluent-nes PORT=4890 nohup bun server/src/index.ts > /tmp/fluent-srv-4890.log 2>&1 &
+FLOWED_DATA_DIR=/tmp/fluent-nes PORT=4890 nohup bun server/src/index.ts > /tmp/fluent-srv-4890.log 2>&1 &
 ```
 
 ---

@@ -38,13 +38,13 @@ export interface ModelConfig {
    *  continuation. llama.cpp's own repeat_penalty looks back 64 tokens by
    *  default — the exercise being repeated is two thousand tokens away. These
    *  are sent only when configured, so nothing changes until someone sets them
-   *  and measures with scripts/fluent-e2e.py. */
+   *  and measures with scripts/flowed-e2e.py. */
   presencePenalty?: number;
   frequencyPenalty?: number;
   repeatPenalty?: number;
   repeatLastN?: number;
   timeoutMs?: number;
-  /** Stream the answer token by token (FLUENT_STREAM=1). Off by default. */
+  /** Stream the answer token by token (FLOWED_STREAM=1). Off by default. */
   stream?: boolean;
 }
 
@@ -344,7 +344,7 @@ export async function runTurn(
 
   for (let i = 0; i < maxRoundtrips; i++) {
     const startedAt = Date.now();
-    // Streaming is opt-in (FLUENT_STREAM=1) and degrades to a normal call: if
+    // Streaming is opt-in (FLOWED_STREAM=1) and degrades to a normal call: if
     // the endpoint refuses to stream, the error propagates to agent.ts, which
     // already knows how to fall back.
     const resp =

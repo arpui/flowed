@@ -28,8 +28,8 @@
 
 | Fitxer | Paper |
 |---|---|
-| `scripts/fluent-web.sh` | Llançador: modes `--web` (UI de sèrie, port 4097) i `--app` (frontend tancat, port 4100 + serve intern 4199), perfil (`~/.fluent/<id>`), port, password (generat o `FLUENT_WEB_PASSWORD`), mDNS (`fluent[-id].local`), `--stop`. **Ignora a propòsit** un `OPENCODE_SERVER_PASSWORD` heretat (per no compartir el password del serveidor opencode principal) |
-| `scripts/fluent-web-proxy.mjs` | Proxy Bun sense dependències: un sol port públic → estàtics de `web/` + proxyfoca `/api/*` a `opencode serve` (passa l'`Authorization`; els 401 surten al navegador) |
+| `scripts/flowed-web.sh` | Llançador: modes `--web` (UI de sèrie, port 4097) i `--app` (frontend tancat, port 4100 + serve intern 4199), perfil (`~/.fluent/<id>`), port, password (generat o `FLUENT_WEB_PASSWORD`), mDNS (`fluent[-id].local`), `--stop`. **Ignora a propòsit** un `OPENCODE_SERVER_PASSWORD` heretat (per no compartir el password del serveidor opencode principal) |
+| `scripts/flowed-web-proxy.mjs` | Proxy Bun sense dependències: un sol port públic → estàtics de `web/` + proxyfoca `/api/*` a `opencode serve` (passa l'`Authorization`; els 401 surten al navegador) |
 | `web/index.html` | Frontend tancat: capçalera + estat, xat, 8 botons de modes, input |
 | `web/app.js` | Client de l'API de l'opencode via `/api/*`: sessió persistent (`localStorage`), xat + comandes amb `agent:"learner"` fixat, render markdown (marked), chips de tools, abort si s'amaga la pestanya. **Nota:** el `POST /session/:id/command` exigeix la clau `arguments` (encara que sigui `""`) |
 | `web/style.css` | Estil mòbil-first (safe-area, botons grans, bubbles) |
@@ -169,12 +169,12 @@ Helper stdlib (sense dependències) per al `/fluent-use`:
 
 Documentació completa a [`WEB.md`](WEB.md). Resum del disseny:
 
-- **Dos modes, un llançador** (`scripts/fluent-web.sh`):
+- **Dos modes, un llançador** (`scripts/flowed-web.sh`):
   - `--web` (Fase 0): `opencode web` oficial — UI completa (agents, models,
     fitxers) + les comandes `/fluent-*` (el frontmatter de cada comanda fixa
     l'agent `tutor`).
   - `--app` (Fase 1): `opencode serve` (només `127.0.0.1:<port+99>`) darrere
-    del proxy Bun (`scripts/fluent-web-proxy.mjs`, un sol port públic):
+    del proxy Bun (`scripts/flowed-web-proxy.mjs`, un sol port públic):
     estàtics de `web/` + `/api/*` → API de l'opencode amb passada de l'
     `Authorization`.
 - **Instància = aprenent**: cada llançament porta el seu port, el seu
@@ -230,7 +230,7 @@ Documentació completa a [`WEB.md`](WEB.md). Resum del disseny:
   (env-var → `/fluent-use` → defecte), convenció `~/.fluent/<id>/`,
   "un perfil = un usuari + una llengua objectiu".
 - **Secció 3. Browser access (phone / tablet / other PC)**: els dos modes del
-  `scripts/fluent-web.sh`, mDNS/URL, password per instància, enllaç a
+  `scripts/flowed-web.sh`, mDNS/URL, password per instància, enllaç a
   `docs/opencode-migration/WEB.md`.
 - Notes: `.claude/` intacte; dades a `./data/` (o env-var / marcador);
   com canviar de model; enllaç a `docs/opencode-migration/PLAN.md`.
@@ -313,5 +313,5 @@ s'ha aturat.
 |---|---|
 | Tot el suport opencode | Esborrar `.opencode/` (excepte si hi ha plugins propis), `opencode.json`, i revertir `README.md`, `CHANGELOG.md`, `.gitignore` (els trossos marcats a §3) |
 | Només multi-usuari | Esborrar `.opencode/commands/fluent-use.md`, `.opencode/helpers/`, revertir la regla 6 de `fluent-setup.md`, `.fluent-active` del `.gitignore`, i a `fluent.js` restaurar `dataDir` a `path.join(root, "data")` (4 punts: `hookEnv`, `inDataDir`, `shell.env`, pre-compact) |
-| Només l'accés web | `scripts/fluent-web.sh --stop` (aturar instàncies) + esborrar `web/`, `scripts/fluent-web.sh`, `scripts/fluent-web-proxy.mjs`, `.opencode/agent/learner.md` i la secció "Browser access" del README + `WEB.md` |
+| Només l'accés web | `scripts/flowed-web.sh --stop` (aturar instàncies) + esborrar `web/`, `scripts/flowed-web.sh`, `scripts/flowed-web-proxy.mjs`, `.opencode/agent/learner.md` i la secció "Browser access" del README + `WEB.md` |
 | Un canvi puntual | El `git diff` de cada fitxer coincideix exactament amb §2–§3; no hi ha canvis amagats enlloc altressí |

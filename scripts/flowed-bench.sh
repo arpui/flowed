@@ -3,28 +3,28 @@
 # comparar. Editar-la és decidir què vol dir "va bé"; canviar-la entre dues
 # execucions és perdre la comparació.
 #
-#   scripts/fluent-bench.sh                      # bateria de temperatura
-#   scripts/fluent-bench.sh --quick              # només la base, per mirar si tot rutlla
-#   scripts/fluent-bench.sh --student --quick   # l'alumne que sap algunes respostes (encerta i falla)
-#   scripts/fluent-bench.sh --journey --quick   # lliçó + Vocabulary + Writing + Vocabulary, sense repetir res
-#   scripts/fluent-bench.sh --days --quick --repeat 1   # 5 dies seguits: l'SM-2 fa tornar el fallat i allunya l'encertat
-#   scripts/fluent-bench.sh --noisy --quick             # respostes brutes: punt, frase, majúscules, errada, a mitges, en català, llarga
-#   scripts/fluent-bench.sh --topics --quick            # topics.txt: Writing hi va, la cua de la Lliçó segueix manant
-#   scripts/fluent-bench.sh --curriculum --quick --repeat 1   # 5 dies d'un alumne simulat A1→A2 en pràctica lliure: competència assignada, exercici, registre, camí
-#   scripts/fluent-bench.sh --curriculum --quick --repeat 1 --span 12   # el mateix, 12 dies (per veure consolidar i el cicle d'oblit)
-#   scripts/fluent-bench.sh --ladder --quick --repeat 1 --span 3   # A0→A1→prova de nivell→tall→A2 amb el tutor real (3 dies d'A1, 2 d'A2)
-#   scripts/fluent-bench.sh --ladder-fail --quick --repeat 1 --span 3   # el mateix, però la prova es contesta tot malament: el curs NO es tanca
-#   scripts/fluent-bench.sh --ladder-stop --quick --repeat 1 --span 3   # para just abans de la prova (~70-80%): la fas tu mateix a la web
-#   scripts/fluent-bench.sh --student --due 2  --quick   # lliçó petita (2 pendents)
-#   scripts/fluent-bench.sh --student --due 15 --quick   # lliçó gran (15 pendents)
-#   scripts/fluent-bench.sh --journey --level A1 --quick # perfil A1 (test-en-a1); també B1
-#   scripts/fluent-bench.sh --port 4104 --repeat 5
-#   scripts/fluent-bench.sh --keep-model         # no aturis el model encara que l'hagi aixecat el bench
-#   scripts/fluent-bench.sh --no-start           # no aixequis res: si el model no hi és, avorta
+#   scripts/flowed-bench.sh                      # bateria de temperatura
+#   scripts/flowed-bench.sh --quick              # només la base, per mirar si tot rutlla
+#   scripts/flowed-bench.sh --student --quick   # l'alumne que sap algunes respostes (encerta i falla)
+#   scripts/flowed-bench.sh --journey --quick   # lliçó + Vocabulary + Writing + Vocabulary, sense repetir res
+#   scripts/flowed-bench.sh --days --quick --repeat 1   # 5 dies seguits: l'SM-2 fa tornar el fallat i allunya l'encertat
+#   scripts/flowed-bench.sh --noisy --quick             # respostes brutes: punt, frase, majúscules, errada, a mitges, en català, llarga
+#   scripts/flowed-bench.sh --topics --quick            # topics.txt: Writing hi va, la cua de la Lliçó segueix manant
+#   scripts/flowed-bench.sh --curriculum --quick --repeat 1   # 5 dies d'un alumne simulat A1→A2 en pràctica lliure: competència assignada, exercici, registre, camí
+#   scripts/flowed-bench.sh --curriculum --quick --repeat 1 --span 12   # el mateix, 12 dies (per veure consolidar i el cicle d'oblit)
+#   scripts/flowed-bench.sh --ladder --quick --repeat 1 --span 3   # A0→A1→prova de nivell→tall→A2 amb el tutor real (3 dies d'A1, 2 d'A2)
+#   scripts/flowed-bench.sh --ladder-fail --quick --repeat 1 --span 3   # el mateix, però la prova es contesta tot malament: el curs NO es tanca
+#   scripts/flowed-bench.sh --ladder-stop --quick --repeat 1 --span 3   # para just abans de la prova (~70-80%): la fas tu mateix a la web
+#   scripts/flowed-bench.sh --student --due 2  --quick   # lliçó petita (2 pendents)
+#   scripts/flowed-bench.sh --student --due 15 --quick   # lliçó gran (15 pendents)
+#   scripts/flowed-bench.sh --journey --level A1 --quick # perfil A1 (test-en-a1); també B1
+#   scripts/flowed-bench.sh --port 4104 --repeat 5
+#   scripts/flowed-bench.sh --keep-model         # no aturis el model encara que l'hagi aixecat el bench
+#   scripts/flowed-bench.sh --no-start           # no aixequis res: si el model no hi és, avorta
 #
 # Abans de mesurar deixa a punt el que la prova necessita, i només això:
 #   1. el perfil de proves (només si no existeix: es crea i es configura; un que ja hi és no es toca);
-#   2. el model deep (si no respon, l'aixeca amb fluent-start.sh --models-only;
+#   2. el model deep (si no respon, l'aixeca amb flowed-start.sh --models-only;
 #      si ja corria, no el toca, i en acabar només atura el que ha aixecat ell).
 # Per a cada configuració el sweep reinicia l'app amb el mostreig nou i
 # comprova que l'app el fa servir de veritat. Res del repositori es reescriu;
@@ -99,7 +99,7 @@ else
 fi
 
 # ---- 1. El perfil de proves i 2. el model deep ------------------------------
-# Compartit amb fluent-testbase.sh (scripts/lib-testbed.sh): un sol lloc.
+# Compartit amb flowed-testbase.sh (scripts/lib-testbed.sh): un sol lloc.
 # shellcheck source=scripts/lib-testbed.sh
 source scripts/lib-testbed.sh
 tb_ensure_profile "$PROFILE" "$PORT" "${LEVEL:-A2}" || exit $?
@@ -107,8 +107,8 @@ tb_ensure_profile "$PROFILE" "$PORT" "${LEVEL:-A2}" || exit $?
 cleanup() {
   if [[ $TB_STARTED_MODEL -eq 1 && $KEEP_MODEL -eq 0 ]]; then
     echo
-    echo "aturo el model que havia aixecat el bench (fluent-stop.sh --models-only)"
-    scripts/fluent-stop.sh --models-only || true
+    echo "aturo el model que havia aixecat el bench (flowed-stop.sh --models-only)"
+    scripts/flowed-stop.sh --models-only || true
   fi
 }
 trap cleanup EXIT
@@ -125,7 +125,7 @@ echo
 
 # Sense `exec`: el trap d'aturada ha de poder córrer en acabar.
 rc=0
-python3 scripts/fluent-sweep.py "$PROFILE" \
+python3 scripts/flowed-sweep.py "$PROFILE" \
   --port "$PORT" --repeat "$REPEAT" ${DUE:+--due "$DUE"} ${SPAN:+--span "$SPAN"} ${TEST_MODE:+--test-mode "$TEST_MODE"} ${STOP_BEFORE_TEST:+--stop-before-test} \
   "${SCENARIOS[@]}" "${SETTINGS[@]}" || rc=$?
 exit "$rc"

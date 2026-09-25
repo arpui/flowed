@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
 
 class FluentCheckScriptTest(unittest.TestCase):
-    """scripts/fluent-check.py is what PROVES.md tells the user to run.
+    """scripts/flowed-check.py is what PROVES.md tells the user to run.
 
     It must survive a profile that is missing everything (a fresh one) without
     tracebacks — a diagnostic tool that crashes on the case you are diagnosing
@@ -90,7 +90,7 @@ class FluentCheckScriptTest(unittest.TestCase):
         import subprocess
         import sys as _sys
         return subprocess.run(
-            [_sys.executable, str(REPO_ROOT / "scripts" / "fluent-check.py"),
+            [_sys.executable, str(REPO_ROOT / "scripts" / "flowed-check.py"),
              check, "--dir", str(self.tmp)],
             capture_output=True, text=True)
 
@@ -111,7 +111,7 @@ class FluentCheckScriptTest(unittest.TestCase):
         import subprocess
         import sys as _sys
         proc = subprocess.run(
-            [_sys.executable, str(REPO_ROOT / "scripts" / "fluent-check.py"),
+            [_sys.executable, str(REPO_ROOT / "scripts" / "flowed-check.py"),
              "all", "--dir", str(self.tmp / "nope")],
             capture_output=True, text=True)
         self.assertEqual(proc.returncode, 1)

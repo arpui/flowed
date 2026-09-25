@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fluent "qwen1.7b-bf16" model server — small fast model (Qwen3-1.7B-BF16).
+# Flowed "qwen1.7b-bf16" model server — small fast model (Qwen3-1.7B-BF16).
 # Candidat face ALTERNATIU (amb el q4 i l'omnicoder legacy): tots comparteixen
 # el 12323 i només un pot estar pujat alhora (l'script rebutja el port ocupat).
 # 

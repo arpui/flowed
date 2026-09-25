@@ -110,7 +110,7 @@ Estimació orientativa: fases 0-1 petites (dies), fase 2 mitjana (mateix patró 
 
 ## 6. Com es guarda i com es veu (implementat en mode prova, 2026-09-21)
 
-Estat: **lector, estat derivat, informes i alumne simulat implementats; res connectat encara a l'app.** Fitxers: `hooks/curriculum.py`, `scripts/fluent-sim-path.py`, `tests/test_curriculum.py` (25 tests).
+Estat: **lector, estat derivat, informes i alumne simulat implementats; res connectat encara a l'app.** Fitxers: `hooks/curriculum.py`, `scripts/flowed-sim-path.py`, `tests/test_curriculum.py` (25 tests).
 
 ### 6.1 Què es guarda: fets, no estats
 
@@ -174,7 +174,7 @@ FUNCIONS
 
 ### 6.3 Alumne simulat A1 → A2
 
-`python3 scripts/fluent-sim-path.py --profile steady|fast|weak --seed N [--admin]`. 8 exercicis al dia: 2 per cada competència nova (una per secció), repàs de les començades (mai dos dies seguits), i 2 de manteniment de les consolidades. Cada competència té una probabilitat d'encert que creix amb la pràctica (i baixa si fa dies que no es veu). **Prova la mecànica del camí, no el tutor.**
+`python3 scripts/flowed-sim-path.py --profile steady|fast|weak --seed N [--admin]`. 8 exercicis al dia: 2 per cada competència nova (una per secció), repàs de les començades (mai dos dies seguits), i 2 de manteniment de les consolidades. Cada competència té una probabilitat d'encert que creix amb la pràctica (i baixa si fa dies que no es veu). **Prova la mecànica del camí, no el tutor.**
 
 `--calibrate N` fa que els mateixos alumnes, amb `N` llavors, s'enfrontin a diferents regles per obrir el checkpoint (`ready_share` = fracció de les core que han d'estar consolidades). `true p` = el que l'alumne sap de veritat quan el promocionen (probabilitat mitjana d'encert de les core):
 
@@ -202,7 +202,7 @@ Lectura: amb la regla actual (`ready_share 0`, «en pràctica» n'hi ha prou) el
 
 - Les respostes ja es guarden a `<perfil>/.records/<sessió>.jsonl` (tutor o derivades). **No s'hi escriu res**: l'etiqueta de competència es **deriva** (`competency_of` a `hooks/curriculum.py`) i `rebuild_path` recalcula `learner-path.json` de zero, sempre igual (idempotent). Si millora el mapa, es reetiqueta tot l'historial. Un camp `competency` al registre, si existeix, mana (fase 2).
 - **Regles:** vocabulari → per `Words`. Gramàtica i funcions → per `Tags:` de la competència: primer la `#categoria` de l'ítem o de la correcció, després les paraules que hi surten; si cap paraula surt, només s'assigna quan hi ha una sola candidata. El que el nivell no ensenya (p. ex. articles a l'A2) queda **sense etiqueta**, i la paraula fora de les llistes també.
-- **Quan corre:** el servidor executa `curriculum.py rebuild --auto` després de cada `accumulate-session`. `--auto` tria el fitxer de `curriculum/` amb `language` i `level` iguals a `target_language` / `target_level` del perfil (o `$FLUENT_CURRICULUM`); si no n'hi ha, no fa res. No canvia cap comportament de l'app.
+- **Quan corre:** el servidor executa `curriculum.py rebuild --auto` després de cada `accumulate-session`. `--auto` tria el fitxer de `curriculum/` amb `language` i `level` iguals a `target_language` / `target_level` del perfil (o `$FLOWED_CURRICULUM`); si no n'hi ha, no fa res. No canvia cap comportament de l'app.
 - **Cobertura:** `python3 hooks/curriculum.py coverage --curriculum curriculum/en-A2.md --data ~/.fluent/<perfil>` diu quantes respostes s'han pogut assignar i per què no la resta. Amb els 20 ítems del perfil de proves: 10 assignats (50 %); els no assignats són d'A1 (articles, majúscules, ortografia), una paraula fora de la llista i `grammar_two_children`, que és ambigu.
 - Perfil i informes: `report --rebuild` refà el camí abans de mostrar-lo.
 
@@ -232,9 +232,9 @@ Mateix patró que l'ítem de la Lliçó: el que el tutor no pot saber, ho diu el
 
 ### 6.7 Test amb el tutor real: `--scenario curriculum`
 
-`scripts/fluent-bench.sh --curriculum --quick --repeat 1` (o `python3 scripts/fluent-e2e.py test-en --port 4103 --scenario curriculum --days 5 --answers 6 --vocab 3 --transcript /tmp/cur.md`).
+`scripts/flowed-bench.sh --curriculum --quick --repeat 1` (o `python3 scripts/flowed-e2e.py test-en --port 4103 --scenario curriculum --days 5 --answers 6 --vocab 3 --transcript /tmp/cur.md`).
 
-Què fa: buida el perfil de proves (cua SM-2 i registres, perquè cap repàs pendent tapi la competència), el posa a `target_language=English`, `target_level=A2`, `current_level=A1` i simula N dies d'un alumne (`--student fast|steady|weak`, `--seed`, les mateixes corbes que `fluent-sim-path.py`). Cada dia: una sessió Mix (`fluent-learn`, «6») amb `--answers` respostes i una de Vocabulary amb `--vocab`. El rellotge avança amb `fluent-advance-day.py --keep-records` (no arxiva els registres: en desplaça el `ts`, perquè el camí es deriva de tots).
+Què fa: buida el perfil de proves (cua SM-2 i registres, perquè cap repàs pendent tapi la competència), el posa a `target_language=English`, `target_level=A2`, `current_level=A1` i simula N dies d'un alumne (`--student fast|steady|weak`, `--seed`, les mateixes corbes que `flowed-sim-path.py`). Cada dia: una sessió Mix (`fluent-learn`, «6») amb `--answers` respostes i una de Vocabulary amb `--vocab`. El rellotge avança amb `flowed-advance-day.py --keep-records` (no arxiva els registres: en desplaça el `ts`, perquè el camí es deriva de tots).
 
 Respostes: vocabulari amb el banc de paraules del bench (bé o malament, ben conegut); gramàtica i funcions les escriu un model (`--student-url`, per defecte el llama del 12322; pot ser el mateix que el tutor) al qual es demana «respon bé» o «fes un error típic d'A1». Sense model, la gramàtica és «no ho sé» i només valen les comprovacions de l'exercici.
 
@@ -269,7 +269,7 @@ La fa el **servidor sense el LLM** (`checkpoint start|answer|status` a `curricul
 
 ### 6.10 Escenari `ladder` (A0 → A1 → prova → tall → A2)
 
-`scripts/fluent-bench.sh --ladder --quick --repeat 1 --span 3` (o `python3 scripts/fluent-e2e.py test-en --port 4103 --scenario ladder --days 3 [--test-mode pass|fail]`). Només perfils de proves.
+`scripts/flowed-bench.sh --ladder --quick --repeat 1 --span 3` (o `python3 scripts/flowed-e2e.py test-en --port 4103 --scenario ladder --days 3 [--test-mode pass|fail]`). Només perfils de proves.
 
 1. **A**: curs A1 des de zero amb el tutor real (les comprovacions de `--scenario curriculum`, `--days` dies).
 2. **B**: la resta de l'historial d'A1 es **fabrica** (alumne simulat `--student`, `--seed`) i s'escriu com a registres al passat (`.records/ladder-synthetic.jsonl`, camp `competency` explícit) fins que la prova s'obre. No es pot viure en una tarda. Comprova que el servidor ofereix la prova.
@@ -277,7 +277,7 @@ La fa el **servidor sense el LLM** (`checkpoint start|answer|status` a `curricul
 4. **D** (`pass`): certificat d'A1 (`checkpoint`), `current_level` = A1, curs arxivat a `courses/`, avís de curs acabat (un sol cop), camí actiu A2 a 0 %, A2 no ofereix la prova. **Sense tall** (`fail`): missatge «Not yet», cap certificat, nivell del perfil igual, intent `stay`, cap avís, el curs continua sent A1.
 5. **E** (`pass`): 2 dies d'A2 amb el tutor real; només compten els registres nous.
 
-`fluent-sim-path.py --ladder` fa el mateix sense app (només la mecànica; `fast`/`steady`/`weak` passen A1 → tall → A2). `sim.run(..., stop_when_ready=True, on_answer=…)` s'usa a la fase B.
+`flowed-sim-path.py --ladder` fa el mateix sense app (només la mecànica; `fast`/`steady`/`weak` passen A1 → tall → A2). `sim.run(..., stop_when_ready=True, on_answer=…)` s'usa a la fase B.
 
 ### 6.11 Què falta
 

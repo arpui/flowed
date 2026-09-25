@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Copy a learner's session transcript to the new path. Never deletes anything.
 
-    ~/.fluent/<id>/.opencode/opencode/opencode.db   (legacy, stays put)
-        ->  ~/.fluent/<id>/sessions/sessions.db     (what the app uses now)
+    ~/.flowed/<id>/.opencode/opencode/opencode.db   (legacy, stays put)
+        ->  ~/.flowed/<id>/sessions/sessions.db     (what the app uses now)
 
 Why a script and not `cp`: the DB runs in WAL mode. Copying the file while
 anything holds it open can leave the copy missing everything still in the -wal
@@ -16,7 +16,7 @@ again — copy when the instance is stopped, or accept that the old file freezes
 Usage:
     python3 scripts/migrate-sessions-db.py --all [--dry-run]
     python3 scripts/migrate-sessions-db.py --profile test-en
-    python3 scripts/migrate-sessions-db.py --dir /home/albert/.fluent/test-en
+    python3 scripts/migrate-sessions-db.py --dir ~/.flowed/test-en
     python3 scripts/migrate-sessions-db.py --all --force   # overwrite an existing copy
 
 Exit codes: 0 ok (or nothing to do), 1 error.
@@ -27,6 +27,8 @@ import argparse
 import sqlite3
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 LEGACY_REL = Path(".opencode") / "opencode" / "opencode.db"
 CURRENT_REL = Path("sessions") / "sessions.db"
@@ -105,9 +107,9 @@ def migrate(profile_dir: Path, dry_run=False, force=False) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Move a profile's sessions DB to the new path")
-    parser.add_argument("--profile", help="profile id under ~/.fluent/")
+    parser.add_argument("--profile", help="profile id under ~/.flowed/")
     parser.add_argument("--dir", help="explicit profile directory")
-    parser.add_argument("--all", action="store_true", help="every profile under ~/.fluent/")
+    parser.add_argument("--all", action="store_true", help="every profile under ~/.flowed/")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true", help="overwrite an existing copy")
     args = parser.parse_args()
@@ -116,9 +118,9 @@ def main() -> int:
     if args.dir:
         targets.append(Path(args.dir).expanduser())
     if args.profile:
-        targets.append(Path.home() / ".fluent" / args.profile)
+        targets.append(profiles_root() / args.profile)
     if args.all:
-        root = Path.home() / ".fluent"
+        root = profiles_root()
         targets += sorted(p for p in root.iterdir()
                           if p.is_dir() and (p / "learner-profile.json").exists())
     if not targets:

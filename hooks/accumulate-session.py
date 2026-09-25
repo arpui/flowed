@@ -17,8 +17,8 @@ review_results quality, milestones, focus) is finalized by the tutor's
 end-of-session fluent-db-updater call (same session_id → upsert, no repeat).
 
 Usage:
-    python3 accumulate-session.py --dir ~/.fluent/<id> [--dry-run]
-    python3 accumulate-session.py --dir ~/.fluent/alex-en
+    python3 accumulate-session.py --dir ~/.flowed/<id> [--dry-run]
+    python3 accumulate-session.py --dir ~/.flowed/alex-en
 
 Exit codes: 0=ok (0/no output means nothing new), 1=error
 """
@@ -77,7 +77,7 @@ def run_update_db(payload: dict, data_dir: str) -> bool:
     cmd = [sys.executable, str(UPDATE_DB)]
     env = os.environ.copy()
     if data_dir:
-        env["FLUENT_DATA_DIR"] = data_dir
+        env["FLOWED_DATA_DIR"] = data_dir
     proc = subprocess.run(
         cmd, input=json.dumps(payload), capture_output=True, text=True, env=env
     )
@@ -233,8 +233,8 @@ def rebuild_skill_scores(payload: dict):
 
 def main():
     parser = argparse.ArgumentParser(description="Accumulate a Fluent session incrementally")
-    parser.add_argument("--dir", help="FLUENT_DATA_DIR / profile dir (~/.fluent/<id>); "
-                                      "defaults to $FLUENT_DATA_DIR")
+    parser.add_argument("--dir", help="FLOWED_DATA_DIR / profile dir (~/.flowed/<id>); "
+                                      "defaults to $FLOWED_DATA_DIR")
     parser.add_argument("--slug", help="Learner slug (overrides profile name detection)")
     parser.add_argument("--session-id", dest="session_id",
                         help="sessions DB session id (ses_...) to accumulate. "
@@ -244,9 +244,9 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Print payload, skip update-db.py and draft write")
     args = parser.parse_args()
 
-    data_dir = args.dir or os.environ.get("FLUENT_DATA_DIR")
+    data_dir = args.dir or os.environ.get("FLOWED_DATA_DIR")
     if not data_dir:
-        print("[Fluent] ⚠ accumulate-session: no --dir and no FLUENT_DATA_DIR — skipping", file=sys.stderr)
+        print("[Fluent] ⚠ accumulate-session: no --dir and no FLOWED_DATA_DIR — skipping", file=sys.stderr)
         sys.exit(0)
     data_dir = os.path.expanduser(data_dir)
     profile = Path(data_dir) / "learner-profile.json"

@@ -4,7 +4,7 @@ El 2026-09-19 es va descobrir que `temp06` mai havia corregut a 0,6: el sweep
 escrivia la temperatura a config/fluent.json, però config/fluent-models.json (una
 capa per sobre) la fixava a 0,2. Cap comprovació ho deia i les taules
 comparaven soroll amb soroll. Aquests tests fixen les dues meitats de l'arreglo:
-el mostreig viatja per FLUENT_MODELS_FILE amb les claus que el servidor llegeix,
+el mostreig viatja per FLOWED_MODELS_FILE amb les claus que el servidor llegeix,
 i el sweep es nega a córrer un setting que el servidor no està fent servir.
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location("fluent_sweep", REPO / "scripts" / "fluent-sweep.py")
+_spec = importlib.util.spec_from_file_location("fluent_sweep", REPO / "scripts" / "flowed-sweep.py")
 sweep = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sweep)
 
@@ -217,7 +217,7 @@ class TestbedScriptsTest(unittest.TestCase):
                          if not l.lstrip().startswith("#"))
 
     def test_both_use_the_same_preparation(self):
-        for name in ("fluent-bench.sh", "fluent-testbase.sh"):
+        for name in ("flowed-bench.sh", "flowed-testbase.sh"):
             with self.subTest(script=name):
                 body = self.read(name)
                 self.assertIn("source scripts/lib-testbed.sh", body)
@@ -225,28 +225,28 @@ class TestbedScriptsTest(unittest.TestCase):
                 self.assertIn("tb_ensure_model", body)
 
     def test_the_preparation_is_not_copied_into_the_scripts(self):
-        for name in ("fluent-bench.sh", "fluent-testbase.sh"):
+        for name in ("flowed-bench.sh", "flowed-testbase.sh"):
             with self.subTest(script=name):
                 body = self.code(name)
                 self.assertNotIn("new-user.sh", body)
-                self.assertNotIn("fluent-start.sh --models-only", body)
+                self.assertNotIn("flowed-start.sh --models-only", body)
 
     def test_the_manual_bench_refuses_a_real_profile(self):
-        self.assertIn("només corre en perfils de proves", self.read("fluent-testbase.sh"))
+        self.assertIn("només corre en perfils de proves", self.read("flowed-testbase.sh"))
 
     def test_the_manual_bench_stops_an_old_app_before_it_seeds(self):
-        body = self.code("fluent-testbase.sh")
-        self.assertLess(body.index("l'aturo abans"), body.index("python3 scripts/fluent-seed.py"))
+        body = self.code("flowed-testbase.sh")
+        self.assertLess(body.index("l'aturo abans"), body.index("python3 scripts/flowed-seed.py"))
 
     def test_the_app_is_pointed_at_the_model_that_was_checked(self):
-        self.assertIn("FLUENT_DEEP_BASE_URL", self.read("fluent-testbase.sh"))
+        self.assertIn("FLOWED_DEEP_BASE_URL", self.read("flowed-testbase.sh"))
 
     def test_the_manual_bench_says_it_wipes_the_day(self):
-        self.assertIn("BUIDA", self.read("fluent-testbase.sh"))
+        self.assertIn("BUIDA", self.read("flowed-testbase.sh"))
 
     def test_all_the_shell_scripts_parse(self):
         import subprocess
-        for name in ("lib-testbed.sh", "fluent-bench.sh", "fluent-testbase.sh"):
+        for name in ("lib-testbed.sh", "flowed-bench.sh", "flowed-testbase.sh"):
             with self.subTest(script=name):
                 r = subprocess.run(["bash", "-n", str(self.ROOT / "scripts" / name)],
                                    capture_output=True, text=True)

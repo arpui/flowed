@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Model bench: how well does a model do Fluent's own jobs?
+"""Model bench: how well does a model do Flowed's own jobs?
 
 See docs/MODELBENCH.md. Two roles, both built on the simulated A1 learner
 (bench/learner-a1.md) — a child who has studied the A1 curriculum:
@@ -11,9 +11,9 @@ See docs/MODELBENCH.md. Two roles, both built on the simulated A1 learner
               model) answers it. Fair = the judge reaches the tutor's answer.
 
     # a candidate on a test port (the production model stays on 12322)
-    python3 scripts/fluent-modelbench.py learner  --url http://127.0.0.1:12330/v1/chat/completions --name gemma-12b
-    python3 scripts/fluent-modelbench.py generate --url http://127.0.0.1:12330/v1/chat/completions --name gemma-12b
-    python3 scripts/fluent-modelbench.py compare
+    python3 scripts/flowed-modelbench.py learner  --url http://127.0.0.1:12330/v1/chat/completions --name gemma-12b
+    python3 scripts/flowed-modelbench.py generate --url http://127.0.0.1:12330/v1/chat/completions --name gemma-12b
+    python3 scripts/flowed-modelbench.py compare
 
 Read-only: it never touches a profile or the app server.
 """
@@ -32,7 +32,7 @@ from datetime import datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-OUT = Path(os.environ.get("FLUENT_BENCH_OUT") or REPO / "results" / "modelbench")
+OUT = Path(os.environ.get("FLOWED_BENCH_OUT") or REPO / "results" / "modelbench")
 SKILL = REPO / "bench" / "learner-a1.md"
 BLANK = re.compile(r"_{3,}")
 
@@ -43,9 +43,9 @@ import curriculum as cu  # noqa: E402
 # ---- the model -------------------------------------------------------------
 
 def default_url() -> str:
-    port = os.environ.get("FLUENT_DEEP_PORT")
+    port = os.environ.get("FLOWED_DEEP_PORT")
     if not port and (REPO / ".env").exists():
-        m = re.search(r"^FLUENT_DEEP_PORT=(\d+)", (REPO / ".env").read_text(), re.M)
+        m = re.search(r"^FLOWED_DEEP_PORT=(\d+)", (REPO / ".env").read_text(), re.M)
         port = m.group(1) if m else None
     return f"http://127.0.0.1:{port or 12322}/v1/chat/completions"
 
@@ -506,20 +506,20 @@ def cmd_compare(a) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--url", default=default_url(), help="model sota prova (compatible OpenAI)")
-    ap.add_argument("--api-key", default=os.environ.get("FLUENT_BENCH_KEY", ""))
+    ap.add_argument("--api-key", default=os.environ.get("FLOWED_BENCH_KEY", ""))
     ap.add_argument("--name", default="qwen3-14b-q4")
     ap.add_argument("--curriculum", default="curriculum/en-A1.md")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("learner")
     g = sub.add_parser("generate")
     g.add_argument("--judge-url", default=default_url(), help="el jutge fix: per defecte, el model de producció")
-    g.add_argument("--judge-key", default=os.environ.get("FLUENT_JUDGE_KEY", ""))
+    g.add_argument("--judge-key", default=os.environ.get("FLOWED_JUDGE_KEY", ""))
     g.add_argument("--per", type=int, default=2, help="exercicis per competència")
     g.add_argument("--temperature", type=float, default=0.7)
     sub.add_parser("compare")
     b = sub.add_parser("bank")
     b.add_argument("--judge-url", default=default_url(), help="el jutge fix: per defecte, el model de producció")
-    b.add_argument("--judge-key", default=os.environ.get("FLUENT_JUDGE_KEY", ""))
+    b.add_argument("--judge-key", default=os.environ.get("FLOWED_JUDGE_KEY", ""))
     b.add_argument("--competence", default="", help="només aquesta competència; buit = totes")
     b.add_argument("--count", type=int, default=40, help="ítems vàlids per competència")
     b.add_argument("--attempts", type=int, default=120, help="intents màxims per competència")

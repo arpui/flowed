@@ -22,11 +22,11 @@ from test_update_db import SESSION_PAYLOAD, make_fixtures  # noqa: E402
 
 def base_env(data_dir: Path, lock_timeout: str | None = None) -> dict:
     env = {k: v for k, v in os.environ.items()
-           if k not in ("FLUENT_DATA_DIR", "FLUENT_PROJECT_DIR", "FLUENT_ROOT",
+           if k not in ("FLOWED_DATA_DIR", "FLOWED_PROJECT_DIR", "FLOWED_ROOT",
                                 "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")}
-    env["FLUENT_DATA_DIR"] = str(data_dir)
+    env["FLOWED_DATA_DIR"] = str(data_dir)
     if lock_timeout is not None:
-        env["FLUENT_DB_LOCK_TIMEOUT"] = lock_timeout
+        env["FLOWED_DB_LOCK_TIMEOUT"] = lock_timeout
     return env
 
 

@@ -11,8 +11,8 @@ day by day, so the profile that comes out is one the app itself could have
 produced: some words mastered and far away, some due today, some patterns still
 weak.
 
-    python3 scripts/fluent-seed.py test-en --days 21
-    python3 scripts/fluent-seed.py test-en --days 21 --due 4   # 6 per defecte = una lliçó
+    python3 scripts/flowed-seed.py test-en --days 21
+    python3 scripts/flowed-seed.py test-en --days 21 --due 4   # 6 per defecte = una lliçó
 
 Refuses anything that is not a scratch profile: the answers here are invented,
 and a learner's real history is not a thing to invent.
@@ -26,6 +26,8 @@ import subprocess
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 REPO = Path(__file__).resolve().parent.parent
 SCRATCH = re.compile(r"^(test|demo|e2e)", re.I)
@@ -123,7 +125,7 @@ def update(prof: Path, payload: dict) -> None:
     p = subprocess.run(
         [sys.executable, str(REPO / "hooks" / "update-db.py")],
         input=json.dumps(payload), capture_output=True, text=True,
-        env={"FLUENT_DATA_DIR": str(prof), "FLUENT_ROOT": str(REPO),
+        env={"FLOWED_DATA_DIR": str(prof), "FLOWED_ROOT": str(REPO),
              "PATH": "/usr/bin:/bin", "HOME": str(Path.home())},
         cwd=REPO, timeout=60)
     if p.returncode != 0:
@@ -150,7 +152,7 @@ def archive(d: Path) -> int:
     moved = 0
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     for f in d.iterdir():
-        # A day archived by fluent-advance-day.py (".<name>.day-<stamp>") is history of a
+        # A day archived by flowed-advance-day.py (".<name>.day-<stamp>") is history of a
         # run that is over: leaving it makes the next run's "yesterday" checks read it.
         if f.is_dir() or (f.name.startswith(".") and ".day-" not in f.name):
             continue  # already archived by an older version of this script
@@ -178,7 +180,7 @@ def main() -> int:
                     help="quants ítems han de quedar per repassar AVUI")
     args = ap.parse_args()
 
-    prof = Path(args.dir).expanduser() if args.dir else Path.home() / ".fluent" / args.profile
+    prof = Path(args.dir).expanduser() if args.dir else profiles_root() / args.profile
     if not (prof / "learner-profile.json").exists():
         print(f"❌ perfil no trobat: {prof}", file=sys.stderr)
         return 2

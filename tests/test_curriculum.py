@@ -241,7 +241,7 @@ class StorageAndSimTest(unittest.TestCase):
     def test_simulated_student_is_deterministic_and_reaches_a_verdict(self):
         import importlib.util
         from datetime import date
-        spec = importlib.util.spec_from_file_location("sim", REPO_ROOT / "scripts" / "fluent-sim-path.py")
+        spec = importlib.util.spec_from_file_location("sim", REPO_ROOT / "scripts" / "flowed-sim-path.py")
         sim = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(sim)
         p1, i1 = sim.run(CUR, "steady", 1, 60, date(2026, 9, 21), verbose=False)
@@ -721,7 +721,7 @@ class CourseTest(unittest.TestCase):
     def test_a_simulated_student_goes_from_zero_to_a2_through_the_cut(self):
         import importlib.util
         from datetime import date
-        spec = importlib.util.spec_from_file_location("sim_ladder", REPO_ROOT / "scripts" / "fluent-sim-path.py")
+        spec = importlib.util.spec_from_file_location("sim_ladder", REPO_ROOT / "scripts" / "flowed-sim-path.py")
         sim = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(sim)
         r = sim.run_ladder("steady", 1, 90, date(2026, 9, 21), verbose=False)
@@ -870,11 +870,11 @@ class LadderScenarioTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("fluent_e2e_ladder", REPO_ROOT / "scripts" / "fluent-e2e.py")
+        spec = importlib.util.spec_from_file_location("fluent_e2e_ladder", REPO_ROOT / "scripts" / "flowed-e2e.py")
         cls.e2e = importlib.util.module_from_spec(spec)
         sys.modules["fluent_e2e_ladder"] = cls.e2e
         spec.loader.exec_module(cls.e2e)
-        spec = importlib.util.spec_from_file_location("fluent_sim_ladder", REPO_ROOT / "scripts" / "fluent-sim-path.py")
+        spec = importlib.util.spec_from_file_location("fluent_sim_ladder", REPO_ROOT / "scripts" / "flowed-sim-path.py")
         cls.sim = importlib.util.module_from_spec(spec)
         sys.modules["fluent_sim_ladder"] = cls.sim
         spec.loader.exec_module(cls.sim)

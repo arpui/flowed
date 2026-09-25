@@ -5,9 +5,9 @@ The test plan used to paste multi-line `python3 -c "..."` snippets, which break
 the moment they are copied with the surrounding indentation. This script exists
 so a check is always one line:
 
-    python3 scripts/fluent-check.py all demo-en
-    python3 scripts/fluent-check.py sm2 test-en
-    python3 scripts/fluent-check.py records test-en --dir /some/other/profile
+    python3 scripts/flowed-check.py all demo-en
+    python3 scripts/flowed-check.py sm2 test-en
+    python3 scripts/flowed-check.py records test-en --dir /some/other/profile
 
 Checks: profile · sm2 · patterns · mastery · records · metrics · sessions.
 It never writes anything.
@@ -24,6 +24,8 @@ import shutil
 import sys
 from datetime import date, datetime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 CHECKS = ("profile", "sm2", "patterns", "mastery", "records", "metrics", "sessions", "tts", "sortida", "historial", "lliço")
 
@@ -326,7 +328,7 @@ def check_historial(d: Path):
     `results/` i una entrada a `session-log.json`, i les tres han de quadrar. Si
     la BD en té menys, hi ha transcripcions en un altre fitxer — típicament
     perquè l'opencode antic escrivia a un lloc central compartit abans que
-    `fluent-web.sh` fixés `XDG_DATA_HOME` per perfil.
+    `flowed-web.sh` fixés `XDG_DATA_HOME` per perfil.
     """
     head("historial: quantes sessions hi ha hagut")
 
@@ -508,7 +510,7 @@ def check_tts(d: Path):
           f" {'✅' if shutil.which(str(tts.get('binary') or '')) or Path(str(tts.get('binary') or '')).is_file() else '❌ no trobat'}")
     voices = tts.get("voices") or {}
     if not voices:
-        print("  veus           : cap  (scripts/fluent-tts.sh install <veu>)")
+        print("  veus           : cap  (scripts/flowed-tts.sh install <veu>)")
     for lang, model in voices.items():
         print(f"  {lang:15s}: {model} {'✅' if Path(model).is_file() else '❌ falta el fitxer'}")
 
@@ -598,7 +600,7 @@ def check_lesson(d: Path):
         print("  → tot correcte. El skill ha arribat al model.")
     else:
         print("  → alguna cosa no hi és. Mira `sortida` per veure el text literal:")
-        print(f"     python3 scripts/fluent-check.py sortida --dir {d}")
+        print(f"     python3 scripts/flowed-check.py sortida --dir {d}")
 
 
 def _recent_tutor_texts(d: Path, limit: int = 8) -> list[str]:
@@ -654,16 +656,16 @@ RUNNERS = {
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Read-only checks on a Fluent learner profile")
+    parser = argparse.ArgumentParser(description="Read-only checks on a Flowed learner profile")
     parser.add_argument("check", choices=(*CHECKS, "all"), help="what to look at")
-    parser.add_argument("profile", nargs="?", help="profile id under ~/.fluent/ (e.g. demo-en)")
+    parser.add_argument("profile", nargs="?", help="profile id under ~/.flowed/ (e.g. demo-en)")
     parser.add_argument("--dir", help="explicit profile directory (instead of a profile id)")
     args = parser.parse_args()
 
     if args.dir:
         profile_dir = Path(args.dir).expanduser()
     elif args.profile:
-        profile_dir = Path.home() / ".fluent" / args.profile
+        profile_dir = profiles_root() / args.profile
     else:
         parser.error("give a profile id or --dir")
 

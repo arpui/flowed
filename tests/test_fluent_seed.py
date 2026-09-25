@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The seeded past is one this script built — not one layered on the last test.
 
-Measured on 2026-09-19. `fluent-seed.py` cleared today (the plan, the records,
+Measured on 2026-09-19. `flowed-seed.py` cleared today (the plan, the records,
 the T0 snapshots) but left `spaced-repetition.json` and `mistakes-db.json`
 alone, so every sweep seeded on top of the queue the previous sweep had left
 behind. The items it introduces "late" so they are still due were already in
@@ -26,7 +26,7 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SEED = REPO_ROOT / "scripts" / "fluent-seed.py"
+SEED = REPO_ROOT / "scripts" / "flowed-seed.py"
 EXAMPLES = REPO_ROOT / "data-examples"
 
 
@@ -221,7 +221,7 @@ class DayArchivesAreHistory(unittest.TestCase):
             shutil.copy(tpl, d / tpl.name.replace("-template", ""))
         (d / ".update-state").mkdir()
         (d / ".update-state" / "session-001@2026-09-20.json").write_text("{}")
-        p = subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "fluent-advance-day.py"),
+        p = subprocess.run([sys.executable, str(REPO_ROOT / "scripts" / "flowed-advance-day.py"),
                             "--dir", str(d), "--days", "1"],
                            capture_output=True, text=True, cwd=REPO_ROOT, timeout=60)
         self.assertEqual(0, p.returncode, p.stderr[-300:])

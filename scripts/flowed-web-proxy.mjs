@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
-// Fluent web proxy — one public port serving the static UI and reverse-proxying
+// Flowed web proxy — one public port serving the static UI and reverse-proxying
 // the opencode serve API.
 //
 //   /            -> web/index.html
 //   /app.js ...  -> static files from ../web/
-//   /api/<path>  -> <FLUENT_INTERNAL_URL>/<path>  (opencode API, auth header passed through)
+//   /api/<path>  -> <FLOWED_INTERNAL_URL>/<path>  (opencode API, auth header passed through)
 //
 // Basic auth: the upstream opencode server enforces it (OPENCODE_SERVER_PASSWORD);
 // 401 + WWW-Authenticate are passed through so the browser shows its prompt.
@@ -13,10 +13,10 @@ import { serve } from "bun"
 import fs from "node:fs"
 import path from "node:path"
 
-const PUBLIC_PORT = Number(process.env.FLUENT_PUBLIC_PORT || 4100)
-const INTERNAL = (process.env.FLUENT_INTERNAL_URL || "http://127.0.0.1:4199").replace(/\/+$/, "")
+const PUBLIC_PORT = Number(process.env.FLOWED_PUBLIC_PORT || 4100)
+const INTERNAL = (process.env.FLOWED_INTERNAL_URL || "http://127.0.0.1:4199").replace(/\/+$/, "")
 const WEB_DIR = path.resolve(path.join(import.meta.dir, "..", "web"))
-const FLUENT_DATA_DIR = process.env.FLUENT_DATA_DIR || ""
+const FLOWED_DATA_DIR = process.env.FLOWED_DATA_DIR || ""
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -64,14 +64,14 @@ const server = serve({
       return new Response("not found", { status: 404 })
     }
 
-    // Fluent-reserved API (not forwarded upstream): lets the web client know the
+    // Flowed-reserved API (not forwarded upstream): lets the web client know the
     // per-profile setup state so it can auto-start /fluent-setup for new users.
     if (url.pathname === "/api/fluent/setup-state") {
       let setupComplete = true
-      if (FLUENT_DATA_DIR) {
+      if (FLOWED_DATA_DIR) {
         try {
           const lp = JSON.parse(
-            fs.readFileSync(path.join(FLUENT_DATA_DIR, "learner-profile.json"), "utf8"),
+            fs.readFileSync(path.join(FLOWED_DATA_DIR, "learner-profile.json"), "utf8"),
           )
           const sc = lp?.preferences?.setup_complete
           setupComplete = sc === undefined ? true : sc === true
@@ -126,4 +126,4 @@ const server = serve({
   },
 })
 
-console.log(`fluent-web proxy :${PUBLIC_PORT} -> ${INTERNAL} (static: ${WEB_DIR})`)
+console.log(`flowed-web proxy :${PUBLIC_PORT} -> ${INTERNAL} (static: ${WEB_DIR})`)

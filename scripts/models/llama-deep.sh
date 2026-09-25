@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fluent "deep" model server — tutor principal (Qwen3-14B-Q6_K).
+# Flowed "deep" model server — tutor principal (Qwen3-14B-Q6_K).
 #
 # IMPORTANT (2026-08-28): el 14B HA d'anar a la RTX 4090 (CUDA0), NO a la 3090.
 # Mesura: prompt ~1400 tokens → 3090 = 146 s, 4090 = 14 s (~10× més ràpida).
@@ -81,5 +81,5 @@ for _ in $(seq 1 60); do
   if curl -sf "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then ok=1; break; fi
   sleep 1
 done
-[[ "$ok" == "1" ]] && echo "Fluent deep server UP — $MODEL @ :$PORT (cuda $GPU, ctx $CTX)" \
+[[ "$ok" == "1" ]] && echo "Flowed deep server UP — $MODEL @ :$PORT (cuda $GPU, ctx $CTX)" \
                    || { echo "ERROR: not healthy in 60s — $LOG"; exit 1; }

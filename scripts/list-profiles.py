@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""List Fluent learner profiles for /fluent-use.
+"""List Flowed learner profiles for /fluent-use.
 
 Scans the repo's data/ directory plus the multi-learner convention
-~/.fluent/<id>/learner-profile.json. Prints one line per profile:
+~/.flowed/<id>/learner-profile.json. Prints one line per profile:
 
     <id>  <nom>  (<llengua>, nivell <CEFR>, racha <N>d)
 
@@ -12,7 +12,10 @@ Pure stdlib; always exits 0.
 import glob
 import json
 import os
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -39,7 +42,7 @@ def main():
     summary = summarize(repo_data)
     if summary is not None:
         rows.append("data  " + summary)
-    pattern = os.path.expanduser("~/.fluent/*/learner-profile.json")
+    pattern = str(profiles_root() / "*" / "learner-profile.json")
     for path in sorted(glob.glob(pattern)):
         data_dir = Path(path).expanduser().parent
         if data_dir.resolve() == repo_data.resolve():

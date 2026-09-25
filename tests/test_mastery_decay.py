@@ -101,7 +101,7 @@ class DecayThroughUpdateDbTest(unittest.TestCase):
         proc = subprocess.run(
             [sys.executable, str(HOOKS / "update-db.py")],
             input=json.dumps(payload), capture_output=True, text=True,
-            env={"FLUENT_DATA_DIR": str(self.dir), "PATH": "/usr/bin:/bin", "HOME": str(self.dir)},
+            env={"FLOWED_DATA_DIR": str(self.dir), "PATH": "/usr/bin:/bin", "HOME": str(self.dir)},
         )
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
@@ -170,7 +170,7 @@ class ErrorPatternsHealTest(unittest.TestCase):
         proc = subprocess.run(
             [sys.executable, str(HOOKS / "read-db.py")],
             capture_output=True, text=True,
-            env={"FLUENT_DATA_DIR": str(self.dir), "PATH": "/usr/bin:/bin", "HOME": str(self.dir)},
+            env={"FLOWED_DATA_DIR": str(self.dir), "PATH": "/usr/bin:/bin", "HOME": str(self.dir)},
         )
         self.assertIn(proc.returncode, (0, 1), proc.stderr)
         return json.loads(proc.stdout)["databases"]["mistakes_db"]["top_weak_patterns"]

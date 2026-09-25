@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Fluent "omnicoder" LEGACY — fast small model (omnicoder-9b-q4_k_m), kept as a
+# Flowed "omnicoder" LEGACY — fast small model (omnicoder-9b-q4_k_m), kept as a
 # face/fast CANDIDATE (see docs/dual-model/PLAN.md for the original dual-model design).
 #
 # Candidats face actuals (tots comparteixen el port 12323; només un pot estar
 # pujat alhora): qwen1.7-q4 (actiu, scripts/models/llama-qwen1.7b-q4.sh), qwen1.7-bf16
 # (scripts/models/llama-qwen1.7b-bf16.sh) i aquest omnicoder legacy.
 #
-# NO cal per operar: si no hi ha res al 12323, el servidor Fluent fa fallback
+# NO cal per operar: si no hi ha res al 12323, el servidor Flowed fa fallback
 # automàtic al tutor (deep, 12322) — vegeu server/src/agent.ts (resolveModel).
 #
 # Usage:
@@ -94,7 +94,7 @@ done
 
 echo
 if [[ "$ok" == "1" ]]; then
-  echo "Fluent face server UP"
+  echo "Flowed face server UP"
   echo "  model:  $MODEL"
   echo "  url:    http://127.0.0.1:$PORT (loopback only)"
   echo "  gpu:    $GPU (ctx $CTX)"

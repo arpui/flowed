@@ -7,8 +7,8 @@ stay / teacher, the % and the ETA) with invented answers. It does not test the
 tutor: for that, the e2e bench. Never touches real learner data (writes to
 --out, a temp dir by default).
 
-    python3 scripts/fluent-sim-path.py --profile steady --seed 1
-    python3 scripts/fluent-sim-path.py --profile weak --days 60 --admin
+    python3 scripts/flowed-sim-path.py --profile steady --seed 1
+    python3 scripts/flowed-sim-path.py --profile weak --days 60 --admin
 """
 from __future__ import annotations
 
@@ -141,7 +141,7 @@ def run_ladder(profile: str, seed: int, days: int, start: date, verbose: bool = 
     """A0 -> A1 -> A2 through the real course machinery: the A1 course, the checkpoint, the cut
     (archive, certificate, profile level, new empty path) and the A2 course. Files in a temp dir."""
     import json
-    data = Path(tempfile.mkdtemp(prefix="fluent-ladder-"))
+    data = Path(tempfile.mkdtemp(prefix="flowed-ladder-"))
     (data / "learner-profile.json").write_text(json.dumps(
         {"learner": {"target_language": "English", "target_level": "A2", "current_level": "A0"}}), encoding="utf-8")
     out: dict = {"data": str(data), "courses": []}
@@ -215,7 +215,7 @@ def main() -> int:
         return 0
     path, _ = run(cur, a.profile, a.seed, a.days, date.fromisoformat(a.start), verbose=not a.quiet)
     last_day = max(x[0] for c in path["competencies"].values() for x in c["answers"])
-    out = Path(a.out) if a.out else Path(tempfile.mkdtemp(prefix="fluent-sim-path-"))
+    out = Path(a.out) if a.out else Path(tempfile.mkdtemp(prefix="flowed-sim-path-"))
     out.mkdir(parents=True, exist_ok=True)
     cu.save_path(out, path)
     print("\n" + "=" * 60 + "\nFINAL\n")

@@ -46,7 +46,7 @@ El chip de `fluent_deep_evaluate` passa de mostrar el nom cru a
 "avaluant resposta" (+ comptador si hi ha més d'una crida al mateix
 missatge).
 
-### `scripts/fluent-web.sh` (v1 i v2) — sanejament d'entorn
+### `scripts/flowed-web.sh` (v1 i v2) — sanejament d'entorn
 El serve heretava l'entorn de la shell que l'arrencava. Des de l'app
 desktop (`OPENCODE_CLIENT=desktop`, `XDG_STATE_HOME=…ai.opencode.desktop`)
 el plugin activava **dev mode** → a la web es treia el paper de tutor
@@ -90,7 +90,7 @@ afecta a fluent.
 `model: llama-local//...` → `model: fluent-deep/deep`. El `tutor-fast.md` no es
 toca (`llama-face/...` — mateix patró, model fix).
 
-### `scripts/fluent-web.sh` (v1 i v2)
+### `scripts/flowed-web.sh` (v1 i v2)
 A l'arrencar, mostra l'estat dels models (només informatiu, **no** arrenca ni
 atura res): `deep (12321)` i `face (12322)` — OK / NOT RUNNING. Ports
 sobrescriptibles amb `FLUENT_DEEP_PORT` / `FLUENT_FACE_PORT`.
@@ -101,7 +101,7 @@ sobrescriptibles amb `FLUENT_DEEP_PORT` / `FLUENT_FACE_PORT`.
 - POST `/session/:id/command` `fluent-vocab` → rutejat a `tutor-fast` →
   `llama-face`/omnicoder-9b, ~9 s, llegeix la BD de la Alex (21 ítems
   pendents).
-- `scripts/fluent-web.sh --app alex-en` imprimeix `deep — OK` i `face — OK`.
+- `scripts/flowed-web.sh --app alex-en` imprimeix `deep — OK` i `face — OK`.
 - Canviar de model al 12321 (qualsevol GGUF amb llama.cpp) **no requereix cap
   canvi** a fluent.
 
@@ -196,7 +196,7 @@ Causa arrel (dues, en cascada):
    aplicava mai les parts que arribaven. Només l'SSE actualitzava un missatge
    ja renderitzat → amb l'SSE mort, `…` etern.
 
-### `scripts/fluent-web-proxy.mjs` (v2 modificat, copiat a v1 — idèntics)
+### `scripts/flowed-web-proxy.mjs` (v2 modificat, copiat a v1 — idèntics)
 
 - `const server = serve(...)` + `server.timeout(req, 0)` per a cada request
   `/api/*`: desactiva el `idleTimeout` per a les peticions proxyades (SSE i
@@ -217,7 +217,7 @@ Verificació:
   sense errors de consola ni falles de xarxa.
 
 Nota: cal reiniciar la instància web perquè agafi el proxy nou
-(`scripts/fluent-web.sh --stop --port 4100` i tornar a llançar-la).
+(`scripts/flowed-web.sh --stop --port 4100` i tornar a llançar-la).
 
 ---
 
@@ -334,7 +334,7 @@ De redibuix sencer post-torn a **render incremental + streaming en viu**:
   `tool`, `shell.env`, `tool.execute.after`, `event`,
   `experimental.chat.system.transform`, `experimental.session.compacting`;
   `execute` de l'eina respon amb la rubric completa.
-- Web `scripts/fluent-web.sh --app` (port 4100): pàgina estàtica OK,
+- Web `scripts/flowed-web.sh --app` (port 4100): pàgina estàtica OK,
   `/api/global/health` OK, sessió creada, POST de missatge → resposta
   `{info, parts}` (parts: step-start/reasoning/text/step-finish) i el
   `/api/event` va emetre `message.part.delta` (639), `message.part.updated`

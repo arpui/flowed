@@ -5,8 +5,8 @@
     "  <  environment variables  <  command-line flags.",
     "So this file describes the project; .env only says how THIS machine differs",
     "(cp .env.railab .env / cp .env.rapve .env). Read it with:",
-    "  python3 scripts/fluent-config.py --json      (effective config)",
-    "  python3 scripts/fluent-config.py --sh        (shell exports)",
+    "  python3 scripts/flowed-config.py --json      (effective config)",
+    "  python3 scripts/flowed-config.py --sh        (shell exports)",
     "The server reads the models section directly; config/fluent-models.json is",
     "kept as a deprecated override layer."
   ],
@@ -33,7 +33,7 @@
         "d'exercici gairebe iguals, i temperatura prou baixa perque 'el mateix",
         "un altre cop' sigui la continuacio mes probable. El repeat_penalty de",
         "llama.cpp mira 64 tokens enrere; l'exercici que repeteix es a 2000.",
-        "NO ELS TOQUIS A CEGUES: mesura amb scripts/fluent-e2e.py abans i despres.",
+        "NO ELS TOQUIS A CEGUES: mesura amb scripts/flowed-e2e.py abans i despres.",
         "Punt de partida raonable per provar:",
         "  temperature 0.6, presence_penalty 0.4, frequency_penalty 0.3,",
         "  repeat_last_n 512",
@@ -64,7 +64,7 @@
   "tts": {
     "_comment": [
       "Local text-to-speech (piper). Off until a voice exists on this machine.",
-      "Install with: scripts/fluent-tts.sh install en_GB-alba-medium",
+      "Install with: scripts/flowed-tts.sh install en_GB-alba-medium",
       "'voices' maps the profile's target_language to a .onnx voice model.",
       "CPU only: it must not compete for the VRAM the deep model needs."
     ],
@@ -77,8 +77,8 @@
     "timeout_ms": 20000
   },
   "_webs_comment": [
-    "El mapa perfil->port viu a FLUENT_WEBS a l'.env: es per maquina i porta",
-    "noms reals d'alumnes. Exemple: FLUENT_WEBS=\"alex-en:4100 sam-en:4101\""
+    "El mapa perfil->port viu a FLOWED_WEBS a l'.env: es per maquina i porta",
+    "noms reals d'alumnes. Exemple: FLOWED_WEBS=\"alex-en:4100 sam-en:4101\""
   ],
   "exercises": {
     "_comment": "PLA-EXERCICIS-TANCATS.md fase 1: banc offline per a Go/Review, sense model, per competencia amb curriculum/bank/<curriculum>/<id>.json. Una competencia sense banc segueix pel cami de sempre.",

@@ -1,6 +1,6 @@
 # Alumne simulat — A1
 
-Skill del banc de models (`scripts/fluent-modelbench.py`). **No la fa servir el
+Skill del banc de models (`scripts/flowed-modelbench.py`). **No la fa servir el
 tutor**: fa que un model respongui un exercici com ho faria una alumna d'A1 que
 ha estudiat el currículum. Serveix per a dues coses:
 

@@ -1024,6 +1024,15 @@ async function send(text) {
       method: "POST",
       body: { agent: AGENT, parts: [{ type: "text", text: msg }] },
     });
+    if (res && res.bounce) {
+      // Session from before a server restart: the answer was not sent anywhere.
+      if (pendingUser) pendingUser.el.remove();
+      pendingUser = null;
+      clearAllPlaceholders();
+      setBusy(false);
+      handleSessionBounce(res.bounce);
+      return;
+    }
     await appendAssistant(res);
   } catch (e) {
     if (pendingUser) {
@@ -1062,6 +1071,12 @@ async function runCommand(cmd) {
       method: "POST",
       body: { agent: AGENT, command: cmd, arguments: "" },
     });
+    if (res && res.bounce) {
+      clearAllPlaceholders();
+      setBusy(false);
+      handleSessionBounce(res.bounce);
+      return;
+    }
     await appendAssistant(res);
   } catch (e) {
     clearAllPlaceholders();
@@ -1129,6 +1144,7 @@ async function newSession(opts) {
 const BOUNCE_REASON_TEXT = {
   "context-full": "Aquesta sessió ha crescut massa i el model ha començat a perdre el fil.",
   "not-grading": "El model ha deixat de puntuar els exercicis.",
+  restart: "L'app s'ha reiniciat i l'exercici pendent s'ha perdut.",
 };
 
 async function handleSessionBounce(reason) {
@@ -1291,7 +1307,7 @@ setInterval(() => {
 async function init() {
   try {
     const h = await api("/global/health");
-    statusEl.dataset.online = "online · v" + (h.version || "?");
+    statusEl.dataset.online = "v" + (h.version || "?");
     statusEl.textContent = statusEl.dataset.online;
   } catch (e) {
     statusEl.textContent = "error de connexió";

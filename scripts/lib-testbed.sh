@@ -1,4 +1,5 @@
-# Peces compartides pel banc (fluent-bench.sh) i el banc manual (fluent-testbase.sh).
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR: where the profiles live
+# Peces compartides pel banc (flowed-bench.sh) i el banc manual (flowed-testbase.sh).
 # Un sol lloc per "deixar a punt el perfil de proves i el model": si es canvia
 # aquí, els dos ho fan igual. Es fa `source` des de l'arrel del repositori.
 #
@@ -12,7 +13,7 @@
 TB_STARTED_MODEL=0
 
 tb_ensure_profile() {
-  local profile="$1" port="$2" level="${3:-A2}" goal pdir="$HOME/.fluent/$1"
+  local profile="$1" port="$2" level="${3:-A2}" goal pdir="$FLOWED_HOME_DIR/$1"
   case "$level" in
     A1) goal=A2 ;; A2) goal=B1 ;; B1) goal=B2 ;; B2) goal=C1 ;;
     *) echo "❌ nivell desconegut: $level (A1, A2, B1 o B2)" >&2; return 2 ;;
@@ -21,14 +22,14 @@ tb_ensure_profile() {
   if [[ ! -d "$pdir" ]]; then
     echo "perfil $profile: no existeix, el creo i el configuro"
     scripts/new-user.sh "$profile" --port "$port" >/dev/null
-    python3 scripts/fluent-profile.py "$profile" --name Test --native Catalan \
+    python3 scripts/flowed-profile.py "$profile" --name Test --native Catalan \
       --target English --level "$level" --goal "$goal" --minutes 20 >/dev/null
   fi
 }
 
 tb_model_port() {
-  python3 scripts/fluent-config.py --json \
-    | python3 -c 'import json,sys; print(json.load(sys.stdin)["FLUENT_DEEP_PORT"])'
+  python3 scripts/flowed-config.py --json \
+    | python3 -c 'import json,sys; print(json.load(sys.stdin)["FLOWED_DEEP_PORT"])'
 }
 
 tb_model_up() {
@@ -47,10 +48,10 @@ tb_ensure_model() {
     echo "❌ el model deep no respon a :$port i has demanat --no-start" >&2
     return 3
   fi
-  echo "model deep :$port: no corre, l'aixeco (fluent-start.sh --models-only)"
+  echo "model deep :$port: no corre, l'aixeco (flowed-start.sh --models-only)"
   TB_STARTED_MODEL=1
-  scripts/fluent-start.sh --models-only --yes
-  # fluent-start ja espera el /health, però un model de 14B pot trigar; 5 min de marge.
+  scripts/flowed-start.sh --models-only --yes
+  # flowed-start ja espera el /health, però un model de 14B pot trigar; 5 min de marge.
   for _ in $(seq 1 100); do
     tb_model_up && return 0
     sleep 3

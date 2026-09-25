@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Fluent web launcher — runs a Fluent learner profile's web UI.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR: where the profiles live
+# Flowed web launcher — runs a Flowed learner profile's web UI.
 #
 # Usage:
-#   scripts/fluent-web.sh --web [--port N] [profile-id]   ARXIVAT (UI d'opencode)
-#   scripts/fluent-web.sh --app [--port N] [profile-id]   standalone Fluent web server (no opencode)
-#   scripts/fluent-web.sh --stop [--port N]               stop an instance started by this script
+#   scripts/flowed-web.sh --web [--port N] [profile-id]   ARXIVAT (UI d'opencode)
+#   scripts/flowed-web.sh --app [--port N] [profile-id]   standalone Flowed web server (no opencode)
+#   scripts/flowed-web.sh --stop [--port N]               stop an instance started by this script
 #
-# profile-id : name of a profile dir under ~/.fluent/<id>/ (default: the repo's own data/ dir)
+# profile-id : name of a profile dir under ~/.flowed/<id>/ (default: the repo's own data/ dir)
 # Password   : OPENCODE_SERVER_PASSWORD env var, or generated on the fly (shown once, never stored)
 #
 # Ports (defaults): --web 4097, --app 4100
@@ -17,7 +18,7 @@ ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$ROOT"
 
 # Configuració (P1-9): .env primer, config/fluent.json per a la resta. Aquest
-# llançador no llegia cap de les dues, així que FLUENT_STREAM i els ports dels
+# llançador no llegia cap de les dues, així que FLOWED_STREAM i els ports dels
 # models li arribaven només si algú els exportava a mà.
 if [[ -f "$ROOT/.env" ]]; then
   while IFS= read -r _line || [[ -n "$_line" ]]; do
@@ -30,7 +31,7 @@ if [[ -f "$ROOT/.env" ]]; then
   done < "$ROOT/.env"
 fi
 if [[ -f "$ROOT/config/fluent.json" ]]; then
-  eval "$(python3 "$ROOT/scripts/fluent-config.py" --sh --missing-only --no-env-file 2>/dev/null || true)"
+  eval "$(python3 "$ROOT/scripts/flowed-config.py" --sh --missing-only --no-env-file 2>/dev/null || true)"
 fi
 
 MODE=""
@@ -80,14 +81,14 @@ if [[ "$STOP" == "1" ]]; then
       [[ -e "$pf" ]] || continue
       stop_pidfile "$pf"
     done
-    echo "stopped all fluent-web instances"
+    echo "stopped all flowed-web instances"
   fi
   exit 0
 fi
 
 if [[ -z "$MODE" ]]; then
-  echo "usage: scripts/fluent-web.sh --web|--app [--port N] [profile-id]"
-  echo "       scripts/fluent-web.sh --stop [--port N]"
+  echo "usage: scripts/flowed-web.sh --web|--app [--port N] [profile-id]"
+  echo "       scripts/flowed-web.sh --stop [--port N]"
   exit 1
 fi
 
@@ -100,7 +101,7 @@ fi
 
 # --- profile / data dir ----------------------------------------------------
 if [[ -n "$PROFILE" ]]; then
-  DATA_DIR="$HOME/.fluent/$PROFILE"
+  DATA_DIR="$FLOWED_HOME_DIR/$PROFILE"
   if [[ ! -f "$DATA_DIR/learner-profile.json" ]]; then
     echo "error: profile '$PROFILE' not found (missing $DATA_DIR/learner-profile.json)"
     exit 1
@@ -123,24 +124,24 @@ else
   echo "error: el mode --web (UI d'opencode) està arxivat des del renombrat de"
   echo "       2026-09-13: els agents i les comandes viuen a prompts/ i opencode"
   echo "       ja no els descobreix. El que hi havia és a obsolet/opencode-runtime/."
-  echo "       Fes servir --app (servidor propi de Fluent)."
+  echo "       Fes servir --app (servidor propi de Flowed)."
   exit 1
 fi
 command -v python3 >/dev/null 2>&1 || { echo "error: python3 no trobat"; exit 1; }
 command -v openssl >/dev/null 2>&1 || { echo "error: openssl no trobat"; exit 1; }
 
 # --- password ----------------------------------------------------------------
-# Priority: FLUENT_WEB_PASSWORD env > stored per-profile file > generate+store.
+# Priority: FLOWED_WEB_PASSWORD env > stored per-profile file > generate+store.
 # The stored file makes each user's password stable across restarts.
 # Deliberately ignores an inherited OPENCODE_SERVER_PASSWORD so the fluent
 # instance never silently shares the host opencode server's password.
 if [[ -n "$PROFILE" ]]; then
-  PWFILE="$HOME/.fluent/$PROFILE/.web-password"
+  PWFILE="$FLOWED_HOME_DIR/$PROFILE/.web-password"
 else
-  PWFILE="$HOME/.fluent/.web-password-default"
+  PWFILE="$FLOWED_HOME_DIR/.web-password-default"
 fi
-if [[ -n "${FLUENT_WEB_PASSWORD:-}" ]]; then
-  OPENCODE_SERVER_PASSWORD="$FLUENT_WEB_PASSWORD"
+if [[ -n "${FLOWED_WEB_PASSWORD:-}" ]]; then
+  OPENCODE_SERVER_PASSWORD="$FLOWED_WEB_PASSWORD"
 elif [[ -f "$PWFILE" ]]; then
   OPENCODE_SERVER_PASSWORD="$(tr -d '[:space:]' < "$PWFILE")"
 else
@@ -148,16 +149,16 @@ else
   (umask 077 && printf '%s\n' "$OPENCODE_SERVER_PASSWORD" > "$PWFILE")
 fi
 export OPENCODE_SERVER_PASSWORD
-export FLUENT_DATA_DIR="$DATA_DIR"
+export FLOWED_DATA_DIR="$DATA_DIR"
 
 # --- per-user session isolation ---------------------------------------------
-# Each profile keeps its own sessions DB (now ~/.fluent/<id>/sessions/sessions.db;
+# Each profile keeps its own sessions DB (now ~/.flowed/<id>/sessions/sessions.db;
 # the server creates the directory). XDG_DATA_HOME is still exported for the
 # archived opencode path and for the previous build of the app, which writes to
-# ~/.fluent/<id>/.opencode/opencode/opencode.db — that file is never deleted.
+# ~/.flowed/<id>/.opencode/opencode/opencode.db — that file is never deleted.
 if [[ -n "$PROFILE" ]]; then
-  export XDG_DATA_HOME="$HOME/.fluent/$PROFILE/.opencode"
-  mkdir -p "$XDG_DATA_HOME/opencode" "$HOME/.fluent/$PROFILE/sessions"
+  export XDG_DATA_HOME="$FLOWED_HOME_DIR/$PROFILE/.opencode"
+  mkdir -p "$XDG_DATA_HOME/opencode" "$FLOWED_HOME_DIR/$PROFILE/sessions"
 fi
 
 # --- port / pidfile checks -----------------------------------------------------
@@ -175,7 +176,7 @@ if [[ -f "$PIDFILE" ]]; then
     echo "(netejant pidfile ranci $PIDFILE — cap procés viu, port lliure)"
     rm -f "$PIDFILE"
   else
-    echo "error: pidfile $PIDFILE exists — run: scripts/fluent-web.sh --stop --port $PORT"
+    echo "error: pidfile $PIDFILE exists — run: scripts/flowed-web.sh --stop --port $PORT"
     exit 1
   fi
 fi
@@ -188,7 +189,7 @@ PIDS=()
 # shell belongs to the opencode desktop app (which exports OPENCODE_CLIENT=
 # desktop / XDG_STATE_HOME=...ai.opencode.desktop and would flip the fluent
 # plugin into dev mode, stripping AGENTS.md from the system prompt).
-ENV_SANITIZED="env -u OPENCODE_CLIENT -u XDG_STATE_HOME FLUENT_DEV=0"
+ENV_SANITIZED="env -u OPENCODE_CLIENT -u XDG_STATE_HOME FLOWED_DEV=0"
 
 case "$MODE" in
   web)
@@ -200,10 +201,10 @@ case "$MODE" in
     BUN="$(command -v bun || echo "$HOME/.bun/bin/bun")"
     # Standalone server (no opencode, no proxy): serves the static UI + API +
     # auth + setup-state directly and writes sessions straight into
-    # ~/.fluent/<id>/sessions/sessions.db (compatible schema, so the
-    # Fluent Python hooks keep working unchanged).
-    nohup $ENV_SANITIZED FLUENT_DATA_DIR="$DATA_DIR" PORT="$PORT" \
-      FLUENT_WEB_PASSWORD="$OPENCODE_SERVER_PASSWORD" \
+    # ~/.flowed/<id>/sessions/sessions.db (compatible schema, so the
+    # Flowed Python hooks keep working unchanged).
+    nohup $ENV_SANITIZED FLOWED_DATA_DIR="$DATA_DIR" PORT="$PORT" \
+      FLOWED_WEB_PASSWORD="$OPENCODE_SERVER_PASSWORD" \
       "$BUN" "$ROOT/server/src/index.ts" >> "$LOG" 2>&1 &
     PIDS+=("$!")
     ;;
@@ -226,7 +227,7 @@ done
 
 echo
 if [[ "$ok" == "1" ]]; then
-  echo "Fluent web UP (mode=$MODE, profile=$PROFILE_LABEL, port=$PORT)"
+  echo "Flowed web UP (mode=$MODE, profile=$PROFILE_LABEL, port=$PORT)"
   echo "  local:    http://localhost:$PORT"
   [[ -n "$IP" ]] && echo "  network:  http://$IP:$PORT"
   [[ "$MODE" == "web" ]] && echo "  mDNS:     http://$MDNS_DOMAIN:$PORT"
@@ -239,7 +240,7 @@ if [[ "$ok" == "1" ]]; then
     echo "  login:    $LOGIN_NAME / $OPENCODE_SERVER_PASSWORD   (basic auth, shown once — not stored)"
   fi
   echo "  log:      $LOG"
-  echo "  stop:     scripts/fluent-web.sh --stop --port $PORT"
+  echo "  stop:     scripts/flowed-web.sh --stop --port $PORT"
   # --- model status (informational only — never starts or stops anything) --------
   model_status() {
     local port="$1" label="$2"
@@ -249,8 +250,8 @@ if [[ "$ok" == "1" ]]; then
       echo "  model:    $label — NOT RUNNING (port $port)"
     fi
   }
-  model_status "${FLUENT_DEEP_PORT:-12322}" "deep  (tutor, chat, sessions)"
-  model_status "${FLUENT_FACE_PORT:-12323}" "face  (vocab, review, progress, setup)"
+  model_status "${FLOWED_DEEP_PORT:-12322}" "deep  (tutor, chat, sessions)"
+  model_status "${FLOWED_FACE_PORT:-12323}" "face  (vocab, review, progress, setup)"
 else
   echo "ERROR: server did not become healthy in 20s — check $LOG"
   echo "(netejant el procés fallit per no deixar orfes ni pidfiles rancis...)"

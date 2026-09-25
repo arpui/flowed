@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fluent llama.cpp server via Docker — recepta per a RTX 4060 Ti 16GB.
+# Flowed llama.cpp server via Docker — recepta per a RTX 4060 Ti 16GB.
 #
 # Model: Qwen3-14B-Q4_K_M — pesos ~8.4 GB + KV ~5.2 GB (@ctx 32768) ≈ 14 GB,
 # cap als 16 GB amb ~2 GB de marge (mesurat a 3090/4090).
@@ -10,7 +10,7 @@
 #   scripts/models/docker-llama.sh --stop             # atura
 #   MODEL_FILE=... HOST_PORT=12325 CTX=16384 scripts/models/docker-llama.sh
 #
-# Lligat a l'.env unificat: FLUENT_DEEP_* mana; HOST_PORT/MODEL_FILE/CTX queden
+# Lligat a l'.env unificat: FLOWED_DEEP_* mana; HOST_PORT/MODEL_FILE/CTX queden
 # com a fallback compatible.
 set -euo pipefail
 
@@ -34,13 +34,13 @@ done
 # config/fluent.json, la configuració canònica del projecte.
 _root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 if [[ -f "$_root/config/fluent.json" ]]; then
-  eval "$(python3 "$_root/scripts/fluent-config.py" --sh --missing-only --no-env-file 2>/dev/null || true)"
+  eval "$(python3 "$_root/scripts/flowed-config.py" --sh --missing-only --no-env-file 2>/dev/null || true)"
 fi
 
-MODEL_DIR="${MODEL_DIR:-${FLUENT_MODEL_DIR:-/home/albert/aidev/models}}"
-MODEL_FILE="${MODEL_FILE:-$(basename "${FLUENT_DEEP_MODEL:-Qwen3-14B-Q4_K_M.gguf}")}"
-HOST_PORT="${HOST_PORT:-${APP_PORT:-${PORT:-${FLUENT_DEEP_PORT:-12322}}}}"
-CTX="${CTX:-${LLAMA_CTX:-${FLUENT_DEEP_CTX:-32768}}}"   # NO baixar a 16384: els torns reals van a 12–25k tokens (overflow)
+MODEL_DIR="${MODEL_DIR:-${FLOWED_MODEL_DIR:-/home/albert/aidev/models}}"
+MODEL_FILE="${MODEL_FILE:-$(basename "${FLOWED_DEEP_MODEL:-Qwen3-14B-Q4_K_M.gguf}")}"
+HOST_PORT="${HOST_PORT:-${APP_PORT:-${PORT:-${FLOWED_DEEP_PORT:-12322}}}}"
+CTX="${CTX:-${LLAMA_CTX:-${FLOWED_DEEP_CTX:-32768}}}"   # NO baixar a 16384: els torns reals van a 12–25k tokens (overflow)
 IMG="${LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp:server-cuda}"
 NAME="${CONTAINER_NAME:-qwen-fluent-server}"
 
@@ -66,7 +66,7 @@ fi
 # KV cache (needs -fa 1, which is on) and so buys either ~2.6 GB back at ctx
 # 32768 or twice the context for the same VRAM. It is a quality trade-off, so it
 # is opt-in and must be MEASURED, not assumed: see docs/model-qwen14b-q4.md.
-KV_TYPE="${FLUENT_DEEP_KV_TYPE:-f16}"
+KV_TYPE="${FLOWED_DEEP_KV_TYPE:-f16}"
 KV_ARGS=()
 if [[ "$KV_TYPE" != "f16" ]]; then
   KV_ARGS=(-ctk "$KV_TYPE" -ctv "$KV_TYPE")

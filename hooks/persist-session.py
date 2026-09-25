@@ -10,7 +10,7 @@ Usage:
 Examples:
     python3 hooks/persist-session.py ses_fbc429f6bffeX9Mnl3BEFl0OW2
     python3 hooks/persist-session.py --latest --slug sam
-    python3 hooks/persist-session.py --latest --dir /home/albert/.fluent/sam-en
+    python3 hooks/persist-session.py --latest --dir ~/.flowed/sam-en
 
 Exit codes: 0=success, 1=error
 """
@@ -34,22 +34,23 @@ LEGACY_SESSIONS_DB_REL = (".opencode", "opencode", "opencode.db")
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from db_schema import normalize_error_category  # noqa: E402
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 UPDATE_DB = SCRIPT_DIR / "update-db.py"
 # Results files are per-user now: each learner's session history lives in
-# ~/.fluent/<id>/results/, alongside the 6 DBs. Derived at save time from the
+# ~/.flowed/<id>/results/, alongside the 6 DBs. Derived at save time from the
 # resolved data_dir (profile), not from the repo root — see save_results_file().
 DEFAULT_RESULTS_DIR = Path(__file__).resolve().parent.parent.parent / "results"
 
 # --- Per-profile sessions DB resolution ---
 # Each learner's transcript lives inside their own profile directory. The path
-# used to be ~/.fluent/<id>/.opencode/opencode/opencode.db — a shape inherited
+# used to be ~/.flowed/<id>/.opencode/opencode/opencode.db — a shape inherited
 # from opencode's XDG layout, kept long after opencode stopped being the
-# runtime. It is now ~/.fluent/<id>/sessions/sessions.db.
+# runtime. It is now ~/.flowed/<id>/sessions/sessions.db.
 #
 # Resolution order (first hit wins):
 #   1. explicit --db
-#   2. $FLUENT_SESSIONS_DB
+#   2. $FLOWED_SESSIONS_DB
 #   3. <profile>/sessions/sessions.db            (current)
 #   4. <profile>/.opencode/opencode/opencode.db  (legacy — still read, never
 #      deleted, so the previous version of the app keeps working on it)
@@ -58,7 +59,7 @@ DEFAULT_RESULTS_DIR = Path(__file__).resolve().parent.parent.parent / "results"
 def resolve_sessions_db(data_dir, explicit_db=None):
     if explicit_db:
         return Path(explicit_db).expanduser()
-    env = os.environ.get("FLUENT_SESSIONS_DB")
+    env = os.environ.get("FLOWED_SESSIONS_DB")
     if env:
         return Path(env).expanduser()
     if data_dir:
@@ -656,7 +657,7 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
 def save_results_file(learner_slug, session_id, exercises, accuracy, report, data_dir=None):
     """Save the results markdown file under the learner's profile directory.
 
-    Results are per-user: ~/.fluent/<id>/results/{slug}-fluent-learn-{ID}.md.
+    Results are per-user: ~/.flowed/<id>/results/{slug}-fluent-learn-{ID}.md.
     Falls back to the repo-root results/ when no data_dir/profile is known.
     """
     data_dir_p = Path(data_dir).expanduser() if data_dir else None
@@ -711,7 +712,7 @@ def run_update_db(report, data_dir):
     cmd = [sys.executable, str(UPDATE_DB)]
     env = os.environ.copy()
     if data_dir:
-        env["FLUENT_DATA_DIR"] = data_dir
+        env["FLOWED_DATA_DIR"] = data_dir
     
     proc = subprocess.run(
         cmd,
@@ -734,7 +735,7 @@ def main():
     parser.add_argument("session_id", nargs="?", help="Session ID to persist")
     parser.add_argument("--latest", action="store_true", help="Persist the latest session")
     parser.add_argument("--slug", help="Learner slug (for --latest)")
-    parser.add_argument("--dir", help="FLUENT_DATA_DIR path")
+    parser.add_argument("--dir", help="FLOWED_DATA_DIR path")
     parser.add_argument("--db", help="Explicit sessions DB path to read the session from")
     parser.add_argument("--session-id", dest="override_session_id",
                         help="Override the session id (e.g. session-004)")
@@ -745,7 +746,7 @@ def main():
         parser.error("Provide a session ID or use --latest")
     
     # Resolve which sessions DB to read: explicit --db, else derive from --dir
-    # when it points at a per-profile data dir (~/.fluent/<id>/), else default.
+    # when it points at a per-profile data dir (~/.flowed/<id>/), else default.
     set_sessions_db(resolve_sessions_db(args.dir, args.db))
     if not SESSIONS_DB.exists():
         # sqlite3.connect would silently CREATE an empty DB here and the real
@@ -807,7 +808,7 @@ def main():
     # Persist
     data_dir = args.dir
     if not data_dir and learner_slug:
-        data_dir = str(Path.home() / ".fluent" / f"{learner_slug}-en")
+        data_dir = str(profiles_root() / f"{learner_slug}-en")
     
     success = run_update_db(report, data_dir)
     if not success:

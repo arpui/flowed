@@ -17,7 +17,7 @@ directory and its 6 databases already exist — the system owner created them wi
 `fluent_setup_profile`, which writes the profile and marks the setup complete.
 
 *(Claude Code / clone mode only: there is no such tool there, so you resolve the
-data directory with `fluent_paths.ensure_data_dir()` and write the files
+data directory with `main_paths.ensure_data_dir()` and write the files
 yourself — see §5b.)*
 
 ## When to Use
@@ -180,7 +180,7 @@ fluent_setup_profile({
 
 There is no `fluent_setup_profile` tool outside the Fluent server. There, start
 from the templates in `data-examples/`, resolve the directory with
-`fluent_paths.ensure_data_dir()` and write the 6 files with the Write tool
+`main_paths.ensure_data_dir()` and write the 6 files with the Write tool
 (`learner-profile.json` filled in and `preferences.setup_complete = true`; the
 other five as the empty templates). Never call `update-db.py` for this — that
 script is for session updates, not bootstrapping.

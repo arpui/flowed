@@ -117,7 +117,7 @@ cada torn:
 2. Headless (`opencode run`, sense env del desktop): llista d'eines inclou
    `fluent_deep_evaluate`; cridar l'eina fa un `POST` real al 12321 i torna
    el format CORRECTIONS/CORRECT VERSION/SCORE/FEEDBACK.
-3. Web (`scripts/fluent-web.sh --app`): pàgina estàtica + `/api/global/health`
+3. Web (`scripts/flowed-web.sh --app`): pàgina estàtica + `/api/global/health`
    + `/api/event` en viu a través del proxy; un POST de missatge genera
    `message.updated`/`message.part.updated`/`message.part.delta` i la resposta
    té la forma `{info, parts}`.

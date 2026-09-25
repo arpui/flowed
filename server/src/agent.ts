@@ -258,7 +258,7 @@ export class Agent {
 
   /** The deep model's context window, from config. */
   private contextTokens(): number {
-    const n = Number(process.env.FLUENT_DEEP_CTX);
+    const n = Number(process.env.FLOWED_DEEP_CTX);
     if (Number.isFinite(n) && n > 0) return n;
     try {
       const cfg = JSON.parse(fs.readFileSync(path.join(this.root, "config", "fluent.json"), "utf8"));
@@ -598,7 +598,7 @@ export class Agent {
       if (action === "answer") args.push("--text", text);
       const r = Bun.spawnSync(args, {
         cwd: this.root,
-        env: { ...process.env, FLUENT_DATA_DIR: this.dataDir(), FLUENT_ROOT: this.root },
+        env: { ...process.env, FLOWED_DATA_DIR: this.dataDir(), FLOWED_ROOT: this.root },
         stdout: "pipe",
         stderr: "pipe",
       });
@@ -814,11 +814,11 @@ export class Agent {
    *  to the normal (model-driven) path unchanged. */
   private tryBankTurn(sessionId: string, agent: string): TurnOutcome | null {
     // Manual test-only override (never set in production; export it in the
-    // shell that runs fluent-start.sh, not in a committed .env): forces every
+    // shell that runs flowed-start.sh, not in a committed .env): forces every
     // Go/Vocabulary turn in bank mode onto ONE competence, so a pilot bank can
     // be checked on screen without waiting for the normal pacing to pick it.
     // Unset it once the check is done.
-    const forced = process.env.FLUENT_BANK_TEST_COMPETENCE;
+    const forced = process.env.FLOWED_BANK_TEST_COMPETENCE;
     const competence = forced ? { ...this.assignedCompetence.get(sessionId), id: forced, name: forced, vocab: forced.includes("vocab") } as AssignedCompetence : this.assignedCompetence.get(sessionId);
     if (!competence) return null;
     // Grade whatever was pending BEFORE deciding whether a next bank item is
@@ -1016,7 +1016,7 @@ export class Agent {
     const msg = this.createAssistantMessage(sessionId, agent, model);
     const view = () => this.db.getMessageView(msg);
 
-    // Streaming (FLUENT_STREAM=1): the first delta creates an empty text part,
+    // Streaming (FLOWED_STREAM=1): the first delta creates an empty text part,
     // the rest arrive as message.part.delta events — the shape web/app.js
     // already knows. The part row is written once, when the segment closes, so
     // the transcript on disk matches what the learner saw without one SQLite
@@ -1059,7 +1059,7 @@ export class Agent {
     // as often as not (repeats, ungraded turns, unanchored blanks). Measured
     // live, 2026-09-22 (Albert): the flawed exercise really was shown for the
     // 2-4s enforceTurn takes, then silently swapped for the fixed one — not
-    // just a log artifact. With streaming off (FLUENT_STREAM unset, the
+    // just a log artifact. With streaming off (FLOWED_STREAM unset, the
     // config this app actually runs), nothing is lost by holding the text
     // part back until enforceTurn has had its say: it is inserted here (so
     // enforceTurn can still find and rewrite it) but NOT emitted; the emit
@@ -1067,7 +1067,7 @@ export class Agent {
     // that point — the rewritten text if there was one, the original
     // otherwise. Tool-call parts still emit immediately (never guarded).
     //
-    // This does NOT cover FLUENT_STREAM=1: onDelta below emits the first
+    // This does NOT cover FLOWED_STREAM=1: onDelta below emits the first
     // token as soon as it arrives, by design, so the learner watches it being
     // typed — holding that back would mean no live streaming at all, a
     // separate trade-off this does not make on its own. In a streaming
@@ -2094,7 +2094,7 @@ export class Agent {
       const spawn = () =>
         Bun.spawnSync(args, {
           cwd: this.root,
-          env: { ...process.env, FLUENT_DATA_DIR: this.dataDir(), FLUENT_ROOT: this.root },
+          env: { ...process.env, FLOWED_DATA_DIR: this.dataDir(), FLOWED_ROOT: this.root },
           stdout: "pipe",
           stderr: "pipe",
         });
@@ -2351,7 +2351,7 @@ export class Agent {
   private async runAutoPersistence(sessionId: string) {
     try {
       const root = this.root;
-      const env = { ...process.env, FLUENT_DATA_DIR: this.dataDir(), FLUENT_PROJECT_DIR: root, FLUENT_ROOT: root };
+      const env = { ...process.env, FLOWED_DATA_DIR: this.dataDir(), FLOWED_PROJECT_DIR: root, FLOWED_ROOT: root };
       const proc = Bun.spawn(
         [
           "python3",
@@ -2402,7 +2402,7 @@ export class Agent {
     try {
       const { spawnSync } = await import("node:child_process");
       const root = this.root;
-      const env = { ...process.env, FLUENT_DATA_DIR: dataDir, FLUENT_PROJECT_DIR: root, FLUENT_ROOT: root };
+      const env = { ...process.env, FLOWED_DATA_DIR: dataDir, FLOWED_PROJECT_DIR: root, FLOWED_ROOT: root };
       const proc = spawnSync("python3", [
         path.join(root, "hooks", "persist-session.py"),
         sessionId,

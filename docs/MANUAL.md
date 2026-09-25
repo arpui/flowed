@@ -17,7 +17,7 @@ d'**aprenentatge activa**), i a qualsevol còpia que en facis.
 > `.opencode/` sinó a **`prompts/agents/`** i **`prompts/commands/`**, i el
 > servidor els llegeix directament. `opencode.json`, el plugin d'opencode i el
 > llançador de models gratuïts són a `obsolet/opencode-runtime/`. El mode
-> `--web` de `fluent-web.sh` (la UI d'opencode) queda arxivat: només `--app`.
+> `--web` de `flowed-web.sh` (la UI d'opencode) queda arxivat: només `--app`.
 > On aquest manual digui "opencode.json" per a la tria de models, ara mana
 > `config/fluent.json` (vegeu §1.7).
 
@@ -120,13 +120,13 @@ la web.
 |---|---|---|
 | 1 | `config/fluent.json` | La configuració del projecte: models, ports, GPU, ctx, backend, llista de webs. Va al git. |
 | 2 | `.env` a l'arrel | Només el que aquesta màquina fa diferent (`cp .env.railab .env` / `cp .env.rapve .env`). No va al git. |
-| 3 | entorn i CLI | `FLUENT_DEEP_PORT=... scripts/fluent-start.sh`, `--gpu 4090`, etc. |
+| 3 | entorn i CLI | `FLOWED_DEEP_PORT=... scripts/flowed-start.sh`, `--gpu 4090`, etc. |
 
 Per veure la configuració efectiva, sense endevinar quina capa ha guanyat:
 
 ```bash
-python3 scripts/fluent-config.py --json      # resultat final
-python3 scripts/fluent-config.py --sh        # el mateix, com a exports
+python3 scripts/flowed-config.py --json      # resultat final
+python3 scripts/flowed-config.py --sh        # el mateix, com a exports
 ```
 
 Els scripts carreguen l'`.env` com sempre i després omplen el que falti des de
@@ -134,15 +134,15 @@ Els scripts carreguen l'`.env` com sempre i després omplen el que falti des de
 n'hi ha, mana ell. La secció `models` de `config/fluent.json` és **l'única font**
 dels paràmetres dels models (port, ctx, temperatura, penalitzacions…): no hi ha
 cap altre fitxer que se li superposi. Només poden passar-li al davant l'`.env`
-(port, GPU, backend) i, per a un experiment, `FLUENT_MODELS_FILE` (és el que fa
-servir `scripts/fluent-sweep.py`). `config/fluent-models.json` es va retirar el
+(port, GPU, backend) i, per a un experiment, `FLOWED_MODELS_FILE` (és el que fa
+servir `scripts/flowed-sweep.py`). `config/fluent-models.json` es va retirar el
 2026-09-20 (és a `obsolet/config/`): repetia `fluent.json` però hi guanyava.
 
 **Streaming (experimental).** `server.stream` a `config/fluent.json`, o
-`FLUENT_STREAM=1` a l'entorn, fa que el tutor escrigui token a token en lloc
+`FLOWED_STREAM=1` a l'entorn, fa que el tutor escrigui token a token en lloc
 d'aparèixer de cop. Està **desactivat per defecte** i encara no s'ha provat
 contra un model real: activa'l primer en una instància de proves
-(`FLUENT_STREAM=1 scripts/fluent-web.sh --app test-en --port 4199`) i mira el
+(`FLOWED_STREAM=1 scripts/flowed-web.sh --app test-en --port 4199`) i mira el
 log. Si el model no accepta `stream:true`, l'error puja a `agent.ts`, que ja sap
 caure al deep i mostrar l'avís.
 
@@ -151,7 +151,7 @@ caure al deep i mostrar l'avís.
 `~/.fluent/<perfil>/.metrics/turns.jsonl`. Per mirar on va el context:
 
 ```bash
-python3 scripts/fluent-check.py metrics demo-en
+python3 scripts/flowed-check.py metrics demo-en
 ```
 
 Treu els torns, la mediana i el màxim de prompt, el temps per torn, **quines**
@@ -162,25 +162,25 @@ Tot es governa des de `.env` a l'arrel (`cp .env.railab/.env.rapve` segons la
 màquina; tot sobreescrivible per entorn o CLI):
 
 ```bash
-scripts/fluent-start.sh                # detecta → pregunta → puja models + webs
-scripts/fluent-start.sh --yes          # sense preguntes
-scripts/fluent-start.sh --dry-run      # només mostra el pla (segur)
-scripts/fluent-start.sh --gpu 4090     # deep a la 4090 (CUDA 0)
-scripts/fluent-start.sh --force        # continua malgrat processos aliens (risc VRAM)
-scripts/fluent-stop.sh                 # atura webs + models gestionats
+scripts/flowed-start.sh                # detecta → pregunta → puja models + webs
+scripts/flowed-start.sh --yes          # sense preguntes
+scripts/flowed-start.sh --dry-run      # només mostra el pla (segur)
+scripts/flowed-start.sh --gpu 4090     # deep a la 4090 (CUDA 0)
+scripts/flowed-start.sh --force        # continua malgrat processos aliens (risc VRAM)
+scripts/flowed-stop.sh                 # atura webs + models gestionats
 ```
 
 Llançadors per separat (independents de l'start, a `scripts/models/`):
 `llama-deep.sh` (Q6/Q4 segons `LLAMA_DEEP_MODEL`), `llama-deep-14b-q4.sh`,
 `llama-qwen1.7b-q4.sh` (face), `llama-qwen1.7b-bf16.sh`, `llama-omnicoder.sh`
-(legacy), `docker-llama.sh` (Docker 4060; llegeix `FLUENT_DEEP_*` de l'env).
+(legacy), `docker-llama.sh` (Docker 4060; llegeix `FLOWED_DEEP_*` de l'env).
 
-Backend del deep (`FLUENT_DEEP_BACKEND`): `native` (llama-*.sh) o `docker`
+Backend del deep (`FLOWED_DEEP_BACKEND`): `native` (llama-*.sh) o `docker`
 (`docker-llama.sh`, `--gpus all`). A rapve: `BACKEND=docker` + `MANAGED=1` →
 l'start el puja on digui l'env; amb `MANAGED=0` només el comprova.
 
 Swap transparent amb el model default (mateix port, p. ex. 12321 a rapve):
-`FLUENT_DEFAULT_MANAGER` (script aliè amb interfície `start|stop|status`,
+`FLOWED_DEFAULT_MANAGER` (script aliè amb interfície `start|stop|status`,
 res a veure amb el nostre) — l'start l'atura abans de pujar el nostre,
 l'stop el restaura sempre. Decisió per fitxer d'estat
 (`/tmp/fluent-deep-docker.state`, agnòstic a noms: un port sa no distingeix
@@ -189,12 +189,12 @@ La detecció mostra sempre el titular (`contenidor 'X'` / `procés pid` /
 `port lliure`); el Docker es resol per published-port (el cmdline duu el port
 del contenidor, mai el del host).
 
-L'env mana també al servidor: `FLUENT_DEEP_BASE_URL` / `FLUENT_FACE_BASE_URL`
+L'env mana també al servidor: `FLOWED_DEEP_BASE_URL` / `FLOWED_FACE_BASE_URL`
 (URL completes, màxima prioritat). Si buides, l'start les deriva del port amb
 `127.0.0.1`. Posar-les explícites només per a model remot (IP).
 
 # Comprovació d'estat (informatiu)
-scripts/fluent-web.sh --app alex-en
+scripts/flowed-web.sh --app alex-en
 # → mostra: "model: deep — OK (port 12322)"
 #           "model: face — NOT RUNNING (port 12323)"
 
@@ -207,7 +207,7 @@ Si el face no arrenca, mira `/tmp/fluent-qwen1.7b-q4-12323.log`.
 - **Model extern**: `scripts/models/docker-llama.sh` (Q4, ctx 32768, ~14 GB)
   al port host que digui l'env (estàndard 12322). El `docker/` antic ja no
   existeix.
-- **Orquestració**: els mateixos `fluent-start.sh`/`fluent-stop.sh` amb
+- **Orquestració**: els mateixos `flowed-start.sh`/`flowed-stop.sh` amb
   `cp .env.rapve .env` (`BACKEND=docker`, `MANAGED=1`: l'start el comprova i
   el puja si cal; `MANAGED=0`: només el comprova, el poses tu).
 - **Prereqs**: Docker + `--gpus all`, `bun`, `python3`, `openssl`, `curl`.
@@ -226,13 +226,13 @@ amb config vella mentre el log nou enganya). Regles:
 
 - **SÍ copiar**: el repo sencer (`server/`, `web/`, `scripts/`, `hooks/`, `skills/`,
   `.opencode/`, `docker/`, docs). Comprovar vintage després:
-  `ls scripts/fluent-start.sh config/fluent.json` + `grep VERSION server/src/index.ts`.
+  `ls scripts/flowed-start.sh config/fluent.json` + `grep VERSION server/src/index.ts`.
 - **NO copiar a cegues**: `~/.fluent/<id>/` (sessions, ratxes, passwords i
   flags divergeixen per màquina). Si cal migrar un perfil: backup del destí
   primer, després còpia; mai fusió manual de JSONs.
 - **`config/` i `.env`**: revisar sempre (ports/GPU/model difereixen);
   `cp .env.rapve .env` a la 4060, mai a l'inrevés.
-- **Aturar-ho tot al destí abans** (`fluent-stop.sh`) per no deixar orfes
+- **Aturar-ho tot al destí abans** (`flowed-stop.sh`) per no deixar orfes
   servint codi vell amb pidfiles nous.
 - `server/node_modules/` es pot copiar (JS pur, mateixa arch) o reinstal·lar.
 
@@ -302,13 +302,13 @@ viatgen ara amb les dades, a `~/.fluent/<id>/results/`, no dins del projecte.
 
 ### 2.3 Variables d'entorn per instància
 
-El script `fluent-web.sh` configura **per cada instància**:
+El script `flowed-web.sh` configura **per cada instància**:
 
 | Variable | Valor | Propòsit |
 |---|---|---|
-| `FLUENT_DATA_DIR` | `~/.fluent/<id>/` | On buscar les BDs del tutor |
+| `FLOWED_DATA_DIR` | `~/.fluent/<id>/` | On buscar les BDs del tutor |
 | `XDG_DATA_HOME` | `~/.fluent/<id>/.opencode` | Només per a la versió anterior i per al camí opencode arxivat. El servidor actual obre `~/.fluent/<id>/sessions/sessions.db` |
-| `FLUENT_SESSIONS_DB` | (opcional) | Força una BD de sessions concreta, saltant-se la resolució |
+| `FLOWED_SESSIONS_DB` | (opcional) | Força una BD de sessions concreta, saltant-se la resolució |
 | `OPENCODE_SERVER_PASSWORD` | Generat o desat a `.web-password` | Autenticació HTTP |
 
 ### 2.4 Arquitectura completa
@@ -458,7 +458,7 @@ inclou, i els payloads antics sense aquests camps funcionen igual que sempre.
 ### 3.1 La web i el `profile-id`
 
 ```bash
-scripts/fluent-web.sh --app [--port N] [profile-id]
+scripts/flowed-web.sh --app [--port N] [profile-id]
 ```
 
 - **Sense `profile-id`** → l'instància usa la carpeta `data/` del propi
@@ -469,7 +469,7 @@ scripts/fluent-web.sh --app [--port N] [profile-id]
   `error: profile '...' not found` i no arrenca). El domini mDNS canvia a
   `fluent-<profile-id>.local`.
   ```bash
-  scripts/fluent-web.sh --app alex-en
+  scripts/flowed-web.sh --app alex-en
   # → http://fluent-alex-en.local:4100  (o http://<ip>:4100)
   # login: opencode + el password que imprimeix el script
   ```
@@ -480,7 +480,7 @@ scripts/fluent-web.sh --app [--port N] [profile-id]
   (`preferences.setup_complete: false`).
   ```bash
   scripts/new-user.sh test-en --port 4102
-  scripts/fluent-web.sh --app test-en --port 4102
+  scripts/flowed-web.sh --app test-en --port 4102
   ```
 - **Setup automàtic al primer login:** en obrir la web sobre un perfil **no
   configurat**, el client llegeix `/api/fluent/setup-state` i auto-arrenca
@@ -493,7 +493,7 @@ scripts/fluent-web.sh --app [--port N] [profile-id]
     fa amb **sessió nova + comanda `/fluent-setup`** (cas excepcional).
 - **Un perfil per instància:** cada `--app <id>` té el seu port, password i
   data dir, perquè els perfils mai es barregen.
-- **Aturar:** `scripts/fluent-web.sh --stop [--port N]`.
+- **Aturar:** `scripts/flowed-web.sh --stop [--port N]`.
 - **Robustesa d'arrencada:** preflight (bun/python3/perfil — error en 1 s, no
   20 s de timeout), neteja de pidfiles rancis, i kill+neteja si el health-check
   falla. Els `fluent-up*` netegen rancis abans de decidir (mai "ACTIVA"
@@ -551,7 +551,7 @@ scripts/fluent-web.sh --app [--port N] [profile-id]
 - **Prova ràpida (perfil de test, sense models):**
   ```bash
   cp -r ~/.fluent/demo-en /tmp/progress-nes
-  PORT=4199 FLUENT_DATA_DIR=/tmp/progress-nes FLUENT_WEB_PASSWORD=test \
+  PORT=4199 FLOWED_DATA_DIR=/tmp/progress-nes FLOWED_WEB_PASSWORD=test \
     bun server/src/index.ts &
   curl -s -u opencode:test http://127.0.0.1:4199/api/fluent/progress \
     | python3 -c "import json,sys; d=json.load(sys.stdin)['data']; print(d['learner'], d['overview'])"
@@ -639,8 +639,8 @@ conté els 6 JSON + `results/` + `.backups/`). Funciona directament amb
 ```bash
 mkdir -p ~/.fluent
 cp -a /camí/origen/~/.fluent/albert-en ~/.fluent 2>/dev/null
-# o un shortcut amb FLUENT_DATA_DIR:
-export FLUENT_DATA_DIR=~/.fluent/albert-en
+# o un shortcut amb FLOWED_DATA_DIR:
+export FLOWED_DATA_DIR=~/.fluent/albert-en
 ```
 
 **B. Copiar tot el directori d'estat d'un altre projecte** (per absorbir
@@ -654,9 +654,9 @@ cp -a /camí/origen/results/* ~/.fluent/<nou-id>/results/
 **C. Apuntar-hi sense copiar** (la dada viu en un lloc únic i totes les
 còpies de codi la comparteixen):
 ```bash
-echo "/camí/absolut/data" > /nou-directori/.fluent-active
+echo "/camí/absolut/data" > /nou-directori/.flowed-active
 ```
-o `export FLUENT_DATA_DIR=/camí/absolut/data` abans de llançar opencode, o
+o `export FLOWED_DATA_DIR=/camí/absolut/data` abans de llançar opencode, o
 `/fluent-use <id>` dins una sessió TUI.
 
 > Consell: com que tot l'estat (6 JSON + `results/` + backups) viu a
@@ -731,7 +731,7 @@ python3 scripts/migrate-db.py --check --dir ~/.fluent/alex-en
 python3 scripts/migrate-db.py --dir ~/.fluent/alex-en
 ```
 
-Sense `--dir` usa `$FLUENT_DATA_DIR` (i si no està definida, `./data`).
+Sense `--dir` usa `$FLOWED_DATA_DIR` (i si no està definida, `./data`).
 
 Guardes que protegeixen les dades (coberts pels tests de la CI):
 
@@ -743,7 +743,7 @@ Guardes que protegeixen les dades (coberts pels tests de la CI):
   esquemes incompatibles o fitxers corruptes.
 - **Lock advisory d'escriptura:** `update-db.py` i `migrate-db.py` (mode
   escriptor) agafen `flock()` sobre `<data-dir>/.db.lock` abans de fer el
-  read-modify-write sobre els 6 JSON. `FLUENT_DB_LOCK_TIMEOUT` controla els
+  read-modify-write sobre els 6 JSON. `FLOWED_DB_LOCK_TIMEOUT` controla els
   segons d'espera (default `10`); si s'esgota, surten amb `2` sense escriure.
   El lock es libera sol si el procés mor. `read-db.py` segueix sense lock.
 - **Decaïment no destructiu:** a la llista de repassos, cada 14 dies de
@@ -780,8 +780,8 @@ llama-server -m /path/to/model.gguf --port 12325 --host 127.0.0.1
 
 | Síntoma | Causa | Solució |
 |---|---|---|
-| `Connection refused` al port 12322 | No hi ha model deep | `scripts/fluent-start.sh` (o `scripts/models/llama-deep.sh` directe) |
-| `Connection refused` al port 12323 | No hi ha model face | `FLUENT_FACE_ENABLED=1 scripts/fluent-start.sh` (opcional: el deep el cobreix) |
+| `Connection refused` al port 12322 | No hi ha model deep | `scripts/flowed-start.sh` (o `scripts/models/llama-deep.sh` directe) |
+| `Connection refused` al port 12323 | No hi ha model face | `FLOWED_FACE_ENABLED=1 scripts/flowed-start.sh` (opcional: el deep el cobreix) |
 | `DEEP UNAVAILABLE` | Model deep cau o timeout | El tutor avaluà sol; el servei continua |
 | `/fluent-learn` → `HTTP 500 UnknownError`, log `init count=1` | **Sessió vella/penjada** desada al `localStorage` del navegador (`fluent.session`) per a una instància concreta; la web la reutilitza en lloc de crear-ne una de nova | Netejar `localStorage.removeItem("fluent.session")` (o botó **"Nova sessió"**), recargar i tornar a provar. No és un error de codi ni de `learner.md`: un perfil amb sessió nova fa `init count=13` i funciona |
 | Resposta molt lenta (>60s) | Model gran o context ple | Reduir context o usar model més petit |
@@ -796,12 +796,12 @@ llama-server -m /path/to/model.gguf --port 12325 --host 127.0.0.1
   server**: després de canviar-lo, cal reiniciar l'app desktop / una
   instància nova perquè surti.
 - El password de la web s'imprimeix **una sola vegada** (mai es desa); per
-  fixar-ne un permanent: `FLUENT_WEB_PASSWORD=... scripts/fluent-web.sh --app`.
+  fixar-ne un permanent: `FLOWED_WEB_PASSWORD=... scripts/flowed-web.sh --app`.
 - **Login per nom:** l'usuari del basic-auth és el nom de l'alumne en
   minúscules (`nes`, `alex`, `sam`, `test`) amb el password del seu
   `.web-password` (que es manté). L'antic `opencode` continua funcionant.
 - El model s'ha de servir abans de provar (deep al 12322; face al 12323
-  opcional amb fallback): `scripts/fluent-start.sh` ho puja tot.
+  opcional amb fallback): `scripts/flowed-start.sh` ho puja tot.
 - **Per a mi (tutor):** la persistència per-resposta és **automàtica** al
   `session.idle` (vegeu §2.5); només finalitzo amb UNA comanda al final per
   afegir la metadada rica. `session-draft.json` i `.update-state/` són
@@ -814,10 +814,10 @@ llama-server -m /path/to/model.gguf --port 12325 --host 127.0.0.1
   exit 1 (abans creava un sqlite buit amb un "no such table" confús);
   `accumulate-session.py` (el ganxo `session.idle`) dona el mateix avís però
   surt amb 0: és best-effort i no ha de bloquejar la sessió. Solució: revisar
-  `FLUENT_DATA_DIR`/`XDG_DATA_HOME` (§2.3).
+  `FLOWED_DATA_DIR`/`XDG_DATA_HOME` (§2.3).
 - **Tots els alumnes comparteixen el mateix `opencode.json`**: els canvis
   de configuració de models afecten a tothom.
-- **Cada alumne té les seves pròpies BDs**: `FLUENT_DATA_DIR` aïlla les
+- **Cada alumne té les seves pròpies BDs**: `FLOWED_DATA_DIR` aïlla les
   dades per instància.
 - **Els perfils nous es creen amb `scripts/new-user.sh`** (bootstrap net dels
   6 JSON; posa `preferences.setup_complete: false`, i la web auto-arrenca
@@ -837,7 +837,7 @@ de temps), 0 VRAM (KV pre-reservat pel `-c`).
   (únic toc de codi; `.get` tolerants).
 - **Prompts:** bloc FRIEND condicional a `tutor.md` + salutació `learn` §3 +
   1 línia a `vocab`/`speaking`/`reading`. Res més.
-- **Rollback:** esborrar el flag = clàssic instantani (`scripts/fluent-friend.sh
+- **Rollback:** esborrar el flag = clàssic instantani (`scripts/flowed-friend.sh
   <id> [on|off|status]` — `off` deixa el perfil byte-idèntic, verificat).
   Revert total = aquests fitxers (seccions FRIEND) + 2 línies d'allowlist a
   `read-db.py:126-135`.
@@ -867,5 +867,5 @@ per línia. Model d'exemple: `data-examples/topics.example.txt`.
 - **Nivell:** el tutor l'aplica al nivell del perfil; si el tema és més difícil, en fa servir
   la forma més simple. Si el tema no encaixa a la pràctica (una estructura a Vocabulary),
   l'ignora.
-- **Proves:** `scripts/fluent-bench.sh --topics --quick` escriu un `topics.txt` temporal,
+- **Proves:** `scripts/flowed-bench.sh --topics --quick` escriu un `topics.txt` temporal,
   comprova que Writing hi va i que la Lliçó segueix manant la cua, i el restaura.

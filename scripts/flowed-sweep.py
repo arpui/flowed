@@ -12,7 +12,7 @@ record everything under results/sweep-<stamp>/ — one directory per setting, a
 run log per execution, and a summary.csv at the top with the numbers side by
 side.
 
-The sampling reaches the app through FLUENT_MODELS_FILE (a models file per
+The sampling reaches the app through FLOWED_MODELS_FILE (a models file per
 setting, written next to its results). It is NOT written to config/fluent.json:
 config/fluent-models.json is a layer that sits above it, and it pins
 `temperature`, so a temperature written to fluent.json was silently ignored —
@@ -20,16 +20,16 @@ every "temp06" ran at 0.2. Whatever the layers do, the sweep now asks the
 running app (/api/global/health) what it will send, and refuses to run a
 setting the app is not actually using.
 
-    python3 scripts/fluent-sweep.py --port 4103 \\
+    python3 scripts/flowed-sweep.py --port 4103 \\
         --setting "base:" \\
         --setting "warm:temperature=0.6,presence_penalty=0.4" \\
         --setting "warm+rep:temperature=0.6,presence_penalty=0.4,repeat_last_n=512"
 
-    python3 scripts/fluent-sweep.py --port 4103 --repeat 3 --scenario wander --scenario full
+    python3 scripts/flowed-sweep.py --port 4103 --repeat 3 --scenario wander --scenario full
 
 Touches no repo configuration: only a test profile, the app instance on --port
 (stopped on exit) and the files under results/. The model is not started here
-(scripts/fluent-bench.sh does that) and is never reloaded: the sampling knobs
+(scripts/flowed-bench.sh does that) and is never reloaded: the sampling knobs
 travel in every request. Refuses any other profile.
 """
 from __future__ import annotations
@@ -46,6 +46,8 @@ import time
 import urllib.request
 from datetime import date, datetime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 REPO = Path(__file__).resolve().parent.parent
 SCRATCH = re.compile(r"^(test|demo|e2e)", re.I)
@@ -87,7 +89,7 @@ def wanted_sampling(knobs: dict[str, float]) -> dict[str, float]:
 
 
 def write_models_file(knobs: dict[str, float], path: Path) -> Path:
-    """The setting as a models file, for FLUENT_MODELS_FILE.
+    """The setting as a models file, for FLOWED_MODELS_FILE.
 
     That layer wins over config/fluent.json AND over config/fluent-models.json,
     so the setting cannot be shadowed by a file someone forgot about — and no
@@ -238,10 +240,10 @@ DEEP_DOWN = re.compile(r"^\s*model:\s+deep\b.*NOT RUNNING", re.M)
 
 
 def deep_model_down(start_log: str) -> bool:
-    """Is the DEEP model down, according to fluent-web.sh's start log?
+    """Is the DEEP model down, according to flowed-web.sh's start log?
 
     That script prints one line per model — deep AND face — and face is off by
-    design (FLUENT_FACE_ENABLED=0), so its "NOT RUNNING" is the normal state.
+    design (FLOWED_FACE_ENABLED=0), so its "NOT RUNNING" is the normal state.
     A bare substring test on the whole log aborted a bench whose deep model
     was up ("model: deep — OK") because of the face line under it."""
     return bool(DEEP_DOWN.search(start_log))
@@ -300,7 +302,7 @@ def main() -> int:
         print(f"❌ només en perfils de proves, no en {args.profile}", file=sys.stderr)
         return 2
     settings = [parse_setting(t) for t in (args.setting or ["base:"])]
-    prof_dir = Path.home() / ".fluent" / args.profile
+    prof_dir = profiles_root() / args.profile
     scenarios = args.scenario or ["wander"]
 
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -321,12 +323,12 @@ def main() -> int:
 
             # The app reads its sampling once, when it starts, so a setting that
             # is not restarted into is a setting that was never tested. The
-            # setting travels in FLUENT_MODELS_FILE (see the module docstring).
-            sh([str(REPO / "scripts" / "fluent-web.sh"), "--stop", "--port", str(args.port)],
+            # setting travels in FLOWED_MODELS_FILE (see the module docstring).
+            sh([str(REPO / "scripts" / "flowed-web.sh"), "--stop", "--port", str(args.port)],
                d / "00-stop.log", timeout=120)
-            rc = sh([str(REPO / "scripts" / "fluent-web.sh"), "--app", "--port", str(args.port),
+            rc = sh([str(REPO / "scripts" / "flowed-web.sh"), "--app", "--port", str(args.port),
                      args.profile], d / "01-start.log", timeout=300,
-               env={"FLUENT_MODELS_FILE": str(models_file)})
+               env={"FLOWED_MODELS_FILE": str(models_file)})
             if rc != 0:
                 print(f"  ❌ el servidor no ha arrencat (mira {d / '01-start.log'})")
                 continue
@@ -348,7 +350,7 @@ def main() -> int:
             if deep_model_down((d / "01-start.log").read_text(encoding="utf-8", errors="ignore")):
                 print("  ❌ el model deep NO corre (mira la línia «model: deep — NOT RUNNING» a "
                       f"{d / '01-start.log'})")
-                print("     arrenca'l amb scripts/fluent-start.sh --models-only i torna-hi;")
+                print("     arrenca'l amb scripts/flowed-start.sh --models-only i torna-hi;")
                 print("     sense model, cada torn torna buit a l'instant i TOTES les "
                       "comprovacions de qualificació surten vermelles.")
                 break
@@ -374,7 +376,7 @@ def main() -> int:
             for scen in scenarios:
                 print(f"  escenari {scen} ×{args.repeat}…")
                 seed_log = d / f"02-seed-{scen}.log"
-                rc_seed = sh([sys.executable, str(REPO / "scripts" / "fluent-seed.py"),
+                rc_seed = sh([sys.executable, str(REPO / "scripts" / "flowed-seed.py"),
                               args.profile, "--days", str(args.days), "--due", str(args.due)],
                              seed_log)
                 before = profile_state(prof_dir)
@@ -392,7 +394,7 @@ def main() -> int:
                 log = d / f"03-{scen}.log"
                 t_scen = time.time()
                 started = t_scen
-                sh([sys.executable, "-u", str(REPO / "scripts" / "fluent-e2e.py"), args.profile,
+                sh([sys.executable, "-u", str(REPO / "scripts" / "flowed-e2e.py"), args.profile,
                     "--port", str(args.port), "--scenario", scen,
                     "--repeat", str(args.repeat), "--summary",
                     *(["--days", str(args.span)] if args.span and scen in ("curriculum", "ladder") else []),
@@ -446,7 +448,7 @@ def main() -> int:
     finally:
         # Leave nothing running: the instance carries the last setting's
         # sampling in its environment and would go on serving it.
-        sh([str(REPO / "scripts" / "fluent-web.sh"), "--stop", "--port", str(args.port)],
+        sh([str(REPO / "scripts" / "flowed-web.sh"), "--stop", "--port", str(args.port)],
            out_root / "99-stop.log", timeout=120)
         print("\nl'app de proves aturada")
 

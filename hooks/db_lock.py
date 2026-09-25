@@ -35,7 +35,7 @@ POLL_SECONDS = 0.05
 def _timeout(timeout: float | None) -> float:
     if timeout is not None:
         return float(timeout)
-    raw = os.environ.get("FLUENT_DB_LOCK_TIMEOUT", "")
+    raw = os.environ.get("FLOWED_DB_LOCK_TIMEOUT", "")
     try:
         return float(raw) if raw else DEFAULT_TIMEOUT
     except ValueError:
@@ -49,7 +49,7 @@ def data_lock(data_dir, exclusive: bool = True, timeout: float | None = None):
     ``exclusive=True`` (default) serializes writers; ``exclusive=False`` takes
     a shared lock that allows concurrent readers. Raises ``TimeoutError`` if
     the lock is still held after ``timeout`` seconds (or
-    ``$FLUENT_DB_LOCK_TIMEOUT``, default 10s).
+    ``$FLOWED_DB_LOCK_TIMEOUT``, default 10s).
     """
     if fcntl is None:  # pragma: no cover - non-POSIX fallback
         yield None

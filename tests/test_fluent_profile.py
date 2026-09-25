@@ -4,7 +4,7 @@
 /fluent-setup used to be a form the learner filled in mid-lesson — the web app
 auto-started it whenever `preferences.setup_complete` was false. Who someone is
 and how their sessions are paced is the system owner's call, so the write now
-also exists as a deterministic CLI (`scripts/fluent-profile.py`) and the app
+also exists as a deterministic CLI (`scripts/flowed-profile.py`) and the app
 shows a notice instead of the interview.
 
 These checks cover the CLI's validation (a wrong CEFR level must not reach the
@@ -18,7 +18,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT = REPO_ROOT / "scripts" / "fluent-profile.py"
+SCRIPT = REPO_ROOT / "scripts" / "flowed-profile.py"
 TEMPLATE = REPO_ROOT / "data-examples" / "learner-profile-template.json"
 
 

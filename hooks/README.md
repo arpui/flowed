@@ -117,7 +117,7 @@ Fluent supports **two hook registration paths** so the same scripts work whether
 | Git clone | `.claude/settings.json` | `$CLAUDE_PROJECT_DIR` |
 | Plugin install | `hooks/hooks.json` (referenced from `plugin.json`) | `$CLAUDE_PLUGIN_ROOT` (with `$CLAUDE_PROJECT_DIR` fallback) |
 
-Both paths point at the same Python scripts under `hooks/`. The scripts themselves resolve the runtime data directory via `fluent_paths.py` — `$FLUENT_DATA_DIR` → `./data/` → `~/.claude/fluent-data/`.
+Both paths point at the same Python scripts under `hooks/`. The scripts themselves resolve the runtime data directory via `main_paths.py` — `$FLOWED_DATA_DIR` → `./data/` → `~/.claude/fluent-data/`.
 
 Clone-mode `.claude/settings.json` example:
 

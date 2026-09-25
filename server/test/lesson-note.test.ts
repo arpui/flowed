@@ -410,7 +410,7 @@ check("and it changes when the source does",
 check("the server serves it", fs.readFileSync(path.join(ROOT, "server", "src", "http.ts"), "utf8")
   .includes("build: opts.build"));
 check("and the e2e refuses to judge a stale one",
-  fs.readFileSync(path.join(ROOT, "scripts", "fluent-e2e.py"), "utf8")
+  fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8")
     .includes("corre un build diferent del que hi ha al disc"));
 
 // --- the marker is made to agree, not asked to -----------------------------
@@ -532,9 +532,9 @@ check("and only once", ag2.split("await this.enforceTurn(").length === 2);
 // morning's finished lesson was still in .daily, so the tutor was told the
 // lesson was complete, said so, asked nothing — correctly — and every check
 // that counts exercises read zero.
-const seed = fs.readFileSync(path.join(ROOT, "scripts", "fluent-seed.py"), "utf8");
+const seed = fs.readFileSync(path.join(ROOT, "scripts", "flowed-seed.py"), "utf8");
 check("seeding a past empties today", seed.includes("avui") && seed.includes('".daily"'));
-const e2e = fs.readFileSync(path.join(ROOT, "scripts", "fluent-e2e.py"), "utf8");
+const e2e = fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8");
 check("and the test refuses to judge a lesson that was already finished",
   e2e.includes("abans d'aquesta execució"));
 check("a right answer in the learner's own language is not a mistake",
@@ -558,7 +558,7 @@ check("a review item that is not a word is not a flashcard",
   fs.readFileSync(path.join(ROOT, "skills", "fluent-vocab", "SKILL.md"), "utf8")
     .includes("A flashcard needs a word"));
 check("and coming back to an unanswered exercise is not a repetition",
-  fs.readFileSync(path.join(ROOT, "scripts", "fluent-e2e.py"), "utf8")
+  fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8")
     .includes("outstanding"));
 
 // --- a vocabulary card is an exercise too ----------------------------------
@@ -589,16 +589,16 @@ check("guard events land in the profile, not only in /tmp",
   ag3.includes("guards.jsonl") && ag3.includes("private logGuard"));
 
 // --- the four uses that were only ever listed ------------------------------
-const e2eSrc = fs.readFileSync(path.join(ROOT, "scripts", "fluent-e2e.py"), "utf8");
+const e2eSrc = fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8");
 check("a finished lesson has to stay finished",
   e2eSrc.includes("cap exercici nou després de tancar"));
 check("and point at the buttons", e2eSrc.includes("l'orienta cap als botons"));
 check("yesterday is checkable without waiting a day",
-  fs.existsSync(path.join(ROOT, "scripts", "fluent-advance-day.py")));
+  fs.existsSync(path.join(ROOT, "scripts", "flowed-advance-day.py")));
 check("what she knew does not come back",
   e2eSrc.includes("no li torna a preguntar el que ja sabia"));
 check("what she missed does", e2eSrc.includes("i sí que li torna el que va fallar"));
-const adv = fs.readFileSync(path.join(ROOT, "scripts", "fluent-advance-day.py"), "utf8");
+const adv = fs.readFileSync(path.join(ROOT, "scripts", "flowed-advance-day.py"), "utf8");
 check("and a real learner's dates are never rewritten",
   adv.includes("només en perfils de proves"));
 
@@ -644,7 +644,7 @@ check("and the queue is not handed out twice in a session",
 // The first --repeat 3 gave one usable run, one on a lesson that run 1 had
 // already finished, and one that refused to start. A lesson eats the day and
 // the queue; if that is not put back, the runs are three different experiments.
-const e2eB = fs.readFileSync(path.join(ROOT, "scripts", "fluent-e2e.py"), "utf8");
+const e2eB = fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8");
 check("the profile is captured before the first run", e2eB.includes("def snapshot(prof_dir"));
 check("and put back between runs", e2eB.includes("restore(prof_dir, snap)"));
 check("restoring a real learner's profile is refused",
@@ -673,7 +673,7 @@ check("and so does bold with trailing space",
   normalizeExercise("**What is the english word for un?**  ") === "what is the english word for un");
 
 // --- the sweep writes its results down --------------------------------------
-const sweep = fs.readFileSync(path.join(ROOT, "scripts", "fluent-sweep.py"), "utf8");
+const sweep = fs.readFileSync(path.join(ROOT, "scripts", "flowed-sweep.py"), "utf8");
 check("a setting is restarted into, or it was never tested",
   sweep.includes("--stop") && sweep.includes("--app"));
 check("the config is put back whatever happens", sweep.includes("finally:"));
@@ -715,25 +715,25 @@ for (const t of ["**Score: 2/10** 🔴", "You got 7/10 on that one.", "Nice try 
 check("and a percentage is not a score", parseFeedback("**Accuracy:** 67%") === null);
 check("nor is a reply with no number at all", parseFeedback("Nice work!") === null);
 
-const e2eC = fs.readFileSync(path.join(ROOT, "scripts", "fluent-e2e.py"), "utf8");
+const e2eC = fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8");
 check("a repeat's summary shows why, not only how often",
   e2eC.includes("for d in dict.fromkeys"));
 
 // --- the sweep records whether the run destroyed the profile ---------------
 // A T0 keyed on a recycled session number rolled a real profile from twelve
 // spaced-repetition items back to two, and nothing failed while it happened.
-const sw = fs.readFileSync(path.join(ROOT, "scripts", "fluent-sweep.py"), "utf8");
+const sw = fs.readFileSync(path.join(ROOT, "scripts", "flowed-sweep.py"), "utf8");
 check("the queue is counted before and after each run", sw.includes("def profile_state"));
 check("and a shrinking queue is called out", sw.includes("la cua ha PERDUT"));
 check("the numbers reach the csv", sw.includes('"items_before"') && sw.includes('"items_after"'));
 const udb = fs.readFileSync(path.join(ROOT, "hooks", "update-db.py"), "utf8");
 check("a T0 belongs to one session on one day", udb.includes('f"{session_id}@{day}"'));
 check("with no undated fallback", udb.includes("A snapshot from another day is not"));
-const seedSrc = fs.readFileSync(path.join(ROOT, "scripts", "fluent-seed.py"), "utf8");
+const seedSrc = fs.readFileSync(path.join(ROOT, "scripts", "flowed-seed.py"), "utf8");
 check("and seeding does not leave one behind", seedSrc.includes('".update-state"'));
 
 // --- the battery is the same every time ------------------------------------
-const bench = fs.readFileSync(path.join(ROOT, "scripts", "fluent-bench.sh"), "utf8");
+const bench = fs.readFileSync(path.join(ROOT, "scripts", "flowed-bench.sh"), "utf8");
 check("the baseline comes first, or the rest means nothing",
   bench.indexOf('"base:"') < bench.indexOf("temp06"));
 check("temperature and the penalties are tried apart before together",

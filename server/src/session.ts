@@ -25,3 +25,35 @@ export function makeSessionService(db: FluentDB): SessionService {
     },
   };
 }
+
+/** Whether a stored session can be picked up again by the web client.
+ *  `bootMs` is when this server process started: a session whose last turn is
+ *  older ran under the previous process, and its exercise state (the card on
+ *  screen, the practice, the skill) lived only in that process's memory.
+ *  Resuming it showed the pending question, but the answer was not graded —
+ *  the server no longer knew the question and moved on to a new one
+ *  (2026-09-25, after a restart). Such a session is not resumed; the sweeper
+ *  closes it and writes its summary like any idle session. */
+export function resumeState(
+  row: { last_activity?: number; metadata?: string | null },
+  now: number,
+  bootMs: number,
+  idleLimitMs: number,
+): { finalized: boolean; idle_ms: number; restarted: boolean; resumable: boolean; reason: string } {
+  let finalized = false;
+  try {
+    finalized = JSON.parse(row.metadata || "{}").capa_b_done != null;
+  } catch {
+    /* malformed metadata is not a reason to strand the learner */
+  }
+  const idleMs = Math.max(0, now - (row.last_activity || 0));
+  const stale = idleMs > idleLimitMs;
+  const restarted = (row.last_activity || 0) < bootMs;
+  return {
+    finalized,
+    idle_ms: idleMs,
+    restarted,
+    resumable: !finalized && !stale && !restarted,
+    reason: finalized ? "finalized" : stale ? "idle" : restarted ? "restart" : "ok",
+  };
+}

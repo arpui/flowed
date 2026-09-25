@@ -15,7 +15,7 @@ export type { ToolContext };
 
 export interface FluentPaths {
   root: string; // project root (fluent_dev/...)
-  dataDir: string; // active learner data dir (~/.fluent/<id>/ or repo data/)
+  dataDir: string; // active learner data dir (~/.flowed/<id>/ or repo data/)
 }
 
 // ---- permission filter (learner.md `permission.bash`) ----------------------
@@ -24,8 +24,8 @@ const BASH_ALLOW: Array<{ re: RegExp; deny?: RegExp }> = [
   { re: /^python3 hooks\/read-db\.py/ },
   { re: /^python3 hooks\/update-db\.py/ },
   { re: /^python3 scripts\/list-profiles\.py/ },
-  { re: /^cat \.fluent-active/ },
-  { re: /^rm -f \.fluent-active/ },
+  { re: /^cat \.flowed-active/ },
+  { re: /^rm -f \.flowed-active/ },
 ];
 
 function bashAllowed(command: string): boolean {
@@ -215,7 +215,7 @@ export function buildTools(opts: {
         return `[bash denied] command not in the allow-list (learner permission): ${command.slice(0, 200)}`;
       }
       const cwd = opts.root;
-      const env = { ...process.env, FLUENT_DATA_DIR: opts.dataDir(), FLUENT_PROJECT_DIR: opts.root, FLUENT_ROOT: opts.root };
+      const env = { ...process.env, FLOWED_DATA_DIR: opts.dataDir(), FLOWED_PROJECT_DIR: opts.root, FLOWED_ROOT: opts.root };
       try {
         const proc = Bun.spawn(["bash", "-c", command], { cwd, env, stdout: "pipe", stderr: "pipe" });
         const exit = await proc.exited;

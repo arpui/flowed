@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reset the Fluent web session: delete the current opencode session and create a new one.
+"""Reset the Flowed web session: delete the current opencode session and create a new one.
 
 Usage:
     python3 scripts/reset-session.py [--host HOST] [--user USER] [--password PASS]
@@ -29,7 +29,7 @@ def api(host, user, password, path="", method="GET", body=None):
         return json.loads(res.read())
 
 def main():
-    p = argparse.ArgumentParser(description="Reset the Fluent web session")
+    p = argparse.ArgumentParser(description="Reset the Flowed web session")
     p.add_argument("--host", default=DEFAULTS["host"])
     p.add_argument("--user", default=DEFAULTS["user"])
     p.add_argument("--password", default=DEFAULTS["password"])
@@ -51,7 +51,7 @@ def main():
         except HTTPError as e:
             print(f"warning: could not delete {sid}: {e}", file=sys.stderr)
 
-    new = api(args.host, args.user, args.password, "session", "POST", {"title": "Fluent"})
+    new = api(args.host, args.user, args.password, "session", "POST", {"title": "Flowed"})
     new_id = new.get("id") or new.get("info", {}).get("id")
     print(f"new session: {new_id}")
 

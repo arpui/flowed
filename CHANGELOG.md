@@ -17,7 +17,7 @@ All notable changes to Fluent will be documented in this file.
   `message.updated` event arrives without parts, so the text-match dedup
   against the optimistic bubble failed and a second identical bubble was
   created (`web/app.js`).
-- `scripts/fluent-web.sh` sanitizes the learner instance's environment
+- `scripts/flowed-web.sh` sanitizes the learner instance's environment
   (`-u OPENCODE_CLIENT -u XDG_STATE_HOME`, `FLUENT_DEV=0`): when the
   launcher was an opencode desktop shell, the web serve inherited
   `OPENCODE_CLIENT=desktop`, the plugin flipped into dev mode and the
@@ -45,7 +45,7 @@ All notable changes to Fluent will be documented in this file.
 
 ### Changed
 
-- `scripts/fluent-web.sh` now prints the status of both models at startup
+- `scripts/flowed-web.sh` now prints the status of both models at startup
   (`deep` on 12321, `face` on 12322 — OK / NOT RUNNING). Informational only:
   it never starts or stops them. Ports overridable via
   `FLUENT_DEEP_PORT` / `FLUENT_FACE_PORT`.

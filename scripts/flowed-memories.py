@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Look through a day's sessions for things the learner said about herself.
 
-    scripts/fluent-memories.py --profile demo-en --since 1 --dry-run
-    scripts/fluent-memories.py --all --since 1
-    scripts/fluent-memories.py --profile demo-en --show
+    scripts/flowed-memories.py --profile demo-en --since 1 --dry-run
+    scripts/flowed-memories.py --all --since 1
+    scripts/flowed-memories.py --profile demo-en --show
 
 Writes candidates to <profile>/.memories/pending.jsonl and **nothing else**.
 Nothing here reaches the tutor: connecting the approved ones to the prompt is a
@@ -36,6 +36,8 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 MEMORY_DIRNAME = ".memories"
 PENDING = "pending.jsonl"
@@ -71,9 +73,9 @@ def profile_dirs(args) -> list[Path]:
     if args.dir:
         out.append(Path(args.dir).expanduser())
     if args.profile:
-        out.append(Path.home() / ".fluent" / args.profile)
+        out.append(profiles_root() / args.profile)
     if args.all:
-        root = Path.home() / ".fluent"
+        root = profiles_root()
         out += sorted(p for p in root.iterdir()
                       if p.is_dir() and (p / "learner-profile.json").exists())
     return out
@@ -239,8 +241,8 @@ def main(argv=None) -> int:
         url, _, name = spec.partition("=")
         models.append((url, name or "deep"))
     if not models:
-        port = os.environ.get("FLUENT_DEEP_PORT", "12322")
-        url = os.environ.get("FLUENT_DEEP_BASE_URL", f"http://127.0.0.1:{port}/v1")
+        port = os.environ.get("FLOWED_DEEP_PORT", "12322")
+        url = os.environ.get("FLOWED_DEEP_BASE_URL", f"http://127.0.0.1:{port}/v1")
         models.append((url, "deep"))
 
     since_ms = int((datetime.now() - timedelta(days=args.since)).timestamp() * 1000)

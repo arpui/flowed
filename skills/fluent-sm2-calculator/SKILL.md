@@ -7,7 +7,7 @@ description: SM-2 spaced-repetition algorithm reference for the Fluent language 
 
 ## Overview
 
-Fluent uses SM-2 (SuperMemo 2) to decide when the learner next sees an item. This skill is the single source of truth for the algorithm. Every practice skill updates `<data_dir>/spaced-repetition.json` (where `<data_dir>` is resolved by `fluent_paths.data_dir()`) through these rules after each answered question.
+Fluent uses SM-2 (SuperMemo 2) to decide when the learner next sees an item. This skill is the single source of truth for the algorithm. Every practice skill updates `<data_dir>/spaced-repetition.json` (where `<data_dir>` is resolved by `main_paths.data_dir()`) through these rules after each answered question.
 
 ## When to Use
 

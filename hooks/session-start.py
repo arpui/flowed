@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fluent_paths import data_dir, force_utf8_io  # noqa: E402
+from main_paths import data_dir, force_utf8_io  # noqa: E402
 
 force_utf8_io()
 

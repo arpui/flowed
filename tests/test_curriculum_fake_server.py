@@ -40,7 +40,7 @@ def _load(name: str, rel: str):
     return mod
 
 
-e2e = _load("fluent_e2e_curriculum", "scripts/fluent-e2e.py")
+e2e = _load("fluent_e2e_curriculum", "scripts/flowed-e2e.py")
 
 
 class FakeTutor:

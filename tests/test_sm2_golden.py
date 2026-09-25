@@ -133,7 +133,7 @@ class SM2GoldenTest(unittest.TestCase):
         env = {
             k: v
             for k, v in os.environ.items()
-            if k not in ("FLUENT_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")
+            if k not in ("FLOWED_DATA_DIR", "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT")
         }
         proc = subprocess.run(
             ["python3", str(SCRIPT)],

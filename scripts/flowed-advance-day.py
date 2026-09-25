@@ -10,8 +10,8 @@ thing as the calendar moving forward: an item due tomorrow becomes due now, a
 pattern last seen today becomes last seen yesterday. Today's lesson plan and
 records are set aside, because a new day starts empty.
 
-    python3 scripts/fluent-advance-day.py test-en            # +1 dia
-    python3 scripts/fluent-advance-day.py test-en --days 7
+    python3 scripts/flowed-advance-day.py test-en            # +1 dia
+    python3 scripts/flowed-advance-day.py test-en --days 7
 
 Refuses anything that is not a scratch profile: rewriting a learner's dates is
 not a thing to do by accident.
@@ -24,6 +24,8 @@ import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 SCRATCH = re.compile(r"^(test|demo|e2e)", re.I)
 ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -79,7 +81,7 @@ def main() -> int:
                          "deriva de TOTES les respostes; sense això el dia 2 no veu el dia 1.")
     args = ap.parse_args()
 
-    prof = Path(args.dir).expanduser() if args.dir else Path.home() / ".fluent" / args.profile
+    prof = Path(args.dir).expanduser() if args.dir else profiles_root() / args.profile
     if not (prof / "learner-profile.json").exists():
         print(f"❌ perfil no trobat: {prof}", file=sys.stderr)
         return 2

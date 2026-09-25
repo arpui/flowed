@@ -7,8 +7,8 @@ mateix opencode + LLM local. Dos modes, dos nivells de bloqueig:
 
 | Mode | Comanda | Què és | Per a qui |
 |---|---|---|---|
-| **web** (Fase 0) | `scripts/fluent-web.sh --web` | UI web oficial de l'opencode (`opencode web`) | Tu (power user): veu agents, models, fitxers, xat lliure |
-| **app** (Fase 1) | `scripts/fluent-web.sh --app` | Frontend tancat propi (`web/`) sobre `opencode serve` + proxy | L'aprenent (usuari final): només xat + botons, agent `learner` bloquejat |
+| **web** (Fase 0) | `scripts/flowed-web.sh --web` | UI web oficial de l'opencode (`opencode web`) | Tu (power user): veu agents, models, fitxers, xat lliure |
+| **app** (Fase 1) | `scripts/flowed-web.sh --app` | Frontend tancat propi (`web/`) sobre `opencode serve` + proxy | L'aprenent (usuari final): només xat + botons, agent `learner` bloquejat |
 
 Ambdós modes reutilitzen tot el que ja hi ha: skills, plugin de hooks, scripts
 `hooks/*.py`, multi-usuari (`FLUENT_DATA_DIR`/`.fluent-active`).
@@ -47,13 +47,13 @@ Regles:
 
 ```bash
 # a la carpeta fluent/ (o des d'on sigui, el script cd'a a l'arrel)
-scripts/fluent-web.sh --web [--port 4097] [profile-id]
+scripts/flowed-web.sh --web [--port 4097] [profile-id]
 
 # amb un perfil concret (~/.fluent/<profile-id>/)
-scripts/fluent-web.sh --web --port 4097 albert-en
+scripts/flowed-web.sh --web --port 4097 albert-en
 
 # password fixa (opcional; si no, se'n genera un i es mostra un cop)
-FLUENT_WEB_PASSWORD='la-meva-clau' scripts/fluent-web.sh --web
+FLUENT_WEB_PASSWORD='la-meva-clau' scripts/flowed-web.sh --web
 ```
 
 Al navegador (telèfon o PC): `http://fluent.local:4097` o `http://<ip-pc>:4097`
@@ -67,7 +67,7 @@ Al navegador (telèfon o PC): `http://fluent.local:4097` o `http://<ip-pc>:4097`
 ### Mode app (Fase 1) — frontend tancat
 
 ```bash
-scripts/fluent-web.sh --app [--port 4100] [profile-id]
+scripts/flowed-web.sh --app [--port 4100] [profile-id]
 ```
 
 Al navegador: `http://<ip-pc>:4100` (o `fluent-<id>.local:4100`) →
@@ -78,8 +78,8 @@ Sense selector d'agent/model, sense fitxers, sense shell.
 ### Aturar / estats
 
 ```bash
-scripts/fluent-web.sh --stop --port 4097     # una instància
-scripts/fluent-web.sh --stop                 # totes
+scripts/flowed-web.sh --stop --port 4097     # una instància
+scripts/flowed-web.sh --stop                 # totes
 ```
 
 - PIDs: `/tmp/fluent-web-<port>.pid` · Logs: `/tmp/fluent-web-<port>.log`
@@ -91,7 +91,7 @@ scripts/fluent-web.sh --stop                 # totes
 Telèfon/PC (navegador)
    │  http://<ip>:4100  (basic auth: opencode / <password>)
    ▼
-proxy Bun  (scripts/fluent-web-proxy.mjs, 0.0.0.0:4100)
+proxy Bun  (scripts/flowed-web-proxy.mjs, 0.0.0.0:4100)
    ├── /, /app.js, /style.css, /marked.min.js → estàtics de web/
    └── /api/* ─────────────► opencode serve (127.0.0.1:4199, projecte fluent)
                                 ├── agent "learner" (permisos tancats)
@@ -156,7 +156,7 @@ només es toquen via `update-db.py`, que ja valida i fa backup.
 ## 6. Multi-usuari
 
 - Un aprenent/idioma = un directori de dades = **una instància**:
-  `scripts/fluent-web.sh --app --port 4101 albert-en`
+  `scripts/flowed-web.sh --app --port 4101 albert-en`
   (el perfil ha d'existir: `~/.fluent/albert-en/learner-profile.json`).
 - El botó **👤 Perfil** del frontend permet canviar entre perfils *existents*
   (via `.fluent-active`) sense reiniciar.
@@ -179,8 +179,8 @@ només es toquen via `update-db.py`, que ja valida i fa backup.
 
 | Fitxer | Paper |
 |---|---|
-| `scripts/fluent-web.sh` | Llançador (modes web/app, perfil, port, password, mDNS, stop) |
-| `scripts/fluent-web-proxy.mjs` | Proxy Bun (estàtics + API), mode app |
+| `scripts/flowed-web.sh` | Llançador (modes web/app, perfil, port, password, mDNS, stop) |
+| `scripts/flowed-web-proxy.mjs` | Proxy Bun (estàtics + API), mode app |
 | `web/index.html`, `web/app.js`, `web/style.css` | Frontend tancat |
 | `web/marked.min.js` | Renderer de markdown (v12.0.2, vendored — sense CDN) |
 | `.opencode/agent/learner.md` | Agent tancat + taula de permisos |

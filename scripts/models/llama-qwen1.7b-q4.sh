@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fluent "face/fast" actiu — petit i ràpid (Qwen3-1.7B-UD-Q4_K_XL) al port 12323.
+# Flowed "face/fast" actiu — petit i ràpid (Qwen3-1.7B-UD-Q4_K_XL) al port 12323.
 # És UN dels candidats face (amb el bf16 i l'omnicoder legacy): tots comparteixen
 # el 12323 i només un pot estar pujat alhora (l'script rebutja el port ocupat).
 #

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Fluent new-user bootstrap — provisions a fresh learner profile under ~/.fluent/<id>/.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR: where the profiles live
+# Flowed new-user bootstrap — provisions a fresh learner profile under ~/.flowed/<id>/.
 #
 # Usage:
 #   scripts/new-user.sh <id> [--port N]
@@ -10,8 +11,8 @@
 # What it does:
 #   1. Validates <id> (no paths/spaces/uppercase — must be a safe dir name).
 #   2. Refuses to overwrite an existing profile dir.
-#   3. Creates ~/.fluent/<id>/ and seeds the 6 JSON DBs from data-examples/ so
-#      that scripts/fluent-web.sh --app <id> will accept the profile.
+#   3. Creates ~/.flowed/<id>/ and seeds the 6 JSON DBs from data-examples/ so
+#      that scripts/flowed-web.sh --app <id> will accept the profile.
 #   4. Generates a per-profile web password (.web-password, mode 600).
 #   5. Prints how to launch and finish the FIRST real setup (the /fluent-setup
 #      interview inside the web instance fills learner-profile.json properly).
@@ -46,7 +47,7 @@ if ! [[ "$ID" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
   exit 2
 fi
 
-DATA_DIR="$HOME/.fluent/$ID"
+DATA_DIR="$FLOWED_HOME_DIR/$ID"
 
 # 2) Never overwrite an existing profile.
 if [[ -d "$DATA_DIR" ]]; then
@@ -70,13 +71,13 @@ d.setdefault('preferences', {})['setup_complete'] = False
 json.dump(d, open(p, 'w'), indent=2, ensure_ascii=False)
 "
 
-# 4) Per-profile web password (same scheme as fluent-web.sh).
+# 4) Per-profile web password (same scheme as flowed-web.sh).
 PWFILE="$DATA_DIR/.web-password"
 PASS="$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | cut -c1-16)"
 (umask 077 && printf '%s\n' "$PASS" > "$PWFILE")
 
 echo
-echo "✅ New Fluent profile created: $DATA_DIR"
+echo "✅ New Flowed profile created: $DATA_DIR"
 echo "   Password: $PASS   (also saved in $PWFILE)"
 echo
 echo "   Seeded 6 DBs from data-examples/. learner-profile.json is a TEMPLATE"
@@ -84,6 +85,6 @@ echo "   placeholder — the learner completes their real identity/level on firs
 echo "   login via the /fluent-setup interview inside the web app."
 echo
 echo "Launch it:"
-echo "   scripts/fluent-web.sh --app $ID --port $PORT"
+echo "   scripts/flowed-web.sh --app $ID --port $PORT"
 echo
 echo "Then open http://localhost:$PORT and the learner runs /fluent-setup first."

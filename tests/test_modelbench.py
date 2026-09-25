@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""scripts/fluent-modelbench.py against fake models.
+"""scripts/flowed-modelbench.py against fake models.
 
 The real bench needs a model on railab. What is checked here is everything
 around it: the learner skill is filled in, the answer is compared loosely
@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SCRIPT = REPO / "scripts" / "fluent-modelbench.py"
+SCRIPT = REPO / "scripts" / "flowed-modelbench.py"
 
 CURRICULUM = """---
 language: English
@@ -95,7 +95,7 @@ class Bench(unittest.TestCase):
         cmd = [sys.executable, str(SCRIPT), "--url", url, "--curriculum", str(self.cur), *args]
         if judge:
             cmd += ["--judge-url", judge]
-        env = {**os.environ, "FLUENT_BENCH_OUT": str(self.out)}
+        env = {**os.environ, "FLOWED_BENCH_OUT": str(self.out)}
         return subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=60)
 
     def test_the_learner_role_scores_the_curriculum_checks(self):

@@ -9,11 +9,11 @@ in mid-lesson. This script is that write, with the same validation the
 preferences so a profile can be provisioned in one go.
 
     scripts/new-user.sh demo-en
-    scripts/fluent-profile.py demo-en --name Nes --native Catalan --target English \\
+    scripts/flowed-profile.py demo-en --name Nes --native Catalan --target English \\
         --level A2 --goal B1 --minutes 20 --session-length 8
 
-    scripts/fluent-profile.py demo-en --session-length 10 --stop soft   # adjust later
-    scripts/fluent-profile.py demo-en --show
+    scripts/flowed-profile.py demo-en --session-length 10 --stop soft   # adjust later
+    scripts/flowed-profile.py demo-en --show
 
 Nothing here is interactive and nothing is guessed: a value you do not pass is
 a value that does not change.
@@ -27,6 +27,8 @@ import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"]
 MOTIVATIONS = ["travel", "work", "exam", "living_abroad", "personal", "family"]
@@ -38,7 +40,7 @@ def profile_dir(profile_id: str) -> Path:
         return Path(__file__).resolve().parent.parent / "data"
     if "/" in profile_id or profile_id.startswith("."):
         raise SystemExit(f"error: '{profile_id}' is not a profile id (letters, digits, hyphens)")
-    return Path(os.path.expanduser("~/.fluent")) / profile_id
+    return profiles_root() / profile_id
 
 
 def load(path: Path) -> dict:
@@ -79,7 +81,7 @@ def summarise(profile: dict) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("profile", help="profile id under ~/.fluent/ (e.g. demo-en), or 'data' for the repo profile")
+    ap.add_argument("profile", help="profile id under ~/.flowed/ (e.g. demo-en), or 'data' for the repo profile")
     ap.add_argument("--show", action="store_true", help="print the current values and exit")
     ap.add_argument("--name")
     ap.add_argument("--native", help="native language, in English (e.g. Catalan)")

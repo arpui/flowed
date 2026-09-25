@@ -38,8 +38,8 @@ def _load(name: str, rel: str):
     return mod
 
 
-e2e = _load("fluent_e2e_days", "scripts/fluent-e2e.py")
-seed = _load("fluent_seed_days", "scripts/fluent-seed.py")
+e2e = _load("fluent_e2e_days", "scripts/flowed-e2e.py")
+seed = _load("fluent_seed_days", "scripts/flowed-seed.py")
 
 WORDS = [("casa", "house"), ("gat", "cat"), ("gos", "dog"), ("pa", "bread"),
          ("aigua", "water"), ("llibre", "book")]

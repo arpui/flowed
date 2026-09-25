@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Fluent friend-mode toggle — per-profile tutor_style flag, no code involved.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR: where the profiles live
+# Flowed friend-mode toggle — per-profile tutor_style flag, no code involved.
 #
-#   scripts/fluent-friend.sh <profile-id> [on|off|status]
+#   scripts/flowed-friend.sh <profile-id> [on|off|status]
 #
 #   on     -> preferences.tutor_style = "friend" (warmer tutor: last-session
 #             callbacks, learner interests in examples)
@@ -24,18 +25,18 @@ if [[ ! "$ACTION" =~ ^(on|off|status)$ ]]; then
   exit 2
 fi
 
-PROFILE="$HOME/.fluent/$ID/learner-profile.json"
+PROFILE="$FLOWED_HOME_DIR/$ID/learner-profile.json"
 if [[ ! -f "$PROFILE" ]]; then
   echo "error: perfil inexistent: $PROFILE"
   exit 1
 fi
 
-export FLUENT_FRIEND_PROFILE="$PROFILE" FLUENT_FRIEND_ACTION="$ACTION"
+export FLOWED_FRIEND_PROFILE="$PROFILE" FLOWED_FRIEND_ACTION="$ACTION"
 python3 - <<'EOF'
 import json, os, tempfile
 
-path = os.environ["FLUENT_FRIEND_PROFILE"]
-action = os.environ["FLUENT_FRIEND_ACTION"]
+path = os.environ["FLOWED_FRIEND_PROFILE"]
+action = os.environ["FLOWED_FRIEND_ACTION"]
 
 try:
     with open(path, "rb") as f:

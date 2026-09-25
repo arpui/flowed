@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Agent } from "./agent";
-import type { SessionService } from "./session";
+import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
 
 export interface HttpConfig {
@@ -36,6 +36,9 @@ interface SSEClient {
 /** Idle time after which a session is over, matching the sweeper's own
  *  timeout in index.ts: past it, Capa B has run (or is about to). */
 const SESSION_IDLE_LIMIT_MS = 30 * 60 * 1000;
+
+// When this server process started — see resumeState() in session.ts.
+const BOOT_MS = Date.now();
 
 type JsonRecord = Record<string, unknown>;
 
@@ -380,7 +383,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
         const proc = spawnSync("python3", [script, "--full"], {
           cwd: opts.root,
           encoding: "utf8",
-          env: { ...process.env, FLUENT_DATA_DIR: opts.dataDir() },
+          env: { ...process.env, FLOWED_DATA_DIR: opts.dataDir() },
           timeout: 10000,
         }) as unknown as { status: number | null; stdout: string; stderr: string; error?: unknown };
 
@@ -414,7 +417,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
         const proc = spawnSync("python3", [script, "json", "--auto", "--data", opts.dataDir()], {
           cwd: opts.root,
           encoding: "utf8",
-          env: { ...process.env, FLUENT_DATA_DIR: opts.dataDir() },
+          env: { ...process.env, FLOWED_DATA_DIR: opts.dataDir() },
           timeout: 10000,
         }) as unknown as { status: number | null; stdout: string; stderr: string; error?: unknown };
         let data: unknown = null;
@@ -490,21 +493,8 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
         const id = url.searchParams.get("session") ?? "";
         const row = id ? opts.sessionService.get(id) : null;
         if (!row) return json({ exists: false, resumable: false, reason: "unknown" });
-        let finalized = false;
-        try {
-          finalized = JSON.parse(row.metadata || "{}").capa_b_done != null;
-        } catch {
-          /* malformed metadata is not a reason to strand the learner */
-        }
-        const idleMs = Math.max(0, Date.now() - (row.last_activity || 0));
-        const stale = idleMs > SESSION_IDLE_LIMIT_MS;
-        return json({
-          exists: true,
-          finalized,
-          idle_ms: idleMs,
-          resumable: !finalized && !stale,
-          reason: finalized ? "finalized" : stale ? "idle" : "ok",
-        });
+        const st = resumeState(row, Date.now(), BOOT_MS, SESSION_IDLE_LIMIT_MS);
+        return json({ exists: true, ...st });
       }
 
       // where the learner is in this session (the header indicator)
@@ -581,6 +571,11 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
           const limit = Number(url.searchParams.get("limit")) || 200;
           return json(opts.sessionService.history(id, limit));
         }
+        // A page left open across a restart: nothing is sent to the model, the
+        // client starts a clean session (see BOOT_MS).
+        if ((sub === "message" || sub === "command") && req.method === "POST" && resumeState(session, Date.now(), BOOT_MS, Infinity).restarted) {
+          return json({ bounce: "restart" });
+        }
         if (sub === "message" && req.method === "POST") {
           const body = (await readBody(req)) as {
             agent?: string;
@@ -620,7 +615,7 @@ function readTargetLanguage(dataDir: string): string | undefined {
 function readSetupState(dataDir: string): boolean {
   try {
     const profile = JSON.parse(fs.readFileSync(path.join(dataDir, "learner-profile.json"), "utf8"));
-    // Lives under preferences.setup_complete (matches fluent-web-proxy.mjs &
+    // Lives under preferences.setup_complete (matches flowed-web-proxy.mjs &
     // new-user.sh). Back-compat: missing flag → treated as completed.
     const sc = profile?.preferences?.setup_complete;
     return sc === undefined ? true : sc === true;

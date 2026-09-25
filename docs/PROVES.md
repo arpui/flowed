@@ -32,15 +32,15 @@ scripts/new-user.sh "$PERFIL" --port 4199
 Quan una prova digui "la web de `$PERFIL`", és la instància d'aquell perfil (el
 seu port surt a `config/fluent.json` → `webs`, o el que li donis amb `--port`).
 
-**Les comprovacions es fan amb un sol script**, `scripts/fluent-check.py`, que
+**Les comprovacions es fan amb un sol script**, `scripts/flowed-check.py`, que
 només llegeix. Substitueix els fragments de Python que abans hi havia aquí (i
 que peten en enganxar-los, perquè la indentació del document entra dins del
 codi):
 
 ```bash
 cd ~/projects/fluent_dev2
-python3 scripts/fluent-check.py all "$PERFIL"   # tot d'un cop
-python3 scripts/fluent-check.py sm2 "$PERFIL"   # o una cosa concreta
+python3 scripts/flowed-check.py all "$PERFIL"   # tot d'un cop
+python3 scripts/flowed-check.py sm2 "$PERFIL"   # o una cosa concreta
 ```
 
 Comprovacions: `profile` · `sm2` · `patterns` · `mastery` · `records` ·
@@ -64,7 +64,7 @@ Des de fora sembla que l'app estigui trencada. Abans de perdre vint minuts
 buscant "l'exercici adequat", mira què escriu el tutor:
 
 ```bash
-python3 scripts/fluent-check.py sortida "$PERFIL"
+python3 scripts/flowed-check.py sortida "$PERFIL"
 ```
 
 Treu els **tres últims missatges del tutor literals**, i sota de cada un què en
@@ -78,15 +78,15 @@ model o del codi, sense endevinar.
 
 - [ ] **0.1 La configuració es resol com toca**
 ```bash
-cd ~/projects/fluent_dev2 && python3 scripts/fluent-config.py --json
+cd ~/projects/fluent_dev2 && python3 scripts/flowed-config.py --json
 ```
-  *Esperat:* surt el port del deep, el model, les webs i `FLUENT_STREAM: "0"`.
+  *Esperat:* surt el port del deep, el model, les webs i `FLOWED_STREAM: "0"`.
   Els valors han de coincidir amb el que hi ha a `.env` (l'`.env` mana sobre
   `config/fluent.json`).
 
 - [ ] **0.2 El pla d'arrencada no ha canviat**
 ```bash
-scripts/fluent-start.sh --dry-run --yes
+scripts/flowed-start.sh --dry-run --yes
 ```
   *Esperat:* la línia `Pla: deep=… :12322 (backend=native, CUDA …)` igual que
   abans del canvi. Si diu una altra cosa, la capa nova de configuració està
@@ -95,8 +95,8 @@ scripts/fluent-start.sh --dry-run --yes
 - [ ] **0.3 Reinici real de les webs** (el codi del servidor ha canviat; els
   prompts es llegeixen a cada torn, però el servidor no)
 ```bash
-scripts/fluent-stop.sh --webs-only
-scripts/fluent-start.sh --webs-only --yes
+scripts/flowed-stop.sh --webs-only
+scripts/flowed-start.sh --webs-only --yes
 ```
   *Esperat:* les tres webs tornen a pujar. Al log de cada instància
   (`/tmp/fluent-web-<port>.log`) hi ha d'haver ara una línia nova:
@@ -147,7 +147,7 @@ python3 scripts/list-profiles.py
 
 - [ ] **2.3 El mode arxivat avisa clarament**
 ```bash
-scripts/fluent-web.sh --web --port 4097
+scripts/flowed-web.sh --web --port 4097
 ```
   *Esperat:* error explicant que `--web` està arxivat i que cal `--app`. **No**
   ha d'arrencar res.
@@ -167,7 +167,7 @@ els patrons d'error d'aquella sessió.
 
 - [ ] **3.1 Fotografia abans**
 ```bash
-python3 scripts/fluent-check.py patterns "$PERFIL"
+python3 scripts/flowed-check.py patterns "$PERFIL"
 ```
   *Apunta el `total`.*
 
@@ -200,7 +200,7 @@ Recorda el punt de partida: **tots els ítems tenien `repetitions: 0`**.
 
 - [ ] **4.1 Estat abans**
 ```bash
-python3 scripts/fluent-check.py sm2 "$PERFIL"
+python3 scripts/flowed-check.py sm2 "$PERFIL"
 ```
 
 - [ ] **4.2 Fes `/fluent-review`** i respon bé 2-3 ítems de la cua.
@@ -215,7 +215,7 @@ python3 scripts/fluent-check.py sm2 "$PERFIL"
 
 - [ ] **4.5 Els registres estructurats existeixen**
 ```bash
-python3 scripts/fluent-check.py records "$PERFIL"
+python3 scripts/flowed-check.py records "$PERFIL"
 ```
   *Esperat:* el nombre de registres i un resum de l'últim (nota, correccions i,
   si venia de la cua, `item_id` i qualitat).
@@ -236,7 +236,7 @@ grep -c "REJECTED" /tmp/fluent-web-*.log
 
 - [ ] **4.7 Les categories arriben variades**
 ```bash
-python3 scripts/fluent-check.py patterns "$PERFIL"
+python3 scripts/flowed-check.py patterns "$PERFIL"
 ```
   *Esperat:* més d'una categoria. Si tot és `grammar`, la taxonomia torna a
   col·lapsar.
@@ -256,7 +256,7 @@ python3 scripts/fluent-check.py patterns "$PERFIL"
 - [ ] **5.3 Escriptura: les correccions arriben a la BD**
   Fes `/fluent-writing`, escriu un text amb 2-3 errors clars, i després:
 ```bash
-python3 scripts/fluent-check.py patterns "$PERFIL"
+python3 scripts/flowed-check.py patterns "$PERFIL"
 ```
   *Esperat:* hi apareixen patrons nous. Abans, les sessions d'escriptura en
   perdien el 100%.
@@ -270,7 +270,7 @@ python3 scripts/fluent-check.py patterns "$PERFIL"
 
 - [ ] **6.1 El fitxer de mètriques creix**
 ```bash
-python3 scripts/fluent-check.py metrics "$PERFIL"
+python3 scripts/flowed-check.py metrics "$PERFIL"
 ```
   *Esperat:* una línia per torn, amb tokens i temps plausibles. **Apunta el
   màxim de `prompt_tokens`**: és el número que decidirà si cal podar
@@ -299,8 +299,8 @@ python3 scripts/fluent-check.py metrics "$PERFIL"
   instància i es torna a engegar sense la variable.
 
 ```bash
-scripts/fluent-web.sh --stop --port 4199            # sortir del mode stream
-scripts/fluent-web.sh --app "$PERFIL" --port 4199   # el mateix perfil, sense stream
+scripts/flowed-web.sh --stop --port 4199            # sortir del mode stream
+scripts/flowed-web.sh --app "$PERFIL" --port 4199   # el mateix perfil, sense stream
 ```
 
 - **Per deixar-lo posat de manera permanent** (quan et convenci), a
@@ -318,10 +318,10 @@ scripts/fluent-web.sh --app "$PERFIL" --port 4199   # el mateix perfil, sense st
   una instància.
 
 ```bash
-scripts/fluent-web.sh --stop --port <el port normal de $PERFIL>
-FLUENT_STREAM=1 scripts/fluent-web.sh --app "$PERFIL" --port 4199
+scripts/flowed-web.sh --stop --port <el port normal de $PERFIL>
+FLOWED_STREAM=1 scripts/flowed-web.sh --app "$PERFIL" --port 4199
 ```
-  *Esperat:* al log, `[Fluent] streaming: on (FLUENT_STREAM)`.
+  *Esperat:* al log, `[Fluent] streaming: on (FLOWED_STREAM)`.
 
 - [ ] **7.2 El text apareix progressivament** en lloc de cop.
 
@@ -338,8 +338,8 @@ FLUENT_STREAM=1 scripts/fluent-web.sh --app "$PERFIL" --port 4199
 
 - [ ] **7.6 Atura la instància de proves i torna a deixar la normal**
 ```bash
-scripts/fluent-web.sh --stop --port 4199
-scripts/fluent-start.sh --webs-only --yes
+scripts/flowed-web.sh --stop --port 4199
+scripts/flowed-start.sh --webs-only --yes
 ```
 
 ---
@@ -391,7 +391,7 @@ cd ~/projects/fluent_dev2 && python3 scripts/migrate-sessions-db.py --all --dry-
 
 - [ ] **10.2 Migrar un perfil de prova primer**
 ```bash
-scripts/fluent-web.sh --stop --port 4199    # si en tens una engegada
+scripts/flowed-web.sh --stop --port 4199    # si en tens una engegada
 python3 scripts/migrate-sessions-db.py --profile "$PERFIL"
 ls ~/.fluent/"$PERFIL"/sessions/
 ```
@@ -413,9 +413,9 @@ ls ~/.fluent/"$PERFIL"/sessions/
 
 - [ ] **10.6 Migrar la resta** (amb les instàncies aturades)
 ```bash
-scripts/fluent-stop.sh --webs-only
+scripts/flowed-stop.sh --webs-only
 python3 scripts/migrate-sessions-db.py --all
-scripts/fluent-start.sh --webs-only --yes
+scripts/flowed-start.sh --webs-only --yes
 ```
   *Esperat:* cap `(legacy path)` als logs.
 
@@ -435,14 +435,14 @@ no hi entra mai.
 ```bash
 cd ~/projects/fluent_dev2
 scripts/new-user.sh prova-en --port 4198
-python3 scripts/fluent-check.py profile prova-en
+python3 scripts/flowed-check.py profile prova-en
 ```
   *Esperat:* `setup_complete : False` i la línia `plantilla sense omplir` amb
   els `{...}` encara posats.
 
 - [ ] **11.2 Omple'l des del terminal**
 ```bash
-python3 scripts/fluent-profile.py prova-en \
+python3 scripts/flowed-profile.py prova-en \
   --name Prova --native Catalan --target English \
   --level A2 --goal B1 --minutes 20 --session-length 8
 ```
@@ -450,7 +450,7 @@ python3 scripts/fluent-profile.py prova-en \
 
 - [ ] **11.3 Ha quedat desat de debò**
 ```bash
-python3 scripts/fluent-check.py profile prova-en
+python3 scripts/flowed-check.py profile prova-en
 ls ~/.fluent/prova-en/ | grep backup
 ```
   *Esperat:* dades reals, `setup_complete : True`, `plantilla sense omplir:
@@ -458,24 +458,24 @@ ls ~/.fluent/prova-en/ | grep backup
 
 - [ ] **11.4 Es pot retocar després sense tornar-hi tot**
 ```bash
-python3 scripts/fluent-profile.py prova-en --session-length 6 --stop soft
-python3 scripts/fluent-profile.py prova-en --show
+python3 scripts/flowed-profile.py prova-en --session-length 6 --stop soft
+python3 scripts/flowed-profile.py prova-en --show
 ```
   *Esperat:* només canvien els dos valors; la resta es manté.
 
 - [ ] **11.5 Refusa el que no té sentit**
 ```bash
-python3 scripts/fluent-profile.py prova-en --level Z9 ; echo "codi=$?"
+python3 scripts/flowed-profile.py prova-en --level Z9 ; echo "codi=$?"
 ```
   *Esperat:* error amb la llista A1…C2 i `codi=1`. El perfil **no** s'ha tocat.
 
 - [ ] **11.6 La web arrenca directament a practicar** — obre
-  `scripts/fluent-web.sh --app prova-en --port 4198`.
+  `scripts/flowed-web.sh --app prova-en --port 4198`.
   *Esperat:* comença amb `/fluent-learn`. **No** hi ha cap botó de setup i **no**
   surt cap entrevista.
 
 - [ ] **11.7 Un perfil sense configurar no atrapa l'alumne** — crea'n un altre
-  amb `new-user.sh` i obre'l sense passar per `fluent-profile.py`.
+  amb `new-user.sh` i obre'l sense passar per `flowed-profile.py`.
   *Esperat:* un avís curt dient que el perfil encara no està configurat i que ho
   fa l'administrador. Cap formulari.
 
@@ -490,7 +490,7 @@ Costa de provar en una tarda: depèn de dies. El que sí es pot comprovar avui:
 - [ ] **12.1 Un skill inactiu baixa** — mira un perfil real amb alguna habilitat
   sense practicar fa setmanes, després d'una sessió nova:
 ```bash
-python3 scripts/fluent-check.py mastery "$PERFIL"
+python3 scripts/flowed-check.py mastery "$PERFIL"
 ```
   *Esperat:* les habilitats practicades avui tenen `mastery_level ==
   mastery_level_earned`; les que fa més de 35 dies que no es toquen, un nivell
@@ -517,7 +517,7 @@ número no el porta el model — el servidor compta les respostes registrades.
 
 - [ ] **13.1 Mira el número del perfil**
 ```bash
-python3 scripts/fluent-check.py profile "$PERFIL"
+python3 scripts/flowed-check.py profile "$PERFIL"
 ```
   *Esperat:* la línia `exercicis/sessió`. Si diu `(per defecte 12)`, és que el
   perfil no el porta escrit i s'usa el 12.
@@ -532,8 +532,8 @@ python3 scripts/fluent-check.py profile "$PERFIL"
 
   **Si es queda a `0/4`** — que és el que passava — no cal investigar res més:
 ```bash
-python3 scripts/fluent-check.py sortida "$PERFIL"
-python3 scripts/fluent-check.py metrics "$PERFIL"
+python3 scripts/flowed-check.py sortida "$PERFIL"
+python3 scripts/flowed-check.py metrics "$PERFIL"
 ```
   El comptador surt dels registres de `fluent_record_answer`. Si el tutor no
   crida l'eina, l'indicador **no es pot moure**: no és un bug de la barra, és que
@@ -570,7 +570,7 @@ gran no es mengi el dia sencer.
 
 - [ ] **13b.1 Mira quants en deuen avui**
 ```bash
-python3 scripts/fluent-check.py sm2 "$PERFIL"
+python3 scripts/flowed-check.py sm2 "$PERFIL"
 ```
   *Esperat:* el recompte de `today`. Si és 0, la porta no s'activa — apunta-ho i
   salta a 13b.6.
@@ -600,7 +600,7 @@ python3 scripts/fluent-check.py sm2 "$PERFIL"
 
 - [ ] **13b.7 Es pot apagar per alumne**
 ```bash
-python3 scripts/fluent-profile.py "$PERFIL" --review-gate off
+python3 scripts/flowed-profile.py "$PERFIL" --review-gate off
 ```
   i reinicia la instància. *Esperat:* cap `🔁`, ni amb 🎲.
   Torna-ho a posar amb `--review-gate on` quan acabis.
@@ -615,7 +615,7 @@ python3 scripts/fluent-profile.py "$PERFIL" --review-gate off
 
 - [ ] **13c.3 No perd res** — després del resum:
 ```bash
-python3 scripts/fluent-check.py all "$PERFIL"
+python3 scripts/flowed-check.py all "$PERFIL"
 ```
   *Esperat:* els patrons i els ítems SM-2 de la sessió hi són (és el bug P0-6:
   la Capa B esborrava la Capa A).
@@ -624,14 +624,14 @@ python3 scripts/fluent-check.py all "$PERFIL"
 
 ## 14. Només a rapve (4060 Ti, backend Docker)
 
-- [ ] **14.1 `cp .env.rapve .env`** i `python3 scripts/fluent-config.py --json`
+- [ ] **14.1 `cp .env.rapve .env`** i `python3 scripts/flowed-config.py --json`
   → el backend ha de sortir `docker` i el port el que toqui.
-- [ ] **14.2 `scripts/fluent-start.sh --dry-run --yes`** → el pla ha de dir
+- [ ] **14.2 `scripts/flowed-start.sh --dry-run --yes`** → el pla ha de dir
   `backend=docker`.
 - [ ] **14.3 Arrencada real** → el contenidor puja, `/health` respon, i
   `/tmp/fluent-deep-docker.state` existeix.
-- [ ] **14.4 `scripts/fluent-stop.sh`** → el contenidor s'atura i, si hi ha
-  `FLUENT_DEFAULT_MANAGER`, el model per defecte torna al port.
+- [ ] **14.4 `scripts/flowed-stop.sh`** → el contenidor s'atura i, si hi ha
+  `FLOWED_DEFAULT_MANAGER`, el model per defecte torna al port.
 
 ---
 
@@ -645,7 +645,7 @@ de sortir cap botó 🔊 enlloc. Això és el primer que cal comprovar.
 
 - [ ] **15.1 Apagat, no es nota** — obre la web sense instal·lar res.
 ```bash
-python3 scripts/fluent-check.py tts "$PERFIL"
+python3 scripts/flowed-check.py tts "$PERFIL"
 ```
   *Esperat:* `enabled : False`, `veus : cap`, i `aquest perfil … sense veu`. A la
   web, **cap** botó 🔊 enlloc i cap error a la consola del navegador.
@@ -653,16 +653,16 @@ python3 scripts/fluent-check.py tts "$PERFIL"
 - [ ] **15.2 Instal·la piper i una veu** (cal internet en aquesta màquina)
 ```bash
 cd ~/projects/fluent_dev2
-scripts/fluent-tts.sh install en_GB-alba-medium
-scripts/fluent-tts.sh status
+scripts/flowed-tts.sh install en_GB-alba-medium
+scripts/flowed-tts.sh status
 ```
   *Esperat:* binari ✅, la veu llistada, i `enabled: True` amb
   `English: …/en_GB-alba-medium.onnx`. Baixa ~80 MB. Comprova-ho també amb
-  `python3 scripts/fluent-check.py tts "$PERFIL"` → ha de dir `sonarà 🔊`.
+  `python3 scripts/flowed-check.py tts "$PERFIL"` → ha de dir `sonarà 🔊`.
 
 - [ ] **15.3 Prova-ho sense la web**
 ```bash
-scripts/fluent-tts.sh say "Good morning, how are you today?"
+scripts/flowed-tts.sh say "Good morning, how are you today?"
 ```
   *Esperat:* escriu un `.wav`. Escolta'l (`aplay <ruta>`). Si aquí no sona, no
   cal continuar: el problema és de piper, no de Fluent.
@@ -674,7 +674,7 @@ scripts/fluent-tts.sh say "Good morning, how are you today?"
   ho fa el codi (`ttsEnv()` a `tts.ts` i `piper_env` a l'script). Comprova-ho
   **sense** el teu perfil de shell:
 ```bash
-env -i HOME="$HOME" PATH=/usr/bin:/bin bash -lc 'cd ~/projects/fluent_dev2 && scripts/fluent-tts.sh status'
+env -i HOME="$HOME" PATH=/usr/bin:/bin bash -lc 'cd ~/projects/fluent_dev2 && scripts/flowed-tts.sh status'
 ```
   *Esperat:* la línia `(corre sense dependre del teu .bashrc ✅)`. Si surt
   l'avís, enganxa'm la sortida de `ldd` que et proposa.
@@ -714,7 +714,7 @@ env -i HOME="$HOME" PATH=/usr/bin:/bin bash -lc 'cd ~/projects/fluent_dev2 && sc
 
 - [ ] **15.8 La segona vegada és instantània** — prem el mateix botó dos cops.
 ```bash
-python3 scripts/fluent-check.py tts "$PERFIL"
+python3 scripts/flowed-check.py tts "$PERFIL"
 ```
   *Esperat:* el segon cop sona de seguida, i la línia `cau` compta un `.wav` per
   frase. La capçalera `x-fluent-cached: 1` a la pestanya Xarxa del navegador ho
@@ -769,7 +769,7 @@ python3 scripts/fluent-check.py tts "$PERFIL"
 
 - [ ] **17.4 El context deixa de créixer**
 ```bash
-python3 scripts/fluent-check.py metrics "$PERFIL"
+python3 scripts/flowed-check.py metrics "$PERFIL"
 ```
   *Esperat:* el **màxim** de prompt tokens baixa amb les sessions noves i es
   queda ben per sota del límit. Era 51.605 contra un ctx de 32.768 — el model
@@ -777,8 +777,8 @@ python3 scripts/fluent-check.py metrics "$PERFIL"
 
 - [ ] **17.5 I ara sí, els registres** — respon **un** exercici de debò.
 ```bash
-python3 scripts/fluent-check.py metrics "$PERFIL"
-python3 scripts/fluent-check.py records "$PERFIL"
+python3 scripts/flowed-check.py metrics "$PERFIL"
+python3 scripts/flowed-check.py records "$PERFIL"
 ```
   *Esperat:* `fluent_record_answer  1 ok` i un `.records/<ses>.jsonl`. Si
   segueix sense sortir, **ara sí** que el model ignora la instrucció i cal
@@ -792,10 +792,10 @@ python3 scripts/fluent-check.py records "$PERFIL"
 el perquè de 48k i no 64k són a `docs/model-qwen14b-q4.md`. **Res d'això està
 mesurat encara.**
 
-- [ ] **18.1 El valor efectiu és el que creus** — `FLUENT_DEEP_CTX` estava
+- [ ] **18.1 El valor efectiu és el que creus** — `FLOWED_DEEP_CTX` estava
   fixat a 32768 als `.env` i l'`.env` mana sobre el config; s'ha comentat.
 ```bash
-python3 scripts/fluent-config.py --sh | grep -i "DEEP_CTX\|KV_TYPE"
+python3 scripts/flowed-config.py --sh | grep -i "DEEP_CTX\|KV_TYPE"
 ```
   *Esperat:* `49152` i `q8_0`. Si surt 32768, hi ha un `.env` que encara el fixa.
 
@@ -833,7 +833,7 @@ curl -s http://127.0.0.1:12322/v1/models | python3 -m json.tool | grep -i ctx
 
 - [ ] **18.6 Velocitat — qui triga, el model o nosaltres**
 ```bash
-python3 scripts/fluent-check.py metrics "$PERFIL"
+python3 scripts/flowed-check.py metrics "$PERFIL"
 ```
   *Esperat:* el bloc `abans/ara` separa el torn sencer del temps **dins** el
   model. Si creix `dins el model`, és el model (context 49152, KV q8_0, prompt
@@ -843,7 +843,7 @@ python3 scripts/fluent-check.py metrics "$PERFIL"
 
 - [ ] **18.6b Velocitat (antic)** — compara el temps per torn amb el que tens apuntat.
 ```bash
-python3 scripts/fluent-check.py metrics "$PERFIL"
+python3 scripts/flowed-check.py metrics "$PERFIL"
 ```
   *Esperat:* mediana semblant. Si el prefill s'ha encarit molt, apunta-ho.
 
@@ -857,7 +857,7 @@ el model, amb el prompt passant de 25.650 a 31.946 tokens — i un màxim de
 
 - [ ] **20.1 El límit efectiu és 40960**
 ```bash
-python3 scripts/fluent-config.py --sh | grep -i "DEEP_CTX\|KV_TYPE"
+python3 scripts/flowed-config.py --sh | grep -i "DEEP_CTX\|KV_TYPE"
 curl -s http://127.0.0.1:12322/v1/models | python3 -m json.tool | grep -i ctx
 ```
   *Esperat:* `40960` als dos llocs. El 49152 del migdia **no s'aplicava**: és per
@@ -870,7 +870,7 @@ curl -s http://127.0.0.1:12322/v1/models | python3 -m json.tool | grep -i ctx
 
 - [ ] **20.3 Cap torn peta**
 ```bash
-python3 scripts/fluent-check.py metrics "$PERFIL"
+python3 scripts/flowed-check.py metrics "$PERFIL"
 ```
   *Esperat:* el màxim de prompt tokens **per sota** de 40960. Si surt
   `❌ ALGUN TORN HA PETAT`, apunta-ho.
@@ -902,7 +902,7 @@ del dia no.** Res es bloqueja mai.
 - [ ] **19.2 De què està feta** — la Lliçó són els repassos vençuts, completats
   amb drills de patrons febles fins a **6 com a mínim**.
 ```bash
-python3 scripts/fluent-check.py sm2 "$PERFIL"
+python3 scripts/flowed-check.py sm2 "$PERFIL"
 ```
   *Esperat:* amb 5 ítems vençuts, el badge diu **6**. Amb 0 vençuts, també 6
   (tot drills) — la Lliçó no és mai un gest simbòlic.
@@ -978,8 +978,8 @@ cat ~/.fluent/$PERFIL/.daily/lesson-$(date +%F).json
 
 - [ ] **19.8 L'objectiu és configurable**
 ```bash
-python3 scripts/fluent-profile.py "$PERFIL" --daily-goal 15
-python3 scripts/fluent-check.py profile "$PERFIL"
+python3 scripts/flowed-profile.py "$PERFIL" --daily-goal 15
+python3 scripts/flowed-check.py profile "$PERFIL"
 ```
 
 ---
@@ -993,7 +993,7 @@ en té menys, hi ha transcripcions en un altre fitxer.
 ```bash
 for p in alex-en sam-en demo-en; do
   echo "=== $p ==="
-  python3 scripts/fluent-check.py historial "$p"
+  python3 scripts/flowed-check.py historial "$p"
 done
 ```
 
@@ -1005,7 +1005,7 @@ find ~ -name 'opencode.db' -o -name 'sessions.db' 2>/dev/null | grep -v node_mod
 ```
 
 L'`opencode` antic desava a un lloc **central compartit** fins que
-`fluent-web.sh` va començar a fixar `XDG_DATA_HOME` per perfil. Les sessions
+`flowed-web.sh` va començar a fixar `XDG_DATA_HOME` per perfil. Les sessions
 anteriors a aquell canvi són en aquell fitxer únic, barrejades entre alumnes.
 
 > **El que NO s'ha perdut:** les dades d'aprenentatge. Nivell, ratxa, patrons
@@ -1027,7 +1027,7 @@ anteriors a aquell canvi són en aquell fitxer únic, barrejades entre alumnes.
 | 7 | 19.3 Lliçó | Amb el badge a 0, el tutor seguia preguntant (Exercise 7, 8…) i sempre amb la mateixa forma ("Rewrite this sentence correctly"). En acabar-se el compte no rebia **cap** instrucció. | ✅ Nota de tancament + instrucció de variar la forma. També retirat el sostre ocult de 12 per sessió, que contradeia el disseny acordat. Provar a 19.7b–19.7d. |
 | 6 | 19.1 badge | El número del badge sortia tallat per dalt: estava posicionat sobre el botó i el `overflow-x` de la barra el retallava. | ✅ Ara va dins el botó, en línia. Res el pot retallar. |
 | 5 | 19.3 Lliçó | Sortir a Speaking a mitja Lliçó i tornar recomençava per l'exercici 1, i en acabar-lo donava els 6 per fets sense haver vist el sisè. El pla es recalculava a cada consulta. | ✅ El pla es fixa un cop al dia (`.daily/lesson-<data>.json`) i el tutor rep ordre de **continuar**, no de recomençar. Provar a 19.6b i 19.6c. |
-| 4 | 15.2 instal·lació | Piper no arrencava sense tocar el `.bashrc` (llibreries pròpies al costat del binari). Funciona al terminal, però el servidor no llegeix cap perfil de shell si l'arrenca systemd/cron o una altra màquina. | ✅ Portat al codi: `ttsEnv()` a `tts.ts` i `piper_env` a `fluent-tts.sh`. El `.bashrc` ja no cal (pots deixar-lo, no fa mal). Provar a 15.3b. |
+| 4 | 15.2 instal·lació | Piper no arrencava sense tocar el `.bashrc` (llibreries pròpies al costat del binari). Funciona al terminal, però el servidor no llegeix cap perfil de shell si l'arrenca systemd/cron o una altra màquina. | ✅ Portat al codi: `ttsEnv()` a `tts.ts` i `piper_env` a `flowed-tts.sh`. El `.bashrc` ja no cal (pots deixar-lo, no fa mal). Provar a 15.3b. |
 | 3 | Sessió del matí | 48 torns acumulats, màxim **51.605 prompt tokens** contra un ctx de 32.768 → el model truncava per l'esquerra (on hi ha el prompt de sistema). | ✅ Arrel atacada amb 17.x (sessions noves). Pujar el ctx és 18.x. Podar l'historial, pendent de decidir. |
 | 2 | Sessió del matí | `ses_9073d7bb` marcada `tancada ✅` a les 10:15 i amb un torn nou a les 16:09: es reprenia una sessió ja finalitzada i el que es feia després no es tornava a persistir mai. | ✅ Corregit: `session-state` + `reopenIfFinalized`. Provar a 17.1–17.3. |
 | 1 | Entrada a demo-en | Amb la cua de repàs buida, el tutor deia «Try: `/fluent-learn`, `/fluent-vocab`…» — comandes que l'alumne no pot escriure. I el missatge sortia marcat `✏️ Exercici`. | ✅ Corregit: skills + regla dura a `rules.md` + `humanizeCommands()` al renderitzat; `MENU_RE` ampliat. Tornar a provar (16.1 i 16.2). |
@@ -1071,7 +1071,7 @@ Amb el servidor engegat i **`test-en`**, mai amb un perfil real. Obre l'app
 (que llança `/fluent-learn` sola), prem 🎓 Lesson, contesta **4 exercicis** i:
 
 ```bash
-python3 scripts/fluent-check.py lliço test-en
+python3 scripts/flowed-check.py lliço test-en
 ```
 
 Vuit línies, totes han de dir `✅ PASSA`:
@@ -1108,7 +1108,7 @@ llavors prem 🎓 Lesson. És el segon command de la sessió, que és on es tren
 Respon **3 exercicis**, i després:
 
 ```bash
-PERFIL=test-en; python3 scripts/fluent-check.py sortida "$PERFIL" | tail -60
+PERFIL=test-en; python3 scripts/flowed-check.py sortida "$PERFIL" | tail -60
 ```
 
 Tres coses han de sortir a cada resposta del tutor:
@@ -1135,7 +1135,7 @@ PERFIL=test-en; wc -l ~/.fluent/$PERFIL/.records/*.jsonl
 ### 22.5 Els registres hi són
 
 ```bash
-PERFIL=test-en; python3 scripts/fluent-check.py records "$PERFIL"
+PERFIL=test-en; python3 scripts/flowed-check.py records "$PERFIL"
 ```
 
 Un directori `.records/` inexistent és el símptoma exacte del perfil A el 16/09:
@@ -1193,7 +1193,7 @@ Cinc comprovacions, escrites com les preguntes que faries tu:
 Lectura només: diu què li està oferint el sistema al tutor ara mateix.
 
 ```bash
-PERFIL=naia-en; FLUENT_DATA_DIR=~/.fluent/$PERFIL python3 hooks/read-db.py | python3 -c "
+PERFIL=naia-en; FLOWED_DATA_DIR=~/.fluent/$PERFIL python3 hooks/read-db.py | python3 -c "
 import json,sys; m=json.load(sys.stdin)['databases']['mistakes_db']
 print('patrons totals :', m.get('total_patterns'))
 print('curats         :', m.get('healed_patterns'))
@@ -1216,7 +1216,7 @@ PERFIL=test-en; cat ~/.fluent/$PERFIL/.daily/lesson-$(date +%F).json
 
 ---
 
-## 24. La lliçó sencera, contra el model de debò (`fluent-e2e.py`)
+## 24. La lliçó sencera, contra el model de debò (`flowed-e2e.py`)
 
 El que faltava. Tota la resta comprova el codi; això fa **parlar el tutor** i
 llegeix el que diu. El 16/09 la suite era verda mentre el tutor feia seixanta
@@ -1233,14 +1233,14 @@ una nena pensi que l'app està trencada.
 Amb el servidor engegat:
 
 ```bash
-scripts/fluent-web.sh --app --port 4103 test-en
+scripts/flowed-web.sh --app --port 4103 test-en
 ```
 
 En una altra terminal:
 
 ```bash
 cd /home/albert/projects/fluent_dev2
-python3 scripts/fluent-e2e.py test-en --port 4103 --reset --transcript /tmp/llico.md
+python3 scripts/flowed-e2e.py test-en --port 4103 --reset --transcript /tmp/llico.md
 ```
 
 Triga el que trigui el model: compta ~15-40 s per exercici amb el 14B. Va
@@ -1299,8 +1299,8 @@ servidor o perfil. Es pot encadenar.
 Cap execució hi havia arribat mai: totes paraven a 6 respostes.
 
 ```bash
-python3 scripts/fluent-seed.py test-en --days 21 --due 3
-python3 scripts/fluent-e2e.py test-en --port 4103 --scenario full --transcript /tmp/full.md
+python3 scripts/flowed-seed.py test-en --days 21 --due 3
+python3 scripts/flowed-e2e.py test-en --port 4103 --scenario full --transcript /tmp/full.md
 ```
 
 Contesta fins que la lliçó es tanqui i **després insisteix dos torns més**. Tres
@@ -1320,14 +1320,14 @@ El que tot el sistema sosté: **el que encerta no torna demà, el que falla sí.
 Esperar un dia per prova no és un pla, així que el rellotge es mou:
 
 ```bash
-python3 scripts/fluent-seed.py test-en --days 21 --due 3
-python3 scripts/fluent-e2e.py test-en --port 4103 --scenario lesson
+python3 scripts/flowed-seed.py test-en --days 21 --due 3
+python3 scripts/flowed-e2e.py test-en --port 4103 --scenario lesson
 
-python3 scripts/fluent-advance-day.py test-en
-python3 scripts/fluent-e2e.py test-en --port 4103 --scenario lesson
+python3 scripts/flowed-advance-day.py test-en
+python3 scripts/flowed-e2e.py test-en --port 4103 --scenario lesson
 ```
 
-`fluent-advance-day.py` resta un dia a **totes** les dates del perfil, que és el
+`flowed-advance-day.py` resta un dia a **totes** les dates del perfil, que és el
 mateix que el calendari avançant-ne un: un ítem per demà passa a ser per avui, i
 el dia que acaba s'arxiva. La segona execució afegeix:
 
@@ -1344,7 +1344,7 @@ No cal codi: el mateix amb `nes-en`, i **sense `--reset`** ni `--seed`, que té
 dades de veritat i les vols conservar.
 
 ```bash
-python3 scripts/fluent-e2e.py nes-en --port 4103 --scenario wander --transcript /tmp/nes.md
+python3 scripts/flowed-e2e.py nes-en --port 4103 --scenario wander --transcript /tmp/nes.md
 ```
 
 ### 25.4 El forat que queda obert
@@ -1365,7 +1365,7 @@ cada vegada**. Una execució verda no vol dir que el problema hagi marxat, i una
 de vermella no vol dir que hi sigui sempre. El que s'ha de mirar és una taxa.
 
 ```bash
-python3 scripts/fluent-e2e.py test-en --port 4103 --scenario wander --repeat 3
+python3 scripts/flowed-e2e.py test-en --port 4103 --scenario wander --repeat 3
 ```
 
 Al final:
@@ -1389,7 +1389,7 @@ format es torni groga, el canvi és bo.
 16 respostes i tres desviacions, una a Writing (respostes llargues):
 
 ```bash
-python3 scripts/fluent-e2e.py test-en --port 4103 --scenario marathon --transcript /tmp/marato.md
+python3 scripts/flowed-e2e.py test-en --port 4103 --scenario marathon --transcript /tmp/marato.md
 ```
 
 Serveix per a l'única cosa que cap prova ha tocat mai: que el context creixi
@@ -1458,15 +1458,15 @@ futura. Si segueix a `interval 1` i venç demà, no s'ha registrat.
 
 ---
 
-## 28. La bateria de paràmetres (`fluent-bench.sh`)
+## 28. La bateria de paràmetres (`flowed-bench.sh`)
 
 ### 28.1 La comanda
 
 ```bash
-scripts/fluent-bench.sh              # base + 3 hipòtesis, wander ×3
-scripts/fluent-bench.sh --quick      # només la base, per veure si tot rutlla
-scripts/fluent-bench.sh --full       # wander + full + marathon
-scripts/fluent-bench.sh --repeat 5 --port 4104
+scripts/flowed-bench.sh              # base + 3 hipòtesis, wander ×3
+scripts/flowed-bench.sh --quick      # només la base, per veure si tot rutlla
+scripts/flowed-bench.sh --full       # wander + full + marathon
+scripts/flowed-bench.sh --repeat 5 --port 4104
 ```
 
 La bateria és **la mateixa cada vegada**. Editar-la és decidir què vol dir "va
@@ -1486,7 +1486,7 @@ Separades a posta: si es canvien alhora i millora, no se sap què ho ha fet.
 ### 28.2 Cridar el sweep a mà
 
 ```bash
-python3 scripts/fluent-sweep.py test-en --port 4103 --repeat 3 \
+python3 scripts/flowed-sweep.py test-en --port 4103 --repeat 3 \
   --setting "base:" \
   --setting "calent:temperature=0.8,top_k=40" \
   --setting "estricte:temperature=0.3,repeat_penalty=1.15,repeat_last_n=1024"
@@ -1545,7 +1545,7 @@ proves. Val la pena tenir-les escrites perquè són la mateixa família d'error 
 `--repeat` consumint el dia: **si l'instrument canvia entre execucions, cap
 comparació feta amb ell val res.**
 
-**La sembra no era idempotent.** `fluent-seed.py` buidava el dia (el pla, els
+**La sembra no era idempotent.** `flowed-seed.py` buidava el dia (el pla, els
 registres, els T0) però deixava `spaced-repetition.json` i `mistakes-db.json` tal
 com estaven. Cada bateria sembrava **a sobre** de la cua que havia deixat
 l'anterior: els ítems que introdueix tard perquè quedin per repassar avui ja hi
@@ -1561,7 +1561,7 @@ armada tota l'execució. Ara la sembra reinicia la cua i els patrons (còpia a
 
 **El guard es comptava dues vegades.** `guards.jsonl` escriu la línia que
 dispara i després `rewritten`, que és el **resultat** de la mateixa
-intervenció. `fluent-e2e.py` les comptava totes dues: els «11 guards» d'una
+intervenció. `flowed-e2e.py` les comptava totes dues: els «11 guards» d'una
 execució eren cinc intervencions i les seves reescriptures. Totes les xifres de
 guard anteriors a avui estan inflades ~×2.
 
@@ -1569,7 +1569,7 @@ guard anteriors a avui estan inflades ~×2.
 són correctes i es queden; a la línia de veredicte diuen el mateix que la nota, i
 «❌ Not quite» sobre un «Score: 10/10» és la contradicció que un nen llegeix
 primer. `alignMarkersToScore` ara els repinta **només** a la línia de veredicte i
-només als dos extrems (≥8, ≤4); la comprovació de `fluent-e2e.py` mira el mateix.
+només als dos extrems (≥8, ≤4); la comprovació de `flowed-e2e.py` mira el mateix.
 
 **La persistència arriba tard.** `runAutoPersistence` es dispara **sense
 `await`**: la resposta arriba a l'alumne (i a l'script) mentre
@@ -1587,7 +1587,7 @@ al tutor se li deia «avui no hi ha res per repassar» i cap registre podia port
     execució 2   8 registres · 1 amb item_id
     execució 3   6 registres · 0 amb item_id   ← i el sweep només mirava aquesta
 
-Ara `fluent-e2e.py` espera (`wait_quiet()`) que no quedi cap
+Ara `flowed-e2e.py` espera (`wait_quiet()`) que no quedi cap
 `accumulate-session.py` / `update-db.py` / `persist-session.py` corrent abans de
 restaurar, i un cop més en acabar.
 
@@ -1599,7 +1599,7 @@ l'escenari i diu en quantes execucions.
 ### I la sembra que va morir sense que ningú ho mirés (22:32)
 
 La tanda següent va sortir amb els tres punts de partida **iguals i a zero**, i
-el motiu no era la cursa: `fluent-seed.py` havia petat abans de sembrar res.
+el motiu no era la cursa: `flowed-seed.py` havia petat abans de sembrar res.
 
     OSError: [Errno 36] File name too long:
       .daily/................lesson-2026-09-16.json.bak-20260919-122651.bak-…
@@ -1612,7 +1612,7 @@ ranci amb 14 ítems i res per repassar, i les va donar per bones.
 
 Tres canvis, un per cada baula:
 
-- **Un arxiu és un lloc, no un sufix.** `fluent-seed.py` i `restore()` mouen els
+- **Un arxiu és un lloc, no un sufix.** `flowed-seed.py` i `restore()` mouen els
   fitxers vius a `_archive/<segell>-<nom>` i no toquen mai el que ja hi és.
   Prova: `tests/test_fluent_seed.py` sembra vint vegades seguides i comprova que
   cap nom passa dels 120 caràcters.
@@ -1639,7 +1639,7 @@ Amb tots els punts de partida iguals (3 vençuts), la propera tanda decideix:
 - **es manté en ~1 de cada 3** → és una fallada real independent de l'estat, i
   el símptoma del 16/09 continua viu.
 
-Per poder-ho adjudicar, `fluent-e2e.py` imprimeix els vençuts en començar cada
+Per poder-ho adjudicar, `flowed-e2e.py` imprimeix els vençuts en començar cada
 execució i marca **PUNT DE PARTIDA DIFERENT** si no coincideixen amb els de la
 primera; el sweep ho puja a la columna `desigual` i a `summary.csv`. L'espera de
 la persistència té límit (45 s) i, si el supera, ho diu pels dos canals i avisa
@@ -1661,7 +1661,7 @@ comprovació**, no pel total d'una volta: amb el mateix codi hem vist de 14/23 a
 | Config | Temperatura efectiva |
 |---|---|
 | `fluent.json` = 0,6, sense models file | **0,2** (el cas d'abans) |
-| `FLUENT_MODELS_FILE` amb 0,6 | 0,6 |
+| `FLOWED_MODELS_FILE` amb 0,6 | 0,6 |
 
 Els altres paràmetres (`top_p`, penalitzacions, `repeat_last_n`) sí que passaven,
 perquè `fluent-models.json` no els fixa. Cap comprovació ho deia. **Qualsevol
@@ -1677,7 +1677,7 @@ valors que resol el servidor són byte per byte els mateixos d'abans, i ara un
 
 ### 30.2 Què s'ha canviat
 
-- **El mostreig d'un setting viatja per `FLUENT_MODELS_FILE`** (un fitxer per
+- **El mostreig d'un setting viatja per `FLOWED_MODELS_FILE`** (un fitxer per
   setting, a `results/sweep-*/<setting>/models.json`). És la capa que guanya sobre
   totes, i no cal reescriure ni restaurar cap fitxer del repositori. Les claus
   van en camelCase perquè és el que llegeix el servidor.
@@ -1687,7 +1687,7 @@ valors que resol el servidor són byte per byte els mateixos d'abans, i ara un
   cosa que faria que la base ja no ho sigui), **no corre aquell setting** i diu
   quin. La sortida imprimeix `mostreig efectiu: …`.
 - **Una sola font per als paràmetres dels models:** `config/fluent.json`. Només
-  hi poden anar al damunt l'`.env` (port, GPU, backend) i `FLUENT_MODELS_FILE`,
+  hi poden anar al damunt l'`.env` (port, GPU, backend) i `FLOWED_MODELS_FILE`,
   explícit.
 - **La comprovació «el model no corre» mirava tot el log** i la línia del `face`
   (apagat per disseny) la disparava. Ara només compta la línia `model: deep`.
@@ -1695,18 +1695,18 @@ valors que resol el servidor són byte per byte els mateixos d'abans, i ara un
   de nou.
 - **En acabar, el sweep atura l'app de proves** (portava el mostreig de l'últim
   setting a l'entorn).
-- **`fluent-bench.sh` deixa a punt el perfil i el model.** El perfil `test-en`
+- **`flowed-bench.sh` deixa a punt el perfil i el model.** El perfil `test-en`
   es crea i es configura si no hi és. El model deep, si no respon, l'aixeca amb
-  `fluent-start.sh --models-only --yes` i l'atura en acabar; si ja corria, no el
+  `flowed-start.sh --models-only --yes` i l'atura en acabar; si ja corria, no el
   toca. `--keep-model` no l'atura, `--no-start` avorta en comptes d'aixecar-lo.
-  Compte: `fluent-start.sh --yes` fa el canvi 1:1 amb el model per defecte si
-  ocupa el port (`FLUENT_DEFAULT_MANAGER`), i l'stop el restaura.
+  Compte: `flowed-start.sh --yes` fa el canvi 1:1 amb el model per defecte si
+  ocupa el port (`FLOWED_DEFAULT_MANAGER`), i l'stop el restaura.
 
 ### 30.3 Com es comprova
 
 ```bash
 python3 -m unittest tests.test_fluent_sweep -v
-scripts/fluent-bench.sh --quick --repeat 1
+scripts/flowed-bench.sh --quick --repeat 1
 ```
 
 *Esperat a la segona:* `mostreig efectiu: temperature=0.2, top_p=0.95` per a la
@@ -1714,7 +1714,7 @@ base. Per veure la comprovació treballant, amb un setting que el servidor **sí
 ha de complir:
 
 ```bash
-python3 scripts/fluent-sweep.py test-en --port 4103 --repeat 1 --setting "calent:temperature=0.6"
+python3 scripts/flowed-sweep.py test-en --port 4103 --repeat 1 --setting "calent:temperature=0.6"
 ```
 
 *Esperat:* `mostreig efectiu: temperature=0.6, top_p=0.95`. Si diu `❌ el
@@ -1730,7 +1730,7 @@ una línia JSON per acció del guard, incloent-hi les de resultat "rewritten"
 realment el tutor quan un check diu "corregeix però no pregunta".
 
 ```bash
-scripts/fluent-bench.sh --quick --repeat 6
+scripts/flowed-bench.sh --quick --repeat 6
 ls results/sweep-*/base/transcript-wander.*.md
 ```
 
@@ -1825,7 +1825,7 @@ Afegit (només instrument):
   amb 0 notes) a part dels checks: una execució així ja no es llegeix com sis
   problemes. Columna `sense nota` al resum i `ungraded_runs` a `summary.csv`.
 
-Tanda següent: `scripts/fluent-bench.sh --quick --repeat 12`.
+Tanda següent: `scripts/flowed-bench.sh --quick --repeat 12`.
 
 ### 30.8 El banc demanava una cosa impossible: 6 exercicis amb 3 ítems (2026-09-20)
 
@@ -1837,7 +1837,7 @@ i comptava cada variant («An ___ is a fruit», «…a red fruit») com a repeti
 el guard reescrivia. Una part de les repeticions i dels guards de les tandes
 anteriors venia d'aquí, no del tutor.
 
-Canvi (només banc): `fluent-sweep.py --due` per defecte 3 → 6. Comprovat
+Canvi (només banc): `flowed-sweep.py --due` per defecte 3 → 6. Comprovat
 amb un perfil temporal: `per repassar avui: 6` amb sis ítems diferents
 (`vocabulary_morning`, `agreement_She_goes_to_school`, `tenses_I_woke_up_at_seven`,
 `capitalization_English`, `spelling_because`, `articles_an_apple`). Cada torn de la
@@ -1865,7 +1865,7 @@ el check ho comptava sempre com a fallada: fallava per construcció.
 
 Canvis de banc:
 
-- `fluent-e2e.py` `classify_repeats`: *repetició* = exercici **ja contestat** que
+- `flowed-e2e.py` `classify_repeats`: *repetició* = exercici **ja contestat** que
   torna a sortir. Dins la mateixa pràctica → fallada (el check ara es diu «cap
   exercici ja contestat es repeteix dins la mateixa pràctica»). Entre pràctiques
   → només informatiu, línia `informatiu (no és cap verdict)` del resum. Sense
@@ -1873,7 +1873,7 @@ Canvis de banc:
   Amb les transcripcions de la tanda: 3 repeticions reals de 6 execucions.
 - `cap clau de plantilla` ja no mira el bloc `fluent:review_results` (el web
   l'amaga; era el fals positiu `{"item_id": …}`).
-- `fluent-seed.py`: 32 ítems (14 de vocabulari + 18 de gramàtica; abans 10) i
+- `flowed-seed.py`: 32 ítems (14 de vocabulari + 18 de gramàtica; abans 10) i
   `--due` 6 per defecte amb una barreja fixa (2 de vocabulari, 4 de gramàtica).
   Vocabulari amb `content` en català i `answer` en anglès («matí» → morning);
   gramàtica amb frases senceres. Abans un ítem era només «because» i el tutor
@@ -1912,7 +1912,7 @@ va sobre l'ítem assignat, mig de les paraules de l'ítem a l'exercici):
 Més els de tancament de `full` (arriba al final, s'hi queda, orienta cap als botons).
 
 ```bash
-scripts/fluent-bench.sh --student --quick --repeat 6
+scripts/flowed-bench.sh --student --quick --repeat 6
 ```
 
 Funcions pures i testades a `tests/test_e2e_transcript.py`; l'escenari sencer
@@ -1952,9 +1952,9 @@ ser la de lliçó completa («avalua la resposta i tanca»). 10 checks nous a
 contingut i el tutor preguntava «What is the English word for 'an apple'?».
 Ara és una frase: «I eat an apple every day».
 
-### 30.12 `fluent-testbase.sh`: el banc manual
+### 30.12 `flowed-testbase.sh`: el banc manual
 
-`scripts/fluent-testbase.sh` deixa el perfil de proves amb el mateix fons que la
+`scripts/flowed-testbase.sh` deixa el perfil de proves amb el mateix fons que la
 bateria i l'app oberta perquè hi provis a mà. Comparteix la preparació de perfil
 i model amb la bateria (`scripts/lib-testbed.sh`, un sol lloc). Sembra (buida
 avui, la cua i els patrons: el mateix reset que fa la bateria), aixeca el model si
@@ -1987,7 +1987,7 @@ sí porta les qualitats bones (2, 5, 5, 5, 2-4, 5): el servidor sap la veritat i
 tutor n'inventa el text. Candidat per a la tanda següent: donar al tutor a la nota
 de tancament la xifra real (encerts, nota mitjana, ítems a reforçar), o comprovar-la.
 
-### 30.14 Primera prova per la web (`fluent-testbase.sh`)
+### 30.14 Primera prova per la web (`flowed-testbase.sh`)
 
 Dues coses vistes a mà, escrivint «6» (🎲 Surprise me) al menú:
 
@@ -2044,8 +2044,8 @@ canviar per «finestra», també sense feedback. A la llista hi havia a més «h
 - `NOT_AN_EXERCISE`: `high/medium/low/critical priority`.
 - Tests: 4 a `practiceNote`, 7 al guard, 1 de fingerprint.
 
-**Per provar net:** `fluent-web.sh` directe sobre `test-en` arrossega el «ja preguntat
-avui» de les benches; `scripts/fluent-testbase.sh` neteja el fons abans d'arrencar.
+**Per provar net:** `flowed-web.sh` directe sobre `test-en` arrossega el «ja preguntat
+avui» de les benches; `scripts/flowed-testbase.sh` neteja el fons abans d'arrencar.
 **No verificat amb model encara.**
 
 ### 30.17 Resultat `student` (sweep-20260920-171904) i escenari `journey`
@@ -2058,11 +2058,11 @@ des de la resposta que tanca fins que comença la pràctica lliure no es compta.
 Sense fallades reals del tutor: marcador, versió correcta, nota, `item_id` (36 de 36),
 0 sense nota, guard 0.3 per execució, 2 en total.
 
-**Escenari nou `journey`** (`scripts/fluent-bench.sh --journey --quick`), més complicat i
+**Escenari nou `journey`** (`scripts/flowed-bench.sh --journey --quick`), més complicat i
 sense repeticions:
 1. Lliçó fins al final amb el pla `student` (encerta/falla) + 1 resposta passat el final.
 2. 📚 Vocabulary: 4 respostes (bé, malament, bé, malament). La resposta es treu d'un banc
-   (el `VOCAB` de `fluent-seed.py`) segons la paraula catalana de l'exercici en pantalla;
+   (el `VOCAB` de `flowed-seed.py`) segons la paraula catalana de l'exercici en pantalla;
    si el tutor en posa una de fora del banc, la resposta és «no ho sé» i no es jutja.
    La resposta dolenta és una altra paraula anglesa real.
 3. 📝 Writing: 2 frases amb errors a propòsit.
@@ -2253,9 +2253,9 @@ paraula» (1/6, 5 de 8 targetes d'aquella execució).
 
 Fins ara tot es mesurava en UN dia i amb respostes netes. Tres forats:
 
-**`days` — diversos dies seguits** (`fluent-bench.sh --days`, o
-`fluent-e2e.py --scenario days --days 5`). Cada dia: sessió nova, Lliçó completa,
-espera a la persistència, i `fluent-advance-day.py` mou el rellotge un dia. L'alumne
+**`days` — diversos dies seguits** (`flowed-bench.sh --days`, o
+`flowed-e2e.py --scenario days --days 5`). Cada dia: sessió nova, Lliçó completa,
+espera a la persistència, i `flowed-advance-day.py` mou el rellotge un dia. L'alumne
 té un nombre de vistes abans de saber cada ítem (0, 1 o 2, fixat pel `item_id`): erroni
 fins llavors i correcte després. Per dia es comprova, contra `spaced-repetition.json`:
 la mida de la Lliçó = pendents (topall `review_items_per_day`; cua buida → 3); cap ítem
@@ -2279,8 +2279,8 @@ majúscules, una lletra de menys, a mitges, en català, en un paràgraf de 300 c
 llarga no fa perdre el fil. (En ítems d'ortografia la «typo» no s'aplica: seria
 l'exercici; en majúscules només a vocabulari.)
 
-**Mides i nivells.** `fluent-seed.py --due N` accepta fins a 26 (després dels 8
-escollits a mà alterna gramàtica i vocabulari). `fluent-bench.sh --student --due 2` i
+**Mides i nivells.** `flowed-seed.py --due N` accepta fins a 26 (després dels 8
+escollits a mà alterna gramàtica i vocabulari). `flowed-bench.sh --student --due 2` i
 `--due 15` proven la Lliçó petita i la gran; `--level A1|B1` crea i fa servir
 `test-en-a1` / `test-en-b1` (l'objectiu és el nivell següent) i comprova, amb
 `--journey`, la llargada del Writing per nivell.
@@ -2332,7 +2332,7 @@ com una nota (`topicsNote` a `pacing.ts`, `topicsNoteFor` a `agent.ts`). Manual 
   mateix `session-001@<data>`: el rellotge de paret no es mou, i `update-db.py` va
   trobar el T0 del dia 1, va restaurar les bases a abans del dia 1 i va tornar a
   aplicar. Una instantània nova en 5 dies. Un demà de veritat té una altra data i no hi
-  arriba mai. `fluent-advance-day.py` aparta ara `.update-state/*.json`; el test
+  arriba mai. `flowed-advance-day.py` aparta ara `.update-state/*.json`; el test
   contra el tutor fals reprodueix la falla sense l'arranjament (5 dies, intervals 1 → 6).
 - **«no li torna a preguntar el que ja sabia — finestra / she go to school»** (tres
   benchs): eren arxius `.day-*` del `days` anterior, que el check «ahir» llegia com a
@@ -2516,7 +2516,7 @@ notes al tutor i els guards a la transcripció.
 
 ## 30.38 Fase 0 del camí d'aprenentatge (2026-09-21)
 
-Canvis: `hooks/curriculum.py` (lector, estat derivat, informes, etiquetatge `competency_of`, `rebuild`, `coverage`), `scripts/fluent-sim-path.py` (alumne simulat, `--calibrate`), `curriculum/en-A2.md` (v1, amb `Tags:`), `tests/test_curriculum.py` (35 tests) i **una** línia de servidor: `runAutoPersistence` crida `curriculum.py rebuild --auto --quiet` després d'`accumulate-session` (try/catch propi). Cap comportament de l'app canvia; sense fitxer de currículum per al perfil no fa res.
+Canvis: `hooks/curriculum.py` (lector, estat derivat, informes, etiquetatge `competency_of`, `rebuild`, `coverage`), `scripts/flowed-sim-path.py` (alumne simulat, `--calibrate`), `curriculum/en-A2.md` (v1, amb `Tags:`), `tests/test_curriculum.py` (35 tests) i **una** línia de servidor: `runAutoPersistence` crida `curriculum.py rebuild --auto --quiet` després d'`accumulate-session` (try/catch propi). Cap comportament de l'app canvia; sense fitxer de currículum per al perfil no fa res.
 
 Verificat: tests Python 387 OK, TS OK (test de codi font del cablejat). **No verificat amb el model ni amb l'app real.** Requereix reiniciar l'app (canvi a `agent.ts`) i el bench rebutjarà un build antic.
 
@@ -2541,9 +2541,9 @@ Resultat de journey 125602 (base): 0 falles, 1.3 guards/exec, però és el build
 
 **Canvis de servidor** (`pacing.ts`, `agent.ts`, `tools.ts`): a Mix i Vocabulary el servidor demana a `curriculum.py next` la competència de l'exercici següent i la posa a la nota (substitueix `topics.txt`; Vocabulary només competències amb paraules; una paraula pendent de repàs mana). `followsCompetence` + regla a `turnGuard` (`must practice "<nom>"`, reescriu només l'exercici); `notes.jsonl` guarda `competence`; el registre porta `competency` només si l'exercici seguia la competència i no és de vocabulari. Detalls a ESQUEMA-APRENENTATGE § 6.6.
 
-**Escenari `curriculum`** (`fluent-e2e.py`, `fluent-bench.sh --curriculum`): N dies d'un alumne simulat A1→A2 en pràctica lliure, amb comprovacions i informe del camí (§ 6.7). `fluent-advance-day.py --keep-records` (desplaça `ts` en lloc d'arxivar). `reset`/`restore` també aparten `learner-path.json`. Cal tenir en compte que el bench deixa el perfil de proves amb `target_level=A2`.
+**Escenari `curriculum`** (`flowed-e2e.py`, `flowed-bench.sh --curriculum`): N dies d'un alumne simulat A1→A2 en pràctica lliure, amb comprovacions i informe del camí (§ 6.7). `flowed-advance-day.py --keep-records` (desplaça `ts` en lloc d'arxivar). `reset`/`restore` també aparten `learner-path.json`. Cal tenir en compte que el bench deixa el perfil de proves amb `target_level=A2`.
 
-**Verificat:** tests Python 398 OK (+ tutor fals de l'escenari, 2 tests), tests TS OK, `bun build` de l'agent OK. **No verificat amb el model ni amb l'app real.** Requereix reiniciar l'app. Proposta de primera prova: `scripts/fluent-bench.sh --curriculum --quick --repeat 1` (~30 min, 5 dies × 9 respostes).
+**Verificat:** tests Python 398 OK (+ tutor fals de l'escenari, 2 tests), tests TS OK, `bun build` de l'agent OK. **No verificat amb el model ni amb l'app real.** Requereix reiniciar l'app. Proposta de primera prova: `scripts/flowed-bench.sh --curriculum --quick --repeat 1` (~30 min, 5 dies × 9 respostes).
 
 **Riscos a mirar en el primer resultat:** (1) que els `signals` donin falsos positius al guard (mirar `guards.jsonl` amb `must practice`); (2) que el tutor de Mix ignori la nota (comprovació «segueix la competència»); (3) que la Vocabulary rebi poques competències de vocabulari; (4) que el model de l'alumne es confongui amb els exercicis en català.
 
@@ -2597,12 +2597,12 @@ Test `ready_share` ja no fixa el valor del fitxer (l'Albert l'edita).
 
 ## 30.47 Currículum A1 (2026-09-21)
 
-`curriculum/en-A1.md` v1, a partir de l'esborrany de l'Albert. Correccions: front matter trencat (`## language:` sense `---` → el fitxer no es trobava per nivell); afegits `version`, `status`, `ready_share`, `Depth`, `Weight`, `Tags` (categories vàlides), `Signals`; `Can do`, enunciats i `Check` passats a anglès (cap dependència de la llengua nativa: `Translate (CA->EN)` → `Meaning`); tipus `Ask politely` → `Ask`; `Words` sense «etc.» ni `autumn/fall` (números fins a 100 i 12 mesos complets); seccions `## Gramàtica/Funcions/Vocabulari` (les numerades sortien tal qual al web); `assumes` eliminat (el nivell zero és el punt de partida, explicat a la capçalera); `checkpoint_items` 15 → 20 (14 core). `validate` OK, sim `fluent-sim-path.py --curriculum` OK, 415 proves OK.
+`curriculum/en-A1.md` v1, a partir de l'esborrany de l'Albert. Correccions: front matter trencat (`## language:` sense `---` → el fitxer no es trobava per nivell); afegits `version`, `status`, `ready_share`, `Depth`, `Weight`, `Tags` (categories vàlides), `Signals`; `Can do`, enunciats i `Check` passats a anglès (cap dependència de la llengua nativa: `Translate (CA->EN)` → `Meaning`); tipus `Ask politely` → `Ask`; `Words` sense «etc.» ni `autumn/fall` (números fins a 100 i 12 mesos complets); seccions `## Gramàtica/Funcions/Vocabulari` (les numerades sortien tal qual al web); `assumes` eliminat (el nivell zero és el punt de partida, explicat a la capçalera); `checkpoint_items` 15 → 20 (14 core). `validate` OK, sim `flowed-sim-path.py --curriculum` OK, 415 proves OK.
 
 ## 30.48 Cursos, prova de nivell a l'app i escenari ladder (2026-09-21)
 
 Bench 230509 validat abans de començar: 21/21, guard 27×, etiquetatge 91 %.
-**Fet** (disseny a ESQUEMA §6.8–6.10): (1) tall de curs (`close_course`, certificats, arxiu, avís, `find_curriculum` per escala, registres anteriors al `start_ts` no compten) + simulador encadenat `fluent-sim-path.py --ladder` (A1 → tall → A2 per fast/steady/weak); (2) prova de nivell dins l'app, feta pel servidor sense LLM (Python + `agent.ts` + web: botó 🧪, avís de curs acabat); (3) `--scenario ladder` a `fluent-e2e.py` (A tutor real A1 · B historial sintètic fins que s'obre la prova · C prova pel servidor `--test-mode pass|fail` · D tall o «no tall» · E dos dies d'A2), `fluent-bench.sh --ladder` / `--ladder-fail`.
+**Fet** (disseny a ESQUEMA §6.8–6.10): (1) tall de curs (`close_course`, certificats, arxiu, avís, `find_curriculum` per escala, registres anteriors al `start_ts` no compten) + simulador encadenat `flowed-sim-path.py --ladder` (A1 → tall → A2 per fast/steady/weak); (2) prova de nivell dins l'app, feta pel servidor sense LLM (Python + `agent.ts` + web: botó 🧪, avís de curs acabat); (3) `--scenario ladder` a `flowed-e2e.py` (A tutor real A1 · B historial sintètic fins que s'obre la prova · C prova pel servidor `--test-mode pass|fail` · D tall o «no tall» · E dos dies d'A2), `flowed-bench.sh --ladder` / `--ladder-fail`.
 **Proves:** suite Python 440 OK (CourseTest, LevelTestTest —totes les respostes esperades dels Check d'A1 i A2 s'accepten—, LadderScenarioTest: lectura de les preguntes, historial sintètic → llest, prova → certificat i A2, tot malament → cap tall); `web-render.test.ts` i `lesson-note.test.ts` OK; parts TS sense canvis des de l'última verificació. Fora de l'app, el mateix flux (historial sintètic → prova → certificat → A2) passa per fast/steady/weak (24 preguntes).
 **No verificat en viu:** el camí real de la prova (servidor + web) i l'escenari `ladder` contra el tutor, cal executar-los; tampoc la pantalla (🧪, avís).
 Decisions de l'Albert: no s'arrosseguen competències febles; «competències personalitzades» és futur.

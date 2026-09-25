@@ -40,7 +40,7 @@ class MigrateDbTest(unittest.TestCase):
             self.write_db(name, {"seed": name})  # no _schema_version
 
     def _run(self, *args):
-        env = {k: v for k, v in os.environ.items() if k != "FLUENT_DATA_DIR"}
+        env = {k: v for k, v in os.environ.items() if k != "FLOWED_DATA_DIR"}
         return subprocess.run(
             ["python3", str(SCRIPT), *args],
             capture_output=True, text=True, env=env,
@@ -121,8 +121,8 @@ class MigrateDbTest(unittest.TestCase):
 
     def test_env_var_data_dir(self):
         self.write_legacy_set()
-        env = {k: v for k, v in os.environ.items() if k != "FLUENT_DATA_DIR"}
-        env["FLUENT_DATA_DIR"] = str(self.data)
+        env = {k: v for k, v in os.environ.items() if k != "FLOWED_DATA_DIR"}
+        env["FLOWED_DATA_DIR"] = str(self.data)
         proc = subprocess.run(["python3", str(SCRIPT)],
                               capture_output=True, text=True, env=env)
         self.assertEqual(proc.returncode, 0, msg=proc.stderr)
@@ -146,8 +146,8 @@ class MigrateDbTest(unittest.TestCase):
         lock_path = self.data / ".db.lock"
         with open(lock_path, "a+", encoding="utf-8") as held:
             fcntl.flock(held.fileno(), fcntl.LOCK_EX)
-            env = {k: v for k, v in os.environ.items() if k != "FLUENT_DATA_DIR"}
-            env["FLUENT_DB_LOCK_TIMEOUT"] = "0.1"
+            env = {k: v for k, v in os.environ.items() if k != "FLOWED_DATA_DIR"}
+            env["FLOWED_DB_LOCK_TIMEOUT"] = "0.1"
             run = subprocess.run(
                 ["python3", str(SCRIPT), "--dir", str(self.data)],
                 capture_output=True, text=True, env=env,

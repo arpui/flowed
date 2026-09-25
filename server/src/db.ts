@@ -2,8 +2,8 @@
 // Reproduces the session/message/part schema the Fluent persistence hooks
 // (accumulate-session.py / persist-session.py) read, so those hooks keep
 // working unchanged. The DB lives at
-//   ~/.fluent/<id>/sessions/sessions.db
-// (legacy profiles: ~/.fluent/<id>/.opencode/opencode/opencode.db) — the same
+//   ~/.flowed/<id>/sessions/sessions.db
+// (legacy profiles: ~/.flowed/<id>/.opencode/opencode/opencode.db) — the same
 // order `resolve_sessions_db` derives in persist-session.py.
 //
 // Only session / message / part are needed; Fluent never reads the other

@@ -132,8 +132,8 @@ Nova regla:
 - (Ja hi ha la regla de seleccions de menú de l'A3: "6"/"ok"/"next" no són respostes.)
 
 ### 4.5 Reinici + reset
-- `scripts/fluent-web.sh --stop --port 4100`
-- `FLUENT_WEB_PASSWORD=8cYfFtlZhAu8NwTg nohup scripts/fluent-web.sh --app alex-en > /tmp/fluent-web-restart.log 2>&1 &`
+- `scripts/flowed-web.sh --stop --port 4100`
+- `FLUENT_WEB_PASSWORD=8cYfFtlZhAu8NwTg nohup scripts/flowed-web.sh --app alex-en > /tmp/fluent-web-restart.log 2>&1 &`
 - `python3 scripts/reset-session.py`
 - Verificar: `devMode=false` al log, deep (12321) i face (12322) UP, web UP.
 

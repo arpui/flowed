@@ -79,7 +79,7 @@ class CapaABTest(unittest.TestCase):
         db.close()
 
     def _run(self, script, *args):
-        env = {**os.environ, "FLUENT_DATA_DIR": str(self.dir)}
+        env = {**os.environ, "FLOWED_DATA_DIR": str(self.dir)}
         proc = subprocess.run([sys.executable, str(HOOKS / script), *args],
                               capture_output=True, text=True, env=env, cwd=REPO_ROOT)
         self.assertEqual(proc.returncode, 0, f"{script} failed: {proc.stderr}")

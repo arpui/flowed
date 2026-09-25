@@ -22,7 +22,7 @@ parametritzable que serveixi aquí (railab) i a la 4060.
 - **`scripts/models/`**: 6 llançadors (`docker-llama.sh` inclòs; `ROOT`
   arreglat a doble `dirname`, rutes `scripts/models/`). Cridades sols, sense
   l'start.
-- **`fluent-start.sh` / `fluent-stop.sh`**: lògica de `fluent-up.sh`
+- **`flowed-start.sh` / `flowed-stop.sh`**: lògica de `fluent-up.sh`
   generalitzada (`--dry-run`, `--gpu`, `--models/--webs-only`, detecció amb
   neteja de rancis, guàrdia GPU, espera de ports). `BACKEND=native|docker`:
   amb `docker`, l'start crida `docker-llama.sh` (llegeix `FLUENT_DEEP_*`);
@@ -36,7 +36,7 @@ parametritzable que serveixi aquí (railab) i a la 4060.
 Verificat: `bash -n` tot, `--dry-run` normal i rapve-simulada, cicle
 stop→start real (deep Q4 + 3 webs, logins per nom OK).
 
-## 2026-09-08 — Mode friend v0.3 (opt-in per alumne) + `fluent-friend.sh`
+## 2026-09-08 — Mode friend v0.3 (opt-in per alumne) + `flowed-friend.sh`
 
 ### Context / objectiu
 
@@ -48,7 +48,7 @@ trencar res i sense matar la 4060, amb rollback garantit.
 
 - Flag `preferences.tutor_style` (`friend`/absent=clàssic) + `interests[]`
   (max 3) + `about` (1 línia): camps opcionals, cap migració. Toggle amb
-  `scripts/fluent-friend.sh <id> [on|off|status]` (`off` = clau eliminada,
+  `scripts/flowed-friend.sh <id> [on|off|status]` (`off` = clau eliminada,
   perfil byte-idèntic verificat en 3 perfils).
 - Únic toc de codi: allowlist del compacte `read-db.py` (+3 camps).
   Prompts: bloc FRIEND condicional a `tutor.md`, salutació `learn` §3 (P.S.
@@ -71,12 +71,12 @@ debò, login humà per a l'alumnat i treure soroll de la UI.
 - Deep 12321→**12322**, face→**12323** (tots els candidats face el
   comparteixen; `llama-face.sh` → `llama-omnicoder.sh` legacy).
   `opencode.json`, `server/src/index.ts` (+override `face` a
-  `fluent-models.json`), `tutor-fast.md`, `fluent-web.sh`.
+  `fluent-models.json`), `tutor-fast.md`, `flowed-web.sh`.
 - **Fallback** (`agent.ts` `resolveModel` + reintent al `catch`): sense face,
   `tutor-fast` corre amb deep (només log). E2: bateria fast 5–15 s amb deep
   sol a la 3090 → face arxivable en la pràctica.
 - **Auth**: usuari = nom en minúscules (`nes`…), legacy `opencode` acceptat
-  (`http.ts` + `resolveLoginName` + missatges `fluent-web.sh`). Passwords
+  (`http.ts` + `resolveLoginName` + missatges `flowed-web.sh`). Passwords
   intactes.
 - **UI**: xip icona sola + `skill`/`bash` amagats + mode debug (`?debug=1`,
   triple-clic), ➤ buit = `next` només si el tutor no espera resposta
@@ -293,7 +293,7 @@ Tres frents:
 2. **"Acabar sessió = tancar el navegador" ja ho deixa tot fet** gràcies a la
    capa A, **menys** el fitxer `results/*.md`: ara la capa A també el genera.
 3. **No existia cap via neta per provisionar un usuari nou** (ni script ni web
-   d'"admin"): `fluent-web.sh` rebutja perfils sense `learner-profile.json`, i
+   d'"admin"): `flowed-web.sh` rebutja perfils sense `learner-profile.json`, i
    `data_dir()` ignora un `FLUENT_DATA_DIR` buit. Creat `scripts/new-user.sh`.
 
 ### Canvis
@@ -311,7 +311,7 @@ Tres frents:
 4. `new-user.sh test-en --port 4102` → crea `~/.fluent/test-en/` amb els 6
    JSON + `.web-password`; `FLUENT_DATA_DIR=~/.fluent/test-en` → `data_dir()`
    retorna `~/.fluent/test-en` (el seed fa que el guard ho accepti).
-5. Llançat `scripts/fluent-web.sh --app test-en --port 4102`; API
+5. Llançat `scripts/flowed-web.sh --app test-en --port 4102`; API
    `POST /session` + `POST /session/{id}/command {command:"fluent-learn"}`
    → **`init count=13`** i salutació del tutor ("Hello, Test! 👋") → el setup
    del perfil és **funcional de cap a cap** (el mateix `leaner.md` que fallava
@@ -348,13 +348,13 @@ de pràctica.
 |---|---|---|
 | `scripts/new-user.sh` | En seedar el perfil, afegeix `preferences.setup_complete: false` al `learner-profile.json`. | Marca el perfil com a "pendent de setup" perquè la web ho sàpiga. |
 | `skills/fluent-setup/SKILL.md` | A l'**alta inicial**, escriure `preferences.setup_complete: true` al `learner-profile.json`. | En completar la configuració, el perfil passa a "configurat" (la web llavors arrenca `/fluent-learn`). |
-| `scripts/fluent-web-proxy.mjs` | Endpoint reservat `GET /api/fluent/setup-state` (no es proxyïa cap a opencode): llegeix `<FLUENT_DATA_DIR>/learner-profile.json` i retorna `{ setup_complete: bool }`. **Fallback segur:** si el camp **no existeix** (perfils migrats com `alex`/`nes`/`sam`) → `true`; només `false` quan hi ha un `false` **explícit**. | Proveeix l'estat a la web sense cremar cap torn de model, protegint els usuaris existents. |
+| `scripts/flowed-web-proxy.mjs` | Endpoint reservat `GET /api/fluent/setup-state` (no es proxyïa cap a opencode): llegeix `<FLUENT_DATA_DIR>/learner-profile.json` i retorna `{ setup_complete: bool }`. **Fallback segur:** si el camp **no existeix** (perfils migrats com `alex`/`nes`/`sam`) → `true`; només `false` quan hi ha un `false` **explícit**. | Proveeix l'estat a la web sense cremar cap torn de model, protegint els usuaris existents. |
 | `web/app.js` | Nova `initialCommand()`: consulta `setup-state` i tria `fluent-setup` (si `false`) o `fluent-learn` (si `true`); fallback a `fluent-learn` si l'endpoint falla. Aplicat a `init()` i `newSession()` (on abans s'auto-arrencava sempre `fluent-learn`). | Decidir el primer pas segons l'estat de configuració del perfil. |
 
 ### Com es verifica
 
 1. `bash -n scripts/new-user.sh` → OK; `node --check web/app.js` → OK;
-   `bun build scripts/fluent-web-proxy.mjs` → OK.
+   `bun build scripts/flowed-web-proxy.mjs` → OK.
 2. `new-user.sh` posa `setup_complete: false` (comprovat amb `curl` de
    `setup-state` = `false`).
 3. **Prova integrada real:** perfil nou → obrir la web → es llança

@@ -41,13 +41,13 @@ class ResolveSessionsDbTest(unittest.TestCase):
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="fluent-ps-"))
-        self._saved_env = os.environ.pop("FLUENT_SESSIONS_DB", None)
+        self._saved_env = os.environ.pop("FLOWED_SESSIONS_DB", None)
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
-        os.environ.pop("FLUENT_SESSIONS_DB", None)
+        os.environ.pop("FLOWED_SESSIONS_DB", None)
         if self._saved_env is not None:
-            os.environ["FLUENT_SESSIONS_DB"] = self._saved_env
+            os.environ["FLOWED_SESSIONS_DB"] = self._saved_env
 
     def _make(self, *rel):
         path = self.tmp.joinpath(*rel)
@@ -61,7 +61,7 @@ class ResolveSessionsDbTest(unittest.TestCase):
 
     def test_env_override_beats_the_profile(self):
         self._make("sessions", "sessions.db")
-        os.environ["FLUENT_SESSIONS_DB"] = str(self.tmp / "elsewhere.db")
+        os.environ["FLOWED_SESSIONS_DB"] = str(self.tmp / "elsewhere.db")
         self.assertEqual(self.ps.resolve_sessions_db(self.tmp), self.tmp / "elsewhere.db")
 
     def test_current_path_when_present(self):
@@ -111,7 +111,7 @@ class DbMissingGuardTest(unittest.TestCase):
 
     def _base_env(self):
         env = {k: v for k, v in os.environ.items()
-               if k not in ("FLUENT_DATA_DIR", "CLAUDE_PROJECT_DIR",
+               if k not in ("FLOWED_DATA_DIR", "CLAUDE_PROJECT_DIR",
                             "CLAUDE_PLUGIN_ROOT")}
         env["HOME"] = str(self.tmp)  # keep default db fallback out of the real home
         return env
@@ -134,7 +134,7 @@ class DbMissingGuardTest(unittest.TestCase):
         (data / "learner-profile.json").write_text(json.dumps(
             {"learner": {"name": "Tester"}}))
         env = self._base_env()
-        env["FLUENT_DATA_DIR"] = str(data)
+        env["FLOWED_DATA_DIR"] = str(data)
         # HOME is tmp, so the default ~/.local/share/opencode/opencode.db
         # does not exist either.
         proc = subprocess.run(

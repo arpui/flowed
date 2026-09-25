@@ -1,18 +1,19 @@
 #!/usr/bin/env bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR: where the profiles live
 # El banc de proves MANUAL: el mateix perfil i el mateix fons que fa servir la
 # bateria, però amb l'app oberta perquè hi pugis provar coses a mà des del navegador.
 #
-#   scripts/fluent-testbase.sh                 # sembra el fons, aixeca el model i l'app
-#   scripts/fluent-testbase.sh --keep          # NO sembris: continua on ho vas deixar
-#   scripts/fluent-testbase.sh --port 4110     # port de l'app (per defecte 4105; la bateria fa servir 4103)
-#   scripts/fluent-testbase.sh --due 3         # ítems per repassar avui (per defecte 6 = una lliçó)
-#   scripts/fluent-testbase.sh --profile test-en
-#   scripts/fluent-testbase.sh --stop          # atura l'app (el model es queda)
-#   scripts/fluent-testbase.sh --stop --models # atura l'app i també el model
+#   scripts/flowed-testbase.sh                 # sembra el fons, aixeca el model i l'app
+#   scripts/flowed-testbase.sh --keep          # NO sembris: continua on ho vas deixar
+#   scripts/flowed-testbase.sh --port 4110     # port de l'app (per defecte 4105; la bateria fa servir 4103)
+#   scripts/flowed-testbase.sh --due 3         # ítems per repassar avui (per defecte 6 = una lliçó)
+#   scripts/flowed-testbase.sh --profile test-en
+#   scripts/flowed-testbase.sh --stop          # atura l'app (el model es queda)
+#   scripts/flowed-testbase.sh --stop --models # atura l'app i també el model
 #
 # Fa, per aquest ordre:
 #   1. el perfil de proves (només si no existeix; un que ja hi és no es reescriu);
-#   2. el fons: fluent-seed.py — 21 dies de passat, 32 ítems, 6 per repassar avui.
+#   2. el fons: flowed-seed.py — 21 dies de passat, 32 ítems, 6 per repassar avui.
 #      ATENCIÓ: això BUIDA el dia d'avui, la cua i els patrons del perfil. És el
 #      mateix reset que fa la bateria, així que el que hi facis a mà es perd la
 #      propera vegada que sembris (o que corri la bateria amb aquest perfil).
@@ -20,8 +21,8 @@
 #   4. l'app, amb l'usuari i la contrasenya que t'imprimeix.
 #
 # Mentre proves, el que fa el servidor és a:
-#   ~/.fluent/<perfil>/.metrics/guards.jsonl   (quan el guard intervé)
-#   ~/.fluent/<perfil>/.metrics/notes.jsonl    (què li diu el servidor al tutor a cada torn)
+#   ~/.flowed/<perfil>/.metrics/guards.jsonl   (quan el guard intervé)
+#   ~/.flowed/<perfil>/.metrics/notes.jsonl    (què li diu el servidor al tutor a cada torn)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -53,9 +54,9 @@ case "$PROFILE" in
 esac
 
 if [[ $STOP -eq 1 ]]; then
-  scripts/fluent-web.sh --stop --port "$PORT"
+  scripts/flowed-web.sh --stop --port "$PORT"
   if [[ $STOP_MODELS -eq 1 ]]; then
-    scripts/fluent-stop.sh --models-only || true
+    scripts/flowed-stop.sh --models-only || true
   else
     echo "(el model continua corrent; per aturar-lo també: $0 --stop --models)"
   fi
@@ -71,7 +72,7 @@ tb_ensure_profile "$PROFILE" "$PORT"
 # podria escriure sobre el perfil just després del reset.
 if [[ -f "/tmp/fluent-web-$PORT.pid" ]]; then
   echo "(hi havia una app al port $PORT; l'aturo abans)"
-  scripts/fluent-web.sh --stop --port "$PORT" >/dev/null || true
+  scripts/flowed-web.sh --stop --port "$PORT" >/dev/null || true
   sleep 3
 fi
 
@@ -80,18 +81,18 @@ if [[ $KEEP -eq 1 ]]; then
   echo "fons: es queda com estava (--keep)"
 else
   echo "fons: el sembro (això buida avui, la cua i els patrons de $PROFILE)"
-  python3 scripts/fluent-seed.py "$PROFILE" --days "$DAYS" --due "$DUE"
+  python3 scripts/flowed-seed.py "$PROFILE" --days "$DAYS" --due "$DUE"
 fi
 echo
 
 tb_ensure_model || exit $?
 
 # L'app ha de parlar amb el model que hem comprovat, no amb el del codi per defecte.
-export FLUENT_DEEP_BASE_URL="http://127.0.0.1:$(tb_model_port)"
-scripts/fluent-web.sh --app --port "$PORT" "$PROFILE"
+export FLOWED_DEEP_BASE_URL="http://127.0.0.1:$(tb_model_port)"
+scripts/flowed-web.sh --app --port "$PORT" "$PROFILE"
 
 echo
 echo "banc de proves manual a punt. Què mirar mentre hi proves:"
-echo "  tail -f ~/.fluent/$PROFILE/.metrics/guards.jsonl"
-echo "  tail -f ~/.fluent/$PROFILE/.metrics/notes.jsonl"
-echo "  atura'l amb: scripts/fluent-testbase.sh --stop --port $PORT"
+echo "  tail -f $FLOWED_HOME_DIR/$PROFILE/.metrics/guards.jsonl"
+echo "  tail -f $FLOWED_HOME_DIR/$PROFILE/.metrics/notes.jsonl"
+echo "  atura'l amb: scripts/flowed-testbase.sh --stop --port $PORT"

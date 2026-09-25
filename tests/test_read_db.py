@@ -16,7 +16,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "hooks" / "read-db.py"
 
-MANAGED_ENV = ("FLUENT_DATA_DIR", "FLUENT_PROJECT_DIR", "FLUENT_ROOT",
+MANAGED_ENV = ("FLOWED_DATA_DIR", "FLOWED_PROJECT_DIR", "FLOWED_ROOT",
                "CLAUDE_PROJECT_DIR", "CLAUDE_PLUGIN_ROOT", "HOME")
 
 

@@ -128,9 +128,9 @@ export async function expandDirectives(
     try {
       const env: Record<string, string> = {};
       for (const [k, v] of Object.entries(opts.env)) if (typeof v === "string") env[k] = v;
-      env["FLUENT_DATA_DIR"] = opts.dataDir;
-      env["FLUENT_PROJECT_DIR"] = opts.root;
-      env["FLUENT_ROOT"] = opts.root;
+      env["FLOWED_DATA_DIR"] = opts.dataDir;
+      env["FLOWED_PROJECT_DIR"] = opts.root;
+      env["FLOWED_ROOT"] = opts.root;
       const proc = Bun.spawn(["bash", "-c", cmd], {
         cwd: opts.root,
         env,

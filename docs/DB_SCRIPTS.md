@@ -137,7 +137,7 @@ advisory `flock()` on `<data-dir>/.db.lock`:
 | `read-db.py` | No lock (read-only; kept outside this change) |
 | `session-draft.json` writers | Not covered by this DB lock |
 
-`FLUENT_DB_LOCK_TIMEOUT` sets the acquire timeout in seconds (default `10`).
+`FLOWED_DB_LOCK_TIMEOUT` sets the acquire timeout in seconds (default `10`).
 On timeout the writer exits with `2` and leaves the databases untouched.
 `.db.lock` is not copied into `.backups/` and is released by the OS if the
 holding process dies.

@@ -24,7 +24,7 @@ const BUILD_STAMP = buildStamp(
   (d) => fs.readdirSync(d)
 );
 
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 
 function resolveRoot(): string {
   // Prefer the project root (contains AGENTS.md). When launched from the repo
@@ -39,10 +39,10 @@ function expand(p: string): string {
 }
 
 function resolveDataDir(root: string): { dir: string; from: string } {
-  if (process.env.FLUENT_DATA_DIR) {
-    return { dir: path.resolve(expand(process.env.FLUENT_DATA_DIR)), from: "env" };
+  if (process.env.FLOWED_DATA_DIR) {
+    return { dir: path.resolve(expand(process.env.FLOWED_DATA_DIR)), from: "env" };
   }
-  const marker = path.join(root, ".fluent-active");
+  const marker = path.join(root, ".flowed-active");
   try {
     const m = fs.readFileSync(marker, "utf8").trim();
     if (m) return { dir: path.resolve(expand(m)), from: "marker" };
@@ -53,7 +53,7 @@ function resolveDataDir(root: string): { dir: string; from: string } {
 }
 
 function resolvePassword(dataDir: string): string {
-  if (process.env.FLUENT_WEB_PASSWORD) return process.env.FLUENT_WEB_PASSWORD;
+  if (process.env.FLOWED_WEB_PASSWORD) return process.env.FLOWED_WEB_PASSWORD;
   const file = path.join(dataDir, ".web-password");
   try {
     return fs.readFileSync(file, "utf8").trim();
@@ -94,13 +94,13 @@ function loadModels(root: string): AgentModels {
   };
   // Model endpoints: project-local config (later wins):
   //   code defaults <- config/fluent.json (the ONE source, P1-9)
-  //                  <- $FLUENT_MODELS_FILE (explicit file override: an
-  //                     experiment, e.g. scripts/fluent-sweep.py)
-  //                  <- $FLUENT_DEEP_BASE_URL / $FLUENT_FACE_BASE_URL (top;
+  //                  <- $FLOWED_MODELS_FILE (explicit file override: an
+  //                     experiment, e.g. scripts/flowed-sweep.py)
+  //                  <- $FLOWED_DEEP_BASE_URL / $FLOWED_FACE_BASE_URL (top;
   //                     so .env drives the server too, not just the scripts)
   const layers: Array<Record<string, unknown>> = [];
   // Canonical project configuration (P1-9): where every model parameter lives.
-  // Only an explicit $FLUENT_MODELS_FILE and the *_BASE_URL variables below are
+  // Only an explicit $FLOWED_MODELS_FILE and the *_BASE_URL variables below are
   // allowed to sit on top of it.
   try {
     const canonical = JSON.parse(fs.readFileSync(path.join(root, "config", "fluent.json"), "utf8"));
@@ -129,7 +129,7 @@ function loadModels(root: string): AgentModels {
   // fluent.json — except that it won over it, so an edit to `temperature` in
   // fluent.json did nothing and a sweep ran every setting at 0.2 without
   // saying so. It is gone (obsolet/config/): a value has one place.
-  for (const p of process.env.FLUENT_MODELS_FILE ? [process.env.FLUENT_MODELS_FILE] : []) {
+  for (const p of process.env.FLOWED_MODELS_FILE ? [process.env.FLOWED_MODELS_FILE] : []) {
     try {
       const raw = JSON.parse(fs.readFileSync(p, "utf8"));
       if (raw && typeof raw === "object") layers.push(raw);
@@ -171,10 +171,10 @@ function loadModels(root: string): AgentModels {
       timeoutMs: num(f.timeout_ms, faceDefaults.timeoutMs),
     };
     // Explicit env wins over every file (lets .env drive the server too).
-    if (process.env.FLUENT_DEEP_BASE_URL) deepModel.baseURL = process.env.FLUENT_DEEP_BASE_URL;
-    if (process.env.FLUENT_FACE_BASE_URL) faceModel.baseURL = process.env.FLUENT_FACE_BASE_URL;
-    // Token streaming: opt-in, off by default (FLUENT_STREAM=1).
-    const stream = /^(1|true|yes|on)$/i.test(process.env.FLUENT_STREAM ?? "");
+    if (process.env.FLOWED_DEEP_BASE_URL) deepModel.baseURL = process.env.FLOWED_DEEP_BASE_URL;
+    if (process.env.FLOWED_FACE_BASE_URL) faceModel.baseURL = process.env.FLOWED_FACE_BASE_URL;
+    // Token streaming: opt-in, off by default (FLOWED_STREAM=1).
+    const stream = /^(1|true|yes|on)$/i.test(process.env.FLOWED_STREAM ?? "");
     deepModel.stream = stream;
     faceModel.stream = stream;
     return {
@@ -204,7 +204,7 @@ interface ModelView {
   repeatPenalty?: number;
   repeatLastN?: number;
   timeoutMs: number;
-  /** Token streaming, set from FLUENT_STREAM (off by default). */
+  /** Token streaming, set from FLOWED_STREAM (off by default). */
   stream?: boolean;
 }
 interface EvalView {
@@ -225,7 +225,7 @@ interface EvalView {
 // being read there (and the old build of the app keeps working on it) until
 // scripts/migrate-sessions-db.py copies it over.
 export function resolveSessionsDb(dataDir: string): { path: string; legacy: boolean } {
-  const fromEnv = process.env.FLUENT_SESSIONS_DB;
+  const fromEnv = process.env.FLOWED_SESSIONS_DB;
   if (fromEnv) return { path: path.resolve(expand(fromEnv)), legacy: false };
   const current = path.join(dataDir, "sessions", "sessions.db");
   if (fs.existsSync(current)) return { path: current, legacy: false };
@@ -242,13 +242,13 @@ function main() {
   const { dir: dataDir } = resolveDataDir(root);
   if (!fs.existsSync(path.join(dataDir, "learner-profile.json"))) {
     console.error(`[Fluent] ⚠ data dir has no learner-profile.json: ${dataDir}`);
-    console.error(`       create the profile first, or set FLUENT_DATA_DIR.`);
+    console.error(`       create the profile first, or set FLOWED_DATA_DIR.`);
     process.exit(1);
   }
 
   const password = resolvePassword(dataDir);
   const loginName = resolveLoginName(dataDir);
-  const port = Number(process.env.PORT) || Number(process.env.FLUENT_PORT) || 4100;
+  const port = Number(process.env.PORT) || Number(process.env.FLOWED_PORT) || 4100;
   const models = loadModels(root);
 
   const sessionsDb = resolveSessionsDb(dataDir);
@@ -276,7 +276,7 @@ function main() {
   console.log(`[Fluent] data dir : ${dataDir}`);
   console.log(`[Fluent] deep     : ${models.deep.baseURL}  (${models.deep.name})`);
   console.log(`[Fluent] face     : ${models.face.baseURL}  (${models.face.name})`);
-  console.log(`[Fluent] streaming: ${models.deep.stream ? "on (FLUENT_STREAM)" : "off"}`);
+  console.log(`[Fluent] streaming: ${models.deep.stream ? "on (FLOWED_STREAM)" : "off"}`);
   console.log(`[Fluent] serving  : http://127.0.0.1:${port}  (login: ${loginName} / ****)`);
   console.log(`[Fluent] build    : ${BUILD_STAMP}  (server/src as it was when this process started)`);
 

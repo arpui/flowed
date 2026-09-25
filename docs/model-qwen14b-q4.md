@@ -108,7 +108,7 @@ mesurar — i llavors hi haurà un motiu mesurat per fer-ho.
 Cal comprovar-ho:
 
 ```bash
-python3 scripts/fluent-config.py --json | grep -i kv
+python3 scripts/flowed-config.py --json | grep -i kv
 scripts/models/llama-deep-14b-q4.sh --stop
 scripts/models/llama-deep-14b-q4.sh
 nvidia-smi --query-gpu=memory.used --format=csv
@@ -129,14 +129,14 @@ A `config/fluent.json`, dins `models.deep`:
 
 `f16` és el valor per defecte del codi; el repositori ara porta `q8_0` escrit.
 
-**Atenció al precedent:** `FLUENT_DEEP_CTX` estava fixat a `32768` als tres
+**Atenció al precedent:** `FLOWED_DEEP_CTX` estava fixat a `32768` als tres
 fitxers `.env`, i l'`.env` **mana sobre el config**. Amb el valor allà, canviar
 `config/fluent.json` no hauria servit de res. S'ha comentat als tres
 (`.env`, `.env.railab`, `.env.rapve`) perquè les dues màquines faran servir el
 mateix context; ja no és un valor per màquina. Comprova sempre què surt de debò:
 
 ```bash
-python3 scripts/fluent-config.py --sh | grep -i "DEEP_CTX\|KV_TYPE"
+python3 scripts/flowed-config.py --sh | grep -i "DEEP_CTX\|KV_TYPE"
 ``` Els dos llançadors (natiu i Docker) hi afegeixen
 `-ctk/-ctv` només quan `kv_type` no és `f16`, i ho diuen a la línia d'arrencada.
 
@@ -228,7 +228,7 @@ Des d'aquí (model a `IP:PORT`, p. ex. `192.168.31.102:12321`):
 curl -sf http://IP:PORT/health
 curl -sf http://IP:PORT/v1/models | head -c 400
 
-# 1. Override via env (sense tocar config/: $FLUENT_MODELS_FILE mana sobre tot)
+# 1. Override via env (sense tocar config/: $FLOWED_MODELS_FILE mana sobre tot)
 python3 - <<'EOF'
 import json
 json.dump({
@@ -244,8 +244,8 @@ rm -rf /tmp/remote-test /tmp/remote-xdg
 cp -r ~/.fluent/test-en /tmp/remote-test
 rm -f /tmp/remote-test/.opencode/opencode/opencode.db*
 mkdir -p /tmp/remote-xdg
-XDG_DATA_HOME=/tmp/remote-xdg FLUENT_DATA_DIR=/tmp/remote-test PORT=4192 \
-  FLUENT_WEB_PASSWORD=remotetest FLUENT_MODELS_FILE=/tmp/remote-models.json \
+XDG_DATA_HOME=/tmp/remote-xdg FLOWED_DATA_DIR=/tmp/remote-test PORT=4192 \
+  FLOWED_WEB_PASSWORD=remotetest FLOWED_MODELS_FILE=/tmp/remote-models.json \
   nohup bun server/src/index.ts > /tmp/remote-web.log 2>&1 &
  sleep 8
 
@@ -259,7 +259,7 @@ time curl -s -u opencode:remotetest -X POST http://127.0.0.1:4192/api/session/$S
 
 # 4. Neteja (la config de producció no s'ha tocat: l'override era només env)
 ss -tlnp 2>/dev/null | grep ":4192" | grep -oP "pid=\K[0-9]+" | head -1 > /tmp/fluent-web-4192.pid
-scripts/fluent-web.sh --stop --port 4192
+scripts/flowed-web.sh --stop --port 4192
 rm -rf /tmp/remote-test /tmp/remote-xdg /tmp/remote-out.json /tmp/remote-models.json
 ```
 

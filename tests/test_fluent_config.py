@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 def _load():
     spec = importlib.util.spec_from_file_location(
-        "fluent_config_mod", REPO_ROOT / "scripts" / "fluent-config.py")
+        "fluent_config_mod", REPO_ROOT / "scripts" / "flowed-config.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -38,35 +38,35 @@ class ConfigLayersTest(unittest.TestCase):
             },
             "webs": {"a-en": 4100, "b-en": 4101},
         }), encoding="utf-8")
-        self._saved = {k: v for k, v in os.environ.items() if k.startswith("FLUENT_")}
+        self._saved = {k: v for k, v in os.environ.items() if k.startswith("FLOWED_")}
         for k in self._saved:
             del os.environ[k]
 
     def tearDown(self):
-        for k in [k for k in os.environ if k.startswith("FLUENT_")]:
+        for k in [k for k in os.environ if k.startswith("FLOWED_")]:
             del os.environ[k]
         os.environ.update(self._saved)
 
     def test_json_alone_produces_the_script_variables(self):
         values = self.mod.resolve()
-        self.assertEqual(values["FLUENT_DEEP_PORT"], "12322")
-        self.assertEqual(values["FLUENT_DEEP_MODEL"], "/models/deep.gguf")
-        self.assertEqual(values["FLUENT_DEEP_MANAGED"], "1")
-        self.assertEqual(values["FLUENT_FACE_ENABLED"], "0")
-        self.assertEqual(values["FLUENT_WEBS"], "a-en:4100 b-en:4101")
+        self.assertEqual(values["FLOWED_DEEP_PORT"], "12322")
+        self.assertEqual(values["FLOWED_DEEP_MODEL"], "/models/deep.gguf")
+        self.assertEqual(values["FLOWED_DEEP_MANAGED"], "1")
+        self.assertEqual(values["FLOWED_FACE_ENABLED"], "0")
+        self.assertEqual(values["FLOWED_WEBS"], "a-en:4100 b-en:4101")
 
     def test_env_file_overrides_the_json(self):
-        self.mod.ENV_FILE.write_text("FLUENT_DEEP_PORT=13000\n# comment\nFLUENT_DEEP_GPU=0\n",
+        self.mod.ENV_FILE.write_text("FLOWED_DEEP_PORT=13000\n# comment\nFLOWED_DEEP_GPU=0\n",
                                      encoding="utf-8")
         values = self.mod.resolve()
-        self.assertEqual(values["FLUENT_DEEP_PORT"], "13000")
-        self.assertEqual(values["FLUENT_DEEP_GPU"], "0")
-        self.assertEqual(values["FLUENT_DEEP_MODEL"], "/models/deep.gguf")
+        self.assertEqual(values["FLOWED_DEEP_PORT"], "13000")
+        self.assertEqual(values["FLOWED_DEEP_GPU"], "0")
+        self.assertEqual(values["FLOWED_DEEP_MODEL"], "/models/deep.gguf")
 
     def test_environment_overrides_everything(self):
-        self.mod.ENV_FILE.write_text("FLUENT_DEEP_PORT=13000\n", encoding="utf-8")
-        os.environ["FLUENT_DEEP_PORT"] = "14000"
-        self.assertEqual(self.mod.resolve()["FLUENT_DEEP_PORT"], "14000")
+        self.mod.ENV_FILE.write_text("FLOWED_DEEP_PORT=13000\n", encoding="utf-8")
+        os.environ["FLOWED_DEEP_PORT"] = "14000"
+        self.assertEqual(self.mod.resolve()["FLOWED_DEEP_PORT"], "14000")
 
     def test_missing_config_is_not_fatal(self):
         """No config at all: built-in defaults, but no model path — which is the
@@ -74,19 +74,19 @@ class ConfigLayersTest(unittest.TestCase):
         self.mod.CONFIG = self.tmp / "does-not-exist.json"
         self.mod.ENV_FILE = self.tmp / "does-not-exist.env"
         values = self.mod.resolve()
-        self.assertNotIn("FLUENT_DEEP_MODEL", values)
-        self.assertEqual(values["FLUENT_DEEP_PORT"], "12322")
+        self.assertNotIn("FLOWED_DEEP_MODEL", values)
+        self.assertEqual(values["FLOWED_DEEP_PORT"], "12322")
 
 
 class RepoConfigTest(unittest.TestCase):
     def test_the_committed_config_is_valid_and_complete(self):
         mod = _load()
         values = mod.resolve(include_env_file=False, include_environ=False)
-        # FLUENT_WEBS deliberately not here: the profile→port map is per
+        # FLOWED_WEBS deliberately not here: the profile→port map is per
         # machine and carries real learners' names, so it lives in .env, which
         # is not committed.
-        for key in ("FLUENT_DEEP_MODEL", "FLUENT_DEEP_PORT", "FLUENT_DEEP_CTX",
-                    "FLUENT_FACE_PORT"):
+        for key in ("FLOWED_DEEP_MODEL", "FLOWED_DEEP_PORT", "FLOWED_DEEP_CTX",
+                    "FLOWED_FACE_PORT"):
             self.assertIn(key, values, f"config/fluent.json does not define {key}")
 
 

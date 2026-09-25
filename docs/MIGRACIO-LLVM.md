@@ -60,7 +60,7 @@ GPU a llvm en repòs: **18 MiB de 16.380**.
 ```bash
 cd ~/projects/fluent_dev2
 python3 -m unittest discover -s tests -q
-python3 scripts/fluent-config.py --json
+python3 scripts/flowed-config.py --json
 ```
 
 *Esperat:* els tests en verd, i `ctx: 36864` amb `kv_type: f16`.
@@ -121,8 +121,8 @@ la corre:
 | Fitxer | Quan s'escriu |
 |---|---|
 | `.env` | el crees tu |
-| `config/fluent.json` | `fluent-tts.sh install` hi escriu la veu |
-| `.fluent-active` | només per `/fluent-use` (camí d'admin) |
+| `config/fluent.json` | `flowed-tts.sh install` hi escriu la veu |
+| `.flowed-active` | només per `/fluent-use` (camí d'admin) |
 | `__pycache__/` | a cada execució de qualsevol script Python |
 
 Els PID i els logs van a `/tmp`, i les dades a `~/.fluent`: aquests són
@@ -173,7 +173,7 @@ comprovació de debò que el codi ha arribat sencer.**
 ```bash
 cd /opt/fluent
 cp .env.rapve .env
-python3 scripts/fluent-config.py --json
+python3 scripts/flowed-config.py --json
 ```
 
 *Esperat:*
@@ -181,7 +181,7 @@ python3 scripts/fluent-config.py --json
 - `port: 12321` (a railab és 12322)
 - `ctx: 36864`, `kv_type: f16` — venen de `config/fluent.json`, iguals a les dues màquines
 
-Si el `ctx` surt 32768, hi ha un `FLUENT_DEEP_CTX` descomentat a l'`.env`:
+Si el `ctx` surt 32768, hi ha un `FLOWED_DEEP_CTX` descomentat a l'`.env`:
 comenta'l. L'`.env` mana sobre el config.
 
 ---
@@ -207,18 +207,18 @@ canvi el fa l'start sol, i el desfà l'stop:
 
 | | Què passa al port 12321 |
 |---|---|
-| `fluent-start.sh` | si l'ocupa un altre → `FLUENT_DEFAULT_MANAGER stop`, espera que s'alliberi, puja el nostre |
-| `fluent-stop.sh` | **sempre** `FLUENT_DEFAULT_MANAGER start` — et torna el default |
+| `flowed-start.sh` | si l'ocupa un altre → `FLOWED_DEFAULT_MANAGER stop`, espera que s'alliberi, puja el nostre |
+| `flowed-stop.sh` | **sempre** `FLOWED_DEFAULT_MANAGER start` — et torna el default |
 | port ocupat i sense manager | avorta amb `no robo ports` |
 
 O sigui: **sí, arrencar Fluent baixa el model que estigui funcionant**, i
-`fluent-stop.sh` te'l torna. L'estat viu a `/tmp/fluent-deep-docker.state`; si
+`flowed-stop.sh` te'l torna. L'estat viu a `/tmp/fluent-deep-docker.state`; si
 hi és i el port respon, l'start respecta el que hi ha i no toca res.
 
 Fes primer el pla i llegeix-lo abans de continuar:
 
 ```bash
-cd /opt/fluent && scripts/fluent-start.sh --dry-run --yes
+cd /opt/fluent && scripts/flowed-start.sh --dry-run --yes
 ```
 
 ```bash
@@ -259,7 +259,7 @@ més petit del que demanes, llama.cpp l'ha retallat (el sostre de Qwen3-14B és
 Per a la prova, comença només amb `demo-en`:
 
 ```bash
-scripts/fluent-web.sh --stop --port 4102     # atura la web d'aquest perfil
+scripts/flowed-web.sh --stop --port 4102     # atura la web d'aquest perfil
 rsync -av ~/.fluent/demo-en/ llvm:~/.fluent/demo-en/
 ```
 
@@ -268,7 +268,7 @@ rsync -av ~/.fluent/demo-en/ llvm:~/.fluent/demo-en/
 amb el perfil, o sigui que el login no canvia).
 
 ```bash
-ssh llvm 'cd /opt/fluent && python3 scripts/fluent-check.py all demo-en'
+ssh llvm 'cd /opt/fluent && python3 scripts/flowed-check.py all demo-en'
 ```
 
 *Esperat:* el mateix que a railab — mateix nivell, mateixa ratxa, mateixos
@@ -315,8 +315,8 @@ python3 scripts/close-old-sessions.py --profile sam-en
 *Esperat:* deixa una còpia `sessions.db.bak-<data>` i marca les sessions.
 
 ```bash
-python3 scripts/fluent-check.py sessions alex-en
-python3 scripts/fluent-check.py all alex-en
+python3 scripts/flowed-check.py sessions alex-en
+python3 scripts/flowed-check.py all alex-en
 ```
 
 *Esperat:* les velles com a `tancada ✅`, i **exactament els mateixos números**
@@ -343,7 +343,7 @@ pronunciada**. Ve apagat: si te'l saltes, no es dibuixa cap botó i no falla res
 
 ```bash
 cd /opt/fluent
-scripts/fluent-tts.sh install en_GB-alba-medium
+scripts/flowed-tts.sh install en_GB-alba-medium
 ```
 
 Això fa tres coses de cop: baixa el binari de piper a `~/.fluent/_tts/piper/`,
@@ -352,7 +352,7 @@ baixa la veu a `~/.fluent/_tts/voices/`, i escriu la ruta de totes dues a
 
 Els tres perfils aprenen **anglès**, així que amb `en_GB-alba-medium` n'hi ha
 prou per als tres. Per a una altra llengua:
-`scripts/fluent-tts.sh voice de_DE-thorsten-low`.
+`scripts/flowed-tts.sh voice de_DE-thorsten-low`.
 
 ### 7.2 Comprovar que corre sense dependre del teu shell
 
@@ -362,7 +362,7 @@ A railab va caldre tocar el `.bashrc` perquè piper trobés les seves pròpies
 perquè el servidor no llegeix cap perfil de shell si un dia l'arrenca systemd.
 
 ```bash
-scripts/fluent-tts.sh status
+scripts/flowed-tts.sh status
 ```
 
 *Esperat:* `(corre sense dependre del teu .bashrc ✅)`.
@@ -371,13 +371,13 @@ Si surt l'avís, prova-ho **sense** el teu perfil de shell, que és com ho farà
 servidor:
 
 ```bash
-env -i HOME="$HOME" PATH=/usr/bin:/bin bash -lc 'cd /opt/fluent && scripts/fluent-tts.sh status'
+env -i HOME="$HOME" PATH=/usr/bin:/bin bash -lc 'cd /opt/fluent && scripts/flowed-tts.sh status'
 ```
 
 ### 7.3 Provar-ho fora de la web
 
 ```bash
-scripts/fluent-tts.sh say "Good morning, how are you today?"
+scripts/flowed-tts.sh say "Good morning, how are you today?"
 aplay /tmp/tmp*.wav        # o copia el .wav i escolta'l on puguis
 ```
 
@@ -388,7 +388,7 @@ problema és de piper, no de Fluent.
 ### 7.4 Lligar-ho al perfil
 
 ```bash
-python3 scripts/fluent-check.py tts demo-en
+python3 scripts/flowed-check.py tts demo-en
 ```
 
 *Esperat:* `enabled: True`, la veu amb ✅, i `aquest perfil: aprèn English →
@@ -400,14 +400,14 @@ llegeix amb una veu que no és la de la llengua.
 
 ### 7.5 ⚠️ Després de cada `rsync` des de railab
 
-`fluent-tts.sh` escriu dins `config/fluent.json`, i aquest fitxer **viatja amb
+`flowed-tts.sh` escriu dins `config/fluent.json`, i aquest fitxer **viatja amb
 el `rsync`**. O sigui que una sincronització des de railab et deixarà el `tts`
 apagat un altre cop. No cal reinstal·lar res — els fitxers segueixen al seu
 lloc — només tornar-ho a lligar:
 
 ```bash
-scripts/fluent-tts.sh install en_GB-alba-medium    # detecta que ja hi és i només reescriu el config
-python3 scripts/fluent-check.py tts demo-en
+scripts/flowed-tts.sh install en_GB-alba-medium    # detecta que ja hi és i només reescriu el config
+python3 scripts/flowed-check.py tts demo-en
 ```
 
 ---
@@ -416,14 +416,14 @@ python3 scripts/fluent-check.py tts demo-en
 
 ```bash
 cd /opt/fluent
-scripts/fluent-start.sh --dry-run --yes
+scripts/flowed-start.sh --dry-run --yes
 ```
 
 *Esperat:* el pla diu `backend=docker` i les webs que toquen. **Llegeix-lo abans
 de continuar.**
 
 ```bash
-scripts/fluent-start.sh --yes
+scripts/flowed-start.sh --yes
 ```
 
 *Esperat:* el model ja hi era (pas 5) i puja una web per perfil.
@@ -443,8 +443,8 @@ Obre la web de `demo-en` des d'un altre dispositiu i comprova, per ordre:
 - [ ] **9.5** Prem 🏁 End: resum i comiat.
 - [ ] **9.6** Els números no s'han perdut:
 ```bash
-python3 scripts/fluent-check.py all demo-en
-python3 scripts/fluent-check.py metrics demo-en
+python3 scripts/flowed-check.py all demo-en
+python3 scripts/flowed-check.py metrics demo-en
 ```
   *Esperat:* els temps per torn de llvm — **la comparació amb railab és el que
   volem saber d'aquesta màquina.**
@@ -457,7 +457,7 @@ Res del que fas a llvm toca railab. Per desfer:
 
 ```bash
 # [rapve]
-scripts/fluent-stop.sh
+scripts/flowed-stop.sh
 docker rm -f qwen-fluent-server
 ```
 
@@ -479,7 +479,7 @@ rsync -av --delete \
   --exclude '__pycache__/' \
   --exclude '.env' \
   --exclude '_to_delete/' \
-  --exclude '.fluent-active' \
+  --exclude '.flowed-active' \
   ~/projects/fluent_dev2/ llvm:/opt/fluent_dev2-0.4/
 ```
 
@@ -489,17 +489,17 @@ Els *excludes* no són decoratius:
 |---|---|
 | `.env` | és de la màquina: llvm té `backend docker` i port 12321 |
 | `node_modules/` | el va fer `bun install` allà; copiar-lo des de railab és demanar problemes |
-| `.fluent-active` | marcador de perfil actiu, propi de cada màquina |
+| `.flowed-active` | marcador de perfil actiu, propi de cada màquina |
 | `__pycache__/` | es regenera; copiar-lo hi porta `.pyc` d'una altra versió de Python |
 | `obsolet/` | 63 MB de runtime arxivat |
 
 **`config/fluent.json` SÍ que viatja.** Si a llvm hi has instal·lat una veu,
-`fluent-tts.sh` hi haurà escrit la ruta del binari i del model — i el `rsync`
+`flowed-tts.sh` hi haurà escrit la ruta del binari i del model — i el `rsync`
 te l'esborrarà. Comprova-ho després i torna-la a posar si cal:
 
 ```bash
 # [llvm]
-python3 scripts/fluent-check.py tts alex-en
+python3 scripts/flowed-check.py tts alex-en
 ```
 
 **Sempre, després de qualsevol rsync:**
@@ -522,6 +522,50 @@ sudo ln -sfn /opt/fluent_dev2-0.5 /opt/fluent
 ```
 
 El canvi és instantani i tornar enrere és moure el symlink un altre cop.
+
+## Pas a FlowEd 0.5.0 (`~/projects/flowed` → `/opt/flowed`) `[railab]` `[llvm]`
+
+Canvis que afecten el desplegament: scripts `fluent-*` → `flowed-*`, variables
+`FLUENT_*` → `FLOWED_*` (sense compatibilitat), marcador `.fluent-active` →
+`.flowed-active`, perfils a `~/.flowed` (amb `~/.fluent` com a reserva mentre no
+es mogui). Tot amb l'app aturada.
+
+```bash
+# [llvm] 1. aturar (amb l'script que hi hagi: flowed-stop.sh o fluent-stop.sh)
+cd /opt/flowed && scripts/flowed-stop.sh
+# 2. còpia per tornar enrere (serveix tant si /opt/flowed és carpeta com symlink)
+sudo cp -a "$(readlink -f /opt/flowed)" /opt/flowed-0.4 && cp .env .env.bak-0.4
+```
+
+```bash
+# [railab] 3. codi
+rsync -av --delete \
+  --exclude 'obsolet/' --exclude 'node_modules/' --exclude '__pycache__/' \
+  --exclude '.env' --exclude '_to_delete/' --exclude '.flowed-active' \
+  ~/projects/flowed/ llvm:/opt/flowed/
+```
+
+```bash
+# [llvm] 4. entorn i perfils
+cd /opt/flowed
+sed -i 's/\bFLUENT_/FLOWED_/g' .env && grep -c '^FLOWED_' .env
+[ -e ~/.flowed ] || mv ~/.fluent ~/.flowed
+python3 hooks/main_paths.py home            # ha de dir /home/<usuari>/.flowed
+# 5. res de fora del repo amb noms vells (scripts reanomenats!)
+crontab -l 2>/dev/null | grep -i fluent; grep -rln 'fluent' ~/.config/systemd/user 2>/dev/null
+# 6. proves i engegar
+(cd server && bun install)
+python3 -m unittest discover -s tests -q 2>&1 | tail -1
+scripts/flowed-start.sh
+```
+
+Després: comprovar la veu (`python3 scripts/flowed-check.py tts <perfil>`, vegeu
+§ anterior sobre `config/fluent.json`) i obrir la web: la capçalera ha de dir
+`v0.5.0`.
+
+**Tornar enrere:** aturar, `sudo rsync -a --delete /opt/flowed-0.4/ /opt/flowed/`,
+`cp .env.bak-0.4 .env`, `mv ~/.flowed ~/.fluent` (la 0.4 només coneix
+`~/.fluent`), engegar amb l'script vell.
 
 ---
 

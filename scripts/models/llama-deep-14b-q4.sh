@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fluent "deep-14b-q4" model server — Qwen3-14B-Q4_K_M, candidat a deep lleuger.
+# Flowed "deep-14b-q4" model server — Qwen3-14B-Q4_K_M, candidat a deep lleuger.
 #
 # Mateixa arquitectura que el deep Q6_K (mateix raonament), menys VRAM:
 #   pesos ~8.4GB + KV ~5.2GB (@ctx 32768) ≈ 14GB → cap a 24GB amb marge i
@@ -61,7 +61,7 @@ fi
 # KV cache (needs -fa 1, which is on) and so buys either ~2.6 GB back at ctx
 # 32768 or twice the context for the same VRAM. It is a quality trade-off, so it
 # is opt-in and must be MEASURED, not assumed: see docs/model-qwen14b-q4.md.
-KV_TYPE="${FLUENT_DEEP_KV_TYPE:-f16}"
+KV_TYPE="${FLOWED_DEEP_KV_TYPE:-f16}"
 KV_ARGS=()
 if [[ "$KV_TYPE" != "f16" ]]; then
   KV_ARGS=(-ctk "$KV_TYPE" -ctv "$KV_TYPE")
@@ -82,5 +82,5 @@ for _ in $(seq 1 60); do
   if curl -sf "http://127.0.0.1:$PORT/health" >/dev/null 2>&1; then ok=1; break; fi
   sleep 1
 done
-[[ "$ok" == "1" ]] && echo "Fluent deep-q4 server UP — $MODEL @ :$PORT (cuda $GPU, ctx $CTX, kv $KV_TYPE)" \
+[[ "$ok" == "1" ]] && echo "Flowed deep-q4 server UP — $MODEL @ :$PORT (cuda $GPU, ctx $CTX, kv $KV_TYPE)" \
                    || { echo "ERROR: not healthy in 60s — $LOG"; exit 1; }
