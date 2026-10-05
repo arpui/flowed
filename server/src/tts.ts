@@ -285,10 +285,10 @@ export function ttsDirFor(
   if (env.FLOWED_TTS_DIR) candidates.push(env.FLOWED_TTS_DIR);
   if (dataDir) candidates.push(path.join(path.dirname(path.resolve(dataDir)), "_tts"));
   const flowed = path.join(home, ".flowed");
-  const fluent = path.join(home, ".fluent");
+  const math = path.join(home, ".fluent");
   const profiles = env.FLOWED_HOME
     ? env.FLOWED_HOME.replace(/^~/, home)
-    : fs.existsSync(flowed) || !fs.existsSync(fluent) ? flowed : fluent;
+    : fs.existsSync(flowed) || !fs.existsSync(math) ? flowed : math;
   candidates.push(path.join(profiles, "_tts"));
   return candidates.find((d) => fs.existsSync(d)) ?? null;
 }

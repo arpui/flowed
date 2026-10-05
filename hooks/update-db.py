@@ -744,7 +744,7 @@ def update_session_log(log: dict, session: dict, streak: int):
         "date": today,
         "duration_minutes": session.get("duration_minutes", 0),
         "skills_practiced": session.get("skills_practiced", list(skill_scores.keys())),
-        "command_used": session.get("command_used", "/fluent-learn"),
+        "command_used": session.get("command_used", "/math-learn"),
         "exercises_completed": total_ex,
         "accuracy": round(total_cor / total_ex, 3) if total_ex > 0 else 0.0,
         "score_breakdown": score_breakdown,

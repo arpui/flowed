@@ -1,4 +1,4 @@
-// fluent_record_answer ↔ the review queue — run with:
+// math_record_answer ↔ the review queue — run with:
 //   node --experimental-strip-types server/test/record-item.test.ts
 //
 // Why this exists, measured on 2026-09-19:
@@ -32,7 +32,7 @@ function check(name: string, cond: boolean, detail?: unknown) {
 const REPO = path.resolve(import.meta.dirname, "..", "..");
 
 function makeDir(items: string[]): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fluent-record-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "math-record-"));
   fs.writeFileSync(
     path.join(dir, "spaced-repetition.json"),
     JSON.stringify({ items: Object.fromEntries(items.map((id) => [id, { content: id }])) }),
@@ -48,8 +48,8 @@ function recordTool(dataDir: string, grading: { id: string } | null) {
     deep: { model: "deep", baseURL: "http://127.0.0.1:1/v1", temperature: 0.2, maxTokens: 10, timeoutMs: 10 },
     gradingItem: () => grading,
   });
-  const tool = definitions.find((d) => d.name === "fluent_record_answer");
-  if (!tool) throw new Error("fluent_record_answer is not registered");
+  const tool = definitions.find((d) => d.name === "math_record_answer");
+  if (!tool) throw new Error("math_record_answer is not registered");
   return tool;
 }
 

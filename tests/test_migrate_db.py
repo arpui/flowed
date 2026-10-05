@@ -25,7 +25,7 @@ NAMES = ["learner-profile.json", "spaced-repetition.json", "mistakes-db.json",
 
 class MigrateDbTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-mig-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-mig-"))
         self.data = self.tmp / "data"
         self.data.mkdir()
 

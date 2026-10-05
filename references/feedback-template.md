@@ -1,6 +1,6 @@
 # Feedback Template
 
-Canonical per-answer feedback format used by every Fluent practice skill. Referenced by the `fluent-feedback-formatter` skill.
+Canonical per-answer feedback format used by every Fluent practice skill. Referenced by the `math-feedback-formatter` skill.
 
 ## Standard Template
 

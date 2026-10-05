@@ -1,7 +1,7 @@
-// fluent_setup_profile checks — run with:
+// math_setup_profile checks — run with:
 //   node --experimental-strip-types server/test/setup-profile.test.ts
 //
-// This is the tool that made /fluent-setup finishable at all: before it, the
+// This is the tool that made /math-setup finishable at all: before it, the
 // interview had nowhere to write. What matters is that it refuses bad input
 // clearly (the model has to be able to fix itself) and that a successful call
 // leaves a profile the rest of the system can read.
@@ -24,7 +24,7 @@ const REPO = path.resolve(import.meta.dirname, "..", "..");
 const TEMPLATE = path.join(REPO, "data-examples", "learner-profile-template.json");
 
 function makeProfileDir(withProfile = true): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fluent-setup-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "math-setup-"));
   if (withProfile) fs.copyFileSync(TEMPLATE, path.join(dir, "learner-profile.json"));
   return dir;
 }
@@ -35,8 +35,8 @@ function setupTool(dataDir: string) {
     dataDir: () => dataDir,
     deep: { model: "deep", baseURL: "http://127.0.0.1:1/v1", temperature: 0.2, maxTokens: 10, timeoutMs: 10 },
   });
-  const tool = definitions.find((d) => d.name === "fluent_setup_profile");
-  if (!tool) throw new Error("fluent_setup_profile is not registered");
+  const tool = definitions.find((d) => d.name === "math_setup_profile");
+  if (!tool) throw new Error("math_setup_profile is not registered");
   return tool;
 }
 

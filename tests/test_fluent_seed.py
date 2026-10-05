@@ -122,7 +122,7 @@ class TheMaterialHasSense(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("fluent_seed", SEED)
+        spec = importlib.util.spec_from_file_location("math_seed", SEED)
         cls.seed = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.seed)
 
@@ -185,7 +185,7 @@ class LessonSizesAreExact(unittest.TestCase):
 
     def test_the_order_past_the_hand_picked_eight_alternates_kinds(self):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("fluent_seed_o", SEED)
+        spec = importlib.util.spec_from_file_location("math_seed_o", SEED)
         seed = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(seed)
         order = seed.due_order(seed.material())
@@ -202,7 +202,7 @@ class DayArchivesAreHistory(unittest.TestCase):
 
     def test_the_seed_puts_day_archives_away(self):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("fluent_seed_a", SEED)
+        spec = importlib.util.spec_from_file_location("math_seed_a", SEED)
         seed = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(seed)
         d = Path(tempfile.mkdtemp(prefix="test-seed-"))

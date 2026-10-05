@@ -32,7 +32,7 @@ def base_env(data_dir: Path, lock_timeout: str | None = None) -> dict:
 
 class UpdateDbLockTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-lock-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-lock-"))
         self.data = self.tmp / "data"
         self.data.mkdir()
         make_fixtures(self.data)

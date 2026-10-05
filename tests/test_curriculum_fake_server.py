@@ -40,7 +40,7 @@ def _load(name: str, rel: str):
     return mod
 
 
-e2e = _load("fluent_e2e_curriculum", "scripts/flowed-e2e.py")
+e2e = _load("math_e2e_curriculum", "scripts/flowed-e2e.py")
 
 
 class FakeTutor:
@@ -114,7 +114,7 @@ class FakeTutor:
         return f"{'✅' if right else '❌'} Feedback.\n\n**Correct version:**\n\"{exp}\"\n\n**Score: {score}/10**\n\n"
 
     def command(self, sid: str, cmd: str) -> str:
-        if cmd == "fluent-vocab":
+        if cmd == "math-vocab":
             self.vocab_sids.add(sid)
             self.state[sid] = {"last": None, "count": 0, "vocab": True}
             return self.ask(sid, vocab=True)

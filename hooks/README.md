@@ -63,7 +63,7 @@ Hooks ensure your learning data is:
 
 **What it does:**
 1. Checks if `data/learner-profile.json` exists
-2. If not found, prompts user to run `/fluent-setup`
+2. If not found, prompts user to run `/math-setup`
 3. If found, displays:
    - Welcome message with learner's name
    - Target language and current/target level
@@ -74,7 +74,7 @@ Hooks ensure your learning data is:
 **Example output (first time):**
 ```
 [Fluent] 🌍 Welcome to Fluent - The AI Language Learning Kit!
-[Fluent] 📝 Run /fluent-setup to create your personalized learning profile
+[Fluent] 📝 Run /math-setup to create your personalized learning profile
 ```
 
 **Example output (returning user):**
@@ -83,7 +83,7 @@ Hooks ensure your learning data is:
 [Fluent] 📚 Learning: Spanish
 [Fluent] 🎯 Level: A2 → B1
 [Fluent] 🔥 Streak: 12 days
-[Fluent] 📅 15 items due for review today - Run /fluent-review!
+[Fluent] 📅 15 items due for review today - Run /math-review!
 ```
 
 ---

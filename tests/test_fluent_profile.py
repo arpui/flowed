@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Onboarding belongs to the admin, not to the learner.
 
-/fluent-setup used to be a form the learner filled in mid-lesson — the web app
+/math-setup used to be a form the learner filled in mid-lesson — the web app
 auto-started it whenever `preferences.setup_complete` was false. Who someone is
 and how their sessions are paced is the system owner's call, so the write now
 also exists as a deterministic CLI (`scripts/flowed-profile.py`) and the app
@@ -118,7 +118,7 @@ class LearnerFacingSurfaceTest(unittest.TestCase):
         import re
         for match in re.findall(r'runCommand\(([^)]*)\)', self.app_js):
             self.assertNotIn("setup", match, f"web/app.js runs the setup command: {match}")
-        self.assertNotIn('return "fluent-setup"', self.app_js,
+        self.assertNotIn('return "math-setup"', self.app_js,
                          "initialCommand() still routes the learner into onboarding")
 
     def test_an_unconfigured_profile_gets_a_notice(self):
@@ -126,11 +126,11 @@ class LearnerFacingSurfaceTest(unittest.TestCase):
         self.assertIn("administrador", self.app_js)
 
     def test_finishing_a_session_is_a_button(self):
-        self.assertIn('data-cmd="fluent-end"', self.index,
+        self.assertIn('data-cmd="math-end"', self.index,
                       "the learner must be able to close the session themselves")
 
     def test_setup_is_not_a_button(self):
-        self.assertNotIn('data-cmd="fluent-setup"', self.index)
+        self.assertNotIn('data-cmd="math-setup"', self.index)
 
     def test_the_lesson_badge_and_the_day_counter_exist(self):
         # Two separate things, which is the whole point: the Lesson HAS an end
@@ -148,7 +148,7 @@ class LearnerFacingSurfaceTest(unittest.TestCase):
 
     def test_no_prompt_tells_the_learner_to_type_a_command(self):
         # The learner has buttons and no command line. A skill printing
-        # "/fluent-vocab" is advice they cannot act on. Only the model-facing
+        # "/math-vocab" is advice they cannot act on. Only the model-facing
         # notes about *triggering* may name a command; anything inside a
         # ```markdown block is shown to the learner verbatim.
         import re
@@ -156,7 +156,7 @@ class LearnerFacingSurfaceTest(unittest.TestCase):
         offenders = []
         for skill in sorted(root.glob("*/SKILL.md")):
             for block in re.findall(r"```markdown\n(.*?)```", skill.read_text(), re.S):
-                if re.search(r"/fluent-[a-z]+", block):
+                if re.search(r"/math-[a-z]+", block):
                     offenders.append(skill.parent.name)
         self.assertEqual(offenders, [],
                          f"these skills print a slash command to the learner: {offenders}")
@@ -175,7 +175,7 @@ class LearnerFacingSurfaceTest(unittest.TestCase):
 
 
 class SessionAnalyzerRemovedTest(unittest.TestCase):
-    """fluent-session-analyzer duplicated read-db.py from prose files, worse.
+    """math-session-analyzer duplicated read-db.py from prose files, worse.
 
     Planning reads the JSON databases; the results/*.md files stay as the
     human-readable record. A stale reference would send the tutor looking for a
@@ -183,7 +183,7 @@ class SessionAnalyzerRemovedTest(unittest.TestCase):
     """
 
     def test_the_skill_is_gone(self):
-        self.assertFalse((REPO_ROOT / "skills" / "fluent-session-analyzer").exists())
+        self.assertFalse((REPO_ROOT / "skills" / "math-session-analyzer").exists())
 
     def test_nothing_live_still_points_at_it(self):
         live = [

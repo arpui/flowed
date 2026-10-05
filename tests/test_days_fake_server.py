@@ -38,8 +38,8 @@ def _load(name: str, rel: str):
     return mod
 
 
-e2e = _load("fluent_e2e_days", "scripts/flowed-e2e.py")
-seed = _load("fluent_seed_days", "scripts/flowed-seed.py")
+e2e = _load("math_e2e_days", "scripts/flowed-e2e.py")
+seed = _load("math_seed_days", "scripts/flowed-seed.py")
 
 WORDS = [("casa", "house"), ("gat", "cat"), ("gos", "dog"), ("pa", "bread"),
          ("aigua", "water"), ("llibre", "book")]
@@ -83,7 +83,7 @@ class FakeTutor:
         return sorted(due)[0] if due else None
 
     def command(self, sid: str, cmd: str) -> str:
-        if cmd != "fluent-review":
+        if cmd != "math-review":
             return "Hi!"
         due = [k for k, v in self.sr().items() if v["due_date"] <= self.today()]
         total = len(due) or 3

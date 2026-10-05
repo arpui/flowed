@@ -126,7 +126,7 @@ PAYLOAD = {
 
 class SM2GoldenTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-sm2-golden-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-sm2-golden-"))
         (self.tmp / "data").mkdir()
         make_fixtures(self.tmp / "data")
 

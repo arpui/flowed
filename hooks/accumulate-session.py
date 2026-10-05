@@ -14,7 +14,7 @@ grade what the tutor already decided — score, corrections/category/severity,
 correct version — without any new model turn or visible pause. The rich
 metadata the transcript can't express (new_vocabulary full fields,
 review_results quality, milestones, focus) is finalized by the tutor's
-end-of-session fluent-db-updater call (same session_id → upsert, no repeat).
+end-of-session math-db-updater call (same session_id → upsert, no repeat).
 
 Usage:
     python3 accumulate-session.py --dir ~/.flowed/<id> [--dry-run]
@@ -305,7 +305,7 @@ def main():
     # feedback" would mean it never got applied at all.
     reviews_block = ps.known_review_results(ps.parse_review_results(transcript_all), data_dir)
 
-    # Structured records (fluent_record_answer): the authority. Read whole on
+    # Structured records (math_record_answer): the authority. Read whole on
     # every run — they are append-only and the payload is rebuilt from scratch,
     # so this stays idempotent.
     records = ps.read_records(data_dir, session_id)

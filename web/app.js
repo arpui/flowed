@@ -13,7 +13,7 @@ const AGENT = "learner";
 // (?debug=1 or triple-click the brand) reveals command text + all tool chips.
 const DEBUG =
   new URLSearchParams(location.search).get("debug") === "1" ||
-  localStorage.getItem("fluent.debug") === "1";
+  localStorage.getItem("math.debug") === "1";
 
 const $ = (s) => document.querySelector(s);
 const messagesEl = $("#messages");
@@ -42,7 +42,7 @@ const skillDotEl = $("#skill-dot");
 
 const enc = encodeURIComponent;
 
-let sessionId = localStorage.getItem("fluent.session") || null;
+let sessionId = localStorage.getItem("math.session") || null;
 let busy = false;
 let nearBottom = true;
 let lastActivity = 0;
@@ -115,7 +115,7 @@ let currentAudio = null;
 
 async function initTts() {
   try {
-    const r = await api("/fluent/tts-state");
+    const r = await api("/math/tts-state");
     ttsReady = r.enabled === true;
     ttsLanguage = r.language || null;
   } catch {
@@ -127,7 +127,7 @@ async function initTts() {
 function speakUrl(text) {
   const q = new URLSearchParams({ text: text.slice(0, 400) });
   if (ttsLanguage) q.set("lang", ttsLanguage);
-  return `${API}/fluent/say?${q.toString()}`;
+  return `${API}/math/say?${q.toString()}`;
 }
 
 async function speak(text, btn) {
@@ -257,9 +257,9 @@ function paintSpeakers(el) {
 }
 
 // The tutor closes a review with a machine-readable block that the server
-// parses (```fluent:review_results ... ```). It is data, not conversation:
+// parses (```math:review_results ... ```). It is data, not conversation:
 // strip it before rendering so the learner never sees it.
-const MACHINE_BLOCK_RE = /```fluent:[a-z_]+[\s\S]*?```/g;
+const MACHINE_BLOCK_RE = /```math:[a-z_]+[\s\S]*?```/g;
 // The tutor also prints the internal id of a review item ("**Item ID:**
 // agreement_she_goes_to_school") because it sees the queue as JSON. The
 // learner has no use for it and it reads as a bug. Whatever the model prints,
@@ -273,24 +273,24 @@ function stripMachineBlocks(text) {
 }
 
 // The learner has buttons, not a command line, so a tutor sentence like
-// "try /fluent-vocab" is advice they cannot follow. rules.md forbids it and the
+// "try /math-vocab" is advice they cannot follow. rules.md forbids it and the
 // skills no longer print any — but a 14B model improvises, and the learner
 // should never be the one who finds out. Rewriting at render time is the only
 // guarantee: whatever the model says, what reaches the screen names a button.
 const BUTTON_NAMES = {
-  "fluent-learn": "🎲 Surprise me!",
-  "fluent-review": "🔁 Review",
-  "fluent-vocab": "📚 Vocabulary",
-  "fluent-writing": "📝 Writing",
-  "fluent-speaking": "🗣️ Speaking",
-  "fluent-reading": "📖 Reading",
-  "fluent-progress": "📊 Progress",
-  "fluent-checkpoint": "🧪 Level test",
-  "fluent-end": "🏁 End",
-  "fluent-setup": "l'administrador",
-  "fluent-use": "l'administrador",
+  "math-learn": "🎲 Surprise me!",
+  "math-review": "🔁 Review",
+  "math-vocab": "📚 Vocabulary",
+  "math-writing": "📝 Writing",
+  "math-speaking": "🗣️ Speaking",
+  "math-reading": "📖 Reading",
+  "math-progress": "📊 Progress",
+  "math-checkpoint": "🧪 Level test",
+  "math-end": "🏁 End",
+  "math-setup": "l'administrador",
+  "math-use": "l'administrador",
 };
-const SLASH_RE = /`?\/(fluent-[a-z]+)`?/g;
+const SLASH_RE = /`?\/(math-[a-z]+)`?/g;
 
 function humanizeCommands(text) {
   return String(text || "").replace(SLASH_RE, (whole, cmd) => {
@@ -312,7 +312,7 @@ function renderTutorText(el, text) {
 // the missing word" read the same — both just plain text next to a blanked
 // ("___") sentence, so a quick skim misses which one is being asked for and
 // he answers with only the missing word when the whole sentence was wanted.
-// These two lines are always rendered bold by the tutor (fluent-feedback-
+// These two lines are always rendered bold by the tutor (math-feedback-
 // formatter's own rule — see FULL_SENTENCE_RE above), so marked() turns them
 // into <strong> — find that node by its exact text and give it its own
 // background instead of relying on bold alone to be noticed.
@@ -379,7 +379,7 @@ function errText(e) {
 // actually recorded — the model is not asked to keep score.
 const paceEl = $("#pace");
 
-// 📖 Reading is hard to follow below A1 (fluent-reading's own skill file says
+// 📖 Reading is hard to follow below A1 (math-reading's own skill file says
 // so: "skip below A1 mastery 3") — hidden until the learner is past A1, so
 // nobody on a fresh A0 profile finds it and gets a text they can't read
 // (2026-09-22, Albert). `p.lesson.level` already carries the learner's
@@ -441,7 +441,7 @@ function renderPace(p) {
 // The badge on 🎓 Lesson. Amber while there is work, a green tick for a moment
 // when it empties, then nothing. It never disables anything: the learner can
 // press whatever they like, the badge just says what is still owed.
-const lessonBtn = document.querySelector('#commands button[data-cmd="fluent-review"]');
+const lessonBtn = document.querySelector('#commands button[data-cmd="math-review"]');
 let lessonWasPending = false;
 
 function renderLessonBadge(lesson) {
@@ -491,11 +491,11 @@ function renderLessonBadge(lesson) {
 // `renderLessonBadge`'s richer (due/slot) logic. Never a gate — Mix keeps
 // choosing whatever it likes; this only says "you haven't done one of these
 // today" (2026-09-22, Albert).
-const speakingBtn = document.querySelector('#commands button[data-cmd="fluent-speaking"]');
-const readingBtn = document.querySelector('#commands button[data-cmd="fluent-reading"]');
+const speakingBtn = document.querySelector('#commands button[data-cmd="math-speaking"]');
+const readingBtn = document.querySelector('#commands button[data-cmd="math-reading"]');
 // 📝 Writing joined them on 2026-09-23 (Albert): the one practice where she writes her
 // own words, owed once a day at every level — like Speaking, unlike Reading (> A1).
-const writingBtn = document.querySelector('#commands button[data-cmd="fluent-writing"]');
+const writingBtn = document.querySelector('#commands button[data-cmd="math-writing"]');
 let speakingWasPending = false;
 let readingWasPending = false;
 let writingWasPending = false;
@@ -557,12 +557,12 @@ function showCourseNotice(n) {
 if (courseOverlay) {
   $("#course-ok").addEventListener("click", async () => {
     courseOverlay.hidden = true;
-    try { await api("/fluent/path/seen", { method: "POST" }); } catch { /* it will be shown again: harmless */ }
+    try { await api("/math/path/seen", { method: "POST" }); } catch { /* it will be shown again: harmless */ }
     courseNoticeShown = false;
   });
 }
 
-const checkpointBtn = document.querySelector('#commands button[data-cmd="fluent-checkpoint"]');
+const checkpointBtn = document.querySelector('#commands button[data-cmd="math-checkpoint"]');
 
 function renderPathMiniBar(p) {
   if (p && p.notice) showCourseNotice(p.notice);
@@ -587,7 +587,7 @@ async function refreshPath(force = false) {
   if (!force && Date.now() - pathAt < 1500) return;
   pathAt = Date.now();
   try {
-    const res = await api("/fluent/path");
+    const res = await api("/math/path");
     renderPathMiniBar(res && res.ok ? res.data : null);
   } catch {
     /* the bar is never worth an error */
@@ -603,7 +603,7 @@ async function refreshPace() {
     return;
   }
   try {
-    renderPace(await api(`/fluent/session-progress?session=${encodeURIComponent(sessionId)}`));
+    renderPace(await api(`/math/session-progress?session=${encodeURIComponent(sessionId)}`));
   } catch {
     /* the indicator is never worth an error */
   }
@@ -644,7 +644,7 @@ function toolChip(part, n) {
   // The deep-evaluation tool shows a friendly label (and its call number)
   // instead of the raw tool name.
   const label =
-    name === "fluent_deep_evaluate"
+    name === "math_deep_evaluate"
       ? "avaluant resposta" + (n && n > 1 ? " (" + n + ")" : "")
       : esc(name);
   // Collapsible: open while running (live feedback), closed once settled so
@@ -660,7 +660,7 @@ function toolChip(part, n) {
 
 function evalCount(entry) {
   let n = 0;
-  for (const r of entry.parts.values()) if (r.tool === "fluent_deep_evaluate") n++;
+  for (const r of entry.parts.values()) if (r.tool === "math_deep_evaluate") n++;
   return n;
 }
 
@@ -720,7 +720,7 @@ function tagFlowMessage(entry) {
   updateSendState();
 }
 
-// Command messages (e.g. /fluent-learn) arrive as user text containing the full expanded
+// Command messages (e.g. /math-learn) arrive as user text containing the full expanded
 // prompt. The learner only needs to see which mode was started, so collapse them to a chip.
 function userBubbleHTML(text) {
   // "next" (typed or via empty send) renders as a continue chip.
@@ -728,14 +728,14 @@ function userBubbleHTML(text) {
     const label = DEBUG ? "next" : "";
     return `<span class="chip" title="next">⏭${label}</span>`;
   }
-  const m = /^Execute\s+\/(fluent-[a-z0-9-]+)/im.exec(text || "");
+  const m = /^Execute\s+\/(math-[a-z0-9-]+)/im.exec(text || "");
   if (m) {
-    const key = m[1].slice("fluent-".length);
+    const key = m[1].slice("math-".length);
     const icons = { learn: "🎲", checkpoint: "🧪", review: "🔄", vocab: "📖", writing: "📝", speaking: "🗣️", reading: "👀", progress: "📊", setup: "⚙️" };
     // Learner view: icon only (the command text adds nothing for the learner).
     // Debug mode reveals which command was started.
-    const label = DEBUG ? ` /fluent-${esc(key)}` : "";
-    return `<span class="chip" title="/fluent-${esc(key)}">${icons[key] || "🎯"}${label}</span>`;
+    const label = DEBUG ? ` /math-${esc(key)}` : "";
+    return `<span class="chip" title="/math-${esc(key)}">${icons[key] || "🎯"}${label}</span>`;
   }
   return md(text);
 }
@@ -966,7 +966,7 @@ async function ensureSession() {
     if (s) {
       let resume = true;
       try {
-        const state = await api(`/fluent/session-state?session=${enc(sessionId)}`);
+        const state = await api(`/math/session-state?session=${enc(sessionId)}`);
         resume = state.resumable !== false;
       } catch {
         resume = true; // the check is never worth blocking on
@@ -974,12 +974,12 @@ async function ensureSession() {
       if (resume) return;
     }
     sessionId = null;
-    localStorage.removeItem("fluent.session");
+    localStorage.removeItem("math.session");
   }
-  const s = await api("/session", { method: "POST", body: { title: "Fluent" } });
+  const s = await api("/session", { method: "POST", body: { title: "FlowMath" } });
   sessionId = s.id || s.info?.id;
   if (!sessionId) throw new Error("no s'ha pogut crear la sessió");
-  localStorage.setItem("fluent.session", sessionId);
+  localStorage.setItem("math.session", sessionId);
 }
 
 async function renderHistory() {
@@ -1051,7 +1051,7 @@ async function send(text) {
 // anyway and Stats/End are one-shot, not a place you stay). A plain ring, not
 // a color, so it never collides with the pending (amber) / done (green)
 // meaning those three buttons already carry.
-const TRACKED_MODE_CMDS = ["fluent-learn", "fluent-review", "fluent-reading", "fluent-speaking", "fluent-writing"];
+const TRACKED_MODE_CMDS = ["math-learn", "math-review", "math-reading", "math-speaking", "math-writing"];
 function updateActiveModeButton() {
   for (const cmd of TRACKED_MODE_CMDS) {
     const btn = document.querySelector(`#commands button[data-cmd="${cmd}"]`);
@@ -1087,17 +1087,17 @@ async function runCommand(cmd) {
 
 // Decide the first command to auto-run when opening a (fresh) session.
 // Onboarding is NOT the learner's job: profiles are created by the admin
-// (scripts/fluent-profile.py), so a profile that is not set up gets a short
+// (scripts/math-profile.py), so a profile that is not set up gets a short
 // notice instead of a form it should not be filling in. Falls back to
-// fluent-learn if setup-state is unreachable (never blocks normal use).
+// math-learn if setup-state is unreachable (never blocks normal use).
 async function initialCommand() {
   try {
-    const r = await api("/fluent/setup-state");
+    const r = await api("/math/setup-state");
     if (r.setup_complete === false) return null;
   } catch {
     /* the check is never worth blocking on */
   }
-  return "fluent-learn";
+  return "math-learn";
 }
 
 function showSetupNotice() {
@@ -1115,7 +1115,7 @@ async function newSession(opts) {
   if (busy && !skipConfirm) return;
   if (!skipConfirm && !confirm("Tancar aquesta sessió i en començar una de nova?")) return;
   sessionId = null;
-  localStorage.removeItem("fluent.session");
+  localStorage.removeItem("math.session");
   messagesEl.innerHTML = "";
   renderedMsgs.clear();
   pendingParts.clear();
@@ -1278,8 +1278,8 @@ setInterval(() => {
 
 // One-time hint: the first characters can take a few seconds (context + tools).
 function showThinkingTip() {
-  if (localStorage.getItem("fluent.tip.thinking")) return;
-  localStorage.setItem("fluent.tip.thinking", "1");
+  if (localStorage.getItem("math.tip.thinking")) return;
+  localStorage.setItem("math.tip.thinking", "1");
   const div = document.createElement("div");
   div.className = "msg hint";
   div.innerHTML =
@@ -1372,7 +1372,7 @@ function prettyId(id) {
 }
 
 // ---- the learner's path (bar towards the level) ------------------------------
-// Data from /api/fluent/path (hooks/curriculum.py json). The learner sees a
+// Data from /api/math/path (hooks/curriculum.py json). The learner sees a
 // plain view: bar, what is being worked on, states in words. What could
 // discourage (stalled, forgotten, per-competence accuracy) sits in a folded
 // "Detall (docent)" block. Pure functions: no DOM, no fetch.
@@ -1500,8 +1500,8 @@ async function loadProgress() {
   progressBody.innerHTML = '<p class="p-loading">Carregant el progrés…</p>';
   try {
     const [res, path] = await Promise.all([
-      api("/fluent/progress"),
-      api("/fluent/path").catch(() => null), // the path is a bonus: never blocks the panel
+      api("/math/progress"),
+      api("/math/path").catch(() => null), // the path is a bonus: never blocks the panel
     ]);
     if (!res || !res.ok || !res.data) {
       throw new Error((res && res.error) || "resposta buida del servidor");
@@ -1618,7 +1618,7 @@ function renderProgress(d) {
 progressBody.addEventListener("click", (e) => {
   if (e.target.closest && e.target.closest("[data-start-checkpoint]")) {
     closeProgress();
-    runCommand("fluent-checkpoint");
+    runCommand("math-checkpoint");
   }
 });
 $("#progress-close").addEventListener("click", closeProgress);
@@ -1634,14 +1634,14 @@ document.addEventListener("keydown", (e) => {
 
 const DEFAULT_PLACEHOLDER = "Escriu la teva resposta…";
 const MODE_PLACEHOLDERS = {
-  "fluent-end": "Sessió tancada — tria una pràctica a dalt…",
-  "fluent-learn": "Respon l'exercici…",
-  "fluent-review": "Escriu el que recordis…",
-  "fluent-vocab": "Escriu la traducció…",
-  "fluent-writing": "Escriu el teu text en l'idioma meta…",
-  "fluent-speaking": "Respon com en una conversa real…",
-  "fluent-reading": "Respon segons el text…",
-  "fluent-checkpoint": "Escriu la teva resposta…",
+  "math-end": "Sessió tancada — tria una pràctica a dalt…",
+  "math-learn": "Respon l'exercici…",
+  "math-review": "Escriu el que recordis…",
+  "math-vocab": "Escriu la traducció…",
+  "math-writing": "Escriu el teu text en l'idioma meta…",
+  "math-speaking": "Respon com en una conversa real…",
+  "math-reading": "Respon segons el text…",
+  "math-checkpoint": "Escriu la teva resposta…",
 };
 let currentMode = null;
 
@@ -1794,7 +1794,7 @@ function lastTutorText() {
 }
 
 // The tutor is SUPPOSED to end a blanked ("___") exercise with one of these
-// two exact lines (fluent-feedback-formatter's blank-marker rule) — the
+// two exact lines (math-feedback-formatter's blank-marker rule) — the
 // ONLY reliable ground truth. Measured live, 2026-09-22: "Type: writing"
 // does NOT reliably mean "write the whole sentence" — a writing-skill
 // item can still just blank a single word (e.g. "What time ___ it?" /
@@ -1924,7 +1924,7 @@ inputEl.addEventListener("input", () => {
 document.querySelectorAll("#commands button").forEach((b) =>
   b.addEventListener("click", () => {
     // 📊 Progress opens the visual dashboard directly (no agent turn).
-    if (b.dataset.cmd === "fluent-progress") {
+    if (b.dataset.cmd === "math-progress") {
       if (!busy) openProgress();
       return;
     }
@@ -1939,15 +1939,15 @@ $("#new-session").addEventListener("click", newSession);
   if (brand) {
     let clicks = 0, timer = 0;
     brand.style.cursor = "pointer";
-    brand.title = "FlowEd (triple-clic: mode debug)";
+    brand.title = "FlowMath (triple-clic: mode debug)";
     brand.addEventListener("click", () => {
       clicks++;
       clearTimeout(timer);
       timer = setTimeout(() => (clicks = 0), 600);
       if (clicks >= 3) {
         clicks = 0;
-        const on = localStorage.getItem("fluent.debug") === "1";
-        localStorage.setItem("fluent.debug", on ? "0" : "1");
+        const on = localStorage.getItem("math.debug") === "1";
+        localStorage.setItem("math.debug", on ? "0" : "1");
         location.reload();
       }
     });

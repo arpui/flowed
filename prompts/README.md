@@ -10,7 +10,7 @@ torn: canviar el comportament no requereix tocar codi ni reiniciar res.
 | `agents/tutor.md` | L'agent complet (model deep) per a les comandes llargues |
 | `agents/tutor-fast.md` | El mateix en mode ràpid (model face, amb *fallback* al deep) |
 | `agents/rules.md` | **Font única** de les regles dures — identitat de llengua, no repetir, alternança, prompts no circulars. El servidor la concatena a TOTS els agents, cada torn |
-| `commands/fluent-*.md` | Les 10 comandes. *Frontmatter* `agent:` (qui la respon) i directives `` !`…` `` que precarreguen l'estat de l'alumne |
+| `commands/math-*.md` | Les 10 comandes. *Frontmatter* `agent:` (qui la respon) i directives `` !`…` `` que precarreguen l'estat de l'alumne |
 
 El *system prompt* d'un torn és: `AGENTS.md` + `LEARNING_SYSTEM.md` +
 `agents/<agent>.md` + `agents/rules.md`. Els skills (`skills/`) no hi

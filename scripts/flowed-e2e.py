@@ -497,8 +497,8 @@ def run(args, quiet: bool = False) -> Report | int:
     print(f"sessió {sid}")
 
     t0 = time.time()
-    greeting = tutor_text(cli.command(sid, "fluent-learn"))
-    transcript.append(f"## /fluent-learn\n\n{greeting}")
+    greeting = tutor_text(cli.command(sid, "math-learn"))
+    transcript.append(f"## /math-learn\n\n{greeting}")
     rep.check(bool(greeting), "el tutor obre la sessió", f"{len(greeting)} car.")
     # An empty greeting that came back instantly is not a tutor that failed to
     # greet: it is a model that is not running. Saying so here saves reading ten
@@ -510,7 +510,7 @@ def run(args, quiet: bool = False) -> Report | int:
               "   i arrenca'l amb scripts/flowed-start.sh --models-only.", file=sys.stderr)
         return 2
 
-    first = tutor_text(cli.command(sid, "fluent-review"))
+    first = tutor_text(cli.command(sid, "math-review"))
     transcript.append(f"## 🎓 Lesson\n\n{first}")
     print(f"  Lesson oberta ({time.time() - t0:.0f}s)")
 
@@ -605,7 +605,7 @@ def run(args, quiet: bool = False) -> Report | int:
     def press(cmd: str, label: str) -> str:
         nonlocal current_practice
         t = time.time()
-        current_practice = {"fluent-review": "lesson", "fluent-vocab": "vocab"}.get(cmd, cmd)
+        current_practice = {"math-review": "lesson", "math-vocab": "vocab"}.get(cmd, cmd)
         body = tutor_text(cli.command(sid, cmd))
         replies.append(body)
         asked.append(fingerprints(body))
@@ -640,7 +640,7 @@ def run(args, quiet: bool = False) -> Report | int:
         daily_at_detour = read_daily()
 
         detour_at = len(replies)
-        press("fluent-vocab", "📚 Vocabulary")
+        press("math-vocab", "📚 Vocabulary")
         phase["vocab_a"] = [len(replies)]
         for n in range(2, 4):
             answer_once(n)
@@ -652,7 +652,7 @@ def run(args, quiet: bool = False) -> Report | int:
         # because she never answered it.
         outstanding = list(asked[phase["lesson_a"][1] - 1]) if phase.get("lesson_a") else []
         resumed_at = len(replies)
-        press("fluent-review", "🎓 Lesson (torna)")
+        press("math-review", "🎓 Lesson (torna)")
         phase["lesson_b"] = [len(replies)]
         for n in range(4, 6):
             if closed_early_at:
@@ -660,7 +660,7 @@ def run(args, quiet: bool = False) -> Report | int:
             answer_once(n)
         phase["lesson_b"].append(len(replies))
 
-        press("fluent-vocab", "📚 Vocabulary (torna)")
+        press("math-vocab", "📚 Vocabulary (torna)")
         phase["vocab_b"] = [len(replies)]
         for n in range(6, 8):
             answer_once(n)
@@ -678,20 +678,20 @@ def run(args, quiet: bool = False) -> Report | int:
         daily_at_detour = read_daily()
 
         detour_at = len(replies)
-        press("fluent-vocab", "📚 Vocabulary")
+        press("math-vocab", "📚 Vocabulary")
         phase["vocab_a"] = [len(replies)]
         for n in range(3, 6):
             answer_once(n)
         phase["vocab_a"].append(len(replies))
         daily_after_vocab = read_daily()
 
-        press("fluent-writing", "📝 Writing")
+        press("math-writing", "📝 Writing")
         for n in range(6, 9):
             answer_once(n)
 
         outstanding = list(asked[phase["lesson_a"][1] - 1]) if phase.get("lesson_a") else []
         resumed_at = len(replies)
-        press("fluent-review", "🎓 Lesson (torna)")
+        press("math-review", "🎓 Lesson (torna)")
         phase["lesson_b"] = [len(replies)]
         for n in range(9, 13):
             if closed_early_at:
@@ -699,7 +699,7 @@ def run(args, quiet: bool = False) -> Report | int:
             answer_once(n)
         phase["lesson_b"].append(len(replies))
 
-        press("fluent-vocab", "📚 Vocabulary (torna)")
+        press("math-vocab", "📚 Vocabulary (torna)")
         phase["vocab_b"] = [len(replies)]
         for n in range(13, 16):
             answer_once(n)
@@ -719,7 +719,7 @@ def run(args, quiet: bool = False) -> Report | int:
 
         # 2) free practice: vocabulary, right and wrong
         journey_from = len(replies)
-        press("fluent-vocab", "📚 Vocabulary")
+        press("math-vocab", "📚 Vocabulary")
         phase["vocab_a"] = [len(replies)]
         for k, kf in enumerate(FREE_VOCAB_PLAN):
             answer_once(100 + k, free="vocab", kind_free=kf)
@@ -728,12 +728,12 @@ def run(args, quiet: bool = False) -> Report | int:
 
         # 3) writing: the answers are wrong on purpose, the tutor has to correct them
         writing_press = len(replies)
-        press("fluent-writing", "📝 Writing")
+        press("math-writing", "📝 Writing")
         for k in range(len(FREE_WRITING)):
             answer_once(200 + k, free="writing")
 
         # 4) back to vocabulary: what was answered must not come back
-        press("fluent-vocab", "📚 Vocabulary (torna)")
+        press("math-vocab", "📚 Vocabulary (torna)")
         phase["vocab_b"] = [len(replies)]
         for k, kf in enumerate(FREE_VOCAB_BACK):
             answer_once(300 + k, free="vocab", kind_free=kf)
@@ -1054,7 +1054,7 @@ def run(args, quiet: bool = False) -> Report | int:
         rep.check(len(no_fix) <= len(writing_replies) // 2, "i n'ensenya la versió correcta",
                   f"{len(writing_replies) - len(no_fix)} de {len(writing_replies)}")
         # What the Writing exercise asks for must be what the level can write
-        # (skills/fluent-writing/SKILL.md): A2 does not write an email.
+        # (skills/math-writing/SKILL.md): A2 does not write an email.
         if writing_press is not None and writing_press < len(replies):
             try:
                 level = str(json.loads((prof_dir / "learner-profile.json").read_text())
@@ -1097,7 +1097,7 @@ def run(args, quiet: bool = False) -> Report | int:
 
         # A card must ask in the language it is not written in: "Català: finestra —
         # Què vol dir en català?" asks the Catalan word's meaning in Catalan. The
-        # tutor mixes the two card templates of skills/fluent-vocab/SKILL.md.
+        # tutor mixes the two card templates of skills/math-vocab/SKILL.md.
         span_vocab = [i for a, b in (phase["vocab_a"], phase["vocab_b"]) for i in range(a - 1, b)]
         cards = [exercise_tail(replies[i]) for i in span_vocab if 0 <= i < len(replies)]
         mixed = [c for c in cards
@@ -1201,7 +1201,7 @@ def run(args, quiet: bool = False) -> Report | int:
         # the way to see a note and a guard asking for opposite things.
         transcript.append("## notes del servidor al tutor (per torn)\n\n" + "\n".join(turn_notes))
 
-    log = Path(f"/tmp/fluent-web-{args.port}.log")
+    log = Path(f"/tmp/math-web-{args.port}.log")
     warns = [l for l in log.read_text(errors="ignore").splitlines()
              if "⚠" in l and sid in l] if log.exists() else []
     rep.check(not warns, "cap avís del servidor per aquesta sessió",
@@ -1400,7 +1400,7 @@ def vocab_bank() -> list[tuple[str, str]]:
     global _BANK
     if _BANK is None:
         import importlib.util
-        spec = importlib.util.spec_from_file_location("fluent_seed", Path(__file__).with_name("flowed-seed.py"))
+        spec = importlib.util.spec_from_file_location("math_seed", Path(__file__).with_name("flowed-seed.py"))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         _BANK = [(en, ca) for en, ca in mod.VOCAB] + EXTRA_WORDS
@@ -1454,7 +1454,7 @@ def free_vocab_answer(kind: str, item: dict | None) -> str:
     return others[(len(item["answer"]) + 3) % len(others)]   # a real word, the wrong one
 
 
-REVIEW_BLOCK = re.compile(r"```fluent:review_results.*?```", re.S)
+REVIEW_BLOCK = re.compile(r"```math:review_results.*?```", re.S)
 
 
 def on_screen(text: str) -> str:
@@ -1691,9 +1691,9 @@ def run_days(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
         sid = cli.new_session()
         sids.add(sid)
         t0 = time.time()
-        greeting = tutor_text(cli.command(sid, "fluent-learn"))
-        first = tutor_text(cli.command(sid, "fluent-review"))
-        transcript.append(f"# dia {day} · {today} · sessió {sid}\n\n## /fluent-learn\n\n{greeting}\n\n## 🎓 Lesson\n\n{first}")
+        greeting = tutor_text(cli.command(sid, "math-learn"))
+        first = tutor_text(cli.command(sid, "math-review"))
+        transcript.append(f"# dia {day} · {today} · sessió {sid}\n\n## /math-learn\n\n{greeting}\n\n## 🎓 Lesson\n\n{first}")
         if day == 1 and not greeting.strip() and time.time() - t0 < 3:
             print("\n❌ el tutor no ha dit res i ha trigat 0s: el model no respon.", file=sys.stderr)
             return 2
@@ -1985,8 +1985,8 @@ def run_curriculum(args, cli, prof_dir: Path, rep: "Report", quiet: bool, setup:
         return 2
     ndays = max(2, args.days)
     sys.path.insert(0, str(REPO / "hooks"))
-    cu = _load_module("fluent_curriculum", "hooks/curriculum.py")
-    sim = _load_module("fluent_sim_path", "scripts/flowed-sim-path.py")
+    cu = _load_module("math_curriculum", "hooks/curriculum.py")
+    sim = _load_module("math_sim_path", "scripts/flowed-sim-path.py")
 
     # The course this scenario tests: A2 (the learner comes with A1 certified by the teacher — a
     # "placement" — so the ladder does not send her back to A1) or A1 (from zero). The scratch
@@ -2154,18 +2154,18 @@ def run_curriculum(args, cli, prof_dir: Path, rep: "Report", quiet: bool, setup:
         sid = cli.new_session()
         sids.add(sid)
         t0 = time.time()
-        greeting = tutor_text(cli.command(sid, "fluent-learn"))
+        greeting = tutor_text(cli.command(sid, "math-learn"))
         if day == 1 and not greeting.strip() and time.time() - t0 < 3:
             print("\n❌ el tutor no ha dit res i ha trigat 0s: el model no respon.", file=sys.stderr)
             return 2
         first = tutor_text(cli.say(sid, "6"))          # 🎲 Surprise me!
-        transcript.append(f"# dia {day} · {today} · Mix · sessió {sid}\n\n## /fluent-learn\n\n{greeting}\n\n## «6»\n\n{first}")
+        transcript.append(f"# dia {day} · {today} · Mix · sessió {sid}\n\n## /math-learn\n\n{greeting}\n\n## «6»\n\n{first}")
         answer_turns(sid, first, args.answers, day, "Mix")
         # Vocabulary
         if args.vocab > 0:
             vsid = cli.new_session()
             sids.add(vsid)
-            vfirst = tutor_text(cli.command(vsid, "fluent-vocab"))
+            vfirst = tutor_text(cli.command(vsid, "math-vocab"))
             transcript.append(f"## dia {day} · Vocabulary · sessió {vsid}\n\n{vfirst}")
             answer_turns(vsid, vfirst, args.vocab, day, "Vocab")
 
@@ -2317,8 +2317,8 @@ def run_ladder(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
         print(f"❌ l'escenari ladder només corre en perfils de proves, no en {prof_dir.name}", file=sys.stderr)
         return 2
     sys.path.insert(0, str(REPO / "hooks"))
-    cu = _load_module("fluent_curriculum", "hooks/curriculum.py")
-    sim = _load_module("fluent_sim_path", "scripts/flowed-sim-path.py")
+    cu = _load_module("math_curriculum", "hooks/curriculum.py")
+    sim = _load_module("math_sim_path", "scripts/flowed-sim-path.py")
     mode = getattr(args, "test_mode", "pass")
     today = date.today().isoformat()
 
@@ -2388,7 +2388,7 @@ def run_ladder(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
     path = cu.rebuild_path(prof_dir, cur, save=True)
     rows = cu.summarize(cur, path, today)
     ready = cu.checkpoint_ready(rows, cu.CFG, cur)
-    view = (cli._call("/api/fluent/path") or {}).get("data") or {}
+    view = (cli._call("/api/math/path") or {}).get("data") or {}
     print(f"  {len(out_lines)} respostes sintètiques en {days_used} dies · barra {cu.progress(rows)['pct']:.0f}% · "
           f"prova: {view.get('checkpoint')}")
     if not rep.check(ready and view.get("checkpoint") == "ready", "l'app ofereix la prova de nivell",
@@ -2401,7 +2401,7 @@ def run_ladder(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
     print(f"\n=== C · la prova de nivell, feta pel servidor (mode {mode}) ===")
     bank = {k["prompt"]: k for c in cur["competencies"] for k in c["checks"]}
     sid = cli.new_session()
-    out = tutor_text(cli.command(sid, "fluent-checkpoint"))
+    out = tutor_text(cli.command(sid, "math-checkpoint"))
     print("  " + out.splitlines()[0][:80] if out.strip() else "  (buit)")
     rep.check("Level test" in out and "question 1/" in out, "la prova comença amb la primera pregunta", out[:70])
     asked = 0
@@ -2434,7 +2434,7 @@ def run_ladder(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
         cf2 = cu.find_curriculum(REPO, prof_dir)
         rep.check(cf2 is not None and cf2.name == cf.name, "el curs actiu continua sent A1", cf2.name if cf2 else "?")
         rep.check(not (prof_dir / "checkpoint-run.json").exists(), "no queda cap prova a mig fer")
-        v2 = (cli._call("/api/fluent/path") or {}).get("data") or {}
+        v2 = (cli._call("/api/math/path") or {}).get("data") or {}
         rep.check(not v2.get("notice"), "no hi ha cap avís de curs acabat", str(v2.get("notice"))[:80])
         rep.guards = guards
         return _ladder_finish(rep, quiet)
@@ -2447,16 +2447,16 @@ def run_ladder(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
     archived = list((prof_dir / "courses").glob("*.json")) if (prof_dir / "courses").is_dir() else []
     rep.check(any("A1" in f.name for f in archived), "el curs A1 queda arxivat", ", ".join(f.name for f in archived) or "cap")
     rep.check(not (prof_dir / "checkpoint-run.json").exists(), "no queda cap prova a mig fer")
-    v2 = (cli._call("/api/fluent/path") or {}).get("data") or {}
+    v2 = (cli._call("/api/math/path") or {}).get("data") or {}
     rep.check(v2.get("level") == "A2" and (v2.get("pct") or 0) == 0.0,
               "el camí actiu és A2 i comença a 0%", f"{v2.get('level')} {v2.get('pct')}%")
     notice = v2.get("notice") or {}
     rep.check(bool(notice), "hi ha l'avís de curs acabat", json.dumps(notice, ensure_ascii=False)[:100])
-    cli._call("/api/fluent/path/seen", {}, "POST")
-    v3 = (cli._call("/api/fluent/path") or {}).get("data") or {}
+    cli._call("/api/math/path/seen", {}, "POST")
+    v3 = (cli._call("/api/math/path") or {}).get("data") or {}
     rep.check(not v3.get("notice"), "l'avís no torna un cop vist")
     rep.check(v3.get("checkpoint") != "ready", "A2 no ofereix la prova de nivell el primer dia", str(v3.get("checkpoint")))
-    again = tutor_text(cli.command(cli.new_session(), "fluent-checkpoint"))
+    again = tutor_text(cli.command(cli.new_session(), "math-checkpoint"))
     rep.check("opens when" in again or "level test" in again.lower(), "el botó de la prova a A2 diu que encara no", again[:80])
 
     print("\n=== E · curs A2 amb el tutor real ===")
@@ -2511,14 +2511,14 @@ def run_topics(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
     try:
         sid = cli.new_session()
         print(f"perfil {prof_dir.name} · port {args.port} · temes: {TOPIC_LINES}")
-        greeting = tutor_text(cli.command(sid, "fluent-learn"))
-        transcript.append(f"## /fluent-learn\n\n{greeting}")
+        greeting = tutor_text(cli.command(sid, "math-learn"))
+        transcript.append(f"## /math-learn\n\n{greeting}")
         if not greeting.strip():
             print("\n❌ el tutor no ha dit res: el model no respon.", file=sys.stderr)
             return 2
 
         # 1. free practice: Writing, twice (the rotation moves with the answers)
-        w1 = tutor_text(cli.command(sid, "fluent-writing"))
+        w1 = tutor_text(cli.command(sid, "math-writing"))
         transcript.append(f"## ✍️ Writing\n\n{w1}")
         replies.append(w1)
         rep.check(mentions_topic(exercise_tail(w1) or w1), "Writing es construeix al voltant d'un tema de la llista",
@@ -2529,14 +2529,14 @@ def run_topics(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
         rep.check(bool(SCORE.search(a1)), "i la resposta a Writing es corregeix amb nota", "")
 
         # 2. Vocabulary: a card is still a card
-        v1 = tutor_text(cli.command(sid, "fluent-vocab"))
+        v1 = tutor_text(cli.command(sid, "math-vocab"))
         transcript.append(f"## 📚 Vocabulary\n\n{v1}")
         replies.append(v1)
         rep.check(bool(re.search(r"Word \d+/\d+|\*\*(?:Catal|English)", v1)), "Vocabulary segueix donant targetes", v1[:80].replace("\n", " "))
 
         # 3. the Lesson: the queue wins
         due = due_now(prof_dir)
-        first = tutor_text(cli.command(sid, "fluent-review"))
+        first = tutor_text(cli.command(sid, "math-review"))
         transcript.append(f"## 🎓 Lesson\n\n{first}")
         replies.append(first)
         notes_path = prof_dir / ".metrics" / "notes.jsonl"

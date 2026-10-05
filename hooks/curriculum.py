@@ -490,7 +490,7 @@ def active_competences(rows: list[dict], path: dict, cfg: dict = CFG) -> list[st
     path (`test_simulated_student_is_deterministic_and_reaches_a_verdict`)
     still gives the same result every time — true randomness would have
     broken that. Reading and Speaking never call this (agent.ts only builds
-    this note for fluent-learn / fluent-vocab) — untouched.
+    this note for math-learn / math-vocab) — untouched.
     """
     if path.get("reinforce"):
         return list(path["reinforce"])[: cfg["max_active"]]

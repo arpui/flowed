@@ -4,16 +4,16 @@
 The failure this guards against, in full, because it cost two children a whole
 lesson and looked from the outside like the app was broken:
 
-Every session opens with an automatic `/fluent-learn`. When the learner then
-pressed 🎓 Lesson, `/fluent-review` arrived as the SECOND command of the
-session. Its first line said "Load the `fluent-review` skill via the skill tool
+Every session opens with an automatic `/math-learn`. When the learner then
+pressed 🎓 Lesson, `/math-review` arrived as the SECOND command of the
+session. Its first line said "Load the `math-review` skill via the skill tool
 and follow it EXACTLY" — and the model, already mid-practice with a working
 pattern in front of it, did not. Measured on 2026-09-16: the `skill` tool was
 called exactly once per session, always on the first command, never again.
 
 Everything else followed from that one miss, because the entire grading
 contract — the 🔴/🟡/🟢 marker, `**Corrections:**`, `**Correct version:**`,
-`**Score: N/10**` — lives only in `skills/fluent-review/SKILL.md`:
+`**Score: N/10**` — lives only in `skills/math-review/SKILL.md`:
 
   no skill  ->  no correction shown        (60 turns, zero corrections)
             ->  no "Score: N/10" in text   (creditTurn returned early)
@@ -30,7 +30,7 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-COMMANDS = sorted((REPO_ROOT / "prompts" / "commands").glob("fluent-*.md"))
+COMMANDS = sorted((REPO_ROOT / "prompts" / "commands").glob("math-*.md"))
 
 
 class CommandsDoNotAskTheModelToLoadSkills(unittest.TestCase):
@@ -58,16 +58,16 @@ class TheServerLoadsIt(unittest.TestCase):
         self.assertIn("loadSkill(opts.root, command, opts.dataDir)", self.commands)
 
     def test_it_follows_the_declared_skill_chain(self):
-        # "Use the `fluent-feedback-formatter` skill for per-answer feedback" is
+        # "Use the `math-feedback-formatter` skill for per-answer feedback" is
         # one more hop the model will not take, and the feedback template — the
         # grading contract — is in that second file. `requires:` makes the
         # dependency explicit and the server follows it.
         self.assertIn("requiredSkills(main)", self.commands)
-        for name in ("fluent-review", "fluent-learn", "fluent-vocab",
-                     "fluent-writing", "fluent-speaking"):
+        for name in ("math-review", "math-learn", "math-vocab",
+                     "math-writing", "math-speaking"):
             with self.subTest(skill=name):
                 body = (REPO_ROOT / "skills" / name / "SKILL.md").read_text()
-                self.assertIn("requires: [fluent-feedback-formatter]", body)
+                self.assertIn("requires: [math-feedback-formatter]", body)
 
     def test_the_skill_is_rendered_for_the_model_not_shipped_raw(self):
         # The file a person maintains is not the prompt a 14B should read.
@@ -98,10 +98,10 @@ class TheServerLoadsIt(unittest.TestCase):
 
 class TheGradingContractHasOneHome(unittest.TestCase):
     def setUp(self):
-        self.skill = (REPO_ROOT / "skills" / "fluent-review" / "SKILL.md").read_text()
+        self.skill = (REPO_ROOT / "skills" / "math-review" / "SKILL.md").read_text()
 
     def test_the_review_skill_states_it(self):
-        for token in ("**Correct version:**", "Score: ", "fluent_record_answer"):
+        for token in ("**Correct version:**", "Score: ", "math_record_answer"):
             with self.subTest(token=token):
                 self.assertIn(token, self.skill)
 

@@ -58,7 +58,7 @@ function resolvePassword(dataDir: string): string {
   try {
     return fs.readFileSync(file, "utf8").trim();
   } catch {
-    return "fluent"; // dev fallback; the launcher always writes a real password
+    return "math"; // dev fallback; the launcher always writes a real password
   }
 }
 

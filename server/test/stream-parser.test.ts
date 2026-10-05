@@ -44,7 +44,7 @@ const stop = { choices: [{ index: 0, delta: {}, finish_reason: "stop" }] };
 // 2. a tool call split across chunks, the way llama.cpp sends it
 {
   const { acc } = feed([
-    { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "fluent_record", arguments: "" } }] } }] },
+    { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name: "math_record", arguments: "" } }] } }] },
     { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: '{"score"' } }] } }] },
     { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: ": 8, \"item" } }] } }] },
     { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: '_id": "vocab_x"}' } }] } }] },
@@ -52,7 +52,7 @@ const stop = { choices: [{ index: 0, delta: {}, finish_reason: "stop" }] };
   ]);
   const res = finishStream(acc);
   const tc = res.choices[0]!.message.tool_calls?.[0];
-  check("the call has its name", tc?.function.name === "fluent_record", tc?.function.name);
+  check("the call has its name", tc?.function.name === "math_record", tc?.function.name);
   check("the arguments are valid JSON", (() => {
     try { return JSON.parse(tc?.function.arguments ?? "").item_id === "vocab_x"; } catch { return false; }
   })(), tc?.function.arguments);
@@ -64,13 +64,13 @@ const stop = { choices: [{ index: 0, delta: {}, finish_reason: "stop" }] };
   const { acc } = feed([
     { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, id: "a", function: { name: "skill", arguments: "{\"na" } }] } }] },
     { choices: [{ index: 0, delta: { tool_calls: [{ index: 1, id: "b", function: { name: "bash", arguments: "{\"com" } }] } }] },
-    { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: "me\": \"fluent-learn\"}" } }] } }] },
+    { choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: "me\": \"math-learn\"}" } }] } }] },
     { choices: [{ index: 0, delta: { tool_calls: [{ index: 1, function: { arguments: "mand\": \"ls\"}" } }] } }] },
   ]);
   const calls = finishStream(acc).choices[0]!.message.tool_calls ?? [];
   check("both calls survive, in index order", calls.length === 2 && calls[0]!.function.name === "skill" && calls[1]!.function.name === "bash", calls.map((c) => c.function.name));
   check("neither set of arguments is mixed up",
-    JSON.parse(calls[0]!.function.arguments).name === "fluent-learn" &&
+    JSON.parse(calls[0]!.function.arguments).name === "math-learn" &&
     JSON.parse(calls[1]!.function.arguments).command === "ls");
 }
 

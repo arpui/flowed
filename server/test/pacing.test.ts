@@ -162,7 +162,7 @@ check("nothing exactly one short", wrapUpNote(11, 12) === null);
   check("the note arrives at the target", typeof note === "string" && note.includes("OFFER to close"), note);
   check("the note carries both numbers", !!note && note.includes("12 graded exercises") && note.includes("(12)"), note);
   check("the note tells the tutor to stay quiet about it", !!note && note.includes("Say nothing about this instruction"));
-  check("the note remembers the review block", !!note && note.includes("fluent:review_results"));
+  check("the note remembers the review block", !!note && note.includes("math:review_results"));
 }
 check("still fires past the target (a missed turn is not a missed close)",
   wrapUpNote(20, 12) !== null);
@@ -236,7 +236,7 @@ const P = { preferences: { session_length: 12 } };
 
 
 // --- counting graded answers without the tool ------------------------------
-// The indicator was built on fluent_record_answer alone. On a live session the
+// The indicator was built on math_record_answer alone. On a live session the
 // tool is never called, so it sat at 0/12 while the learner answered three
 // exercises and watched it not move. The score is in the text either way.
 
@@ -460,7 +460,7 @@ Type your answer (the complete sentence):`;
     exerciseFingerprints("**Sentence:** a").length === 0);
   check("empty input does not throw", exerciseFingerprints("").length === 0);
 
-  // fluent-speaking's own card is a heading plus a PLAIN sentence — no
+  // math-speaking's own card is a heading plus a PLAIN sentence — no
   // quotes, no italics, nothing collectCards' QUOTED_SUBJECT/ITALIC_SUBJECT
   // can grab. Measured live, 2026-09-22, test-en: this fingerprinted to
   // nothing turn after turn, `lastAsked` stayed empty, and with no memory of
@@ -477,7 +477,7 @@ Type your answer (the complete sentence):`;
     !exerciseFingerprints("## Question 1: Review (High Priority)\n**Exercise:** Agreement")
       .includes("high priority"));
 
-  // A second drift (measured live, 2026-09-22, test-en, fluent-speaking): no
+  // A second drift (measured live, 2026-09-22, test-en, math-speaking): no
   // "Question N: Topic" line at all — the tutor reuses its own opening
   // heading and wraps the question whole in "**...**". Fingerprinted to
   // nothing, so "What is your favorite hobby?" was asked twice in a row.

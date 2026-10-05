@@ -870,13 +870,13 @@ class LadderScenarioTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("fluent_e2e_ladder", REPO_ROOT / "scripts" / "flowed-e2e.py")
+        spec = importlib.util.spec_from_file_location("math_e2e_ladder", REPO_ROOT / "scripts" / "flowed-e2e.py")
         cls.e2e = importlib.util.module_from_spec(spec)
-        sys.modules["fluent_e2e_ladder"] = cls.e2e
+        sys.modules["math_e2e_ladder"] = cls.e2e
         spec.loader.exec_module(cls.e2e)
-        spec = importlib.util.spec_from_file_location("fluent_sim_ladder", REPO_ROOT / "scripts" / "flowed-sim-path.py")
+        spec = importlib.util.spec_from_file_location("math_sim_ladder", REPO_ROOT / "scripts" / "flowed-sim-path.py")
         cls.sim = importlib.util.module_from_spec(spec)
-        sys.modules["fluent_sim_ladder"] = cls.sim
+        sys.modules["math_sim_ladder"] = cls.sim
         spec.loader.exec_module(cls.sim)
 
     def test_every_question_can_be_read_back_to_its_check(self):

@@ -28,7 +28,7 @@ check("neither says Writing", !/Writing/.test(g + v));
 // 🎓 Review on the bank (fase 4), and the day's count for every bank answer.
 const ag = readFileSync(new URL("../src/agent.ts", import.meta.url), "utf8");
 check("Review goes through the bank when it is on",
-  ag.includes('this.currentCommand.get(sessionId) === "fluent-review"') && ag.includes("this.tryBankReviewTurn(sessionId, agent)"));
+  ag.includes('this.currentCommand.get(sessionId) === "math-review"') && ag.includes("this.tryBankReviewTurn(sessionId, agent)"));
 check("it asks curriculum.py for a review item", ag.includes('"review-pick", "--used"'));
 check("the record names the queue item it reviewed, so SM-2 advances it",
   ag.includes("queueId ? { item_id: queueId, sm2_quality:"));

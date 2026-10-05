@@ -8,7 +8,7 @@
 //     "✏️ Exercici" in the flow, which tells an eight-year-old to answer a list
 //     of options.
 //  2. NO SLASH COMMANDS REACH THE SCREEN. The learner has buttons and no
-//     command line, so "try /fluent-vocab" is advice they cannot follow. The
+//     command line, so "try /math-vocab" is advice they cannot follow. The
 //     prompts forbid it, but a 14B model improvises: the renderer is the only
 //     guarantee.
 //
@@ -107,26 +107,26 @@ check("feedback with a score is not an open exercise",
 // --- no slash commands reach the screen ------------------------------------
 
 check("a bare command becomes its button",
-  humanizeCommands("Try /fluent-vocab next.") === "Try **📚 Vocabulary** next.",
-  humanizeCommands("Try /fluent-vocab next."));
+  humanizeCommands("Try /math-vocab next.") === "Try **📚 Vocabulary** next.",
+  humanizeCommands("Try /math-vocab next."));
 check("a backticked command becomes its button",
-  humanizeCommands("Run `/fluent-review` first.") === "Run **🔁 Review** first.",
-  humanizeCommands("Run `/fluent-review` first."));
-check("fluent-learn is the dice button",
-  humanizeCommands("/fluent-learn").includes("Surprise me!"));
-check("fluent-end is the finish button",
-  humanizeCommands("/fluent-end").includes("End"), humanizeCommands("/fluent-end"));
+  humanizeCommands("Run `/math-review` first.") === "Run **🔁 Review** first.",
+  humanizeCommands("Run `/math-review` first."));
+check("math-learn is the dice button",
+  humanizeCommands("/math-learn").includes("Surprise me!"));
+check("math-end is the finish button",
+  humanizeCommands("/math-end").includes("End"), humanizeCommands("/math-end"));
 check("setup points at the admin, not at a button",
-  humanizeCommands("/fluent-setup").includes("administrador"));
+  humanizeCommands("/math-setup").includes("administrador"));
 check("every command in a list is rewritten",
-  !humanizeCommands("- /fluent-learn\n- /fluent-vocab\n- /fluent-progress").includes("/fluent-"),
-  humanizeCommands("- /fluent-learn\n- /fluent-vocab\n- /fluent-progress"));
+  !humanizeCommands("- /math-learn\n- /math-vocab\n- /math-progress").includes("/math-"),
+  humanizeCommands("- /math-learn\n- /math-vocab\n- /math-progress"));
 check("the whole empty-queue message comes out clean",
   !humanizeCommands(
-    "Try:\n- `/fluent-learn` — mixed\n- `/fluent-vocab` — words\n- `/fluent-progress` — stats"
-  ).includes("/fluent-"));
+    "Try:\n- `/math-learn` — mixed\n- `/math-vocab` — words\n- `/math-progress` — stats"
+  ).includes("/math-"));
 check("an unknown command is left alone rather than mangled",
-  humanizeCommands("/fluent-nonsense") === "/fluent-nonsense");
+  humanizeCommands("/math-nonsense") === "/math-nonsense");
 check("ordinary text is untouched",
   humanizeCommands("I am fluent in Catalan.") === "I am fluent in Catalan.");
 
@@ -217,7 +217,7 @@ check("ordinary text is untouched",
   check("a sentence that merely mentions an item is left alone",
     stripMachineBlocks("Every item ID is private.") === "Every item ID is private.");
   check("the machine block is still stripped",
-    stripMachineBlocks('Bé!\n```fluent:review_results\n[{"item_id":"x"}]\n```') === "Bé!");
+    stripMachineBlocks('Bé!\n```math:review_results\n[{"item_id":"x"}]\n```') === "Bé!");
 }
 
 
@@ -284,8 +284,8 @@ check("ordinary text is untouched",
   check("test: nothing once the level is certified", pathCheckpointOffer({ ...P, checkpoint: "promoted" }) === null);
   check("test: the panel has the button when ready",
     renderPath({ ...P, checkpoint: "ready", as_of: "2026-09-25" }).includes("data-start-checkpoint") && !renderPath(P).includes("data-start-checkpoint"));
-  check("path: the server serves it (/api/fluent/path -> curriculum.py json)",
-    /"\/api\/fluent\/path"/.test(fs.readFileSync(path.join(repo, "server", "src", "http.ts"), "utf8")) &&
+  check("path: the server serves it (/api/math/path -> curriculum.py json)",
+    /"\/api\/math\/path"/.test(fs.readFileSync(path.join(repo, "server", "src", "http.ts"), "utf8")) &&
     fs.readFileSync(path.join(repo, "server", "src", "http.ts"), "utf8").includes('"json", "--auto"'));
 }
 

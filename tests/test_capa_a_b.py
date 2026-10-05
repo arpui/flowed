@@ -33,7 +33,7 @@ FEEDBACK = (
 
 class CapaABTest(unittest.TestCase):
     def setUp(self):
-        self.dir = Path(tempfile.mkdtemp(prefix="fluent-capa-"))
+        self.dir = Path(tempfile.mkdtemp(prefix="math-capa-"))
         for name in ("learner-profile", "mastery-db", "mistakes-db", "progress-db",
                      "session-log", "spaced-repetition"):
             shutil.copy(TEMPLATES / f"{name}-template.json", self.dir / f"{name}.json")
@@ -62,7 +62,7 @@ class CapaABTest(unittest.TestCase):
         """)
         now = int(time.time() * 1000)
         db.execute(
-            "INSERT INTO session VALUES ('ses_T','global','fluent','','Fluent',"
+            "INSERT INTO session VALUES ('ses_T','global','math','','Fluent',"
             "'0.0.0-local','learner','deep',?,?,?,NULL)", (now - 600000, now, now))
 
         def msg(mid, role, text):
@@ -133,7 +133,7 @@ class CapaABTest(unittest.TestCase):
 
     REVIEW_BLOCK = (
         "## Review session complete!\n\nGreat work today.\n\n"
-        "```fluent:review_results\n"
+        "```math:review_results\n"
         '[{"item_id": "example_item_id", "quality": 4},\n'
         ' {"item_id": "not_in_the_queue", "quality": 5}]\n'
         "```\n"
@@ -173,12 +173,12 @@ class CapaABTest(unittest.TestCase):
         self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
         self._run("persist-session.py", "ses_T", "--dir", str(self.dir))
         names = sorted(p.name for p in (self.dir / "results").glob("*.md"))
-        self.assertEqual(names, ["test-fluent-learn-session-001.md"],
+        self.assertEqual(names, ["test-math-learn-session-001.md"],
                          f"unexpected results files: {names}")
 
 
 class StructuredRecordsTest(CapaABTest):
-    """P1-5: the tutor DECLARES each graded answer via fluent_record_answer.
+    """P1-5: the tutor DECLARES each graded answer via math_record_answer.
 
     The server validates and appends a record; the Python layer prefers records
     over the prose parsers and must not count the same answer twice.

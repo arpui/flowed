@@ -79,7 +79,7 @@ class DecayThroughUpdateDbTest(unittest.TestCase):
     """The real path: a session applied by update-db.py."""
 
     def setUp(self):
-        self.dir = Path(tempfile.mkdtemp(prefix="fluent-decay-"))
+        self.dir = Path(tempfile.mkdtemp(prefix="math-decay-"))
         for name in ("learner-profile", "mastery-db", "mistakes-db", "progress-db",
                      "session-log", "spaced-repetition"):
             shutil.copy(REPO_ROOT / "data-examples" / f"{name}-template.json",
@@ -148,7 +148,7 @@ class ErrorPatternsHealTest(unittest.TestCase):
     """
 
     def setUp(self):
-        self.dir = Path(tempfile.mkdtemp(prefix="fluent-rank-"))
+        self.dir = Path(tempfile.mkdtemp(prefix="math-rank-"))
         for name in ("learner-profile", "mastery-db", "mistakes-db", "progress-db",
                      "session-log", "spaced-repetition"):
             shutil.copy(REPO_ROOT / "data-examples" / f"{name}-template.json",

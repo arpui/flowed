@@ -1,5 +1,5 @@
 // Fluent server — command loader.
-// Parses `prompts/commands/fluent-*.md`: splits YAML frontmatter from the
+// Parses `prompts/commands/math-*.md`: splits YAML frontmatter from the
 // body, resolves the directive lines (`` !`cmd` ``) by executing them and
 // splicing their output in place, and exposes the agent/model routing.
 
@@ -9,7 +9,7 @@ import * as yaml from "js-yaml";
 import { renderSkillForModel, requiredSkills } from "./pacing.ts";
 
 export interface ResolvedCommand {
-  command: string; // e.g. "fluent-learn"
+  command: string; // e.g. "math-learn"
   agent: string; // agent id from frontmatter (tutor | tutor-fast) or "learner"
   title: string; // first heading/description
   body: string; // expanded body (directives spliced in)
@@ -25,8 +25,8 @@ export interface ResolvedCommand {
  * was the first thing in a session. From the second command on the model was
  * already mid-practice and simply carried on without loading anything — and
  * the entire grading contract (the 🔴/🟡/🟢 marker, "Correct version",
- * "Score: N/10") lives in `skills/fluent-review/SKILL.md`. Measured on a real
- * lesson: 🎓 Lesson pressed after the session's automatic /fluent-learn, skill
+ * "Score: N/10") lives in `skills/math-review/SKILL.md`. Measured on a real
+ * lesson: 🎓 Lesson pressed after the session's automatic /math-learn, skill
  * never loaded, no corrections shown, nothing for the counter to read, and the
  * tutor repeating one exercise for twenty-five turns.
  *
@@ -35,7 +35,7 @@ export interface ResolvedCommand {
  * server loads.
  */
 function readSkillFile(root: string, name: string): string | undefined {
-  if (!/^fluent-[a-z0-9-]+$/.test(name)) return undefined;
+  if (!/^math-[a-z0-9-]+$/.test(name)) return undefined;
   try {
     const body = fs.readFileSync(path.join(root, "skills", name, "SKILL.md"), "utf8").trim();
     return body || undefined;
@@ -67,7 +67,7 @@ export function loadSkill(
   if (!main) return undefined;
   const langs = dataDir ? profileLanguages(dataDir) : undefined;
 
-  // Skills reference each other in prose — "Use the `fluent-feedback-formatter`
+  // Skills reference each other in prose — "Use the `math-feedback-formatter`
   // skill for per-answer feedback" — which is one more hop the model is
   // supposed to take with the skill tool, and does not. The feedback template
   // is in that second file, so the grading contract was two loads away from a

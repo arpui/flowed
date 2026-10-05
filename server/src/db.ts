@@ -46,13 +46,13 @@ export interface PartRow {
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS session (
   id text PRIMARY KEY,
-  project_id text NOT NULL DEFAULT 'proj_fluent',
+  project_id text NOT NULL DEFAULT 'proj_math',
   workspace_id text,
   parent_id text,
   slug text NOT NULL,
   directory text NOT NULL DEFAULT '',
   path text,
-  title text NOT NULL DEFAULT 'Fluent',
+  title text NOT NULL DEFAULT 'FlowMath',
   version text NOT NULL DEFAULT '0.0.0-local',
   share_url text,
   summary_additions integer,
@@ -164,7 +164,7 @@ export class FluentDB {
     const id = this.newId("ses");
     const model =
       opts.model ??
-      JSON.stringify({ id: "deep", providerID: "fluent-deep", variant: "default" });
+      JSON.stringify({ id: "deep", providerID: "math-deep", variant: "default" });
     // Explicit NOT NULL columns (no reliance on table defaults): works against
     // both our fresh schema and an existing opencode.db.
     this.ensureGlobalProject();
@@ -174,8 +174,8 @@ export class FluentDB {
          (id, project_id, slug, directory, title, version, agent, model, time_created, time_updated, last_activity)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(id, "global", opts.slug, "", opts.title ?? "Fluent", "0.0.0-local", opts.agent, model, now, now, now);
-    return { id, slug: opts.slug, agent: opts.agent, title: opts.title ?? "Fluent", model, time_created: now, time_updated: now, last_activity: now, metadata: null };
+      .run(id, "global", opts.slug, "", opts.title ?? "FlowMath", "0.0.0-local", opts.agent, model, now, now, now);
+    return { id, slug: opts.slug, agent: opts.agent, title: opts.title ?? "FlowMath", model, time_created: now, time_updated: now, last_activity: now, metadata: null };
   }
 
   getSession(id: string): SessionRow | null {

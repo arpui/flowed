@@ -1,8 +1,8 @@
 // Fluent server — tools exposed to the LLM.
 // Mirrors the opencode plugin toolbox for the learner agent:
-//   - skill: load a fluent-* skill's SKILL.md (read-only)
+//   - skill: load a math-* skill's SKILL.md (read-only)
 //   - bash: run a shell command, filtered by the learner.md permission list
-//   - fluent_deep_evaluate: delegate evaluation to the deep model role
+//   - math_deep_evaluate: delegate evaluation to the deep model role
 //
 // Each tool returns a plain string that is fed back to the model as the
 // role:"tool" result AND persisted as a tool part.
@@ -33,11 +33,11 @@ function bashAllowed(command: string): boolean {
   return BASH_ALLOW.some(({ re }) => re.test(cmd));
 }
 
-// ---- deep-evaluation tool (port of plugin's fluent_deep_evaluate) ----------
+// ---- deep-evaluation tool (port of plugin's math_deep_evaluate) ----------
 
 // Canonical error categories. SINGLE SOURCE: ERROR_CATEGORIES in
 // hooks/db_schema.py — tests/test_error_categories.py fails if these
-// two lists drift apart. Used by the deep rubric AND by fluent_record_answer's
+// two lists drift apart. Used by the deep rubric AND by math_record_answer's
 // validation, so a category the parser would silently turn into "grammar" is
 // rejected at the moment it is written instead.
 export const ERROR_CATEGORIES = [
@@ -179,16 +179,16 @@ export function buildTools(opts: {
   const skillTool: ToolDefinition = {
     name: "skill",
     description:
-      "Load a Fluent skill's instructions (a Markdown SKILL.md) into your context. Only 'fluent-*' skills are available. Returns the skill content to follow exactly.",
+      "Load a Fluent skill's instructions (a Markdown SKILL.md) into your context. Only 'math-*' skills are available. Returns the skill content to follow exactly.",
     parameters: {
       type: "object",
-      properties: { name: { type: "string", description: "Skill name, e.g. 'fluent-learn'." } },
+      properties: { name: { type: "string", description: "Skill name, e.g. 'math-learn'." } },
       required: ["name"],
     },
     execute: async (args: Record<string, unknown>) => {
       const name = String(args.name ?? "").trim();
-      if (!/^fluent-[a-z0-9-]+$/.test(name)) {
-        return `[skill error: '${name}' is not a valid fluent-* skill name]`;
+      if (!/^math-[a-z0-9-]+$/.test(name)) {
+        return `[skill error: '${name}' is not a valid math-* skill name]`;
       }
       const file = path.join(opts.root, "skills", name, "SKILL.md");
       try {
@@ -229,7 +229,7 @@ export function buildTools(opts: {
   };
 
   const deepTool: ToolDefinition = {
-    name: "fluent_deep_evaluate",
+    name: "math_deep_evaluate",
     description:
       "Delegate evaluation of a learner answer to the deep model role (focused rubric in a clean context). Use it for free-composition answers: writing texts, speaking replies, open-ended reading answers, or final scoring. Call it at most ONCE, and only with the learner's real, already-submitted answer — never with placeholder, hypothetical or invented content. Returns a structured evaluation (CORRECTIONS / CORRECT VERSION / SCORE / FEEDBACK) to present to the learner in your feedback format. If the result starts with 'DEEP UNAVAILABLE', follow the instructions in the message (usually: evaluate the answer yourself in the same format, or continue the session without calling the tool).",
     parameters: {
@@ -301,7 +301,7 @@ export function buildTools(opts: {
     },
   };
 
-  // ---- fluent_record_answer: structured grading (P1-5) --------------------
+  // ---- math_record_answer: structured grading (P1-5) --------------------
   // The tutor DECLARES what it graded instead of only narrating it. The server
   // validates and appends the record; the Python layer prefers records over the
   // prose parsers and logs any divergence between the two.
@@ -318,7 +318,7 @@ export function buildTools(opts: {
   };
 
   const recordTool: ToolDefinition = {
-    name: "fluent_record_answer",
+    name: "math_record_answer",
     description:
       "Record ONE graded answer in the learner's databases. Call it once per answer, right after you show the learner your feedback, with the same values you just showed them. This is what actually stores the result: your message text is for the learner, this call is the data. If it returns REJECTED, fix the arguments and call it again once.",
     parameters: {
@@ -444,8 +444,8 @@ export function buildTools(opts: {
     },
   };
 
-  // ---- fluent_setup_profile: onboarding that can actually finish (S14) -----
-  // /fluent-setup interviews the learner and then has to WRITE the profile.
+  // ---- math_setup_profile: onboarding that can actually finish (S14) -----
+  // /math-setup interviews the learner and then has to WRITE the profile.
   // In this runtime it had no way to: no write tool, and its python one-liners
   // are denied by the allow-list — so a profile created by new-user.sh stayed a
   // template for ever while the web kept auto-starting the interview. This tool
@@ -453,9 +453,9 @@ export function buildTools(opts: {
   const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
   const setupTool: ToolDefinition = {
-    name: "fluent_setup_profile",
+    name: "math_setup_profile",
     description:
-      "Write the learner's profile at the END of the /fluent-setup interview, once you have their answers. Call it ONCE. It fills learner-profile.json (name, languages, levels, daily minutes, goals) and marks the setup as complete, so the app stops asking. If it returns REJECTED, fix what it names and call it again once. Never call it during normal practice.",
+      "Write the learner's profile at the END of the /math-setup interview, once you have their answers. Call it ONCE. It fills learner-profile.json (name, languages, levels, daily minutes, goals) and marks the setup as complete, so the app stops asking. If it returns REJECTED, fix what it names and call it again once. Never call it during normal practice.",
     parameters: {
       type: "object",
       properties: {

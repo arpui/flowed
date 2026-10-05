@@ -40,7 +40,7 @@ class ResolveSessionsDbTest(unittest.TestCase):
         cls.ps = _load("ps_under_test", "persist-session.py")
 
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-ps-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-ps-"))
         self._saved_env = os.environ.pop("FLOWED_SESSIONS_DB", None)
 
     def tearDown(self):
@@ -103,7 +103,7 @@ class DbMissingGuardTest(unittest.TestCase):
     empty database."""
 
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-ps-guard-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-ps-guard-"))
         self.missing = self.tmp / "nope.db"
 
     def tearDown(self):
@@ -235,7 +235,7 @@ class MigrateSessionsDbTest(unittest.TestCase):
     """scripts/migrate-sessions-db.py: copy, verify, never delete."""
 
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-mig-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-mig-"))
         (self.tmp / "learner-profile.json").write_text('{"learner": {"name": "Test"}}',
                                                        encoding="utf-8")
         self.legacy = self.tmp / ".opencode" / "opencode" / "opencode.db"

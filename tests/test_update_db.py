@@ -111,7 +111,7 @@ SESSION_PAYLOAD = {
     "session_id": "session-002",
     "date": "2026-04-24",
     "duration_minutes": 15,
-    "command_used": "/fluent-learn",
+    "command_used": "/math-learn",
     "skills_practiced": ["vocabulary"],
     "skill_scores": {
         "vocabulary": {"exercises": 5, "correct": 4, "time_minutes": 15}
@@ -146,7 +146,7 @@ SESSION_PAYLOAD = {
 
 class UpdateDbSmokeTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-test-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-test-"))
         (self.tmp / "data").mkdir()
         make_fixtures(self.tmp / "data")
 
@@ -430,7 +430,7 @@ class UpdateDbIdempotencyTest(unittest.TestCase):
     application of the final payload."""
 
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-idem-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-idem-"))
         (self.tmp / "data").mkdir()
         make_fixtures(self.tmp / "data")
 
@@ -490,7 +490,7 @@ class UpdateDbIdempotencyTest(unittest.TestCase):
 
         # House 2: fresh fixtures, single full apply.
         shutil.rmtree(self.tmp)
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-idem2-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-idem2-"))
         (self.tmp / "data").mkdir()
         make_fixtures(self.tmp / "data")
         proc = self._run(full)
@@ -507,7 +507,7 @@ class ErrorTwinsTest(unittest.TestCase):
     """One sentence, one item — whatever the tutor called the slip."""
 
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-twin-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-twin-"))
         (self.tmp / "data").mkdir()
         make_fixtures(self.tmp / "data")
 

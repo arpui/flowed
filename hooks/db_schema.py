@@ -21,7 +21,7 @@ CURRENT_SCHEMA_VERSION = 1
 # must appear in three places; tests/test_error_categories.py enforces it:
 #   1. here (used by persist-session.parse_error_patterns to build pattern ids)
 #   2. server/src/tools.ts  -> DEEP_RUBRIC (what the deep evaluator may emit)
-#   3. skills/fluent-feedback-formatter/SKILL.md and
+#   3. skills/math-feedback-formatter/SKILL.md and
 #      references/feedback-template.md (what the tutor is told to use)
 # Anything unrecognized silently became "grammar", which is how mistakes-db
 # used to collapse into a single category.

@@ -14,11 +14,11 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_H
 #   3. Creates ~/.flowed/<id>/ and seeds the 6 JSON DBs from data-examples/ so
 #      that scripts/flowed-web.sh --app <id> will accept the profile.
 #   4. Generates a per-profile web password (.web-password, mode 600).
-#   5. Prints how to launch and finish the FIRST real setup (the /fluent-setup
+#   5. Prints how to launch and finish the FIRST real setup (the /math-setup
 #      interview inside the web instance fills learner-profile.json properly).
 #
 # This is the "script, no admin web" path: provisioning is a deterministic copy,
-# and the learner's actual identity/level is captured live by /fluent-setup.
+# and the learner's actual identity/level is captured live by /math-setup.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -52,7 +52,7 @@ DATA_DIR="$FLOWED_HOME_DIR/$ID"
 # 2) Never overwrite an existing profile.
 if [[ -d "$DATA_DIR" ]]; then
   echo "error: profile directory already exists: $DATA_DIR"
-  echo "       refusing to overwrite. If this is a reset, do it via /fluent-setup."
+  echo "       refusing to overwrite. If this is a reset, do it via /math-setup."
   exit 1
 fi
 
@@ -61,8 +61,8 @@ mkdir -p "$DATA_DIR" "$DATA_DIR/sessions"
 for tpl in learner-profile mastery-db mistakes-db progress-db session-log spaced-repetition; do
   cp "$TEMPLATE_DIR/$tpl-template.json" "$DATA_DIR/$tpl.json"
 done
-# Mark the profile as "pending setup" so the web knows to auto-start /fluent-setup
-# on first open. /fluent-setup flips it to true after the initial interview.
+# Mark the profile as "pending setup" so the web knows to auto-start /math-setup
+# on first open. /math-setup flips it to true after the initial interview.
 python3 -c "
 import json
 p = '$DATA_DIR/learner-profile.json'
@@ -82,9 +82,9 @@ echo "   Password: $PASS   (also saved in $PWFILE)"
 echo
 echo "   Seeded 6 DBs from data-examples/. learner-profile.json is a TEMPLATE"
 echo "   placeholder — the learner completes their real identity/level on first"
-echo "   login via the /fluent-setup interview inside the web app."
+echo "   login via the /math-setup interview inside the web app."
 echo
 echo "Launch it:"
 echo "   scripts/flowed-web.sh --app $ID --port $PORT"
 echo
-echo "Then open http://localhost:$PORT and the learner runs /fluent-setup first."
+echo "Then open http://localhost:$PORT and the learner runs /math-setup first."

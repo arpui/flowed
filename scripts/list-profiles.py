@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""List Flowed learner profiles for /fluent-use.
+"""List Flowed learner profiles for /math-use.
 
 Scans the repo's data/ directory plus the multi-learner convention
 ~/.flowed/<id>/learner-profile.json. Prints one line per profile:
@@ -53,7 +53,7 @@ def main():
     if rows:
         print("\n".join(rows))
     else:
-        print("(cap perfil — fes /fluent-setup per crear-ne un)")
+        print("(cap perfil — fes /math-setup per crear-ne un)")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 // Fluent server — the agent orchestrator.
-// Runs a "turn" (a /fluent-* command or a learner chat message) over the LLM,
+// Runs a "turn" (a /math-* command or a learner chat message) over the LLM,
 // persists every produced part into the SQLite bridge, and emits SSE events so
 // the web UI renders incrementally (same contract opencode exposed).
 
@@ -162,7 +162,7 @@ interface TurnKind {
 }
 // kind "command" is created by the caller and passed as the first user turn.
 
-const OPEN_PRACTICES = new Set(["fluent-speaking", "fluent-writing", "fluent-reading"]);
+const OPEN_PRACTICES = new Set(["math-speaking", "math-writing", "math-reading"]);
 
 export class Agent {
   private db: FluentDB;
@@ -327,7 +327,7 @@ export class Agent {
 
   /** Speaking, Writing and Reading: the server records the answer from the
    *  feedback text (deriveRecord), so the model is not offered
-   *  fluent_record_answer there. Tutor-bench, 2026-09-29 (docs/MODELBENCH.md):
+   *  math_record_answer there. Tutor-bench, 2026-09-29 (docs/MODELBENCH.md):
    *  the call cost a second full request of ~17k tokens per answer (27B: 2
    *  round-trips per turn, ~60 s), and 5 of 17 times the score it stored was
    *  not the one it showed. The 14B was already stored this way 21 times in 30. */
@@ -337,7 +337,7 @@ export class Agent {
 
   private toolsFor(sessionId: string): ToolDefinition[] {
     return this.recordsFromText(sessionId)
-      ? this.tools.definitions.filter((t) => t.name !== "fluent_record_answer")
+      ? this.tools.definitions.filter((t) => t.name !== "math_record_answer")
       : this.tools.definitions;
   }
 
@@ -368,7 +368,7 @@ export class Agent {
     if (this.recordsFromText(sessionId)) {
       blocks.push(
         `Recording, in this practice: the server stores each answer from your feedback text. ` +
-          `fluent_record_answer is NOT available here — do not call it and do not mention it. ` +
+          `math_record_answer is NOT available here — do not call it and do not mention it. ` +
           `Your feedback must show "**Score: N/10**" and each correction as ❌ "wrong" → **"right"**, ` +
           `and then continue with the next question or task in the same message.`
       );
@@ -430,7 +430,7 @@ export class Agent {
       role: "user",
       time: { created: Date.now() },
       agent,
-      model: { providerID: "fluent-deep", modelID: "deep" },
+      model: { providerID: "math-deep", modelID: "deep" },
       summary: { diffs: [] },
     });
     this.db.insertPart(msg.id, sessionId, { type: "text", text });
@@ -447,7 +447,7 @@ export class Agent {
       parentID: null,
       role: "assistant",
       agent,
-      model: { providerID: model.name === "deep" ? "fluent-deep" : "llama-face", modelID: model.name },
+      model: { providerID: model.name === "deep" ? "math-deep" : "llama-face", modelID: model.name },
       cost: 0,
       tokens: { total: 0 },
     });
@@ -484,7 +484,7 @@ export class Agent {
     if (this.currentCommand.size > 500) this.currentCommand.clear();
     this.answerInFront.set(sessionId, false);
     // The level test is run by the server (docs/ESQUEMA-APRENENTATGE.md): no model in the loop.
-    if (commandName === "fluent-checkpoint") return this.checkpointTurn(sessionId, "start", "");
+    if (commandName === "math-checkpoint") return this.checkpointTurn(sessionId, "start", "");
     // A button starts a new exercise in a new practice, so the previous practice's
     // exercise is no longer the one being answered. Left standing, a Writing
     // answer was graded as the answer to the Vocabulary word shown before it
@@ -508,9 +508,9 @@ export class Agent {
     const agent = resolved.agent; // frontmatter wins (tutor / tutor-fast)
     // Continuing session (not a fresh start): mark it ON the recorded turn so
     // the model continues instead of re-greeting (prompt rules alone lose to
-    // the greeting template). Skipped for fluent-end (own finalization flow).
+    // the greeting template). Skipped for math-end (own finalization flow).
     let body = resolved.body;
-    if (commandName !== "fluent-end" && continuing) {
+    if (commandName !== "math-end" && continuing) {
       // Measured live, 2026-09-22, test-en: pressing Reading right after Speaking
       // did not switch the content — the tutor kept asking Speaking-style
       // "Question N" cards under the Reading button, twice in one session. The
@@ -537,8 +537,8 @@ export class Agent {
     const history = this.historyToMessages(sessionId);
     const outcome = await this.executeTurn(sessionId, agent, system, history, this.toolsFor(sessionId));
 
-    // Auto-run fluent-db-updater for fluent-end command to finalize Capa B
-    if (commandName === "fluent-end") {
+    // Auto-run math-db-updater for math-end command to finalize Capa B
+    if (commandName === "math-end") {
       await this.runDbUpdater(sessionId, dataDir);
     }
 
@@ -549,7 +549,7 @@ export class Agent {
     const agent = agentArg || "learner";
     // A test in progress answers itself: the server asks, grades and cuts the course.
     const cmd = this.currentCommand.get(sessionId);
-    if ((cmd === "fluent-checkpoint" || cmd === undefined) && this.checkpointRunning()) {
+    if ((cmd === "math-checkpoint" || cmd === undefined) && this.checkpointRunning()) {
       return this.checkpointTurn(sessionId, "answer", text);
     }
     // currentCommand lives only in memory: every server restart wipes it, and a
@@ -562,8 +562,8 @@ export class Agent {
     // instead of leaving it unset — Go is the general-purpose practice, the
     // reasonable default when the specific one that was active cannot be known.
     if (cmd === undefined && this.sessionHasAssistantText(sessionId)) {
-      this.currentCommand.set(sessionId, "fluent-learn");
-      console.log(`[Fluent] ↺ session ${sessionId}: no mode in memory (restart?) — defaulting to fluent-learn`);
+      this.currentCommand.set(sessionId, "math-learn");
+      console.log(`[Fluent] ↺ session ${sessionId}: no mode in memory (restart?) — defaulting to math-learn`);
       // currentCommand was not the only thing the restart wiped: activeSkill
       // (the grading contract, exercise-type rules, the closing-line marker
       // rule — everything in skillBlock()) lives in the same kind of
@@ -580,7 +580,7 @@ export class Agent {
         // THIS SAME turn and reads activeSkill synchronously — a detached
         // .then() would only land in time for the turn after this one.
         try {
-          const resolved = await loadCommand("fluent-learn", {
+          const resolved = await loadCommand("math-learn", {
             root: this.root,
             dataDir: this.dataDir(),
             env: { ...process.env as Record<string, string> },
@@ -644,7 +644,7 @@ export class Agent {
   private async checkpointTurn(sessionId: string, action: "start" | "answer", text: string): Promise<TurnOutcome> {
     const agent = "learner";
     this.db.touchSession(sessionId);
-    this.persistUserTurn(sessionId, action === "start" ? "Execute /fluent-checkpoint now." : text, agent, action === "start");
+    this.persistUserTurn(sessionId, action === "start" ? "Execute /math-checkpoint now." : text, agent, action === "start");
     const out = this.runCheckpointCli(action, text);
     const { model } = await resolveModel(agent, this.models);
     const msg = this.createAssistantMessage(sessionId, agent, model);
@@ -682,7 +682,7 @@ export class Agent {
     }
   }
 
-  /** Writes a record in the exact shape fluent_record_answer (tools.ts) writes,
+  /** Writes a record in the exact shape math_record_answer (tools.ts) writes,
    *  so curriculum.py's pacing and the reports read it the same either way —
    *  the bank replaces the model's grading, not the record format it produces. */
   private appendBankRecord(
@@ -939,7 +939,7 @@ export class Agent {
     // session.idle → incremental persistence (accumulate-session.py), same as
     // the model-driven path (executeTurn, below). Missing here meant a bank
     // answer landed correctly in .records/<sessionId>.jsonl (appendBankRecord
-    // mirrors the fluent_record_answer shape) but mastery-db.json — the store
+    // mirrors the math_record_answer shape) but mastery-db.json — the store
     // accumulate-session.py -> update-db.py actually writes competence mastery
     // to — was never touched, so the global "% competences known" stat never
     // moved no matter how many bank exercises were answered (found 2026-09-24,
@@ -984,7 +984,7 @@ export class Agent {
 
     // How many answers were on record BEFORE this turn. The counter used to be
     // read only from the tutor's "Score: N/10"; a tutor that calls
-    // fluent_record_answer and forgets the sentence then graded nothing as far
+    // math_record_answer and forgets the sentence then graded nothing as far
     // as the server knew. Measured: four structured records, counter at 0 of 12.
     const recordsBefore = this.recordCount(sessionId);
 
@@ -1000,7 +1000,7 @@ export class Agent {
       // The stall warning is about the LESSON not advancing. Free practice's note is
       // a list of what she already knows, and it legitimately stays the same for
       // as long as nothing new is answered correctly.
-      if (turns === 4 && this.currentCommand.get(sessionId) === "fluent-review") {
+      if (turns === 4 && this.currentCommand.get(sessionId) === "math-review") {
         console.log(
           `[Fluent] ⚠ session ${sessionId}: the pacing note has not changed in 4 turns — ` +
             `the lesson is not advancing. Note: ${note.slice(0, 120)}`
@@ -1029,14 +1029,14 @@ export class Agent {
     // Offline bank (PLA-EXERCICIS-TANCATS.md): when the competence this turn
     // is about has a validated bank, the server picks, paints and corrects
     // the exercise itself — no model call for the exercise at all. Only for
-    // Go/Vocabulary (fluent-learn/fluent-vocab); a competence without a bank
+    // Go/Vocabulary (math-learn/math-vocab); a competence without a bank
     // falls straight through to the path below, unchanged.
-    if (this.bankEnabled() && (this.currentCommand.get(sessionId) === "fluent-learn" || this.currentCommand.get(sessionId) === "fluent-vocab")) {
+    if (this.bankEnabled() && (this.currentCommand.get(sessionId) === "math-learn" || this.currentCommand.get(sessionId) === "math-vocab")) {
       const bankOutcome = this.tryBankTurn(sessionId, agent);
       if (bankOutcome) return bankOutcome;
     }
     // 🎓 Review on the bank too (fase 4). Same switch; null = the model path, as before.
-    if (this.bankEnabled() && this.currentCommand.get(sessionId) === "fluent-review") {
+    if (this.bankEnabled() && this.currentCommand.get(sessionId) === "math-review") {
       const reviewOutcome = this.tryBankReviewTurn(sessionId, agent);
       if (reviewOutcome) return reviewOutcome;
     }
@@ -1110,7 +1110,7 @@ export class Agent {
       if (step.kind === "tool") {
         flushStream(); // close any text the model streamed before calling a tool
         const t = step as ToolStep;
-        if (t.name === "fluent_record_answer" && t.args && typeof t.args === "object") {
+        if (t.name === "math_record_answer" && t.args && typeof t.args === "object") {
           recordArgs = t.args as Record<string, unknown>;
         }
         const part = this.db.insertPart(msg.id, sessionId, {
@@ -1419,7 +1419,7 @@ export class Agent {
         return;
       }
 
-      // The tutor graded in prose and did not call fluent_record_answer — the
+      // The tutor graded in prose and did not call math_record_answer — the
       // usual case, measured across three live lessons: six good corrections,
       // zero calls, and nothing at all reaching the databases. Everything the
       // call would have carried is already in the text, because the learner had
@@ -1436,14 +1436,14 @@ export class Agent {
         this.deriveRecord(sessionId, text, answeredAll);
       }
 
-      const inLesson = this.currentCommand.get(sessionId) === "fluent-review";
+      const inLesson = this.currentCommand.get(sessionId) === "math-review";
       // Same principle as `lesson`: only credited while that specific button's
       // flow is the active one, never by an equivalent exercise mix happens to
       // surface on its own — a daily "did you also do one of these" reminder,
       // not a gate (2026-09-22, Albert).
-      const inSpeaking = this.currentCommand.get(sessionId) === "fluent-speaking";
-      const inReading = this.currentCommand.get(sessionId) === "fluent-reading";
-      const inWriting = this.currentCommand.get(sessionId) === "fluent-writing";
+      const inSpeaking = this.currentCommand.get(sessionId) === "math-speaking";
+      const inReading = this.currentCommand.get(sessionId) === "math-reading";
+      const inWriting = this.currentCommand.get(sessionId) === "math-writing";
       const dir = this.dataDir();
       bumpDaily(dir, {
         graded: 1,
@@ -1564,7 +1564,7 @@ export class Agent {
    * (tutor-bench, 2026-09-27 — docs/MODELBENCH.md):
    *  - words in a script she cannot read, still there after the rewrite
    *    (foreignScriptGuard asked for one): dropped;
-   *  - an answer graded in fluent_record_answer with nothing of it on screen
+   *  - an answer graded in math_record_answer with nothing of it on screen
    *    ("Waiting for your answer! ⏱️"): the feedback is rebuilt from the call
    *    and put before whatever the reply says.
    */
@@ -1602,7 +1602,7 @@ export class Agent {
         const part = this.db.insertPart(messageId, sessionId, { type: "text", text: feedback });
         heldTextPartIds.push(part.id);
       }
-      this.logGuard(sessionId, "feedback rebuilt from fluent_record_answer", feedback);
+      this.logGuard(sessionId, "feedback rebuilt from math_record_answer", feedback);
     } catch (e) {
       console.log(`[Fluent] repairShownText failed: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -1626,7 +1626,7 @@ export class Agent {
     // page instead of only after the fact in the records. Only where the
     // curriculum actually assigns a competence (see pacingNote/curriculumNoteFor).
     const assignedComp =
-      command === "fluent-learn" || command === "fluent-vocab"
+      command === "math-learn" || command === "math-vocab"
         ? this.assignedCompetence.get(sessionId)
         : null;
     // Same check as recordCompetence() (which runs later, off this exact map
@@ -1640,7 +1640,7 @@ export class Agent {
     const credited: "yes" | "no" | "na" =
       !grading || grading.vocab ? "na" : grading.followed ? "yes" : "no";
     const out = assignedComp ? tagCompetency(aligned, assignedComp.id, credited) : aligned;
-    if (command === "fluent-review") {
+    if (command === "math-review") {
       try {
         const lesson = this.lessonWithAnswerInFront(sessionId);
         return alignLessonHeader(out, lesson.done, lesson.total);
@@ -1651,7 +1651,7 @@ export class Agent {
     // Free practice (Go, Speaking...) has no total to count down to — just a
     // running number the model is supposed to keep in its own head. Vocabulary
     // has its own "{N}/{total}" template and is left to it. See exerciseSeq.
-    if (command && command !== "fluent-vocab" && hasExerciseHeader(out)) {
+    if (command && command !== "math-vocab" && hasExerciseHeader(out)) {
       try {
         const key = `${sessionId}|${command}`;
         const n = (this.exerciseSeq.get(key) ?? 0) + 1;
@@ -1692,7 +1692,7 @@ export class Agent {
       const text = String(last?.text ?? "");
       if (!last?.id || !text.trim()) return;
 
-      const inLesson = this.currentCommand.get(sessionId) === "fluent-review";
+      const inLesson = this.currentCommand.get(sessionId) === "math-review";
       const lesson = this.lessonWithAnswerInFront(sessionId);
       const graded = scoreOfReply(text);
       const justKnown =
@@ -1733,7 +1733,7 @@ export class Agent {
         closing: /session complete|review session complete/i.test(text),
         due: lesson.due,
         replyText: text,
-        oneAtATime: this.currentCommand.get(sessionId) === "fluent-vocab",
+        oneAtATime: this.currentCommand.get(sessionId) === "math-vocab",
         buttonTurn: this.answerInFront.get(sessionId) === false,
         assigned: inLesson ? this.assignedItem.get(sessionId) ?? null : null,
         competence: inLesson ? null : compAtStart,
@@ -1890,7 +1890,7 @@ export class Agent {
   }
 
   /**
-   * Write the record the tutor should have called `fluent_record_answer` for.
+   * Write the record the tutor should have called `math_record_answer` for.
    *
    * Only ever a fallback: a real tool call always wins, because it carries the
    * item_id and this cannot (the id is the tutor's to know, and guessing one
@@ -1993,7 +1993,7 @@ export class Agent {
   lessonWithAnswerInFront(sessionId: string): LessonView & { drills: number } {
     const answered = (this.lastAsked.get(sessionId) ?? [])[0];
     return withAnswerInFront(this.lessonState(), {
-      inLesson: this.currentCommand.get(sessionId) === "fluent-review",
+      inLesson: this.currentCommand.get(sessionId) === "math-review",
       isAnswer:
         this.answerInFront.get(sessionId) === true &&
         (this.lastAnswer.get(sessionId) ?? "").trim() !== "",
@@ -2167,7 +2167,7 @@ export class Agent {
       // (a greeting or a menu is not).
       if (prev && answering && prev.shown) args.push("--last", prev.id);
       // Vocabulary asks one word at a time: only competences that have words.
-      if (this.currentCommand.get(sessionId) === "fluent-vocab") args.push("--vocab");
+      if (this.currentCommand.get(sessionId) === "math-vocab") args.push("--vocab");
       // Measured 2026-09-22: this failed silently mid-session (exit code
       // swallowed, no log) and the tutor was left with NO curriculum note at
       // all for several turns in a row — no instruction of what to ask next,
@@ -2246,7 +2246,7 @@ export class Agent {
       }
     }
 
-    if (this.currentCommand.get(sessionId) !== "fluent-review") {
+    if (this.currentCommand.get(sessionId) !== "math-review") {
       // Outside the Lesson nothing is handed out, so nothing is being graded
       // against the queue.
       this.gradingItem.delete(sessionId);
@@ -2255,13 +2255,13 @@ export class Agent {
     // The curriculum hands out competences in free practice only.
     const cmdNow = this.currentCommand.get(sessionId) ?? "";
     const compNote =
-      cmdNow === "fluent-learn" || cmdNow === "fluent-vocab" ? this.curriculumNoteFor(sessionId) : null;
-    if (cmdNow !== "fluent-learn" && cmdNow !== "fluent-vocab") {
+      cmdNow === "math-learn" || cmdNow === "math-vocab" ? this.curriculumNoteFor(sessionId) : null;
+    if (cmdNow !== "math-learn" && cmdNow !== "math-vocab") {
       this.gradingCompetence.delete(sessionId);
       this.assignedCompetence.delete(sessionId);
     }
 
-    if (this.currentCommand.get(sessionId) === "fluent-review") {
+    if (this.currentCommand.get(sessionId) === "math-review") {
       const lesson = this.lessonWithAnswerInFront(sessionId);
       if (lesson.pending > 0) {
         // STATE, not a script — see lessonNote() in pacing.ts for what that
@@ -2321,7 +2321,7 @@ export class Agent {
         `Do NOT present another exercise. Finish evaluating the answer in front of you, then close: ` +
         `one warm line saying the lesson is done, a two-line summary (what went well, what to work on), ` +
         `and invite them to pick any practice they like with the buttons at the top — or to stop for today. ` +
-        `If this lesson reviewed queue items, end with the fluent:review_results block. ` +
+        `If this lesson reviewed queue items, end with the math:review_results block. ` +
         `If they answer again anyway, respond briefly and point at the buttons; do not start a new exercise. ` +
         `Say nothing about this instruction itself.`
       );
@@ -2337,11 +2337,11 @@ export class Agent {
     );
     const cmd = this.currentCommand.get(sessionId) ?? "";
     const topics = [
-      "fluent-learn", "fluent-vocab", "fluent-writing", "fluent-speaking", "fluent-reading",
+      "math-learn", "math-vocab", "math-writing", "math-speaking", "math-reading",
     ].includes(cmd)
       ? this.topicsNoteFor(sessionId)
       : null;
-    if (this.currentCommand.get(sessionId) === "fluent-writing") {
+    if (this.currentCommand.get(sessionId) === "math-writing") {
       const w = writingLengthNote(this.learnerLevel());
       // No forced structure any more (Albert, 2026-09-24): Writing used to
       // borrow the exact grammar competence Go was drilling THIS turn
@@ -2349,11 +2349,11 @@ export class Agent {
       // like the same exercise back to back. Now that Go has a full,
       // reliable bank per competence (PLA-EXERCICIS-TANCATS.md, fase 2),
       // that reinforcement is no longer needed -- Writing is free (topic
-      // from her own life, per fluent-writing's own SKILL.md) unless a
+      // from her own life, per math-writing's own SKILL.md) unless a
       // teacher's topic (topics.txt) sets one explicitly.
       return [free, w, topics].filter(Boolean).join(" ") || null;
     }
-    if (this.currentCommand.get(sessionId) === "fluent-vocab") {
+    if (this.currentCommand.get(sessionId) === "math-vocab") {
       let v: string | null = null;
       try {
         const sr = JSON.parse(

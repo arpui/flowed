@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location("fluent_e2e", REPO / "scripts" / "flowed-e2e.py")
+_spec = importlib.util.spec_from_file_location("math_e2e", REPO / "scripts" / "flowed-e2e.py")
 e2e = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(e2e)
 
@@ -84,7 +84,7 @@ class RepeatsThatMatterTest(unittest.TestCase):
 
 class TemplateBracesTest(unittest.TestCase):
     def test_the_review_results_block_is_not_on_screen(self):
-        text = 'Bé!\n\n```fluent:review_results\n[{"item_id": "x", "quality": 1}]\n```\n'
+        text = 'Bé!\n\n```math:review_results\n[{"item_id": "x", "quality": 1}]\n```\n'
         self.assertFalse(e2e.BRACE.search(e2e.on_screen(text)))
 
     def test_a_real_leaked_placeholder_still_is(self):

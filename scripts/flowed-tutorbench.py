@@ -9,7 +9,7 @@ with a fixed learner — the same answers for every model — and measures:
     ok         no LLM/HTTP error in the reply
     saved      the answer reached <profile>/.records (the model's tool call, or
                the server's own record when the model forgot — both count)
-    graded     a score, in the text (N/10) or in fluent_record_answer
+    graded     a score, in the text (N/10) or in math_record_answer
     shown      the score is on screen: she sees how she did (27B, 2026-09-27:
                graded in the tool call, then only "Waiting for your answer!")
     continues  next question/task, an explicit retry, or "ready" (Reading's
@@ -19,7 +19,7 @@ with a fixed learner — the same answers for every model — and measures:
                (14B, 2026-09-27: a Chinese word inside an English text)
   quality
     catches    an answer with a planted error: the fix appears in the reply
-    consistent the score in fluent_record_answer = the score shown to her
+    consistent the score in math_record_answer = the score shown to her
   and seconds per turn. Each reply is kept in the .json and the .md.
 
   The learner's answers are fixed, so they do not always fit the question
@@ -70,7 +70,7 @@ E2E = _e2e()
 # appear in the correction), free (only sufficiency: the right answer depends on
 # what the tutor asked).
 PRACTICES = {
-    "fluent-speaking": {
+    "math-speaking": {
         "next": re.compile(r"question\s*\d+", re.I),
         "answers": [
             ("good", "I'm fine, thanks. I am at home with my family today.", None),
@@ -80,14 +80,14 @@ PRACTICES = {
             ("good", "I like pizza and I play football on Saturdays.", None),
         ],
     },
-    "fluent-writing": {
+    "math-writing": {
         "next": re.compile(r"writing exercise|keep going|rewrite|new task|next task|\?\s*$", re.I),
         "answers": [
             ("error", "My name is Anna. I has a small dog. He are very funny and we play in the garden.", "has"),
             ("good", "My name is Tom. I live in a small town with my parents. I like music and I play the guitar.", None),
         ],
     },
-    "fluent-reading": {
+    "math-reading": {
         "next": re.compile(r"question\s*\d+|reading text|true or false|\?\s*$", re.I | re.M),
         "answers": [("free", "It is about a family.", None), ("free", "Yes.", None), ("free", "I don't know.", None)],
     },
@@ -101,7 +101,7 @@ NON_LATIN = re.compile(r"[\u0400-\u04ff\u0590-\u06ff\u3040-\u30ff\u3400-\u9fff\u
 
 def record_of(outcome) -> dict | None:
     for p in (outcome or {}).get("parts") or []:
-        if p.get("type") == "tool" and p.get("tool") == "fluent_record_answer":
+        if p.get("type") == "tool" and p.get("tool") == "math_record_answer":
             return ((p.get("state") or {}).get("input")) or {}
     return None
 
@@ -329,7 +329,7 @@ def cmd_rescore(a) -> int:
     for f in a.files:
         md = Path(f).with_suffix(".md").read_text(encoding="utf-8")
         d = json.loads(Path(f).with_suffix(".json").read_text(encoding="utf-8"))
-        chunks = re.split(r"\n---\n\n(?=## fluent-|\*\*Learner:\*\*)", md.split("\n\n", 1)[1])
+        chunks = re.split(r"\n---\n\n(?=## math-|\*\*Learner:\*\*)", md.split("\n\n", 1)[1])
         if len(chunks) != len(d["rows"]):
             print(f"{f}: {len(chunks)} blocs per {len(d['rows'])} torns — no es pot alinear", file=sys.stderr)
             continue

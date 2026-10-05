@@ -22,9 +22,9 @@ class PromptTreeTest(unittest.TestCase):
 
     def test_every_command_the_ui_can_start_exists(self):
         # The web buttons and the auto-start path in web/app.js.
-        for cmd in ("fluent-learn", "fluent-review", "fluent-vocab", "fluent-writing",
-                    "fluent-speaking", "fluent-reading", "fluent-progress",
-                    "fluent-setup", "fluent-end", "fluent-use"):
+        for cmd in ("math-learn", "math-review", "math-vocab", "math-writing",
+                    "math-speaking", "math-reading", "math-progress",
+                    "math-setup", "math-end", "math-use"):
             path = REPO_ROOT / "prompts" / "commands" / f"{cmd}.md"
             self.assertTrue(path.exists(), f"missing command: {path}")
 
@@ -76,7 +76,7 @@ class FluentCheckScriptTest(unittest.TestCase):
     def setUp(self):
         import shutil
         import tempfile
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-check-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-check-"))
         self._rm = shutil.rmtree
         for name in ("learner-profile", "mastery-db", "mistakes-db", "progress-db",
                      "session-log", "spaced-repetition"):

@@ -13,7 +13,7 @@ export interface SessionService {
 export function makeSessionService(db: FluentDB): SessionService {
   return {
     create(title: string): SessionRow {
-      return db.createSession({ slug: "fluent", agent: "learner", title: title || "Fluent" });
+      return db.createSession({ slug: "math", agent: "learner", title: title || "FlowMath" });
     },
     get(id: string): SessionRow | null {
       return db.getSession(id);

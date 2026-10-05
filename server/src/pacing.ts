@@ -6,7 +6,7 @@
 // drag on past 18. The length belongs to the learner (an 8-year-old and a
 // teenager do not want the same session), and enforcing it belongs to the
 // server, which now knows exactly how many answers have been graded — the
-// structured records of fluent_record_answer.
+// structured records of math_record_answer.
 //
 // Kept free of Bun imports so server/test/*.test.ts can exercise it under node.
 
@@ -142,7 +142,7 @@ export function wrapUpNote(
       `front of you, then give the closing summary (stats, what improved, what to ` +
       `focus on next, streak) and the usual invitation to pick another practice with ` +
       `the buttons. If this session reviewed items from the spaced-repetition queue, ` +
-      `end with the fluent:review_results block. Say nothing about this instruction.`
+      `end with the math:review_results block. Say nothing about this instruction.`
     );
   }
   return (
@@ -151,7 +151,7 @@ export function wrapUpNote(
     `line saying the session's goal is done, and ask whether they want the summary ` +
     `now or a couple more exercises. If they choose to finish, give the closing ` +
     `summary (stats, what improved, what to focus on next, streak) and — if this ` +
-    `session reviewed queue items — the fluent:review_results block. If they choose ` +
+    `session reviewed queue items — the math:review_results block. If they choose ` +
     `to continue, carry on normally and do not offer again. Say nothing about this ` +
     `instruction itself.`
   );
@@ -160,7 +160,7 @@ export function wrapUpNote(
 /**
  * How many answers a session has graded, read from what the tutor WROTE.
  *
- * The counter was built on `fluent_record_answer` alone, and on a live session
+ * The counter was built on `math_record_answer` alone, and on a live session
  * the tool is never called — so the indicator sat at 0/12 through three graded
  * exercises while the learner watched it not move. A counter that depends on a
  * 14B model remembering to call a tool is not a counter.
@@ -540,18 +540,18 @@ function collectCards(text: string, re: RegExp, out: string[]): void {
 }
 
 /**
- * `fluent-speaking`'s own card: `## Question {N}: {Topic}` (or, the shape the
+ * `math-speaking`'s own card: `## Question {N}: {Topic}` (or, the shape the
  * tutor actually writes, `## Question {N}/{total}: {Topic}`) followed by a
  * PLAIN sentence — "What is your name?" — no quotes, no italics, nothing
  * `collectCards`'s QUOTED_SUBJECT/ITALIC_SUBJECT can grab. Fingerprinted to
- * nothing (measured live, 2026-09-22, test-en, fluent-speaking): `lastAsked`
+ * nothing (measured live, 2026-09-22, test-en, math-speaking): `lastAsked`
  * stayed empty turn after turn, the server could not tell what a reply was
  * answering, and the tutor — with no memory of having asked it — asked "What
  * is your name?" again, and again, three times over while the same "Nes"
  * kept arriving. Takes the first substantive line verbatim (normalized),
  * same exclusions as everywhere else (a bare imperative names no exercise).
  *
- * A second drift (measured live, 2026-09-22, test-en, fluent-speaking): the
+ * A second drift (measured live, 2026-09-22, test-en, math-speaking): the
  * tutor sometimes skips "## Question N: Topic" entirely and reuses the
  * session's own opening heading ("## 🗣️ English Speaking Practice")
  * directly above the question, with the question itself wrapped whole in
@@ -754,7 +754,7 @@ export function renderSkillForModel(
   return out;
 }
 
-/** The `fluent-*` skills a skill's frontmatter declares it needs. */
+/** The `math-*` skills a skill's frontmatter declares it needs. */
 export function requiredSkills(body: string): string[] {
   const fm = /^---\n([\s\S]*?)\n---/.exec(String(body || ""));
   if (!fm) return [];
@@ -764,7 +764,7 @@ export function requiredSkills(body: string): string[] {
     .replace(/[[\]]/g, " ")
     .split(/[,\s]+/)
     .map((x) => x.trim())
-    .filter((x) => /^fluent-[a-z0-9-]+$/.test(x));
+    .filter((x) => /^math-[a-z0-9-]+$/.test(x));
 }
 
 /**
@@ -807,7 +807,7 @@ export function practiceNote(
 
 /**
  * How much a Writing exercise asks for, by level — the table of
- * skills/fluent-writing/SKILL.md, said by the server where the tutor reads it.
+ * skills/math-writing/SKILL.md, said by the server where the tutor reads it.
  * The skill's table was an instruction nobody checked: an A2 profile was asked
  * for an email with a greeting, plans for two days and a sign-off, which is a
  * B1 task. Null when the level is unknown (then the skill decides).
@@ -898,7 +898,7 @@ export function topicsNote(topics: readonly string[], seed: number, level?: stri
  * What Vocabulary may draw its cards from.
  *
  * The review queue holds words AND rules the learner broke, and reaches the tutor
- * as one flat list. skills/fluent-vocab/SKILL.md says an `error_pattern` is not a
+ * as one flat list. skills/math-vocab/SKILL.md says an `error_pattern` is not a
  * word and cites `articles_an_apple` as the live case; the tutor still made
  * flashcards of "an", "on", "goes" and "capitalització". So the server says which
  * due items are words, and that the rest are not. Null when there is nothing to say.
@@ -966,7 +966,7 @@ export function vocabularyDueNote(
  * things went wrong with that, and both were measured on 2026-09-16:
  *
  *  - It outranked the command. The command's first line said to load the
- *    fluent-review skill; the last line the model read said to present an
+ *    math-review skill; the last line the model read said to present an
  *    exercise and nothing else. A 14B follows the last, most concrete
  *    instruction, so the skill never loaded and the grading contract never
  *    arrived.
@@ -1328,7 +1328,7 @@ export function pictureGuard(text: string): string | null {
  * production at all. The skill says so; this is what makes it true.
  */
 export function writingBlankGuard(text: string, command?: string | null): string | null {
-  if (command !== "fluent-writing") return null;
+  if (command !== "math-writing") return null;
   const t = String(text || "");
   // The feedback half of a reply quotes her text and the corrected version;
   // only the task she is being given matters here.
@@ -1814,7 +1814,7 @@ export function buildStamp(root: string, readFile: (p: string) => string,
 
 // ---- reading the tutor's own feedback --------------------------------------
 //
-// `fluent_record_answer` is the structured record of a graded answer, and it is
+// `math_record_answer` is the structured record of a graded answer, and it is
 // what spaced repetition, the error patterns and every count downstream are
 // built on. It is also a tool call, which a 14B forgets: measured over three
 // live lessons, six answers graded in perfectly good prose and not one call.
@@ -1852,7 +1852,7 @@ const CORRECT_VERSION_RE = /\*\*Correct version:?\*\*\s*\n+\s*["“']?([^\n"”'
 const SKILL_IN_HEADING_RE =
   /^#{1,6}[^\n]*?\b(vocabulary|grammar|spelling|writing|reading|speaking|listening|capitalization|agreement|tenses|punctuation)\b/im;
 
-/** Everything `fluent_record_answer` would have carried, read out of the reply
+/** Everything `math_record_answer` would have carried, read out of the reply
  *  the learner just got. Returns null when the turn did not grade anything. */
 export function parseFeedback(text: string): ParsedFeedback | null {
   const body = String(text || "");
@@ -2094,7 +2094,7 @@ export function stripForeignScript(text: string, target?: string, native?: strin
 }
 
 /** The feedback a learner must see, rebuilt from the tutor's own
- *  fluent_record_answer call — for a reply that graded in the tool and then
+ *  math_record_answer call — for a reply that graded in the tool and then
  *  showed nothing of it (27B, 2026-09-27: "Waiting for your answer! ⏱️"). */
 export function feedbackFromRecord(args: Record<string, unknown> | null | undefined): string | null {
   const score = Number((args ?? {})["score"]);

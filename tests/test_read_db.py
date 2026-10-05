@@ -72,7 +72,7 @@ def make_fixtures(data_dir: Path, with_profile=True):
 
 class ReadDbTest(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-read-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-read-"))
         self.data = self.tmp / "data"
         self.data.mkdir()
         make_fixtures(self.data)

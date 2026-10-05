@@ -48,7 +48,7 @@ class NormalizeTest(unittest.TestCase):
 
 class SurfacesInSyncTest(unittest.TestCase):
     def test_server_category_list_matches_python(self):
-        """tools.ts drives both the deep rubric and fluent_record_answer's
+        """tools.ts drives both the deep rubric and math_record_answer's
         validation from one array; it must equal the Python source of truth."""
         src = (REPO_ROOT / "server" / "src" / "tools.ts").read_text(encoding="utf-8")
         m = re.search(r"export const ERROR_CATEGORIES = \[(.*?)\] as const;", src, re.S)
@@ -61,11 +61,11 @@ class SurfacesInSyncTest(unittest.TestCase):
         self.assertIn("Allowed categories: ${ERROR_CATEGORIES.join(\", \")}", src,
                       "the deep rubric no longer derives its category list")
         self.assertIn("One of: ${ERROR_CATEGORIES.join(\", \")}", src,
-                      "fluent_record_answer no longer documents the canonical list")
+                      "math_record_answer no longer documents the canonical list")
 
     def test_prompt_surfaces_document_every_category(self):
         for rel in (
-            "skills/fluent-feedback-formatter/SKILL.md",
+            "skills/math-feedback-formatter/SKILL.md",
             "references/feedback-template.md",
         ):
             text = (REPO_ROOT / rel).read_text(encoding="utf-8")
@@ -74,7 +74,7 @@ class SurfacesInSyncTest(unittest.TestCase):
 
 
 class WritingFeedbackIsParseableTest(unittest.TestCase):
-    """Regression: the fluent-writing variant used to lose every error."""
+    """Regression: the math-writing variant used to lose every error."""
 
     @classmethod
     def setUpClass(cls):
@@ -94,7 +94,7 @@ class WritingFeedbackIsParseableTest(unittest.TestCase):
         self.assertEqual(pats[0]["category"], "word_order")
 
     def test_writing_skill_template_uses_the_parseable_shape(self):
-        skill = (REPO_ROOT / "skills/fluent-writing/SKILL.md").read_text(encoding="utf-8")
+        skill = (REPO_ROOT / "skills/math-writing/SKILL.md").read_text(encoding="utf-8")
         self.assertIn('- 🔴 "{wrong}" → **"{correct}"** ({category} — {why})', skill)
         self.assertNotIn('- {issue}: "{wrong}" → **"{correct}"** — {why}', skill)
 

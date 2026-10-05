@@ -54,7 +54,7 @@ check("emoji go",
   speakableText("Good morning! 👋 🔥"));
 
 check("a machine block never reaches the voice",
-  !speakableText("Say this\n```fluent:review_results\nid: 3\n```").includes("review_results"));
+  !speakableText("Say this\n```math:review_results\nid: 3\n```").includes("review_results"));
 
 check("code marks go but the word stays",
   speakableText("the verb `to be`") === "the verb to be",
@@ -120,7 +120,7 @@ check("a different sentence is a different file",
 // --- the cache does not eat the disk ---------------------------------------
 
 {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "fluent-tts-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "math-tts-"));
   const kb = Buffer.alloc(1024 * 300, 1); // 300 KB each
   for (let i = 0; i < 5; i++) {
     const f = path.join(dir, `${i}.wav`);

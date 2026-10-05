@@ -20,7 +20,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location("fluent_sweep", REPO / "scripts" / "flowed-sweep.py")
+_spec = importlib.util.spec_from_file_location("math_sweep", REPO / "scripts" / "flowed-sweep.py")
 sweep = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(sweep)
 
@@ -152,7 +152,7 @@ class ParseSettingTest(unittest.TestCase):
 REAL_START_LOG = """
 Fluent web UP (mode=app, profile=test-en, port=4103)
   local:    http://localhost:4103
-  log:      /tmp/fluent-web-4103.log
+  log:      /tmp/math-web-4103.log
   model:    deep  (tutor, chat, sessions) — OK (port 12322)
   model:    face  (vocab, review, progress, setup) — NOT RUNNING (port 12323)
 """

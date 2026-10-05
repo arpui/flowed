@@ -31,11 +31,11 @@ const GAP = `## ✍️ Writing Exercise
 
 **Task:** Complete the sentence: My dog ___ brown.`;
 
-check("an open task passes", writingBlankGuard(OPEN, "fluent-writing") === null);
-check("a gap in Writing is sent back", writingBlankGuard(GAP, "fluent-writing") !== null);
+check("an open task passes", writingBlankGuard(OPEN, "math-writing") === null);
+check("a gap in Writing is sent back", writingBlankGuard(GAP, "math-writing") !== null);
 check("so is \"complete the sentence\" without a gap",
-  writingBlankGuard("**Task:** Complete the sentences about your family.", "fluent-writing") !== null);
-check("the same gap in Go is Go's business", writingBlankGuard(GAP, "fluent-learn") === null);
+  writingBlankGuard("**Task:** Complete the sentences about your family.", "math-writing") !== null);
+check("the same gap in Go is Go's business", writingBlankGuard(GAP, "math-learn") === null);
 
 // The feedback half quotes her text; only the NEW task is judged.
 const GRADED_THEN_OPEN = `### ❌ Areas to Improve
@@ -44,7 +44,7 @@ const GRADED_THEN_OPEN = `### ❌ Areas to Improve
 **Score: 6/10**
 
 ${OPEN}`;
-check("feedback above an open task does not trip it", writingBlankGuard(GRADED_THEN_OPEN, "fluent-writing") === null);
+check("feedback above an open task does not trip it", writingBlankGuard(GRADED_THEN_OPEN, "math-writing") === null);
 
 const a1 = writingLengthNote("A1") ?? "";
 check("A1 asks for her own sentences", /of her own/.test(a1), a1);

@@ -2,7 +2,7 @@
 //   node --experimental-strip-types server/test/shown-text.test.ts
 //
 // Tutor-bench, 2026-09-27 (docs/MODELBENCH.md): the 14B put "{❌}" and a Chinese
-// word into Reading; the 27B graded in fluent_record_answer and then showed only
+// word into Reading; the 27B graded in math_record_answer and then showed only
 // "Waiting for your answer! ⏱️".
 
 import {

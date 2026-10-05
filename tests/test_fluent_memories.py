@@ -24,7 +24,7 @@ from tempfile import TemporaryDirectory
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SPEC = importlib.util.spec_from_file_location(
-    "fluent_memories", REPO_ROOT / "scripts" / "flowed-memories.py")
+    "math_memories", REPO_ROOT / "scripts" / "flowed-memories.py")
 mem = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(mem)
 
@@ -99,7 +99,7 @@ class TurnExtractionTest(unittest.TestCase):
 
     def test_commands_are_not_turns(self):
         # A button press arrives as user text carrying the whole expanded prompt.
-        self.add("user", "/fluent-learn " + "x" * 300)
+        self.add("user", "/math-learn " + "x" * 300)
         self.assertEqual(self.turns(), [])
 
     def test_one_word_answers_are_skipped(self):

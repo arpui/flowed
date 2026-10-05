@@ -17,7 +17,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 def _load():
     spec = importlib.util.spec_from_file_location(
-        "fluent_config_mod", REPO_ROOT / "scripts" / "flowed-config.py")
+        "math_config_mod", REPO_ROOT / "scripts" / "flowed-config.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -26,7 +26,7 @@ def _load():
 class ConfigLayersTest(unittest.TestCase):
     def setUp(self):
         self.mod = _load()
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-cfg-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-cfg-"))
         self.mod.CONFIG = self.tmp / "fluent.json"
         self.mod.ENV_FILE = self.tmp / ".env"
         self.mod.CONFIG.write_text(json.dumps({

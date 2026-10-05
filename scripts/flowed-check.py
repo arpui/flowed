@@ -97,8 +97,8 @@ def check_sm2(d: Path):
     print(f"  intervals      : {dict(intervals)}")
     print(f"  cua            : {queue}")
     if fresh == len(items):
-        print("  ⚠ cap ítem ha graduat mai — si ja s'ha fet un /fluent-review amb el codi nou,")
-        print("    vol dir que el bloc fluent:review_results o l'eina no han arribat.")
+        print("  ⚠ cap ítem ha graduat mai — si ja s'ha fet un /math-review amb el codi nou,")
+        print("    vol dir que el bloc math:review_results o l'eina no han arribat.")
     else:
         print("  ✅ hi ha ítems que han avançat")
 
@@ -148,7 +148,7 @@ def check_mastery(d: Path):
 
 
 def check_records(d: Path):
-    head("registres estructurats (fluent_record_answer)")
+    head("registres estructurats (math_record_answer)")
     folder = d / ".records"
     if not folder.exists():
         print("  (encara no n'hi ha cap)")
@@ -262,8 +262,8 @@ def check_metrics(d: Path):
     for name, ok in sorted(names.items(), key=lambda kv: -kv[1]):
         bad = refused.get(name, 0)
         print(f"    {name:24s} {ok:4d} ok" + (f"  ⚠ {bad} rebutjada/es" if bad else ""))
-    if names and not names.get("fluent_record_answer"):
-        print("  ⚠ cap crida a fluent_record_answer: el tutor no ha qualificat res")
+    if names and not names.get("math_record_answer"):
+        print("  ⚠ cap crida a math_record_answer: el tutor no ha qualificat res")
         print("    (normal si la sessió es va quedar al menú o al saludo)")
     last = rows[-1]
     when = datetime.fromtimestamp(last.get("ts", 0) / 1000).strftime("%Y-%m-%d %H:%M") if last.get("ts") else "?"
@@ -410,7 +410,7 @@ def check_sortida(d: Path, limit: int = 3):
     """Què ha dit el tutor, literalment, i què en detecta l'app.
 
     Tres coses de l'app depenen que el tutor faci una cosa concreta:
-    l'indicador ✏️ N/M (crida `fluent_record_answer`), el botó 🔊 de la
+    l'indicador ✏️ N/M (crida `math_record_answer`), el botó 🔊 de la
     correcció (l'etiqueta `Correct version:`) i les frases marcades
     (`[[say]]`). Si el model no ho fa, les tres fallen en silenci i des de
     fora sembla que l'app estigui trencada. Això ho ensenya en una pantalla.
@@ -548,7 +548,7 @@ def check_lesson(d: Path):
     """Veredicte d'una sola pantalla sobre la lliçó d'avui.
 
     Escrita arran del 16/09/2026, quan una lliçó sencera va córrer sense el
-    skill `fluent-review` carregat: cap correcció a la pantalla, el comptador
+    skill `math-review` carregat: cap correcció a la pantalla, el comptador
     clavat a 0 de 12 amb tretze exercicis contestats, i el mateix exercici
     vint-i-cinc vegades. Cap dels checks que ja hi havia ho deia en una línia.
     Aquest sí: mira les quatre coses que van fallar aquell dia i diu PASSA o
@@ -653,7 +653,7 @@ def _recent_tutor_texts(d: Path, limit: int = 8) -> list[str]:
         return []
 
 
-OPEN_PRACTICES = ("fluent-speaking", "fluent-writing", "fluent-reading")
+OPEN_PRACTICES = ("math-speaking", "math-writing", "math-reading")
 
 
 def check_open(d: Path):
@@ -661,7 +661,7 @@ def check_open(d: Path):
 
     Escrita el 2026-09-27, amb un 27B nou a producció: saber, sense tocar res,
     si les respostes de Speaking/Writing/Reading d'aquell dia es van guardar i
-    puntuar. Per torn: si el tutor va cridar fluent_record_answer (puntuat pel
+    puntuar. Per torn: si el tutor va cridar math_record_answer (puntuat pel
     model) o si el servidor el va haver de derivar (el model no ho va fer), i
     els errors LLM del log de la web.
     """
@@ -720,7 +720,7 @@ def check_open(d: Path):
         print(f"  {c.split('-')[-1]:9s}: {v['turns']:3d} torns · puntuades pel model {v['model']}"
               f" · derivades pel servidor {v['derived']} · sense cap eina {v['no_tool']} · nota mitjana {avg}")
     errs = []
-    for f in sorted(d.glob("fluent-web-*.log")) + sorted(d.glob("flowed-web-*.log")):
+    for f in sorted(d.glob("math-web-*.log")) + sorted(d.glob("flowed-web-*.log")):
         errs += [l.strip() for l in f.read_text(encoding="utf-8", errors="replace").splitlines()
                  if "LLM HTTP" in l or "TemplateError" in l]
     print(f"  errors LLM al log de la web (tot el log): {len(errs)}")

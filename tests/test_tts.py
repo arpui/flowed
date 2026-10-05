@@ -67,8 +67,8 @@ class TtsServerSurfaceTest(unittest.TestCase):
         self.tts = (REPO_ROOT / "server" / "src" / "tts.ts").read_text()
 
     def test_the_two_endpoints_exist(self):
-        self.assertIn('/api/fluent/tts-state', self.http)
-        self.assertIn('/api/fluent/say', self.http)
+        self.assertIn('/api/math/tts-state', self.http)
+        self.assertIn('/api/math/say', self.http)
 
     def test_only_the_target_language_is_read_aloud(self):
         self.assertIn("readTargetLanguage", self.http)
@@ -97,7 +97,7 @@ class LessonPlanTest(unittest.TestCase):
     def setUp(self):
         self.agent = (REPO_ROOT / "server" / "src" / "agent.ts").read_text()
         self.daily = (REPO_ROOT / "server" / "src" / "daily.ts").read_text()
-        self.review_skill = (REPO_ROOT / "skills" / "fluent-review" / "SKILL.md").read_text()
+        self.review_skill = (REPO_ROOT / "skills" / "math-review" / "SKILL.md").read_text()
         # The note itself is Bun-free and lives in pacing.ts, so it can be run
         # for real by server/test/lesson-note.test.ts instead of grepped.
         self.pacing = (REPO_ROOT / "server" / "src" / "pacing.ts").read_text()
@@ -167,7 +167,7 @@ class LessonPlanTest(unittest.TestCase):
         self.assertIn("Your previous exercise was", self.pacing)
 
     def test_the_counter_accepts_structured_evidence(self):
-        # Measured: four fluent_record_answer calls, no "Score: N/10" in the
+        # Measured: four math_record_answer calls, no "Score: N/10" in the
         # text, counter stuck at 0 of 12 while thirteen exercises were answered.
         self.assertIn("recordsBefore", self.agent)
         body = self.agent.split("const gradedNow =")[1][:260]

@@ -36,7 +36,7 @@ class FluentPathsTest(unittest.TestCase):
         self._saved_home = os.environ.get("HOME")
         for k in MANAGED_ENV:
             os.environ.pop(k, None)
-        self.tmp = Path(tempfile.mkdtemp(prefix="fluent-paths-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="math-paths-"))
         self._old_cwd = Path.cwd()
         clear_caches()
 

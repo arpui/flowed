@@ -271,7 +271,7 @@ RECORDS_DIRNAME = ".records"
 
 
 def read_records(data_dir, session_id):
-    """Structured grading records written by the server's fluent_record_answer.
+    """Structured grading records written by the server's math_record_answer.
 
     One JSON object per line in <data_dir>/.records/<session_id>.jsonl, already
     validated at write time (score range, known category, item_id present in the
@@ -377,7 +377,7 @@ def records_to_payload(records):
     return exercises, errors, [{"item_id": k, "quality": v} for k, v in reviews.items()]
 
 
-REVIEW_BLOCK_RE = re.compile(r"```fluent:review_results\s*(.*?)```", re.S)
+REVIEW_BLOCK_RE = re.compile(r"```math:review_results\s*(.*?)```", re.S)
 
 
 def parse_review_results(transcript):
@@ -385,7 +385,7 @@ def parse_review_results(transcript):
 
     Shape (the tutor sends it once, at the end of a review/vocab session):
 
-        ```fluent:review_results
+        ```math:review_results
         [{"item_id": "vocab_window", "quality": 4}, ...]
         ```
 
@@ -552,7 +552,7 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
     if override_session_id:
         computed_session_id = override_session_id
 
-    # Structured records (fluent_record_answer) are the authority; the prose
+    # Structured records (math_record_answer) are the authority; the prose
     # parsers below fill in only the answers the tutor narrated but did not
     # record. Capa B re-applies the WHOLE session, so it must read both — if it
     # dropped either, closing a session would undo what Capa A just applied.
@@ -631,7 +631,7 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
     report = {
         "session_id": computed_session_id,
         "learner_slug": learner_slug,
-        "skill": "fluent-learn",
+        "skill": "math-learn",
         "date": session_date(session_info),
         "duration_minutes": duration_minutes,
         "total_exercises": total_exercises,
@@ -657,7 +657,7 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
 def save_results_file(learner_slug, session_id, exercises, accuracy, report, data_dir=None):
     """Save the results markdown file under the learner's profile directory.
 
-    Results are per-user: ~/.flowed/<id>/results/{slug}-fluent-learn-{ID}.md.
+    Results are per-user: ~/.flowed/<id>/results/{slug}-math-learn-{ID}.md.
     Falls back to the repo-root results/ when no data_dir/profile is known.
     """
     data_dir_p = Path(data_dir).expanduser() if data_dir else None
@@ -669,12 +669,12 @@ def save_results_file(learner_slug, session_id, exercises, accuracy, report, dat
     if not results_dir.exists():
         results_dir.mkdir(parents=True)
     
-    filename = f"{learner_slug}-fluent-learn-{session_id}.md"
+    filename = f"{learner_slug}-math-learn-{session_id}.md"
     filepath = results_dir / filename
     
     lines = [
         f"# Language Learning Session - {session_id}",
-        f"**Date:** {report['date']} · **Duration:** {report['duration_minutes']} min · **Skill:** fluent-learn",
+        f"**Date:** {report['date']} · **Duration:** {report['duration_minutes']} min · **Skill:** math-learn",
         "",
         f"## Summary",
         f"Questions: {len(exercises)} · Correct: {report['correct_count']} · Accuracy: {accuracy*100:.0f}%",
@@ -785,7 +785,7 @@ def main():
     # Fallback: the name is parsed out of the preloaded state in the first turns.
     # If that block is missing (a session started without a command, a truncated
     # transcript), fall back to the profile instead of writing a results file
-    # literally called "None-fluent-learn-...".
+    # literally called "None-math-learn-...".
     if not learner_slug and args.dir:
         try:
             with open(Path(args.dir).expanduser() / "learner-profile.json", encoding="utf-8") as f:

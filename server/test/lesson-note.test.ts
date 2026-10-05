@@ -59,18 +59,18 @@ function check(name: string, cond: boolean, detail?: unknown) {
 
 // --- the skill actually reaches the prompt ---------------------------------
 
-const review = loadSkill(ROOT, "fluent-review");
+const review = loadSkill(ROOT, "math-review");
 check("the server finds the review skill on disk", !!review);
 const block = skillBlock(review);
 check("it becomes a system-prompt block", !!block && block.includes("<skill_content"));
-for (const token of ["**Correct version:**", "Score: ", "fluent_record_answer", "Every answer gets BOTH"]) {
+for (const token of ["**Correct version:**", "Score: ", "math_record_answer", "Every answer gets BOTH"]) {
   check(`the block carries the grading contract: ${token.trim()}`, !!block && block.includes(token));
 }
 check("no skill, no block", skillBlock(undefined) === null);
-check("an unknown skill is not invented", loadSkill(ROOT, "fluent-nope") === undefined);
+check("an unknown skill is not invented", loadSkill(ROOT, "math-nope") === undefined);
 check("a path is not a skill name", loadSkill(ROOT, "../../etc") === undefined);
 
-const commanded = fs.readFileSync(path.join(ROOT, "prompts", "commands", "fluent-review.md"), "utf8");
+const commanded = fs.readFileSync(path.join(ROOT, "prompts", "commands", "math-review.md"), "utf8");
 check("the command no longer delegates the load to the model",
   !commanded.includes("via the skill tool"));
 
@@ -162,7 +162,7 @@ check("with the fix, the repeat is already on the list",
 
 // --- the counter's two witnesses -------------------------------------------
 //
-// Verbatim: the tutor called fluent_record_answer and wrote this as its whole
+// Verbatim: the tutor called math_record_answer and wrote this as its whole
 // visible reply. No marker, no correction, no score — and under the old rule
 // the lesson counter read this as "nothing happened".
 
@@ -181,11 +181,11 @@ check("a proper feedback turn still counts",
 
 // --- the state block is not re-injected on every press ---------------------
 
-const first = await loadCommand("fluent-review", {
+const first = await loadCommand("math-review", {
   root: ROOT, dataDir: ROOT, env: {}, skipDirectives: true,
 });
 check("a continuing command resolves", !!first);
-check("it carries the skill with it", first?.skill?.name === "fluent-review");
+check("it carries the skill with it", first?.skill?.name === "math-review");
 check("and it does NOT re-run read-db.py",
   !!first && !first.body.includes("!`python3 hooks/read-db.py`") &&
   first.body.includes("in your system prompt"));
@@ -225,7 +225,7 @@ check("grading and asking are one turn",
   midLesson.includes("grade the answer in front of you AND present the next, DIFFERENT exercise"));
 check("and repeating a question is ruled out in the note too",
   midLesson.includes("never ask the same question twice"));
-const reviewSkill = fs.readFileSync(path.join(ROOT, "skills", "fluent-review", "SKILL.md"), "utf8");
+const reviewSkill = fs.readFileSync(path.join(ROOT, "skills", "math-review", "SKILL.md"), "utf8");
 check("both directions are allowed, but only one language is graded",
   reviewSkill.includes("Both directions are real exercises. Only one language gets graded"));
 check("and a native-language slip is never filed",
@@ -241,7 +241,7 @@ check("and the server refuses to count one exercise twice",
   fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8")
     .includes("already counted — not twice"));
 check("the skill says the same thing",
-  fs.readFileSync(path.join(ROOT, "skills", "fluent-review", "SKILL.md"), "utf8")
+  fs.readFileSync(path.join(ROOT, "skills", "math-review", "SKILL.md"), "utf8")
     .includes("The lesson's length is the server's, not the queue's"));
 
 // --- what the model is actually handed --------------------------------------
@@ -254,18 +254,18 @@ check("the skill says the same thing",
 // That is Example 1 of the skill, copied out. And the morning transcript opens
 // with a literal "{✅}", which is the feedback template's "{✅ or ❌}".
 
-const rendered = loadSkill(ROOT, "fluent-review", path.join(ROOT, "data-examples"));
+const rendered = loadSkill(ROOT, "math-review", path.join(ROOT, "data-examples"));
 const shown = rendered?.body ?? "";
 check("the worked examples are not shipped to the model", !/##\s+Examples/.test(shown));
 check("their placeholders go with them", !shown.includes("{the word}"), 
   shown.match(/\{the word\}/g));
 check("the braces rule is stated", shown.includes("must never appear in anything you send"));
 check("the feedback template travels with the skill",
-  shown.includes('name="fluent-feedback-formatter"'));
+  shown.includes('name="math-feedback-formatter"'));
 check("so the grading shape is present", shown.includes("**Correct version:**"));
 check("the dependency is declared, not guessed",
-  requiredSkills(fs.readFileSync(path.join(ROOT, "skills", "fluent-review", "SKILL.md"), "utf8"))
-    .includes("fluent-feedback-formatter"));
+  requiredSkills(fs.readFileSync(path.join(ROOT, "skills", "math-review", "SKILL.md"), "utf8"))
+    .includes("math-feedback-formatter"));
 
 const resolved = renderSkillForModel(
   "## Overview\n\n**{Target}:** hello — what is it in {Native}?\n\n## Examples\n\n> {the word}\n",
@@ -339,16 +339,16 @@ check("with real items due it is a real review",
 check("and a plain exercise on an empty queue is fine",
   turnGuard({ ...fabState, due: 0, replyText: "What is the plural of child?" }) === null);
 check("the skill forbids inventing one too",
-  fs.readFileSync(path.join(ROOT, "skills", "fluent-review", "SKILL.md"), "utf8")
+  fs.readFileSync(path.join(ROOT, "skills", "math-review", "SKILL.md"), "utf8")
     .includes("Never invent a review item"));
 check("and writing asks for a length the level can reach",
-  fs.readFileSync(path.join(ROOT, "skills", "fluent-writing", "SKILL.md"), "utf8")
+  fs.readFileSync(path.join(ROOT, "skills", "math-writing", "SKILL.md"), "utf8")
     .includes("Length follows the level"));
 
 // --- the record the tutor never files --------------------------------------
 //
 // Verbatim from three live lessons: good corrections, in prose, and not one
-// call to fluent_record_answer. The databases learned nothing from any of them.
+// call to math_record_answer. The databases learned nothing from any of them.
 
 const REAL_FEEDBACK = `**Corrections:**
 - ❌ "banana" → **"pa amb tomàquet"** (vocabulary - "banana" is not related)
@@ -394,7 +394,7 @@ check("a derived record never invents an item_id",
 
 // --- the feedback template has no braces left to copy ----------------------
 const formatter = fs.readFileSync(
-  path.join(ROOT, "skills", "fluent-feedback-formatter", "SKILL.md"), "utf8");
+  path.join(ROOT, "skills", "math-feedback-formatter", "SKILL.md"), "utf8");
 const fbRendered = renderSkillForModel(formatter, { target: "english", native: "català" });
 check("nothing in the feedback template is copyable as a slot",
   !/\{[^}\n]{0,40}\}/.test(fbRendered), (fbRendered.match(/\{[^}\n]{0,40}\}/) ?? [""])[0]);
@@ -553,9 +553,9 @@ check("only the lesson's own headers are touched",
   alignLessonHeader("## Word 4/10", 2, 6) === "## Word 4/10");
 check("the server applies it inside the lesson only",
   fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8")
-    .includes('this.currentCommand.get(sessionId) !== "fluent-review"'));
+    .includes('this.currentCommand.get(sessionId) !== "math-review"'));
 check("a review item that is not a word is not a flashcard",
-  fs.readFileSync(path.join(ROOT, "skills", "fluent-vocab", "SKILL.md"), "utf8")
+  fs.readFileSync(path.join(ROOT, "skills", "math-vocab", "SKILL.md"), "utf8")
     .includes("A flashcard needs a word"));
 check("and coming back to an unanswered exercise is not a repetition",
   fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8")
@@ -791,7 +791,7 @@ check("and an empty fingerprint never reaches the list",
     ag4.includes("...justKnown"));
 }
 
-// Writing asks for what the level can write (skills/fluent-writing/SKILL.md).
+// Writing asks for what the level can write (skills/math-writing/SKILL.md).
 {
   const a2 = writingLengthNote("a2") ?? "";
   // 2026-09-23: A1/A2 Writing became guided production of her own sentences
@@ -805,8 +805,8 @@ check("and an empty fingerprint never reaches the list",
   check("B1 may write the email", b1.includes("email") && !b1.includes("not an email"), b1);
   check("an unknown level says nothing", writingLengthNote(undefined) === null && writingLengthNote("??") === null);
   const ag5 = fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8");
-  check("the note goes to Writing only", ag5.includes('=== "fluent-writing"') && ag5.includes("writingLengthNote(this.learnerLevel())"));
-  check("the stall warning is the Lesson's", ag5.includes('turns === 4 && this.currentCommand.get(sessionId) === "fluent-review"'));
+  check("the note goes to Writing only", ag5.includes('=== "math-writing"') && ag5.includes("writingLengthNote(this.learnerLevel())"));
+  check("the stall warning is the Lesson's", ag5.includes('turns === 4 && this.currentCommand.get(sessionId) === "math-review"'));
 }
 
 {
@@ -866,7 +866,7 @@ check("and an empty fingerprint never reaches the list",
   check("and there is no word list to offer",
     !(vocabularyDueNote({ items: {} }, "2026-09-13") ?? "").includes("Words due"));
   const ag7 = fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8");
-  check("Vocabulary gets it", ag7.includes('=== "fluent-vocab"') && ag7.includes("vocabularyDueNote(sr, todayISO()"));
+  check("Vocabulary gets it", ag7.includes('=== "math-vocab"') && ag7.includes("vocabularyDueNote(sr, todayISO()"));
 }
 
 // The closing reply has to grade the last answer (days 083631, temp06 day 3).
@@ -963,7 +963,7 @@ check("and an empty fingerprint never reaches the list",
     !(vocabularyDueNote({ items: {} }, "2026-09-13") ?? "").includes("How do you say it in"));
   const ag8 = fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8");
   check("the server passes the flag and the languages",
-    ag8.includes('oneAtATime: this.currentCommand.get(sessionId) === "fluent-vocab"') &&
+    ag8.includes('oneAtATime: this.currentCommand.get(sessionId) === "math-vocab"') &&
     ag8.includes("this.learnerLanguages()"));
 }
 
@@ -1014,7 +1014,7 @@ check("and an empty fingerprint never reaches the list",
   const ag = fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8");
   check("the server reads topics.txt each turn and only where the tutor picks the subject",
     ag.includes('"topics.txt"') && ag.includes("!assigned ? this.topicsNoteFor") &&   // (drills removed, fase 5)
-    ag.includes('"fluent-speaking"'));
+    ag.includes('"math-speaking"'));
 }
 
 {
@@ -1176,7 +1176,7 @@ check("and an empty fingerprint never reaches the list",
   const tl = fs.readFileSync(path.join(ROOT, "server", "src", "tools.ts"), "utf8");
   check("agent asks hooks/curriculum.py next, only in Mix and Vocabulary",
     ag.includes('"hooks", "curriculum.py"') && ag.includes('"next", "--auto"') &&
-      ag.includes('cmdNow === "fluent-learn" || cmdNow === "fluent-vocab"'));
+      ag.includes('cmdNow === "math-learn" || cmdNow === "math-vocab"'));
   check("with nothing due the vocabulary note still speaks but names no due words (so it must not stop the competence)",
     !(vocabularyDueNote({ items: {} }, "2026-09-13") ?? "").includes("Words due for review today") &&
       Boolean(vocabularyDueNote({ items: {} }, "2026-09-13")));
@@ -1204,8 +1204,8 @@ check("and an empty fingerprint never reaches the list",
   const body = src.slice(start, next < 0 ? undefined : start + 10 + next);
   check("level test: no model in the loop", body.length > 200 && !/runTurn|executeTurn|resolveModel\(agent, this\.models\)\s*;\s*const msg = .*runTurn/.test(body));
   check("level test: the button is answered before any command file is loaded",
-    src.indexOf('commandName === "fluent-checkpoint"') > 0 &&
-      src.indexOf('commandName === "fluent-checkpoint"') < src.indexOf("await loadCommand(commandName"));
+    src.indexOf('commandName === "math-checkpoint"') > 0 &&
+      src.indexOf('commandName === "math-checkpoint"') < src.indexOf("await loadCommand(commandName"));
   check("level test: the answers of a running test go to it, also after a restart",
     src.includes('this.checkpointTurn(sessionId, "answer", text)') && src.includes('cmd === undefined) && this.checkpointRunning()'));
   check("level test: a test of another day is not answered", src.includes("run.day ===") && src.includes("checkpoint-run.json"));

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Fill in (or adjust) a learner profile from the command line — admin only.
 
-Onboarding used to be an interview the learner ran themselves (/fluent-setup).
+Onboarding used to be an interview the learner ran themselves (/math-setup).
 It no longer is: the profile says who someone is and how their sessions are
 paced, which is the system owner's call, not a form a child should be filling
 in mid-lesson. This script is that write, with the same validation the
-`fluent_setup_profile` tool applies, and it also carries the pacing
+`math_setup_profile` tool applies, and it also carries the pacing
 preferences so a profile can be provisioned in one go.
 
     scripts/new-user.sh demo-en

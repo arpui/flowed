@@ -106,11 +106,11 @@ if [[ -n "$PROFILE" ]]; then
     echo "error: profile '$PROFILE' not found (missing $DATA_DIR/learner-profile.json)"
     exit 1
   fi
-  MDNS_DOMAIN="fluent-$PROFILE.local"
+  MDNS_DOMAIN="math-$PROFILE.local"
   PROFILE_LABEL="$PROFILE"
 else
   DATA_DIR="$ROOT/data"
-  MDNS_DOMAIN="fluent.local"
+  MDNS_DOMAIN="math.local"
   PROFILE_LABEL="default (repo data/)"
 fi
 
@@ -133,7 +133,7 @@ command -v openssl >/dev/null 2>&1 || { echo "error: openssl no trobat"; exit 1;
 # --- password ----------------------------------------------------------------
 # Priority: FLOWED_WEB_PASSWORD env > stored per-profile file > generate+store.
 # The stored file makes each user's password stable across restarts.
-# Deliberately ignores an inherited OPENCODE_SERVER_PASSWORD so the fluent
+# Deliberately ignores an inherited OPENCODE_SERVER_PASSWORD so the math
 # instance never silently shares the host opencode server's password.
 if [[ -n "$PROFILE" ]]; then
   PWFILE="$FLOWED_HOME_DIR/$PROFILE/.web-password"
@@ -182,12 +182,12 @@ if [[ -f "$PIDFILE" ]]; then
 fi
 
 IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
-LOG="$DATA_DIR/fluent-web-$PORT.log"
+LOG="$DATA_DIR/math-web-$PORT.log"
 PIDS=()
 
 # The learner instance must keep the tutor prompt even when the launcher's
 # shell belongs to the opencode desktop app (which exports OPENCODE_CLIENT=
-# desktop / XDG_STATE_HOME=...ai.opencode.desktop and would flip the fluent
+# desktop / XDG_STATE_HOME=...ai.opencode.desktop and would flip the math
 # plugin into dev mode, stripping AGENTS.md from the system prompt).
 ENV_SANITIZED="env -u OPENCODE_CLIENT -u XDG_STATE_HOME FLOWED_DEV=0"
 

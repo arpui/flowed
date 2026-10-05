@@ -281,7 +281,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
   const unauth = () =>
     new Response("Unauthorized", {
       status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="Fluent", charset="UTF-8"' },
+      headers: { "WWW-Authenticate": 'Basic realm="FlowMath", charset="UTF-8"' },
     });
 
   const json = (data: unknown, status = 200) =>
@@ -359,22 +359,22 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
 
       // health
       if (p === "/api/global/health") {
-        return json({ ok: true, version: opts.version, service: "fluent-server",
+        return json({ ok: true, version: opts.version, service: "math-server",
                       build: opts.build ?? null, sampling: opts.sampling ?? null });
       }
 
       // agents list (UI requires the "learner" agent to exist)
       if (p === "/api/agent") {
-        return json([{ name: "learner", title: "Fluent learner" }]);
+        return json([{ name: "learner", title: "FlowMath learner" }]);
       }
 
-      // setup-state (auto-start /fluent-setup for onboarding)
-      if (p === "/api/fluent/setup-state") {
+      // setup-state (auto-start /math-setup for onboarding)
+      if (p === "/api/math/setup-state") {
         return json({ setup_complete: readSetupState(opts.dataDir()) });
       }
 
       // visual progress dashboard: normalized view of the 6 learner DBs.
-      if (p === "/api/fluent/progress") {
+      if (p === "/api/math/progress") {
         const script = path.join(opts.root, "hooks", "read-db.py");
         if (!fs.existsSync(script)) {
           return json({ ok: false, exitCode: -1, error: `read-db.py no trobat: ${script}` }, 500);
@@ -410,7 +410,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       // the learner's path through the curriculum (bar, state per competence).
       // `available:false` when the profile's level has no curriculum: the UI
       // then shows nothing, never an error.
-      if (p === "/api/fluent/path") {
+      if (p === "/api/math/path") {
         const script = path.join(opts.root, "hooks", "curriculum.py");
         if (!fs.existsSync(script)) return json({ ok: true, data: { available: false } });
         const { spawnSync } = await import("node:child_process");
@@ -434,7 +434,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       }
 
       // the learner has seen the "course completed" notice: it does not come back.
-      if (p === "/api/fluent/path/seen" && req.method === "POST") {
+      if (p === "/api/math/path/seen" && req.method === "POST") {
         const script = path.join(opts.root, "hooks", "curriculum.py");
         if (fs.existsSync(script)) {
           const { spawnSync } = await import("node:child_process");
@@ -450,7 +450,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       // there is no tool and no extra context per turn. When no voice is
       // installed the UI is told so and simply shows no speaker buttons —
       // never a button that fails.
-      if (p === "/api/fluent/tts-state") {
+      if (p === "/api/math/tts-state") {
         const cfg = opts.tts ?? DEFAULT_TTS;
         const language = readTargetLanguage(opts.dataDir());
         return json({
@@ -459,7 +459,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
         });
       }
 
-      if (p === "/api/fluent/say") {
+      if (p === "/api/math/say") {
         const cfg = opts.tts ?? DEFAULT_TTS;
         const text = url.searchParams.get("text") ?? "";
         const language = url.searchParams.get("lang") || readTargetLanguage(opts.dataDir());
@@ -473,7 +473,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             "content-length": String(audio.length),
             // Same sentence, same bytes: let the browser keep it too.
             "cache-control": "private, max-age=86400",
-            "x-fluent-cached": outcome.cached ? "1" : "0",
+            "x-math-cached": outcome.cached ? "1" : "0",
           },
         });
       }
@@ -489,7 +489,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       // that has been finalized, or left alone longer than the sweeper's
       // timeout, is over. Starting a fresh one costs nothing: streak and
       // progress live in the databases, not in the session.
-      if (p === "/api/fluent/session-state") {
+      if (p === "/api/math/session-state") {
         const id = url.searchParams.get("session") ?? "";
         const row = id ? opts.sessionService.get(id) : null;
         if (!row) return json({ exists: false, resumable: false, reason: "unknown" });
@@ -498,14 +498,14 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       }
 
       // where the learner is in this session (the header indicator)
-      if (p === "/api/fluent/session-progress") {
+      if (p === "/api/math/session-progress") {
         const id = url.searchParams.get("session") ?? "";
         if (!id) return json({ error: "missing session" }, 400);
         return json({ sessionID: id, ...opts.agent.sessionProgress(id) });
       }
 
       // session summary (Capa A data for instant resume/summary)
-      if (p === "/api/fluent/summary") {
+      if (p === "/api/math/summary") {
         const dataDir = opts.dataDir();
         const draftPath = path.join(dataDir, "session-draft.json");
         let draft: Record<string, unknown> = {};
