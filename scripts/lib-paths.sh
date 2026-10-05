@@ -14,9 +14,6 @@ flowed_home() {
     echo "$HOME/.fluent"
   fi
 }
-FLOWED_HOME_DIR="$(flowed_home)"
-export FLOWED_HOME_DIR
-
 # Load <root>/.env without overriding what the environment already sets
 # (CLI/env > .env > config/fluent.json). One loader for every script: it used to
 # be copied in four places.
@@ -57,3 +54,13 @@ flowed_load_env() {
   fi
   export FLOWED_ENV_FILE
 }
+
+# Resolve the home AFTER loading <root>/.env. Before this, FLOWED_HOME_DIR was
+# computed at source time — before any script called flowed_load_env — so a
+# FLOWED_HOME set in .env was silently ignored (new-user.sh provisioned into
+# ~/.flowed even with FLOWED_HOME pointing elsewhere). Scripts that call
+# flowed_load_env again later are unaffected: it never overrides what the
+# environment already sets.
+flowed_load_env "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FLOWED_HOME_DIR="$(flowed_home)"
+export FLOWED_HOME_DIR
