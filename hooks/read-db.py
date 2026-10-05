@@ -150,7 +150,7 @@ def curriculum_progress(today: str) -> dict | None:
         cf = cu.find_curriculum(root, DATA_DIR)
         if cf is None:
             return None
-        cur = cu.load_curriculum(cf)
+        cur = cu.load_curriculum(cf, DATA_DIR)
         path = cu.rebuild_path(DATA_DIR, cur, save=False)
         rows = cu.summarize(cur, path, today)
         pr = cu.progress(rows)

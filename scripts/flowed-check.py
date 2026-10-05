@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import os
 import sqlite3
 import statistics
 import re
@@ -27,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
 from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
-CHECKS = ("profile", "sm2", "patterns", "mastery", "records", "metrics", "sessions", "tts", "sortida", "historial", "lliço")
+CHECKS = ("profile", "sm2", "patterns", "mastery", "records", "metrics", "sessions", "tts", "sortida", "historial", "lliço", "obertes")
 
 
 def load(path: Path):
@@ -504,15 +505,27 @@ def check_tts(d: Path):
     except Exception as e:
         print(f"  no puc llegir config/fluent.json: {e}")
         return
-    enabled = tts.get("enabled") is True
-    print(f"  enabled        : {enabled}")
-    print(f"  binari         : {tts.get('binary')}"
-          f" {'✅' if shutil.which(str(tts.get('binary') or '')) or Path(str(tts.get('binary') or '')).is_file() else '❌ no trobat'}")
-    voices = tts.get("voices") or {}
+    # Same rule as server/src/tts.ts (loadTtsConfig): the machine's own install
+    # in _tts/ next to the profiles; the config only says whether to use it.
+    langs = {"en": "English", "de": "German", "fr": "French", "es": "Spanish",
+             "ca": "Catalan", "it": "Italian", "pt": "Portuguese", "nl": "Dutch"}
+    cands = [Path(os.environ["FLOWED_TTS_DIR"])] if os.environ.get("FLOWED_TTS_DIR") else []
+    cands += [d.parent / "_tts", profiles_root() / "_tts"]
+    tts_dir = next((c for c in cands if c.exists()), None)
+    binary = tts_dir / "piper" / "piper" if tts_dir else None
+    voices = {}
+    for f in sorted((tts_dir / "voices").glob("*.onnx")) if tts_dir else []:
+        lang = langs.get(f.name[:2]) if re.match(r"^[a-z]{2}_[A-Z]{2}-", f.name) else None
+        if lang and Path(str(f) + ".json").is_file():
+            voices.setdefault(lang, str(f))
+    enabled = tts.get("enabled") is True and bool(voices)
+    print(f"  config enabled : {tts.get('enabled') is True}")
+    print(f"  carpeta        : {tts_dir or '— cap _tts/ (scripts/flowed-tts.sh install <veu>)'}")
+    print(f"  binari         : {binary if binary and binary.is_file() else '❌ no trobat'}")
     if not voices:
         print("  veus           : cap  (scripts/flowed-tts.sh install <veu>)")
     for lang, model in voices.items():
-        print(f"  {lang:15s}: {model} {'✅' if Path(model).is_file() else '❌ falta el fitxer'}")
+        print(f"  {lang:15s}: {model} ✅")
 
     target = None
     try:
@@ -640,6 +653,83 @@ def _recent_tutor_texts(d: Path, limit: int = 8) -> list[str]:
         return []
 
 
+OPEN_PRACTICES = ("fluent-speaking", "fluent-writing", "fluent-reading")
+
+
+def check_open(d: Path):
+    """Les pràctiques obertes d'un dia (per defecte avui; FLOWED_CHECK_DAY=AAAA-MM-DD).
+
+    Escrita el 2026-09-27, amb un 27B nou a producció: saber, sense tocar res,
+    si les respostes de Speaking/Writing/Reading d'aquell dia es van guardar i
+    puntuar. Per torn: si el tutor va cridar fluent_record_answer (puntuat pel
+    model) o si el servidor el va haver de derivar (el model no ho va fer), i
+    els errors LLM del log de la web.
+    """
+    day = os.environ.get("FLOWED_CHECK_DAY") or date.today().isoformat()
+    head(f"pràctiques obertes — {day}")
+
+    def day_of(ms) -> str:
+        try:
+            return datetime.fromtimestamp(ms / 1000).date().isoformat()
+        except (TypeError, ValueError, OSError):
+            return ""
+
+    turns = []
+    mp = d / ".metrics" / "turns.jsonl"
+    for line in (mp.read_text(encoding="utf-8").splitlines() if mp.exists() else []):
+        try:
+            t = json.loads(line)
+        except ValueError:
+            continue
+        if day_of(t.get("ts")) == day:
+            turns.append(t)
+    recs = []
+    for f in sorted((d / ".records").glob("*.jsonl")) if (d / ".records").exists() else []:
+        for line in f.read_text(encoding="utf-8").splitlines():
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            if day_of(r.get("ts")) == day:
+                recs.append(r)
+    # a record belongs to the first turn of its session that ends at or after it
+    by_sess: dict[str, list] = collections.defaultdict(list)
+    for t in turns:
+        by_sess[t.get("session_id")].append(t)
+    for ts in by_sess.values():
+        ts.sort(key=lambda t: t.get("ts") or 0)
+    per = {c: {"turns": 0, "no_tool": 0, "model": 0, "derived": 0, "scores": []} for c in OPEN_PRACTICES}
+    for t in turns:
+        c = t.get("command")
+        if c in per:
+            per[c]["turns"] += 1
+            per[c]["no_tool"] += 1 if not t.get("tool_calls") else 0
+    for r in recs:
+        t = next((t for t in by_sess.get(r.get("session_id"), []) if (t.get("ts") or 0) >= (r.get("ts") or 0)), None)
+        c = t.get("command") if t else None
+        if c in per:
+            per[c]["derived" if r.get("derived") else "model"] += 1
+            if isinstance(r.get("score"), (int, float)):
+                per[c]["scores"].append(r["score"])
+    if not any(v["turns"] for v in per.values()):
+        print("  cap torn de Speaking/Writing/Reading aquest dia")
+    for c, v in per.items():
+        if not v["turns"]:
+            continue
+        avg = f"{statistics.mean(v['scores']):.1f}" if v["scores"] else "—"
+        print(f"  {c.split('-')[-1]:9s}: {v['turns']:3d} torns · puntuades pel model {v['model']}"
+              f" · derivades pel servidor {v['derived']} · sense cap eina {v['no_tool']} · nota mitjana {avg}")
+    errs = []
+    for f in sorted(d.glob("fluent-web-*.log")) + sorted(d.glob("flowed-web-*.log")):
+        errs += [l.strip() for l in f.read_text(encoding="utf-8", errors="replace").splitlines()
+                 if "LLM HTTP" in l or "TemplateError" in l]
+    print(f"  errors LLM al log de la web (tot el log): {len(errs)}")
+    for l in errs[-3:]:
+        print(f"    {l[:160]}")
+    print("  Llegenda: «derivades» = el model no va cridar l'eina i el servidor va guardar")
+    print("  la resposta igualment; «sense cap eina» inclou els torns de presentar exercici.")
+
+
 RUNNERS = {
     "profile": check_profile,
     "sm2": check_sm2,
@@ -652,6 +742,7 @@ RUNNERS = {
     "sortida": check_sortida,
     "historial": check_historial,
     "lliço": check_lesson,
+    "obertes": check_open,
 }
 
 

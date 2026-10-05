@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR, flowed_load_env
 # Flowed STOP — atura tot segons .env (webs + models gestionats).
 # No pregunta (aturar és segur). Tolera el que ja estigui aturat.
 #
@@ -9,15 +10,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$ROOT"
 
-if [[ -f "$ROOT/.env" ]]; then
-  while IFS= read -r _line || [[ -n "$_line" ]]; do
-    _line="${_line%%#*}"
-    [[ "$_line" =~ ^[[:space:]]*$ ]] && continue
-    [[ "$_line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
-    _k="${BASH_REMATCH[1]}"; _v="${BASH_REMATCH[2]}"
-    _v="${_v%\"}"; _v="${_v#\"}"; _v="${_v%\'}"; _v="${_v#\'}"
-    if [[ -z "${!_k+x}" ]]; then export "$_k=$_v"; fi
-  done < "$ROOT/.env"
+flowed_load_env "$ROOT"
+if [[ -z "$FLOWED_ENV_FILE" ]]; then
+  # Without it every value comes from config/fluent.json, which describes railab.
+  echo "error: falta $ROOT/.env — cada màquina en té un: cp .env.rapve .env (llvm) · cp .env.railab .env (railab)"
+  exit 1
 fi
 
 # Capa de sota (P1-9): config/fluent.json. Només omple el que .env i l'entorn no

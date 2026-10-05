@@ -185,6 +185,46 @@ export function finishStream(acc: StreamAccumulator): OpenAIResponse {
   };
 }
 
+/**
+ * Some chat templates accept a system message only at the start (Qwen3.5 and
+ * others: "TemplateError: System message must be at the beginning."). The
+ * server puts per-turn notes (pacing, retry) as a system message at the END of
+ * the history — right where a small model reads them — and Qwen3-14B's template
+ * accepts that. For a template that refuses it, the same notes go in the last
+ * user turn instead, marked as not written by the learner. Leading system
+ * messages are merged into one. Measured 2026-09-27: a 27B behind TabbyAPI
+ * answered every exercise with HTTP 400.
+ */
+export function foldLateSystem(messages: ChatMessage[]): ChatMessage[] {
+  const out: ChatMessage[] = [];
+  let head = true;
+  for (const m of messages) {
+    if (m.role === "system") {
+      if (head) {
+        const first = out[0];
+        if (first) out[0] = { ...first, content: `${first.content ?? ""}\n\n${m.content ?? ""}` };
+        else out.push({ ...m });
+        continue;
+      }
+      const note = `[Note for the tutor — not written by the learner]\n${m.content ?? ""}`;
+      const prev = out[out.length - 1];
+      if (prev && prev.role === "user") out[out.length - 1] = { ...prev, content: `${prev.content ?? ""}\n\n${note}` };
+      else out.push({ role: "user", content: note });
+      continue;
+    }
+    head = false;
+    out.push(m);
+  }
+  return out;
+}
+
+/** The template's own words for "no system message here". */
+export const LATE_SYSTEM_REFUSED = /system message must be at the beginning|roles must alternate/i;
+
+/** Endpoints (baseURL) that refused a late system message once: folded from then
+ *  on, for the life of the process, so the refusal costs one request, not one per turn. */
+const foldsSystem = new Set<string>();
+
 async function chatStreaming(
   cfg: ModelConfig,
   messages: ChatMessage[],
@@ -347,10 +387,21 @@ export async function runTurn(
     // Streaming is opt-in (FLOWED_STREAM=1) and degrades to a normal call: if
     // the endpoint refuses to stream, the error propagates to agent.ts, which
     // already knows how to fall back.
-    const resp =
-      cfg.stream && onDelta
-        ? await chatStreaming(cfg, messages, tools, onDelta)
-        : await chat(cfg, messages, tools);
+    const send = (msgs: ChatMessage[]) =>
+      cfg.stream && onDelta ? chatStreaming(cfg, msgs, tools, onDelta) : chat(cfg, msgs, tools);
+    let resp: OpenAIResponse;
+    if (foldsSystem.has(cfg.baseURL)) {
+      resp = await send(foldLateSystem(messages));
+    } else {
+      try {
+        resp = await send(messages);
+      } catch (e) {
+        if (!LATE_SYSTEM_REFUSED.test(String(e))) throw e;
+        foldsSystem.add(cfg.baseURL);
+        console.log(`[Flowed] ${cfg.baseURL}: the chat template refuses late system messages — folding them into the user turn from now on`);
+        resp = await send(foldLateSystem(messages));
+      }
+    }
     metrics.modelMs += Date.now() - startedAt;
     metrics.roundtrips += 1;
     countUsage(resp.usage);

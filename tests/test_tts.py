@@ -22,20 +22,15 @@ class TtsConfigTest(unittest.TestCase):
     def test_the_block_exists(self):
         self.assertIn("tts", self.config, "config/fluent.json has no tts block")
 
-    def test_enabled_never_means_enabled_without_a_voice(self):
-        # config/fluent.json is a working file: scripts/flowed-tts.sh flips
-        # `enabled` when it installs a voice, so asserting it is False would
-        # fail on any machine that actually has audio. The invariant that
-        # matters is the one that prevents buttons which 503 on every click:
-        # enabled implies at least one voice, and every voice file exists.
+    def test_no_machine_paths_in_the_shared_config(self):
+        # config/fluent.json travels between machines (rsync, git); piper and its
+        # voices do not. Absolute paths here broke audio twice on 2026-09-26
+        # (after `mv ~/.fluent ~/.flowed`, and on llvm after a rsync). The server
+        # finds each machine's install in _tts/ next to the profiles
+        # (server/src/tts.ts loadTtsConfig); the config only says on/off.
         tts = self.config["tts"]
-        if not tts.get("enabled"):
-            return
-        voices = tts.get("voices") or {}
-        self.assertTrue(voices, "tts.enabled is true but no voice is configured")
-        # Whether the .onnx is actually on THIS disk is machine state, not a
-        # repository invariant — `scripts/flowed-check.py tts <perfil>` reports
-        # that, and the server refuses with 503 rather than guessing a voice.
+        self.assertNotIn("binary", tts)
+        self.assertNotIn("voices", tts)
 
     def test_it_carries_the_limits(self):
         tts = self.config["tts"]

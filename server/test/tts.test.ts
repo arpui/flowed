@@ -21,6 +21,9 @@ import {
   MAX_TTS_CHARS,
   DEFAULT_TTS,
   ttsEnv,
+  loadTtsConfig,
+  ttsDirFor,
+  voiceLanguage,
 } from "../src/tts.ts";
 
 let failures = 0;
@@ -163,6 +166,55 @@ check("a different sentence is a different file",
 
   check("the rest of the environment survives",
     ttsEnv(BIN, { HOME: "/home/x" }).HOME === "/home/x");
+}
+
+// --- this machine's install, found on disk (2026-09-26) ---------------------
+// config/fluent.json travels between machines; piper does not. Paths to it in
+// the shared config broke audio after `mv ~/.fluent ~/.flowed` and after a
+// rsync to llvm.
+{
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "tts-home-"));
+  const tts = path.join(home, ".flowed", "_tts");
+  fs.mkdirSync(path.join(tts, "piper"), { recursive: true });
+  fs.mkdirSync(path.join(tts, "voices"), { recursive: true });
+  fs.writeFileSync(path.join(tts, "piper", "piper"), "");
+  for (const f of ["en_GB-alba-medium.onnx", "en_GB-alba-medium.onnx.json", "de_DE-thorsten-low.onnx"]) {
+    fs.writeFileSync(path.join(tts, "voices", f), "");
+  }
+  const repo = fs.mkdtempSync(path.join(os.tmpdir(), "tts-repo-"));
+  fs.mkdirSync(path.join(repo, "config"));
+  const writeCfg = (t: unknown) => fs.writeFileSync(path.join(repo, "config", "fluent.json"), JSON.stringify({ tts: t }));
+  const profile = path.join(home, ".flowed", "nes-en");
+
+  check("voice file names map to the profile's language",
+    voiceLanguage("en_GB-alba-medium.onnx") === "English" && voiceLanguage("xx.onnx") === null);
+  check("the _tts folder is found next to the profile",
+    ttsDirFor(profile, {}, home) === tts);
+  check("…and by the profiles-folder rule without a profile",
+    ttsDirFor(undefined, {}, home) === tts);
+  check("$FLOWED_TTS_DIR wins",
+    ttsDirFor(profile, { FLOWED_TTS_DIR: repo }, home) === repo);
+
+  writeCfg({ enabled: true, binary: "/home/albert/.fluent/_tts/piper/piper",
+    voices: { English: "/home/albert/.fluent/_tts/voices/en_GB-alba-medium.onnx" } });
+  let c = loadTtsConfig(repo, profile, tts);
+  check("stale paths in the config give way to what is on disk",
+    c.enabled && c.binary === path.join(tts, "piper", "piper")
+      && voiceFor(c, "English") === path.join(tts, "voices", "en_GB-alba-medium.onnx"), c);
+  check("a voice without its .onnx.json is not offered", voiceFor(c, "German") === null);
+
+  writeCfg({ enabled: true });
+  c = loadTtsConfig(repo, profile, tts);
+  check("enabled + nothing named = this machine's install", c.enabled && voiceFor(c, "english") !== null, c);
+
+  writeCfg({ enabled: false });
+  check("the config can still switch it off", loadTtsConfig(repo, profile, tts).enabled === false);
+
+  writeCfg({ enabled: true });
+  check("enabled but nothing installed stays off", loadTtsConfig(repo, profile, null).enabled === false);
+
+  fs.rmSync(home, { recursive: true, force: true });
+  fs.rmSync(repo, { recursive: true, force: true });
 }
 
 console.log(failures === 0 ? "tts: all checks passed" : `tts: ${failures} failure(s)`);

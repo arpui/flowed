@@ -57,6 +57,8 @@ def read_env_file(path: Path) -> dict:
             continue
         key, _, value = line.partition("=")
         key = key.strip()
+        if key.startswith("FLUENT_"):  # name from before 0.5.0 (scripts/lib-paths.sh does the same)
+            key = "FLOWED_" + key[len("FLUENT_"):]
         if not key.replace("_", "").isalnum():
             continue
         out[key] = value.strip().strip('"').strip("'")
@@ -109,6 +111,10 @@ def resolve(include_env_file=True, include_environ=True) -> dict:
         for key, value in read_env_file(ENV_FILE).items():
             values[key] = value
     if include_environ:
+        for key in [k for k in os.environ if k.startswith("FLUENT_")]:
+            new = "FLOWED_" + key[len("FLUENT_"):]
+            if new not in os.environ:
+                values[new] = os.environ[key]
         for key in list(values) + [k for k in os.environ if k.startswith("FLOWED_")]:
             if key in os.environ:
                 values[key] = os.environ[key]

@@ -94,21 +94,23 @@ install_voice() {
 wire_config() {
   local name="$1" onnx="$2" language
   language="$(voice_language "$name")"
-  [[ -n "$language" ]] || die "I do not know which language '$name' is. Add it to config/fluent.json by hand."
-  python3 - "$CONFIG" "$BIN" "$language" "$onnx" <<'PY'
+  [[ -n "$language" ]] || die "I do not know which language '$name' is — the server will not offer it."
+  # No paths go into config/fluent.json: it travels between machines and piper
+  # does not. The server finds $TTS_DIR on its own; the config only says "on".
+  python3 - "$CONFIG" <<'PY'
 import json, sys, pathlib
-config_path, binary, language, model = sys.argv[1:5]
-p = pathlib.Path(config_path)
+p = pathlib.Path(sys.argv[1])
 data = json.loads(p.read_text())
 tts = data.setdefault("tts", {})
+changed = tts.get("enabled") is not True or "binary" in tts or "voices" in tts
 tts["enabled"] = True
-tts["binary"] = binary
-tts.setdefault("cache_max_mb", 200)
-tts.setdefault("timeout_ms", 20000)
-tts.setdefault("voices", {})[language] = model
-p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-print(f"config/fluent.json: {language} -> {model}")
+tts.pop("binary", None)
+tts.pop("voices", None)
+if changed:
+    p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+    print("config/fluent.json: tts on (paths are found on disk)")
 PY
+  echo "$language -> $onnx"
   echo "Restart the web instance for it to pick this up."
 }
 
@@ -125,14 +127,7 @@ status() {
   fi
   echo "voices  :"
   ls -1 "$TTS_DIR/voices/"*.onnx 2>/dev/null | sed 's/^/  /' || echo "  (none)"
-  echo "config  :"
-  python3 -c "
-import json,sys
-tts = json.load(open('$CONFIG')).get('tts', {})
-print('  enabled:', tts.get('enabled'))
-for lang, model in (tts.get('voices') or {}).items():
-    print(f'  {lang}: {model}')
-" 2>/dev/null || echo "  (unreadable)"
+  echo "config  : tts.enabled = $(python3 -c "import json;print(json.load(open('$CONFIG')).get('tts',{}).get('enabled'))" 2>/dev/null || echo '?')"
 }
 
 case "${1:-}" in

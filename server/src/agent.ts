@@ -42,6 +42,11 @@ import {
   drillMaterial,
   parseFeedback,
   alignMarkersToScore,
+  stripTemplateBraces,
+  foreignScriptGuard,
+  stripForeignScript,
+  foreignScript,
+  feedbackFromRecord,
   spliceFeedback,
   withAnswerInFront,
   alignLessonHeader,
@@ -156,6 +161,8 @@ interface TurnKind {
   agentArg: string;
 }
 // kind "command" is created by the caller and passed as the first user turn.
+
+const OPEN_PRACTICES = new Set(["fluent-speaking", "fluent-writing", "fluent-reading"]);
 
 export class Agent {
   private db: FluentDB;
@@ -318,6 +325,22 @@ export class Agent {
     }
   }
 
+  /** Speaking, Writing and Reading: the server records the answer from the
+   *  feedback text (deriveRecord), so the model is not offered
+   *  fluent_record_answer there. Tutor-bench, 2026-09-29 (docs/MODELBENCH.md):
+   *  the call cost a second full request of ~17k tokens per answer (27B: 2
+   *  round-trips per turn, ~60 s), and 5 of 17 times the score it stored was
+   *  not the one it showed. The 14B was already stored this way 21 times in 30. */
+  private recordsFromText(sessionId?: string): boolean {
+    return OPEN_PRACTICES.has(sessionId ? this.currentCommand.get(sessionId) ?? "" : "");
+  }
+
+  private toolsFor(sessionId: string): ToolDefinition[] {
+    return this.recordsFromText(sessionId)
+      ? this.tools.definitions.filter((t) => t.name !== "fluent_record_answer")
+      : this.tools.definitions;
+  }
+
   private buildSystemPrompt(agent: string, sessionId?: string): string {
     const blocks: string[] = [];
     for (const f of ["AGENTS.md", "LEARNING_SYSTEM.md"]) {
@@ -342,6 +365,14 @@ export class Agent {
     }
     const practice = skillBlock(sessionId ? this.activeSkill.get(sessionId) : undefined);
     if (practice) blocks.push(practice);
+    if (this.recordsFromText(sessionId)) {
+      blocks.push(
+        `Recording, in this practice: the server stores each answer from your feedback text. ` +
+          `fluent_record_answer is NOT available here — do not call it and do not mention it. ` +
+          `Your feedback must show "**Score: N/10**" and each correction as ❌ "wrong" → **"right"**, ` +
+          `and then continue with the next question or task in the same message.`
+      );
+    }
     return blocks.join("\n\n");
   }
 
@@ -504,7 +535,7 @@ export class Agent {
     this.persistUserTurn(sessionId, body, agent, true);
     const system = this.buildSystemPrompt(agent, sessionId);
     const history = this.historyToMessages(sessionId);
-    const outcome = await this.executeTurn(sessionId, agent, system, history, this.tools.definitions);
+    const outcome = await this.executeTurn(sessionId, agent, system, history, this.toolsFor(sessionId));
 
     // Auto-run fluent-db-updater for fluent-end command to finalize Capa B
     if (commandName === "fluent-end") {
@@ -570,7 +601,7 @@ export class Agent {
     if (this.lastAnswer.size > 500) this.lastAnswer.clear();
     this.persistUserTurn(sessionId, text, agent, false);
     const system = this.buildSystemPrompt(agent, sessionId);
-    return this.executeTurn(sessionId, agent, system, this.historyToMessages(sessionId), this.tools.definitions);
+    return this.executeTurn(sessionId, agent, system, this.historyToMessages(sessionId), this.toolsFor(sessionId));
   }
 
   // ---- the level test ------------------------------------------------------
@@ -1074,10 +1105,14 @@ export class Agent {
     // environment the same flash-then-swap would still happen; ask before
     // turning streaming on if that matters there.
     const heldTextPartIds: string[] = [];
+    let recordArgs: Record<string, unknown> | null = null;
     const onPart = (step: TurnPart) => {
       if (step.kind === "tool") {
         flushStream(); // close any text the model streamed before calling a tool
         const t = step as ToolStep;
+        if (t.name === "fluent_record_answer" && t.args && typeof t.args === "object") {
+          recordArgs = t.args as Record<string, unknown>;
+        }
         const part = this.db.insertPart(msg.id, sessionId, {
           type: "tool",
           tool: t.name,
@@ -1143,6 +1178,7 @@ export class Agent {
     }
 
     await this.enforceTurn(sessionId, msg.id, view, system, history, tools, model, onPart, onDelta);
+    this.repairShownText(sessionId, msg.id, view, recordArgs, heldTextPartIds);
     emitHeld();
 
     this.logTurn(sessionId, agent, model.name, startedAt, history, metrics);
@@ -1523,6 +1559,55 @@ export class Agent {
     }
   }
 
+  /**
+   * After the guards, two things the learner must never be left with
+   * (tutor-bench, 2026-09-27 — docs/MODELBENCH.md):
+   *  - words in a script she cannot read, still there after the rewrite
+   *    (foreignScriptGuard asked for one): dropped;
+   *  - an answer graded in fluent_record_answer with nothing of it on screen
+   *    ("Waiting for your answer! ⏱️"): the feedback is rebuilt from the call
+   *    and put before whatever the reply says.
+   */
+  private repairShownText(
+    sessionId: string,
+    messageId: string,
+    view: () => { parts: unknown[] },
+    recordArgs: Record<string, unknown> | null,
+    heldTextPartIds: string[],
+  ): void {
+    try {
+      const langs = this.learnerLanguages();
+      const texts = view().parts.filter((p) => (p as { type?: string }).type === "text") as Array<{ id?: string; text?: string }>;
+      for (const p of texts) {
+        const t = String(p.text ?? "");
+        if (p.id && foreignScript(t, langs.target, langs.native)) {
+          this.db.updatePart(String(p.id), { type: "text", text: stripForeignScript(t, langs.target, langs.native) });
+          this.logGuard(sessionId, "foreign script dropped", t);
+        }
+      }
+      if (!recordArgs || this.answerInFront.get(sessionId) !== true) return;
+      const shown = view().parts.some((p) => {
+        const q = p as { type?: string; text?: string };
+        return q.type === "text" && scoreOfReply(String(q.text ?? "")) !== null;
+      });
+      if (shown) return;
+      const feedback = feedbackFromRecord(recordArgs);
+      if (!feedback) return;
+      const last = [...texts].reverse().find((p) => p.id);
+      if (last?.id) {
+        const now = view().parts.find((p) => (p as { id?: string }).id === last.id) as { text?: string } | undefined;
+        const body = String(now?.text ?? "");
+        this.db.updatePart(String(last.id), { type: "text", text: `${feedback}\n\n${body}`.trim() });
+      } else {
+        const part = this.db.insertPart(messageId, sessionId, { type: "text", text: feedback });
+        heldTextPartIds.push(part.id);
+      }
+      this.logGuard(sessionId, "feedback rebuilt from fluent_record_answer", feedback);
+    } catch (e) {
+      console.log(`[Fluent] repairShownText failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
   /** The two things the server knows better than the tutor: what the score
    *  means, and where the lesson actually is. */
   private tidyTutorText(sessionId: string, text: string): string {
@@ -1533,7 +1618,7 @@ export class Agent {
         .replace(/<think>[\s\S]*?<\/think>\s*/gi, "")
         .replace(/<\/?think>\s*/gi, "")
     );
-    const aligned = alignMarkersToScore(clean);
+    const aligned = alignMarkersToScore(stripTemplateBraces(clean));
     const command = this.currentCommand.get(sessionId);
     // Debug aid, not for the learner: barely-visible tag of which competence
     // this exercise was built for, so the rotation (the thing that was silently
@@ -1626,7 +1711,8 @@ export class Agent {
       // "Number: one" into an unrelated articles_plurals exercise that had
       // nothing to do with numbers.
       const compAtStart = this.assignedCompetence.get(sessionId) ?? null;
-      const note = pictureGuard(text)
+      const note = foreignScriptGuard(text, langs.target, langs.native)
+        ?? pictureGuard(text)
         ?? writingBlankGuard(text, this.currentCommand.get(sessionId))
         ?? languageDirectionGuard(text, langs.target, langs.native)
         ?? turnGuard({

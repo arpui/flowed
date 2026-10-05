@@ -385,7 +385,7 @@ function main() {
           repeat_last_n: models.deep.repeatLastN,
         }).filter(([, v]) => typeof v === "number")
       ) as Record<string, number>,
-      tts: loadTtsConfig(root),
+      tts: loadTtsConfig(root, dataDir),
     },
     hub
   );

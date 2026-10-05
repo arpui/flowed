@@ -17,16 +17,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$ROOT"
 
-if [[ -f "$ROOT/.env" ]]; then
-  # Carrega .env sense trepitjar variables ja exportades (CLI/entorn mana).
-  while IFS= read -r _line || [[ -n "$_line" ]]; do
-    _line="${_line%%#*}"
-    [[ "$_line" =~ ^[[:space:]]*$ ]] && continue
-    [[ "$_line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
-    _k="${BASH_REMATCH[1]}"; _v="${BASH_REMATCH[2]}"
-    _v="${_v%\"}"; _v="${_v#\"}"; _v="${_v%\'}"; _v="${_v#\'}"
-    if [[ -z "${!_k+x}" ]]; then export "$_k=$_v"; fi
-  done < "$ROOT/.env"
+flowed_load_env "$ROOT"
+if [[ -z "$FLOWED_ENV_FILE" ]]; then
+  # Without it every value comes from config/fluent.json, which describes railab.
+  echo "error: falta $ROOT/.env — cada màquina en té un: cp .env.rapve .env (llvm) · cp .env.railab .env (railab)"
+  exit 1
 fi
 
 # Capa de sota (P1-9): config/fluent.json. Només omple el que .env i l'entorn no
@@ -211,6 +206,7 @@ fi
 
 # --- pla -------------------------------------------------------------------------
 echo
+echo "Config: $FLOWED_ENV_FILE (la resta, de config/fluent.json)"
 echo "Pla: deep=$(basename "$FLOWED_DEEP_MODEL") :$FLOWED_DEEP_PORT (backend=$FLOWED_DEEP_BACKEND, CUDA $FLOWED_DEEP_GPU, ctx $FLOWED_DEEP_CTX, managed=$FLOWED_DEEP_MANAGED)"
 [[ "$FLOWED_FACE_ENABLED" == "1" ]] && echo "     face :$FLOWED_FACE_PORT (CUDA $FLOWED_FACE_GPU)" || echo "     face: off"
 [[ "$MODELS_ONLY" == "0" ]] && echo "     webs: stop+releu [$FLOWED_WEBS]"

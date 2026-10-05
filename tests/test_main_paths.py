@@ -216,3 +216,43 @@ class ProfilesRootTest(unittest.TestCase):
         os.environ["FLOWED_HOME"] = str(self.home / "altres")
         self.assertEqual((str(self.home / "altres"),) * 2, self.both())
         self.assertEqual(self.home / "altres" / "nes-en", main_paths.profile_dir("nes-en"))
+
+
+class LoadEnvTest(unittest.TestCase):
+    """scripts/lib-paths.sh flowed_load_env — the one .env loader of every script.
+
+    2026-09-26, llvm: an .env still written with the pre-0.5.0 names was ignored
+    in silence, every value fell back to config/fluent.json (railab's native
+    backend, port 12322), and the start tried to bring the model up the railab way.
+    """
+
+    def run_loader(self, env_text, extra_env=None):
+        with tempfile.TemporaryDirectory() as d:
+            if env_text is not None:
+                Path(d, ".env").write_text(env_text)
+            env = {k: v for k, v in os.environ.items() if not k.startswith(("FLOWED_", "FLUENT_"))}
+            env.update(extra_env or {})
+            script = (f'set -euo pipefail; source "{REPO_ROOT}/scripts/lib-paths.sh"; '
+                      f'flowed_load_env "{d}"; '
+                      'echo "$FLOWED_DEEP_PORT|${FLOWED_DEEP_BACKEND:-}|${FLOWED_ENV_FILE:+yes}"')
+            r = subprocess.run(["bash", "-c", script], capture_output=True, text=True, env=env)
+            self.assertEqual(0, r.returncode, r.stderr)
+            return r.stdout.strip(), r.stderr
+
+    def test_new_names(self):
+        out, err = self.run_loader("FLOWED_DEEP_PORT=12321\nFLOWED_DEEP_BACKEND=docker\n")
+        self.assertEqual("12321|docker|yes", out)
+        self.assertEqual("", err)
+
+    def test_old_names_still_work_and_say_so(self):
+        out, err = self.run_loader("FLUENT_DEEP_PORT=12321\nFLUENT_DEEP_BACKEND=docker\n")
+        self.assertEqual("12321|docker|yes", out)
+        self.assertIn("FLUENT_DEEP_PORT", err)
+
+    def test_the_environment_wins_over_the_file(self):
+        out, _ = self.run_loader("FLOWED_DEEP_PORT=12321\n", {"FLOWED_DEEP_PORT": "9"})
+        self.assertTrue(out.startswith("9|"), out)
+
+    def test_no_file_is_reported(self):
+        out, _ = self.run_loader(None, {"FLOWED_DEEP_PORT": "1"})
+        self.assertEqual("1||", out)

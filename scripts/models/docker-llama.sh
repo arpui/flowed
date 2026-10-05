@@ -16,19 +16,9 @@ set -euo pipefail
 
 # Si hi ha .env a l'arrel del projecte, les seves vars fan de defaults
 # (mai trepitgen variables ja exportades a l'entorn: CLI mana).
-for _env in "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)/.env" ./.env; do
-  if [[ -f "$_env" ]]; then
-    while IFS= read -r _line || [[ -n "$_line" ]]; do
-      _line="${_line%%#*}"
-      [[ "$_line" =~ ^[[:space:]]*$ ]] && continue
-      [[ "$_line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
-      _k="${BASH_REMATCH[1]}"; _v="${BASH_REMATCH[2]}"
-      _v="${_v%\"}"; _v="${_v#\"}"; _v="${_v%\'}"; _v="${_v#\'}"
-      if [[ -z "${!_k+x}" ]]; then export "$_k=$_v"; fi
-    done < "$_env"
-    break
-  fi
-done
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/lib-paths.sh"
+flowed_load_env "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+[[ -z "$FLOWED_ENV_FILE" && -f ./.env ]] && flowed_load_env "."
 
 # Capa de sota (P1-9): el que .env i l'entorn no hagin definit surt de
 # config/fluent.json, la configuració canònica del projecte.

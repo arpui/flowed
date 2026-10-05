@@ -63,16 +63,13 @@
   },
   "tts": {
     "_comment": [
-      "Local text-to-speech (piper). Off until a voice exists on this machine.",
-      "Install with: scripts/flowed-tts.sh install en_GB-alba-medium",
-      "'voices' maps the profile's target_language to a .onnx voice model.",
-      "CPU only: it must not compete for the VRAM the deep model needs."
+      "Local text-to-speech (piper). CPU only: it must not compete for the VRAM the deep model needs.",
+      "Only on/off and limits live here: this file travels between machines, piper does not.",
+      "The server finds each machine's own install in _tts/ next to the profiles (~/.flowed/_tts/):",
+      "piper/piper and voices/<voice>.onnx, the voice's language taken from its name (en_* -> English).",
+      "Install with: scripts/flowed-tts.sh install en_GB-alba-medium"
     ],
     "enabled": true,
-    "binary": "/home/albert/.fluent/_tts/piper/piper",
-    "voices": {
-      "English": "/home/albert/.fluent/_tts/voices/en_GB-alba-medium.onnx"
-    },
     "cache_max_mb": 200,
     "timeout_ms": 20000
   },

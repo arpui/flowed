@@ -15,6 +15,7 @@
 
 import crypto from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 /** Longest utterance we will synthesise. A whole feedback message is not a
@@ -253,13 +254,85 @@ export async function synthesise(
   return { ok: true, file, cached: false };
 }
 
-/** Read the `tts` block of config/fluent.json. Absent or malformed means off —
- *  audio is a bonus, never a reason the server fails to start. */
-export function loadTtsConfig(root: string): TtsConfig {
+// ---- where this machine keeps piper -------------------------------------
+// config/fluent.json travels between machines (rsync, git); piper and its voices
+// do not — they live in `_tts/` next to the profiles. Absolute paths to them in
+// the shared config broke audio twice on 2026-09-26: after `mv ~/.fluent
+// ~/.flowed` (the paths pointed at the old folder) and on llvm after a rsync
+// (railab's config replaced llvm's). So the machine's own install is found on
+// disk, and config/fluent.json only says whether to use it.
+
+const VOICE_LANGUAGE: Record<string, string> = {
+  en: "English", de: "German", fr: "French", es: "Spanish",
+  ca: "Catalan", it: "Italian", pt: "Portuguese", nl: "Dutch",
+};
+
+/** en_GB-alba-medium.onnx -> "English" (what learner-profile.json calls it). */
+export function voiceLanguage(file: string): string | null {
+  const m = path.basename(file).match(/^([a-z]{2})_[A-Z]{2}-/);
+  return m?.[1] ? VOICE_LANGUAGE[m[1]] ?? null : null;
+}
+
+/** The `_tts` folder of this machine: $FLOWED_TTS_DIR, else the one next to
+ *  the profile (its parent is the profiles folder), else the profiles folder by
+ *  the same rule as hooks/main_paths.py. null when none exists. */
+export function ttsDirFor(
+  dataDir?: string,
+  env: Record<string, string | undefined> = process.env,
+  home: string = os.homedir(),
+): string | null {
+  const candidates: string[] = [];
+  if (env.FLOWED_TTS_DIR) candidates.push(env.FLOWED_TTS_DIR);
+  if (dataDir) candidates.push(path.join(path.dirname(path.resolve(dataDir)), "_tts"));
+  const flowed = path.join(home, ".flowed");
+  const fluent = path.join(home, ".fluent");
+  const profiles = env.FLOWED_HOME
+    ? env.FLOWED_HOME.replace(/^~/, home)
+    : fs.existsSync(flowed) || !fs.existsSync(fluent) ? flowed : fluent;
+  candidates.push(path.join(profiles, "_tts"));
+  return candidates.find((d) => fs.existsSync(d)) ?? null;
+}
+
+/** What is installed in a `_tts` folder: piper/piper and voices/*.onnx (with
+ *  their .onnx.json). One voice per language, the first by name. */
+export function discoverTts(dir: string): { binary?: string; voices: Record<string, string> } {
+  const binary = path.join(dir, "piper", "piper");
+  const voices: Record<string, string> = {};
   try {
-    const raw = JSON.parse(fs.readFileSync(path.join(root, "config", "fluent.json"), "utf8"));
-    return resolveTtsConfig(raw?.tts);
+    for (const f of fs.readdirSync(path.join(dir, "voices")).sort()) {
+      if (!f.endsWith(".onnx")) continue;
+      const full = path.join(dir, "voices", f);
+      const lang = voiceLanguage(f);
+      if (!lang || !fs.existsSync(full + ".json")) continue;
+      voices[lang.toLowerCase()] ??= full;
+    }
+  } catch {
+    /* no voices folder */
+  }
+  return { binary: fs.existsSync(binary) ? binary : undefined, voices };
+}
+
+/** config/fluent.json's `tts` block (on/off and limits) over this machine's
+ *  install. A binary or voice named in the config is used only if it exists
+ *  here. Absent or malformed means off — audio is a bonus, never a reason the
+ *  server fails to start. */
+export function loadTtsConfig(root: string, dataDir?: string, ttsDir: string | null = ttsDirFor(dataDir)): TtsConfig {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(fs.readFileSync(path.join(root, "config", "fluent.json"), "utf8"))?.tts;
   } catch {
     return { ...DEFAULT_TTS };
   }
+  const base = resolveTtsConfig(raw);
+  const found = ttsDir ? discoverTts(ttsDir) : { voices: {} as Record<string, string> };
+  const onDisk = (p: string) => !p.includes("/") || fs.existsSync(p);
+  const explicitBinary = base.binary !== DEFAULT_TTS.binary && onDisk(base.binary);
+  const voices = { ...found.voices };
+  for (const [lang, file] of Object.entries(base.voices)) if (onDisk(file)) voices[lang] = file;
+  return {
+    ...base,
+    binary: explicitBinary ? base.binary : found.binary ?? base.binary,
+    voices,
+    enabled: base.enabled && Object.keys(voices).length > 0,
+  };
 }

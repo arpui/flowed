@@ -20,18 +20,18 @@ cd "$ROOT"
 # Configuració (P1-9): .env primer, config/fluent.json per a la resta. Aquest
 # llançador no llegia cap de les dues, així que FLOWED_STREAM i els ports dels
 # models li arribaven només si algú els exportava a mà.
-if [[ -f "$ROOT/.env" ]]; then
-  while IFS= read -r _line || [[ -n "$_line" ]]; do
-    _line="${_line%%#*}"
-    [[ "$_line" =~ ^[[:space:]]*$ ]] && continue
-    [[ "$_line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]] || continue
-    _k="${BASH_REMATCH[1]}"; _v="${BASH_REMATCH[2]}"
-    _v="${_v%\"}"; _v="${_v#\"}"; _v="${_v%\'}"; _v="${_v#\'}"
-    if [[ -z "${!_k+x}" ]]; then export "$_k=$_v"; fi
-  done < "$ROOT/.env"
-fi
+flowed_load_env "$ROOT"
 if [[ -f "$ROOT/config/fluent.json" ]]; then
   eval "$(python3 "$ROOT/scripts/flowed-config.py" --sh --missing-only --no-env-file 2>/dev/null || true)"
+fi
+# Same endpoints as flowed-start.sh passes down. Without these, a web started on
+# its own talked to config/fluent.json's port (railab's 12322) whatever the
+# .env said — on llvm the model is on 12321 (2026-09-27).
+if [[ -n "${FLOWED_DEEP_PORT:-}" ]]; then
+  export FLOWED_DEEP_BASE_URL="${FLOWED_DEEP_BASE_URL:-http://127.0.0.1:$FLOWED_DEEP_PORT/v1}"
+fi
+if [[ -n "${FLOWED_FACE_PORT:-}" ]]; then
+  export FLOWED_FACE_BASE_URL="${FLOWED_FACE_BASE_URL:-http://127.0.0.1:$FLOWED_FACE_PORT/v1}"
 fi
 
 MODE=""

@@ -224,8 +224,41 @@ def parse_curriculum(text: str) -> dict:
     return {"meta": meta, "competencies": comps, "retired": retired}
 
 
-def load_curriculum(path: str | os.PathLike) -> dict:
-    return parse_curriculum(Path(path).read_text(encoding="utf-8"))
+EXTRA_FILE = "extra.md"
+
+
+def load_curriculum(path: str | os.PathLike, data_dir: str | os.PathLike | None = None) -> dict:
+    """The level's curriculum; with `data_dir`, plus that learner's own extras."""
+    cur = parse_curriculum(Path(path).read_text(encoding="utf-8"))
+    if data_dir:
+        add_profile_extras(cur, data_dir)
+    return cur
+
+
+def add_profile_extras(cur: dict, data_dir: str | os.PathLike) -> dict:
+    """Competences only one learner has: `<profile>/extra.md`, same format as
+    the curriculum (2026-09-27, Albert: a song, or what they do in class this
+    week). `[extra]` ones are practised like any other but never count towards
+    the level bar or the checkpoint (`progress` and `checkpoint_plan` only look
+    at `core`). Their exercises live in `<profile>/bank/<id>.json` (hooks/bank.py).
+    An id that is already in the curriculum is ignored: an extra never replaces
+    a competence of the level."""
+    f = Path(data_dir) / EXTRA_FILE
+    if not f.is_file():
+        return cur
+    try:
+        ext = parse_curriculum(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return cur
+    known = {c["id"] for c in cur["competencies"]}
+    for c in ext["competencies"]:
+        if c["id"] in known:
+            continue
+        c["section"] = c["section"] or "Extra"
+        c["profile"] = True
+        cur["competencies"].append(c)
+        known.add(c["id"])
+    return cur
 
 
 def validate_curriculum(cur: dict) -> list[str]:
@@ -659,7 +692,7 @@ def _bank_checkpoint_items(root, stem: str, cid: str, data_dir, today: str, used
     bank, never an item of an earlier level test, and preferring what she has
     not practised in the last 7 days — a test, not a replay of this week.
     """
-    items = bank_mod.load_bank(Path(root), stem, cid)
+    items = bank_mod.load_bank(Path(root), stem, cid, data_dir)
     if not items:
         return []
     prog = bank_mod._load_progress(data_dir).get(cid, {})
@@ -1597,13 +1630,13 @@ def legacy_competence(cur: dict, item_id: str, sr_item: dict, pattern: dict | No
     return (winner["id"], "tags", True) if own else (winner["id"], "tags-shared", False)
 
 
-def _bank_index(root: Path, stem: str) -> dict[str, dict]:
-    """Every bank item of this curriculum, by id."""
+def _bank_index(root: Path, stem: str, data_dir: str | os.PathLike | None = None) -> dict[str, dict]:
+    """Every bank item of this curriculum (and of the learner's own extras), by id."""
     out: dict[str, dict] = {}
-    d = bank_mod.bank_dir(root, stem)
-    for f in sorted(d.glob("*.json")) if d.is_dir() else []:
-        for it in bank_mod.load_bank(root, stem, f.stem):
-            out[it["id"]] = it
+    for d in bank_mod.bank_dirs(root, stem, data_dir):
+        for f in sorted(d.glob("*.json")):
+            for it in bank_mod.load_bank(root, stem, f.stem, data_dir):
+                out[it["id"]] = it
     return out
 
 
@@ -1620,7 +1653,7 @@ def review_pick(root: Path, cur: dict, stem: str, data_dir: str | os.PathLike, t
         patterns = json.loads((data_dir / "mistakes-db.json").read_text(encoding="utf-8")).get("error_patterns", {})
     except (OSError, ValueError):
         patterns = {}
-    index = _bank_index(root, stem)
+    index = _bank_index(root, stem, data_dir)
     items = sr.get("items") or {}
     due = sorted(((k, v) for k, v in items.items()
                   if isinstance(v, dict) and isinstance(v.get("due_date"), str) and v["due_date"] <= today
@@ -1634,7 +1667,7 @@ def review_pick(root: Path, cur: dict, stem: str, data_dir: str | os.PathLike, t
             choice = {"source": "bank", "queue_id": qid, "competence": item["competence"], "item": item}
             break
         cid, how, safe = legacy_competence(cur, qid, it, patterns.get(qid))
-        if safe and cid and bank_mod.has_bank(root, stem, cid):
+        if safe and cid and bank_mod.has_bank(root, stem, cid, data_dir):
             item = bank_mod.pick_item(root, stem, cid, data_dir, today)
             if item:
                 choice = {"source": "legacy", "queue_id": qid, "competence": cid, "how": how, "item": item}
@@ -1658,7 +1691,7 @@ def review_pick(root: Path, cur: dict, stem: str, data_dir: str | os.PathLike, t
     if choice is None:
         t = next_target(cur, data_dir, today, last_id)
         cid = t.get("id")
-        if cid and bank_mod.has_bank(root, stem, cid):
+        if cid and bank_mod.has_bank(root, stem, cid, data_dir):
             item = bank_mod.pick_item(root, stem, cid, data_dir, today)
             if item:
                 choice = {"source": "weak", "queue_id": None, "competence": cid, "item": item}
@@ -1742,7 +1775,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("cal --curriculum o --auto", file=sys.stderr)
                 return 2
             return 0
-        path = rebuild_path(a.data, load_curriculum(f))
+        path = rebuild_path(a.data, load_curriculum(f, a.data))
         if not a.quiet:
             tg = path["tagging"]
             print(f"{f.name}: {tg['records']} respostes registrades, {tg['tagged']} assignades a una competència")
@@ -1753,7 +1786,7 @@ def main(argv: list[str] | None = None) -> int:
         if not f:
             print(json.dumps({"available": False}))
             return 0
-        cur_ = load_curriculum(f)
+        cur_ = load_curriculum(f, a.data)
         print(json.dumps(path_view(cur_, rebuild_path(a.data, cur_, save=False), a.today, data_dir=a.data,
                                    stem=f.stem, root=root), ensure_ascii=False))
         return 0
@@ -1766,7 +1799,7 @@ def main(argv: list[str] | None = None) -> int:
         if not f:
             print(json.dumps({"ok": False, "text": "No curriculum for this learner."}))
             return 0
-        cur_ = load_curriculum(f)
+        cur_ = load_curriculum(f, a.data)
         if a.action == "start":
             out = checkpoint_start(a.data, cur_, a.today, force=a.force, stem=f.stem, root=root)
         else:
@@ -1776,7 +1809,7 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "bank":
         root = Path(__file__).resolve().parent.parent
         f = Path(a.curriculum) if a.curriculum else (find_curriculum(root, a.data) if a.auto else None)
-        cur_ = load_curriculum(f) if f else None
+        cur_ = load_curriculum(f, a.data) if f else None
         stem = f.stem if f else ""
         comp = next((c for c in (cur_["competencies"] if cur_ else []) if c["id"] == a.competence), None)
         if a.action == "review-pick":
@@ -1816,7 +1849,7 @@ def main(argv: list[str] | None = None) -> int:
         if not f:
             print(json.dumps({"error": "no curriculum"}))
             return 2
-        cur_ = load_curriculum(f)
+        cur_ = load_curriculum(f, a.data)
         rebuild_path(a.data, cur_)
         print(json.dumps(close_course(a.data, cur_, a.day, root=root, kind="manual"), ensure_ascii=False))
         return 0
@@ -1824,9 +1857,9 @@ def main(argv: list[str] | None = None) -> int:
         root = Path(__file__).resolve().parent.parent
         f = Path(a.curriculum) if a.curriculum else (find_curriculum(root, a.data) if a.auto else None)
         if a.writing:
-            print(json.dumps(writing_frame(load_curriculum(f), a.data, a.today) if f else {}, ensure_ascii=False))
+            print(json.dumps(writing_frame(load_curriculum(f, a.data), a.data, a.today) if f else {}, ensure_ascii=False))
         else:
-            print(json.dumps(next_target(load_curriculum(f), a.data, a.today, a.last or None, only_vocab=a.vocab) if f else {}, ensure_ascii=False))
+            print(json.dumps(next_target(load_curriculum(f, a.data), a.data, a.today, a.last or None, only_vocab=a.vocab) if f else {}, ensure_ascii=False))
         return 0
     cur = load_curriculum(a.curriculum)
     if a.cmd == "coverage":

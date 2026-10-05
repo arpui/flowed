@@ -493,13 +493,13 @@ Els *excludes* no són decoratius:
 | `__pycache__/` | es regenera; copiar-lo hi porta `.pyc` d'una altra versió de Python |
 | `obsolet/` | 63 MB de runtime arxivat |
 
-**`config/fluent.json` SÍ que viatja.** Si a llvm hi has instal·lat una veu,
-`flowed-tts.sh` hi haurà escrit la ruta del binari i del model — i el `rsync`
-te l'esborrarà. Comprova-ho després i torna-la a posar si cal:
+**`config/fluent.json` SÍ que viatja, i ja no porta res de la màquina** (des de
+2026-09-26). La veu (piper) no hi té rutes: el servidor la troba a `_tts/` al
+costat dels perfils (`~/.flowed/_tts/`). Un rsync ja no la desfà. Per comprovar-la:
 
 ```bash
 # [llvm]
-python3 scripts/flowed-check.py tts alex-en
+python3 scripts/flowed-check.py tts <perfil>
 ```
 
 **Sempre, després de qualsevol rsync:**
@@ -534,7 +534,9 @@ es mogui). Tot amb l'app aturada.
 # [llvm] 1. aturar (amb l'script que hi hagi: flowed-stop.sh o fluent-stop.sh)
 cd /opt/flowed && scripts/flowed-stop.sh
 # 2. còpia per tornar enrere (serveix tant si /opt/flowed és carpeta com symlink)
-sudo cp -a "$(readlink -f /opt/flowed)" /opt/flowed-0.4 && cp .env .env.bak-0.4
+#    (inclou l'.env vell: /opt/flowed-0.4/.env; una còpia DINS /opt/flowed
+#    l'esborraria el rsync --delete)
+sudo cp -a "$(readlink -f /opt/flowed)" /opt/flowed-0.4
 ```
 
 ```bash
@@ -548,7 +550,12 @@ rsync -av --delete \
 ```bash
 # [llvm] 4. entorn i perfils
 cd /opt/flowed
-sed -i 's/\bFLUENT_/FLOWED_/g' .env && grep -c '^FLOWED_' .env
+# .env de llvm = plantilla rapve (docker, --gpus all, una sola GPU, face off)
+# + els perfils reals, recuperats de l'.env vell (no viatja amb el rsync).
+WEBS=$(grep -E '^(FLUENT|FLOWED)_WEBS=' /opt/flowed-0.4/.env | cut -d= -f2-)
+cp .env.rapve .env
+[ -n "$WEBS" ] && sed -i "s|^FLOWED_WEBS=.*|FLOWED_WEBS=$WEBS|" .env
+grep -E '^FLOWED_(WEBS|DEEP_PORT|DEEP_BACKEND)=' .env
 [ -e ~/.flowed ] || mv ~/.fluent ~/.flowed
 python3 hooks/main_paths.py home            # ha de dir /home/<usuari>/.flowed
 # 5. res de fora del repo amb noms vells (scripts reanomenats!)
@@ -556,16 +563,43 @@ crontab -l 2>/dev/null | grep -i fluent; grep -rln 'fluent' ~/.config/systemd/us
 # 6. proves i engegar
 (cd server && bun install)
 python3 -m unittest discover -s tests -q 2>&1 | tail -1
+scripts/flowed-start.sh --dry-run --yes    # revisar abans d'engegar
 scripts/flowed-start.sh
 ```
 
-Després: comprovar la veu (`python3 scripts/flowed-check.py tts <perfil>`, vegeu
-§ anterior sobre `config/fluent.json`) i obrir la web: la capçalera ha de dir
-`v0.5.0`.
+Després: comprovar la veu (`python3 scripts/flowed-check.py tts <perfil>`; si
+`_tts/` ja hi era, no cal fer res) i obrir la web: la capçalera ha de dir `v0.5.0`.
+
+**Si falta `.env`,** `flowed-start.sh` i `flowed-stop.sh` s'aturen amb un error
+(abans agafaven en silenci els valors de `config/fluent.json`, que són els de
+railab). **Si l'`.env` encara té noms `FLUENT_*`,** es llegeixen igual, amb un
+avís que diu com convertir-los.
 
 **Tornar enrere:** aturar, `sudo rsync -a --delete /opt/flowed-0.4/ /opt/flowed/`,
-`cp .env.bak-0.4 .env`, `mv ~/.flowed ~/.fluent` (la 0.4 només coneix
+(l'.env vell ja hi torna amb el rsync), `mv ~/.flowed ~/.fluent` (la 0.4 només coneix
 `~/.fluent`), engegar amb l'script vell.
+
+## Després de la 0.5.0: canvis del 2026-09-26/27 `[railab]` `[llvm]`
+
+Tot va dins del mateix rsync (secció «Pas a FlowEd 0.5.0», pas 3). Res a fer a
+mà a llvm llevat del que diu aquí:
+
+- **`.env`:** obligatori; si encara té `FLUENT_*`, funciona amb avís
+  (ARQUITECTURA G.15).
+- **Veu:** es troba sola a `~/.flowed/_tts/`; `scripts/flowed-tts.sh status` per
+  comprovar-ho. No cal `install`.
+- **Models amb plantilla estricta** (27B a TabbyAPI): sense configuració
+  (G.16).
+- **Competència extra** (G.17): al perfil que la vulgui, després del rsync:
+
+```bash
+# [llvm]
+cd /opt/flowed
+python3 scripts/flowed-extra.py add <perfil> curriculum/extras/x.good_luck_babe
+python3 scripts/flowed-extra.py list <perfil>
+```
+
+Després, `scripts/flowed-stop.sh && scripts/flowed-start.sh`.
 
 ---
 

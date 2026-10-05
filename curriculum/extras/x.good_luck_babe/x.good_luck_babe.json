@@ -1,0 +1,381 @@
+[
+ {
+  "id": "x.good_luck_babe.001",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "What is the English word for 'sort' (bona sort)?",
+  "sentence": "sort",
+  "context": "",
+  "answer": "luck",
+  "also_accept": [],
+  "options": [],
+  "why": "Good luck = bona sort.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.002",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "Say it in English.",
+  "sentence": "Bona sort!",
+  "context": "",
+  "answer": "Good luck",
+  "also_accept": [
+   "good luck!"
+  ],
+  "options": [],
+  "why": "Good luck! = Bona sort!",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.003",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "What is the English word for 'la veritat'?",
+  "sentence": "la veritat",
+  "context": "",
+  "answer": "the truth",
+  "also_accept": [
+   "truth"
+  ],
+  "options": [],
+  "why": "La veritat = the truth.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.004",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "What is the English word for 'àngel'?",
+  "sentence": "àngel",
+  "context": "",
+  "answer": "angel",
+  "also_accept": [
+   "an angel"
+  ],
+  "options": [],
+  "why": "Àngel = angel.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.005",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "What is the English word for 'excusa'?",
+  "sentence": "excusa",
+  "context": "",
+  "answer": "excuse",
+  "also_accept": [
+   "an excuse"
+  ],
+  "options": [],
+  "why": "Excusa = excuse.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.006",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "What is the English word for 'motiu, raó'?",
+  "sentence": "motiu",
+  "context": "",
+  "answer": "reason",
+  "also_accept": [
+   "a reason"
+  ],
+  "options": [],
+  "why": "Motiu / raó = reason.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.007",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "What is the English word for 'sentiment'?",
+  "sentence": "sentiment",
+  "context": "",
+  "answer": "feeling",
+  "also_accept": [
+   "the feeling",
+   "a feeling"
+  ],
+  "options": [],
+  "why": "Sentiment = feeling.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.008",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "What is the English word for 'just' (no és just)?",
+  "sentence": "just",
+  "context": "",
+  "answer": "fair",
+  "also_accept": [],
+  "options": [],
+  "why": "It's not fair = no és just.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.009",
+  "competence": "x.good_luck_babe",
+  "type": "translate",
+  "instruction": "What is the English word for 'cent' (100)?",
+  "sentence": "cent",
+  "context": "",
+  "answer": "hundred",
+  "also_accept": [
+   "a hundred",
+   "one hundred"
+  ],
+  "options": [],
+  "why": "100 = a hundred / one hundred.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.010",
+  "competence": "x.good_luck_babe",
+  "type": "meaning",
+  "instruction": "What is the word?",
+  "sentence": "The part of your body at the end of your arm.",
+  "context": "",
+  "answer": "hand",
+  "also_accept": [
+   "a hand"
+  ],
+  "options": [],
+  "why": "Hand = mà (plural: hands).",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.011",
+  "competence": "x.good_luck_babe",
+  "type": "meaning",
+  "instruction": "What is the word?",
+  "sentence": "Twelve months.",
+  "context": "",
+  "answer": "year",
+  "also_accept": [
+   "a year",
+   "one year"
+  ],
+  "options": [],
+  "why": "A year has twelve months.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.012",
+  "competence": "x.good_luck_babe",
+  "type": "meaning",
+  "instruction": "What is the word?",
+  "sentence": "The front of your head: eyes, nose and mouth.",
+  "context": "",
+  "answer": "face",
+  "also_accept": [
+   "a face"
+  ],
+  "options": [],
+  "why": "Face = cara.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.013",
+  "competence": "x.good_luck_babe",
+  "type": "complete",
+  "instruction": "Complete with can.",
+  "sentence": "You ___ say that we are nothing.",
+  "context": "",
+  "answer": "can",
+  "also_accept": [],
+  "options": [],
+  "why": "Can + verb: you can say.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.014",
+  "competence": "x.good_luck_babe",
+  "type": "complete",
+  "instruction": "Complete with am, is or are.",
+  "sentence": "I ___ the fool.",
+  "context": "",
+  "answer": "am",
+  "also_accept": [],
+  "options": [],
+  "why": "I am (I'm).",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.015",
+  "competence": "x.good_luck_babe",
+  "type": "complete",
+  "instruction": "Complete with am, is or are.",
+  "sentence": "We ___ nothing.",
+  "context": "",
+  "answer": "are",
+  "also_accept": [],
+  "options": [],
+  "why": "We are.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.016",
+  "competence": "x.good_luck_babe",
+  "type": "complete",
+  "instruction": "Complete with am, is or are.",
+  "sentence": "It ___ not fair.",
+  "context": "",
+  "answer": "is",
+  "also_accept": [],
+  "options": [],
+  "why": "It is (it's).",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.017",
+  "competence": "x.good_luck_babe",
+  "type": "complete",
+  "instruction": "Complete with want or wants.",
+  "sentence": "I don't ___ to call it off.",
+  "context": "",
+  "answer": "want",
+  "also_accept": [],
+  "options": [],
+  "why": "I don't want to… (in the song: wanna = want to).",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.018",
+  "competence": "x.good_luck_babe",
+  "type": "choose",
+  "instruction": "Choose the right form.",
+  "sentence": "I just ___ a little air.",
+  "context": "",
+  "answer": "need",
+  "also_accept": [],
+  "options": [
+   "need",
+   "needs"
+  ],
+  "why": "With I, no -s: I need.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.019",
+  "competence": "x.good_luck_babe",
+  "type": "complete",
+  "instruction": "Complete with his or her.",
+  "sentence": "She has ___ arms out like an angel.",
+  "context": "",
+  "answer": "her",
+  "also_accept": [],
+  "options": [],
+  "why": "She → her.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.020",
+  "competence": "x.good_luck_babe",
+  "type": "complete",
+  "instruction": "Complete with his or her.",
+  "sentence": "You're nothing more than ___ wife. (the wife of him)",
+  "context": "",
+  "answer": "his",
+  "also_accept": [],
+  "options": [],
+  "why": "Him → his.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.021",
+  "competence": "x.good_luck_babe",
+  "type": "choose",
+  "instruction": "Choose the right form.",
+  "sentence": "You can kiss a hundred ___.",
+  "context": "",
+  "answer": "boys",
+  "also_accept": [],
+  "options": [
+   "boy",
+   "boys"
+  ],
+  "why": "A hundred + plural: boys.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.022",
+  "competence": "x.good_luck_babe",
+  "type": "complete",
+  "instruction": "Complete the phrase (t'ho vaig dir).",
+  "sentence": "I told you ___.",
+  "context": "",
+  "answer": "so",
+  "also_accept": [],
+  "options": [],
+  "why": "I told you so = t'ho vaig dir.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.023",
+  "competence": "x.good_luck_babe",
+  "type": "correct",
+  "instruction": "Correct the sentence.",
+  "sentence": "You knows the truth.",
+  "context": "",
+  "answer": "You know the truth.",
+  "also_accept": [],
+  "options": [],
+  "why": "With you, no -s: you know.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.024",
+  "competence": "x.good_luck_babe",
+  "type": "correct",
+  "instruction": "Correct the sentence.",
+  "sentence": "She wake up in the middle of the night.",
+  "context": "",
+  "answer": "She wakes up in the middle of the night.",
+  "also_accept": [],
+  "options": [],
+  "why": "She → wakes (present simple, -s).",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ },
+ {
+  "id": "x.good_luck_babe.025",
+  "competence": "x.good_luck_babe",
+  "type": "correct",
+  "instruction": "Correct the sentence.",
+  "sentence": "I hates to say it.",
+  "context": "",
+  "answer": "I hate to say it.",
+  "also_accept": [],
+  "options": [],
+  "why": "With I, no -s: I hate.",
+  "status": "validated",
+  "source": "claude · 2026-09-27"
+ }
+]

@@ -1758,3 +1758,130 @@ i a qualsevol `export` o servei fora del repo.
 
 Proves: `tests/test_main_paths.py`. Comprova que Python i shell donen el mateix
 resultat en els quatre casos.
+
+## G.15 Configuració per màquina: `.env` obligatori i veu trobada al disc (2026-09-26)
+
+Primer desplegament de la 0.5.0 a llvm. Dues coses es van perdre pel camí, i
+totes dues tenien la mateixa arrel: un valor de màquina vivint en un lloc que
+viatja, o que es pot ignorar sense avís.
+
+**1. `.env`.** Els quatre scripts que el llegien (`flowed-start.sh`, `flowed-stop.sh`,
+`flowed-web.sh`, `models/docker-llama.sh`) tenien cadascun la seva còpia del
+bucle. Un `.env` amb els noms d'abans (`FLUENT_*`) no donava cap error: les
+variables no es reconeixien i tot sortia de `config/fluent.json`, que descriu
+railab (backend native, port 12322). A llvm, l'start va intentar pujar el model
+com a railab.
+
+- Un sol carregador: `flowed_load_env` a `scripts/lib-paths.sh`. Mateixa regla
+  (entorn > `.env` > `config/fluent.json`).
+- Noms `FLUENT_*` (fitxer o entorn) → es llegeixen com `FLOWED_*`, amb un avís i
+  la comanda per convertir-los. També a `flowed-config.py`.
+- `flowed-start.sh` i `flowed-stop.sh` exigeixen `.env`; el pla imprimeix quin
+  fitxer ha carregat.
+- Proves: `tests/test_main_paths.py` (`LoadEnvTest`).
+
+**2. Veu (TTS).** `flowed-tts.sh install` escrivia rutes absolutes del binari i de
+la veu a `config/fluent.json`. Es va trencar dues vegades el mateix dia: després
+de `mv ~/.fluent ~/.flowed` (rutes a la carpeta vella) i a llvm després del rsync
+(el config de railab va substituir el de llvm).
+
+- `config/fluent.json` → `tts` només diu `enabled` i els límits.
+- `server/src/tts.ts` `loadTtsConfig(root, dataDir)` troba la instal·lació de la
+  màquina: `$FLOWED_TTS_DIR`, o `_tts/` al costat del perfil, o la carpeta de
+  perfils (mateixa regla que `main_paths.py`). Veus: `voices/*.onnx` amb el seu
+  `.onnx.json`; l'idioma surt del nom (`en_*` → English). Una ruta al config
+  només s'usa si existeix en aquesta màquina.
+- `flowed-tts.sh install` ja no escriu rutes; `flowed-check.py tts` aplica la
+  mateixa regla.
+- Proves: `server/test/tts.test.ts` (bloc «this machine's install»),
+  `tests/test_tts.py` (el config compartit no porta rutes).
+
+
+## G.16 Notes de sistema i plantilles estrictes (2026-09-27)
+
+Prova d'un 27B servit per TabbyAPI: cada resposta a un exercici obert donava
+`LLM HTTP 400: TemplateError: System message must be at the beginning.` El
+servidor posa la nota de cada torn (pacing, reintent) com a missatge `system` al
+FINAL de l'historial, on un model petit la llegeix millor. La plantilla de
+Qwen3-14B ho accepta; la d'aquest model (i d'altres) no.
+
+- `server/src/llm.ts` `foldLateSystem()`: els `system` inicials es fusionen en
+  un; els posteriors van a l'últim torn `user`, marcats «Note for the tutor — not
+  written by the learner» (o com a torn `user` propi si l'anterior és del tutor).
+- No canvia res per al 14B: només s'aplica quan l'endpoint refusa
+  (`LATE_SYSTEM_REFUSED`); llavors es reintenta plegat i es recorda per a aquell
+  `baseURL` durant la vida del procés (un sol 400, no un per torn).
+- Avís de TabbyAPI «Unable to switch model to deep… inline_model_loading»: és
+  inofensiu (respon el model carregat); ve del camp `model: "deep"` que enviem.
+- Proves: `server/test/llm-messages.test.ts`.
+
+## G.17 Competències extra per alumne (2026-09-27)
+
+Una cançó, o el tema que fan a classe aquella setmana, per a un sol alumne.
+Es practica a Go, surt a Stats i **no compta** per a la barra del nivell ni per
+al checkpoint.
+
+- **On viu:** al perfil, no al currículum del nivell.
+  - `<perfil>/extra.md` — mateix format que `curriculum/en-A1.md`. `[extra]` = no
+    compta (`progress` i `checkpoint_plan` només miren `core`). Secció per
+    defecte: «Extra».
+  - `<perfil>/bank/<id>.json` — els exercicis, mateix esquema i correcció
+    determinista que el banc del nivell.
+- **Codi:** `hooks/curriculum.py` `load_curriculum(path, data_dir)` →
+  `add_profile_extras` (un id que ja és al nivell s'ignora). `hooks/bank.py`
+  `bank_dirs` busca primer al banc del nivell i després al del perfil
+  (`load_bank`, `has_bank`, `bank_left`, `pick_item`, `answer_and_record`,
+  `_bank_index`). Totes les ordres del CLI i `read-db.py` passen `--data`, així
+  que el servidor no canvia.
+- **Web:** Stats ja mostrava les competències no-core amb el xip «extra»; la
+  secció «Extra» surt sola.
+- **Afegir-ne una:** plantilla a `curriculum/extras/<id>/` (`extra.md` + `<id>.json`),
+  i `python3 scripts/flowed-extra.py add <perfil> curriculum/extras/<id>`
+  (idempotent). `list <perfil>` mostra les que té.
+- **Primera:** `x.good_luck_babe` (25 ítems, `validated`, per revisar): vocabulari
+  de la cançó i A1 lligat (to be, can, want/need, his/her, plurals, -s). Només
+  fragments curts de la lletra; la frase explícita, fora.
+- **Proves:** `tests/test_profile_extras.py`.
+
+## G.18 `flowed-web.sh` sol ja segueix el port de l'`.env` (2026-09-27)
+
+Engegada sola (sense `flowed-start.sh`), una web no rebia `FLOWED_DEEP_BASE_URL`
+i el servidor parlava amb el port de `config/fluent.json` (12322, railab), fos
+quin fos el de l'`.env`. Ara `flowed-web.sh` el deriva de `FLOWED_DEEP_PORT`
+com fa l'start. Motiu: el *tutor bench* (MODELBENCH.md) engega una web de prova
+a part.
+
+## G.19 El que l'alumne veu: escriptures estranyes, `{❌}` i correcció amagada (2026-09-27)
+
+Trobat pel *tutor bench* (MODELBENCH.md), arreglat al servidor, per a qualsevol model:
+
+- **`{❌}`** (14B): `stripTemplateBraces` a `tidyTutorText` — claus al voltant de
+  res amb lletres (`{❌}`, `{8/10}`) es desfan; `{Target}` no es toca.
+- **Escriptura no llatina** (14B, Reading: «滑梯» dins d'un text d'A1 i una
+  pregunta sobre aquella paraula): `foreignScriptGuard` és el primer de la
+  cadena de guardes i demana reescriure el torn; si la reescriptura encara en
+  porta, `repairShownText` treu els caràcters i endreça la puntuació. Les
+  escriptures de la llengua meta o nativa de l'alumne es respecten.
+- **Correcció amagada** (27B: puntua a `fluent_record_answer` i a pantalla només
+  «Waiting for your answer! ⏱️»): si hi ha resposta al davant, crida a l'eina i
+  cap text del torn porta puntuació, `repairShownText` hi posa davant
+  `feedbackFromRecord` (correccions + **Score: N/10**, marcador alineat).
+- Proves: `server/test/shown-text.test.ts`.
+
+## G.20 Menys crides per torn a les pràctiques obertes (2026-09-29)
+
+Del *tutor bench* a la 4060 Ti (MODELBENCH.md): el temps no és del model, és de
+quantes vegades l'app el fa rellegir un prompt de ~17k tokens.
+
+- **Sense `fluent_record_answer` a Speaking/Writing/Reading.** `toolsFor()` no
+  l'ofereix quan `currentCommand` és una pràctica oberta, i `buildSystemPrompt`
+  hi afegeix l'últim bloc: el servidor registra la resposta a partir del text
+  (`deriveRecord`), no cridis l'eina, mostra `**Score: N/10**` i les correccions
+  i continua al mateix missatge. Una crida per torn en lloc de dues; la nota
+  guardada és la que es veu (el 27B no coincidia 5 de 17 vegades). Go/Review
+  (banc) i Vocab no canvien.
+- **Salutació ≠ exercici.** `collectPlainQuestion` prenia «Hello, Test!» sota
+  l'encapçalament d'obertura de Speaking com a pregunta feta, i cada sessió nova
+  del dia es reescrivia per «already asked hello, test». Sota l'encapçalament
+  d'obertura ara només compta una línia que acaba en «?», i les salutacions mai.
+- Proves: `server/test/shown-text.test.ts`.

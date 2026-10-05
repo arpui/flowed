@@ -1,0 +1,1 @@
+rsync -av --delete   --exclude 'obsolet/' --exclude 'node_modules/' --exclude '__pycache__/'   --exclude '.env' --exclude '_to_delete/' --exclude '.flowed-active'   ~/projects/flowed/ llvm:/opt/flowed/

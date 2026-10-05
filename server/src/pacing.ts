@@ -566,6 +566,11 @@ function collectPlainQuestion(text: string): string[] {
     /^#{1,6}\s*(?:Question\s*\d+(?:\s*\/\s*\d+)?\s*:?[^\n]*|[^\n]*Speaking Practice[^\n]*)\n((?:[^\n]*(?:\n|$)){1,6})/gim;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
+    // Under the session's OPENING heading only a real question counts. The first
+    // line there is usually the greeting: "Hello, Test!" was fingerprinted as an
+    // exercise, and every new Speaking session of the day was then rewritten for
+    // "already asked hello, test" (tutor-bench, 2026-09-29: twice in one run).
+    const opening = !/^#{1,6}\s*Question\b/i.test(m[0]);
     for (const line of (m[1] ?? "").split("\n")) {
       let t = line.trim();
       if (/^#{1,6}\s/.test(t) || /type your answer/i.test(t)) break;
@@ -576,6 +581,8 @@ function collectPlainQuestion(text: string): string[] {
       } else if (t.startsWith("**")) {
         continue;
       }
+      if (opening && !/\?\s*$/.test(t)) continue;
+      if (/^(?:hello|hi|hey|welcome|good (?:morning|afternoon|evening))\b/i.test(t)) continue;
       const label = normalizeLabel(t);
       if (label.length < 3 || NOT_AN_EXERCISE.has(label) || BARE_INSTRUCTION.test(label)) continue;
       if (!out.includes(label)) out.push(label);
@@ -2022,3 +2029,83 @@ export function reviewDailyLimit(sr: unknown): number {
 }
 
 /** `preferences.review_gate: false` switches the rule off for a learner. */
+
+// ---- 2026-09-27: what the tutor-bench found (docs/MODELBENCH.md) -----------
+
+/** `{❌}`, `{✅}`, `{8/10}`: a template slot the model filled but did not
+ *  unwrap. Only braces around something with no letters — `{Target}` and the
+ *  like are a different leak, handled where the prompt is built. */
+export function stripTemplateBraces(text: string): string {
+  return String(text ?? "")
+    .replace(/\{([^\p{L}{}\n]{1,12})\}/gu, "$1")
+    // The Reading skill's own heading instruction, copied as is (14B,
+    // 2026-09-29): `## {"Question 1: Main idea" — in English}` → the quoted part.
+    .replace(/\{\s*"([^"\n{}]{1,80})"\s*[—–-][^{}\n]{0,60}\}/gu, "$1");
+}
+
+const SCRIPTS: Array<{ re: RegExp; langs: string[] }> = [
+  { re: /[㐀-鿿豈-﫿]/u, langs: ["chinese", "japanese", "mandarin", "cantonese"] },
+  { re: /[぀-ヿ]/u, langs: ["japanese"] },
+  { re: /[가-힯ᄀ-ᇿ]/u, langs: ["korean"] },
+  { re: /[Ѐ-ӿ]/u, langs: ["russian", "ukrainian", "bulgarian", "serbian", "belarusian", "macedonian"] },
+  { re: /[Ͱ-Ͽ]/u, langs: ["greek"] },
+  { re: /[؀-ۿ]/u, langs: ["arabic", "persian", "farsi", "urdu"] },
+  { re: /[֐-׿]/u, langs: ["hebrew", "yiddish"] },
+  { re: /[ऀ-ॿ]/u, langs: ["hindi", "marathi", "nepali"] },
+  { re: /[฀-๿]/u, langs: ["thai"] },
+];
+
+/** Characters of a script that is neither the target nor the native language
+ *  — 14B, Reading, 2026-09-27: "they played on the swings, 滑梯, and…" in a
+ *  text for an A1 learner of English, then a question about that word. */
+export function foreignScript(text: string, target?: string, native?: string): RegExp | null {
+  const mine = [target, native].map((l) => String(l ?? "").trim().toLowerCase());
+  for (const s of SCRIPTS) {
+    if (s.langs.some((l) => mine.includes(l))) continue;
+    if (s.re.test(text)) return new RegExp(`${s.re.source}+`, "gu");
+  }
+  return null;
+}
+
+export function foreignScriptGuard(text: string, target?: string, native?: string): string | null {
+  const re = foreignScript(text, target, native);
+  if (!re) return null;
+  const sample = (String(text).match(re) ?? []).slice(0, 3).join(", ");
+  return (
+    `Your reply contains words in another writing system (${sample}). The learner is learning ` +
+    `${target ?? "the target language"} and reads ${native ?? "her own language"}; she cannot read ` +
+    `these. Write the whole turn again using only ${target ?? "the target language"} (and ` +
+    `${native ?? "her language"} where the practice allows it), with an ordinary word in their place.`
+  );
+}
+
+/** Last resort when the rewrite still carries them: drop the characters and
+ *  tidy what is left ("swings, 滑梯, and" → "swings, and"). */
+export function stripForeignScript(text: string, target?: string, native?: string): string {
+  let out = String(text ?? "");
+  for (let re = foreignScript(out, target, native); re; re = foreignScript(out, target, native)) {
+    out = out.replace(re, "");
+  }
+  return out
+    .replace(/[ \t]+([,.;:!?])/g, "$1")
+    .replace(/([,;:])(\s*[,;:])+/g, "$1")
+    .replace(/(["“'‘])\s*(["”'’])/g, "")
+    .replace(/[ \t]{2,}/g, " ");
+}
+
+/** The feedback a learner must see, rebuilt from the tutor's own
+ *  fluent_record_answer call — for a reply that graded in the tool and then
+ *  showed nothing of it (27B, 2026-09-27: "Waiting for your answer! ⏱️"). */
+export function feedbackFromRecord(args: Record<string, unknown> | null | undefined): string | null {
+  const score = Number((args ?? {})["score"]);
+  if (!Number.isFinite(score) || score < 0 || score > 10) return null;
+  const corrections = Array.isArray((args ?? {})["corrections"])
+    ? ((args ?? {})["corrections"] as Array<Record<string, unknown>>)
+    : [];
+  const lines = corrections
+    .map((c) => [String(c["wrong"] ?? "").trim(), String(c["right"] ?? "").trim()])
+    .filter(([w, r]) => w && r && w !== r)
+    .map(([w, r]) => `- ❌ "${w}" → **"${r}"**`);
+  const head = lines.length ? `**Corrections:**\n${lines.join("\n")}` : "✅ Correct!";
+  return alignMarkersToScore(`${head}\n\n**Score: ${Math.round(score)}/10** 🟢`);
+}

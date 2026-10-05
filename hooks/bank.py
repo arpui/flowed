@@ -98,16 +98,33 @@ def bank_dir(root: Path, curriculum_stem: str) -> Path:
     return root / "curriculum" / "bank" / curriculum_stem
 
 
-def load_bank(root: Path, curriculum_stem: str, competence_id: str) -> list[dict]:
-    f = bank_dir(root, curriculum_stem) / f"{competence_id}.json"
-    if not f.exists():
-        return []
-    items = json.loads(f.read_text(encoding="utf-8"))
-    return [it for it in items if it.get("status") in ("validated", "reviewed")]
+def profile_bank_dir(data_dir: str | os.PathLike) -> Path:
+    """The learner's own exercises, for the competences in her `extra.md`
+    (hooks/curriculum.py add_profile_extras)."""
+    return Path(data_dir) / "bank"
 
 
-def has_bank(root: Path, curriculum_stem: str, competence_id: str) -> bool:
-    return bool(load_bank(root, curriculum_stem, competence_id))
+def bank_dirs(root: Path, curriculum_stem: str, data_dir: str | os.PathLike | None = None) -> list[Path]:
+    """Where a competence's items can live: the level's bank, then the learner's."""
+    dirs = [bank_dir(root, curriculum_stem)]
+    if data_dir:
+        dirs.append(profile_bank_dir(data_dir))
+    return [d for d in dirs if d.is_dir()]
+
+
+def load_bank(root: Path, curriculum_stem: str, competence_id: str,
+              data_dir: str | os.PathLike | None = None) -> list[dict]:
+    for d in bank_dirs(root, curriculum_stem, data_dir):
+        f = d / f"{competence_id}.json"
+        if f.exists():
+            items = json.loads(f.read_text(encoding="utf-8"))
+            return [it for it in items if it.get("status") in ("validated", "reviewed")]
+    return []
+
+
+def has_bank(root: Path, curriculum_stem: str, competence_id: str,
+             data_dir: str | os.PathLike | None = None) -> bool:
+    return bool(load_bank(root, curriculum_stem, competence_id, data_dir))
 
 
 def _progress_path(data_dir: str | os.PathLike) -> Path:
@@ -137,11 +154,13 @@ def bank_left(root: Path, curriculum_stem: str, data_dir: str | os.PathLike) -> 
     """{competence: {"unseen": n, "total": m}} for one learner. Once `unseen`
     reaches 0 the bank recycles her oldest items — it never blocks a turn —
     so this is the number that says it is time to add some."""
-    d = bank_dir(root, curriculum_stem)
     prog = _load_progress(data_dir)
     out: dict[str, dict] = {}
-    for f in sorted(d.glob("*.json")) if d.is_dir() else []:
-        items = load_bank(root, curriculum_stem, f.stem)
+    files = [f for d in bank_dirs(root, curriculum_stem, data_dir) for f in sorted(d.glob("*.json"))]
+    for f in files:
+        if f.stem in out:
+            continue
+        items = load_bank(root, curriculum_stem, f.stem, data_dir)
         if items:
             seen = prog.get(f.stem, {})
             out[f.stem] = {"unseen": sum(1 for it in items if it["id"] not in seen), "total": len(items)}
@@ -153,7 +172,7 @@ def pick_item(root: Path, curriculum_stem: str, competence_id: str, data_dir: st
     """Wrong last time, first; then never seen; then the one not seen longest
     (>= 7 days preferred, else whichever is oldest — the bank never blocks a
     turn for lack of a fresh item)."""
-    items = load_bank(root, curriculum_stem, competence_id)
+    items = load_bank(root, curriculum_stem, competence_id, data_dir)
     if not items:
         return None
     prog = _load_progress(data_dir).get(competence_id, {})
@@ -269,7 +288,7 @@ def grade(item: dict, raw_answer: str, comp: dict | None = None) -> dict:
 
 def answer_and_record(root: Path, curriculum_stem: str, item_id: str, competence_id: str, raw_answer: str,
                        data_dir: str | os.PathLike, today: str, comp: dict | None = None) -> dict:
-    items = {it["id"]: it for it in load_bank(root, curriculum_stem, competence_id)}
+    items = {it["id"]: it for it in load_bank(root, curriculum_stem, competence_id, data_dir)}
     item = items.get(item_id)
     if not item:
         return {"error": f"item {item_id!r} not found in bank for {competence_id}"}
