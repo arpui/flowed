@@ -3,14 +3,14 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "How am I doing with my Dutch?",
+      "prompt": "How am I doing with my fractions?",
       "expected_output": "A dashboard report rendered in the math-progress skill's canonical format — overview, skills mastery, trends, focus areas, spaced-repetition status, achievements, session history, next goals, recommendations. Must use the learner's name and the current streak value from learner-profile.json. No DB writes.",
       "files": [],
       "expectations": [
         "The output contains the learner's name (from learner-profile.json)",
-        "The output contains the target language (from learner-profile.json)",
+        "The output contains the current level (from learner-profile.json)",
         "The output contains the current streak value (day vs days rendered correctly)",
-        "The output contains a '💪 Skills Mastery' section with entries for writing, speaking, vocabulary, reading",
+        "The output contains a '💪 Skills Mastery' section with entries for computation, steps, problems, reasoning, facts",
         "The output contains a '🔄 Spaced Repetition Status' section with the due_reviews_count",
         "The output does NOT call update-db.py",
         "The output does NOT write to any file in data/"
@@ -23,9 +23,9 @@
       "files": [],
       "expectations": [
         "The output contains the learner's name",
-        "The output contains the target language",
+        "The output contains the current level",
         "The output contains the current streak value",
-        "The output contains all 4 skill sections",
+        "The output contains all 5 skill sections",
         "The output does NOT call update-db.py"
       ]
     },
@@ -42,22 +42,22 @@
     },
     {
       "id": 4,
-      "prompt": "can you teach me some Dutch vocabulary?",
-      "expected_output": "The math-progress skill should NOT trigger. This is a /math-vocab request, not a stats request.",
+      "prompt": "can you drill me on the times tables?",
+      "expected_output": "The math-progress skill should NOT trigger. This is a /math-vocab (facts drill) request, not a stats request.",
       "files": [],
       "expectations": [
         "The progress-skill dashboard template is NOT rendered",
-        "The assistant routes the learner to /math-vocab or engages vocabulary practice"
+        "The assistant routes the learner to /math-vocab or engages the facts drill"
       ]
     },
     {
       "id": 5,
       "prompt": "what is the weather like today",
-      "expected_output": "The math-progress skill should NOT trigger. Unrelated to Fluent.",
+      "expected_output": "The math-progress skill should NOT trigger. Unrelated to FlowMath.",
       "files": [],
       "expectations": [
         "The progress-skill dashboard template is NOT rendered",
-        "The assistant does not try to apply Fluent skills to an unrelated question"
+        "The assistant does not try to apply FlowMath skills to an unrelated question"
       ]
     }
   ]

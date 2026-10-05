@@ -1,6 +1,6 @@
 ---
 name: math-progress
-description: Show the learner's language learning progress, statistics, mastery levels, streak, and achievements. Use when the learner asks "how am I doing", "show my progress", "stats", "dashboard", "what's my streak", "how many words have I learned", or invokes /math-progress. Read-only — safe to auto-invoke.
+description: Show the learner's math learning progress, statistics, mastery levels, streak, and achievements. Use when the learner asks "how am I doing", "show my progress", "stats", "dashboard", "what's my streak", "how many facts have I automated", or invokes /math-progress. Read-only — safe to auto-invoke.
 allowed-tools: Read, Bash
 ---
 
@@ -42,7 +42,7 @@ python3 hooks/read-db.py
 
 This returns a single JSON with all 6 databases + computed fields (`due_reviews_count`, `next_session_id`, `streak_active`, `days_since_last_session`).
 
-If the helper is unavailable, fall back to reading each file directly. Resolve the data directory via `main_paths.data_dir()` first — do NOT hardcode `data/` (plugin installs store data under `~/.claude/fluent-data/`):
+If the helper is unavailable, fall back to reading each file directly. Resolve the data directory via `main_paths.data_dir()` first — do NOT hardcode `data/` (plugin installs store data elsewhere):
 
 - `<data_dir>/learner-profile.json`
 - `<data_dir>/progress-db.json`
@@ -57,8 +57,15 @@ If any are missing, point the learner at `/math-setup` and stop.
 
 Use this exact structure. Fill in values from the databases; compute percentages and progress bars yourself.
 
+The math skills are `computation`, `steps`, `problems`, `reasoning`, `facts`.
+NOTE (WP1.7): databases created before the math fork may still carry
+language-era skill keys (`writing`, `speaking`, `vocabulary`, `reading`) in
+`mastery-db` and `progress-db`. Render whatever keys exist under the math
+label that best matches (writing→reasoning, vocabulary→facts, reading→problems,
+speaking→math talk); never invent numbers for a key that is absent.
+
 ```markdown
-# 📊 {learner_name}'s {target_language} Learning Dashboard
+# 📊 {learner_name}'s Math Learning Dashboard
 
 **Last Updated:** {today}
 
@@ -79,28 +86,34 @@ Use this exact structure. Fill in values from the databases; compute percentages
 
 ## 💪 Skills Mastery
 
-### Writing ✍️
+### Computation 🧮
 **Level:** {n}/5 {stars}
 **Accuracy:** {percent}%
 **Progress:** {progress_bar}
 **Last Practiced:** {date_or_never}
 
-### Speaking 🗣️
+### Steps 🪜
 **Level:** {n}/5 {stars}
 **Accuracy:** {percent}%
 **Progress:** {progress_bar}
 **Last Practiced:** {date_or_never}
 
-### Vocabulary 📚
+### Problems 📖
 **Level:** {n}/5 {stars}
-**Words Known:** {count}
-**Words Mastered:** {count}
+**Accuracy:** {percent}%
 **Progress:** {progress_bar}
 **Last Practiced:** {date_or_never}
 
-### Reading 👀
+### Reasoning ✍️
 **Level:** {n}/5 {stars}
-**Comprehension:** {percent}%
+**Accuracy:** {percent}%
+**Progress:** {progress_bar}
+**Last Practiced:** {date_or_never}
+
+### Facts ⚡
+**Level:** {n}/5 {stars}
+**Facts Automated:** {count}
+**Facts Mastered:** {count}
 **Progress:** {progress_bar}
 **Last Practiced:** {date_or_never}
 
@@ -174,7 +187,7 @@ Use this exact structure. Fill in values from the databases; compute percentages
 2. {skill not practiced recently}
 3. {due review count if > 0}
 
-Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End) to act on this now.
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End) to act on this now.
 
 ---
 
@@ -193,25 +206,25 @@ Append this only if the learner seems new or asks what the numbers mean:
 - ⭐⭐☆☆☆ (2/5): Learning
 - ⭐⭐⭐☆☆ (3/5): Good
 - ⭐⭐⭐⭐☆ (4/5): Strong
-- ⭐⭐⭐⭐⭐ (5/5): Mastered
+- ⭐⭐⭐⭐⭐ (5/5): Mastered — automatic
 
 **Accuracy bands:** 0-40% intensive, 40-60% learning, 60-75% good, 75-85% strong, 85%+ excellent.
 ```
 
 ## Examples
 
-### Example 1 — minimal (A1 learner, week 1)
+### Example 1 — minimal (new learner, week 1)
 
-> # 📊 {Name}'s {Target} Learning Dashboard
+> # 📊 {Name}'s Math Learning Dashboard
 >
-> **Current Level:** A1 → A2 (4% to A2)
+> **Current Level:** m4 → m5 (4% to m5)
 > **Current Streak:** 🔥 3 days
 > **Total Sessions:** 3 · 45 min
 >
-> ### Vocabulary 📚
-> **Level:** 1/5 ⭐☆☆☆☆ · 12 words known · 0 mastered
+> ### Facts ⚡
+> **Level:** 1/5 ⭐☆☆☆☆ · 12 facts automated · 0 mastered
 >
-> Speaking / Writing / Reading: Not yet practiced.
+> Computation / Steps / Problems / Reasoning: Not yet practiced.
 >
 > **Items Due Today:** 6 — press 🔁 **Review** first.
 >
@@ -219,16 +232,16 @@ Append this only if the learner seems new or asks what the numbers mean:
 
 ### Example 2 — trigger on natural-language question
 
-Learner: "how am I doing?" / "how is my {Target} going?" → auto-invoke this skill, render the full dashboard.
+Learner: "how am I doing?" / "how is my times-table going?" → auto-invoke this skill, render the full dashboard.
 
 ## Critical Rules
 
 - **Read-only.** Never call `update-db.py` or edit any JSON in `data/`.
 - **Use the current streak value** from `learner-profile.json`. Never guess or increment.
 - **Use `day` vs `days`** correctly (1 = day, else days).
-- **Skip sections with no data.** If speaking hasn't been practiced, show "Not yet practiced" — don't fabricate numbers.
+- **Skip sections with no data.** If reasoning hasn't been practiced, show "Not yet practiced" — don't fabricate numbers.
 - **Cite the learner by name** from `learner-profile.json`.
-- **Use target-language greetings** where natural — in the profile's target language, never in the language of an example.
+- **Greet in the learner's own language** where natural — never in the language of an example.
 
 ## Why This Skill Auto-Invokes
 

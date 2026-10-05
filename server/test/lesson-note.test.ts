@@ -225,8 +225,8 @@ check("grading and asking are one turn",
 check("and repeating a question is ruled out in the note too",
   midLesson.includes("never ask the same question twice"));
 const reviewSkill = fs.readFileSync(path.join(ROOT, "skills", "math-review", "SKILL.md"), "utf8");
-check("both directions are allowed, but only one language is graded",
-  reviewSkill.includes("Both directions are real exercises. Only one language gets graded"));
+check("any valid notation is accepted, but only the math is graded",
+  reviewSkill.includes("Any valid notation is a real answer. Only the math gets graded"));
 check("and a native-language slip is never filed",
   reviewSkill.includes("do not record it"));
 check("retrying has a limit", reviewSkill.includes("One retry, then move on"));
@@ -553,9 +553,9 @@ check("only the lesson's own headers are touched",
 check("the server applies it inside the lesson only",
   fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8")
     .includes('this.currentCommand.get(sessionId) !== "math-review"'));
-check("a review item that is not a word is not a flashcard",
+check("a review item that is not a fact is not a card",
   fs.readFileSync(path.join(ROOT, "skills", "math-vocab", "SKILL.md"), "utf8")
-    .includes("A flashcard needs a word"));
+    .includes("A facts card needs one right answer"));
 check("and coming back to an unanswered exercise is not a repetition",
   fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8")
     .includes("outstanding"));

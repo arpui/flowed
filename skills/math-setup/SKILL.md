@@ -1,17 +1,17 @@
 ---
 name: math-setup
-description: One-time interactive onboarding that creates the learner's personalized language-learning profile — name, target language, native language, current/target CEFR level, timeline, daily minutes, and learning goals. Triggered only when the learner types /math-setup. Also handles profile updates and resets for returning users. Must never auto-invoke because re-running can reset progress.
+description: One-time interactive onboarding that creates the learner's personalized math-learning profile — name, the language of the problem statements, current/target level, timeline, daily minutes, and learning goals. Triggered only when the learner types /math-setup. Also handles profile updates and resets for returning users. Must never auto-invoke because re-running can reset progress.
 allowed-tools: Read, Write, Bash, AskUserQuestion
 disable-model-invocation: true
 ---
 
-# Language Learning Setup
+# Math Learning Setup
 
 ## Overview
 
-One-time onboarding that seeds all 6 databases in the Fluent data directory. After setup, every other skill reads from those files — this is the bootstrap. Also handles profile updates and progress resets for returning users.
+One-time onboarding that seeds all 6 databases in the FlowMath data directory. After setup, every other skill reads from those files — this is the bootstrap. Also handles profile updates and progress resets for returning users.
 
-**In the Fluent server (the web app), you do NOT touch files.** The profile
+**In the FlowMath server (the web app), you do NOT touch files.** The profile
 directory and its 6 databases already exist — the system owner created them with
 `scripts/new-user.sh`. Your job is the interview, and then ONE call to
 `math_setup_profile`, which writes the profile and marks the setup complete.
@@ -31,23 +31,23 @@ Skip this skill if a profile already exists and the learner did not ask to chang
 ### 1. Check for existing profile
 
 The learner state is preloaded with the command. If it shows a real name and a
-target language, the profile is already set up: jump to **Profile updates**
-below. If the fields still look like a template (`{YOUR_NAME}`, empty
-languages), this is a first setup — continue.
+level, the profile is already set up: jump to **Profile updates** below. If the
+fields still look like a template (`{YOUR_NAME}`, empty languages), this is a
+first setup — continue.
 
 ### 2. Welcome
 
 ```markdown
-# 🌍 Welcome to Your Personal Language Learning System!
+# 🌍 Benvingut al teu sistema personal de matemàtiques!
 
-This AI-powered system will help you learn any language through:
-- 📊 Systematic progress tracking
-- 🧠 Spaced repetition (scientifically proven)
-- 🎮 Gamification (streaks, achievements)
-- 📈 Adaptive difficulty
-- 🎯 Personalized to YOUR goals
+Aquest sistema t'ajudarà a progressar en matemàtiques amb:
+- 📊 Seguiment sistemàtic del progrés
+- 🧠 Repàs espaiat (SM-2, científicament provat)
+- 🎮 Gamificació (ratxes, assoliments)
+- 📈 Dificultat adaptativa
+- 🎯 Personalitzat als TEUS objectius
 
-**Let's get you set up!** (~5 minutes)
+**Comencem!** (~5 minuts)
 ```
 
 ### 3. Collect info
@@ -55,99 +55,82 @@ This AI-powered system will help you learn any language through:
 Use the `AskUserQuestion` tool to gather questions in batches when possible. Required fields:
 
 1. **Name** — personalizes greetings.
-2. **Target language** — the language being learned (e.g. Spanish, French, German, Japanese, Korean, Arabic, Dutch).
-3. **Native language** — for translations and explanations.
-4. **Other languages spoken** — optional, used to offer cross-language connections.
-5. **Current level** — A1 / A2 / B1 / B2 / C1 / C2 / "not sure".
-6. **Target level** — where they want to get to.
-7. **Timeline** — 3 months / 6 months / 12 months / 2+ years / custom.
-8. **Daily study minutes** — 10 / 15 / 30 / 60 / custom.
-9. **Learning goal** — travel / work / exam (specify) / living in country / academic / family / interest.
-10. **Learning style** — conversational / academic / immersive / balanced (default).
-11. **Gamification on/off** — default on.
-12. **Interests (max 3, 1-2 words each)** — e.g. football, cooking, travel. Used
-    in examples and scenarios. Short on purpose: everything stored here costs
-    context on every turn.
-13. **About you (1 line, optional)** — free sentence the tutor may reference
-    ("I'm a nurse working nights"). Skip if the learner has nothing to add.
-14. **Tutor style** — `classic` (default: neutral tutor) or `friend` (warmer:
+2. **Language of the problem statements** — the language the learner reads and
+   answers word problems in (e.g. Catalan, Spanish). This is stored as
+   `native_language`.
+3. **School grade / current math level** — which grade they are in, or what
+   they can already do (times tables? fractions? multi-step problems?).
+4. **Target level** — where they want to get to (pass the course? automatic
+   mental math? prepare an exam?).
+5. **Timeline** — this term / this year / 2+ years / custom.
+6. **Daily study minutes** — 10 / 15 / 30 / 60 / custom.
+7. **Learning goal** — school / exam / mental math automaticity / everyday
+   math (shopping, cooking) / competition / interest.
+8. **Learning style** — practice-first / theory-first / balanced (default).
+9. **Gamification on/off** — default on.
+10. **Interests (max 3, 1-2 words each)** — e.g. football, cooking, space. Used
+    in word problems and examples. Short on purpose: everything stored here
+    costs context on every turn.
+11. **About you (1 line, optional)** — free sentence the tutor may reference
+    ("vaig a 5è i em perdo amb les fraccions"). Skip if the learner has nothing to add.
+12. **Tutor style** — `classic` (default: neutral tutor) or `friend` (warmer:
     cites last session, uses your interests). Changeable later in
     `preferences.tutor_style`.
 
-If the learner picks "not sure" for current level, run a quick 5-question assessment:
+If the learner does not know their level, run a quick 5-question placement
+with closed math items, one at a time:
 
-1. Basic vocabulary recognition → A1
-2. Simple sentence construction → A2
-3. Past tense usage → B1
-4. Complex subordinate clauses → B2
-5. Idiomatic expression → C1
+1. A double or halve (×2, ÷2) → early
+2. A times-table fact → basic
+3. A two-digit addition with carrying → intermediate
+4. A fraction equivalence (1/2 = ?/4) → upper
+5. A two-step word problem with fractions → advanced
 
-Map score to level: 0-1 correct = A1, 2 = A2, 3 = B1, 4 = B2, 5 = C1.
+Map score to level: 0-1 correct = early, 2 = basic, 3 = intermediate, 4 = upper, 5 = advanced.
 
 ### 4. Generate the learning plan
-
-Compute expected months to target level:
-
-```
-A1 → A2: ~100 hours
-A2 → B1: ~150 hours
-B1 → B2: ~200 hours
-B2 → C1: ~300 hours
-C1 → C2: ~400 hours
-
-months = hours_needed / (daily_minutes / 60) / 30
-```
-
-Adjust:
-
-- `-10%` time if learner's native language is typologically close to the target (e.g. Dutch ↔ English, Spanish ↔ Italian).
-- `-10%` per additional language already known (cap at 30% total).
 
 Present:
 
 ```markdown
 ## 🎉 Setup Complete!
 
-**Your Learning Profile:**
-- 👤 Name: {name}
-- 🌍 Learning: {target_language}
-- 📚 Native: {native_language}
-- 📊 Level: {current} → {target}
-- 📅 Timeline: {timeline}
-- ⏱️ Daily time: {minutes} min
-- 💡 Goal: {goal}
+**El teu perfil:**
+- 👤 Nom: {name}
+- 🔢 Assignatura: Matemàtiques
+- 🗣️ Enunciat en: {native_language}
+- 📊 Nivell: {current} → {target}
+- 📅 Terminis: {timeline}
+- ⏱️ Temps diari: {minutes} min
+- 💡 Objectiu: {goal}
 
-## 📋 Personalized Plan
+## 📋 Pla personalitzat
 
-**Estimated time:** {months} months
-**Total study hours:** ~{hours} hours
+**Diari:**
+- 🔁 **Review** — repàs espaiat ({X} min)
+- 📚 **Facts** — càlcul automàtic ({Y} min)
 
-### Weekly Schedule
-**Daily:**
-- 🔁 **Review** — spaced repetition ({X} min)
-- 📚 **Vocabulary** — new words ({Y} min)
+**Alternant:**
+- 🎲 **Go** — càlcul i procediment (dilluns/dimecres/divendres)
+- 📖 **Problemes** (dimarts/dijous)
+- 📝 **Raonament** o 🗣️ **Math talk** (cap de setmana)
 
-**Alternating:**
-- 📝 **Writing** (Mon/Wed/Fri)
-- 🗣️ **Speaking** (Tue/Thu/Sat)
-- 📖 **Reading** (Sun)
+**Setmanal:**
+- 📊 **Stats** — mira el progrés (5 min)
 
-**Weekly:**
-- 📊 **Progress** — check stats (5 min)
-
-### Milestones
-- Month 1: {reasonable short-term}
-- Month 3: {quarter-way}
-- Month 6: {half-way}
-- Target date: {target_level}!
+### Fites
+- Mes 1: {reasonable short-term}
+- Mes 3: {quarter-way}
+- Mes 6: {half-way}
+- Data objectiu: {target}!
 
 ### Next Steps
-1. Start now — press 🎲 **Surprise me!**
-2. Daily habit — 🔁 **Review** every day
-3. Weekly — 📊 **Progress** to see stats
+1. Comença ara — prem 🎲 **Go**
+2. Hàbit diari — 🔁 **Review** cada dia
+3. Setmanal — 📊 **Stats** per veure les xifres
 4. Stay consistent — even 10 min daily beats 2 hours weekly
 
-**Your journey to {target_language} fluency starts now!** 🚀
+**El teu camí cap a les matemàtiques fluides comença ara!** 🚀
 ```
 
 ### 5. Save the profile — ONE tool call
@@ -155,21 +138,27 @@ Present:
 ```
 math_setup_profile({
   name: "<their first name>",
-  target_language: "<in English: English, German, …>",
-  native_language: "<in English: Catalan, Spanish, …>",   // never guess
+  target_language: "Math",          // the subject — the server field is still named this (WP1.7)
+  native_language: "<the language of the statements, in English: Catalan, Spanish, …>",  // never guess
   current_level: "A1|A2|B1|B2|C1|C2",
   target_level:  "A1|A2|B1|B2|C1|C2",
   daily_minutes: <number>,
   goals: ["…"],                 // why they are learning, their words
-  motivation: "travel|work|exam|living_abroad|personal|family",
-  interests: ["…"],             // up to 3, optional — warmer examples
+  motivation: "school|exam|personal|family|work",
+  interests: ["…"],             // up to 3, optional — warmer word problems
   about: "<one line>"           // optional
 })
 ```
 
 - Call it **once**, at the end of the interview, with what they actually said.
-- If the learner does not know their CEFR level, ask ONE placement question and
-  decide yourself — the call needs a level.
+- **WP1.7 note:** the tool still validates CEFR levels and a language pair —
+  the math level scale (m1…m6) is not in the server yet. Until it is, map the
+  learner's math level onto CEFR honestly (early→A1, basic→A2, intermediate→B1,
+  upper→B2, advanced→C1) and keep the real grade in `about`/`goals`. The
+  curriculum front matter matches on `language: math`, so `target_language:
+  "Math"` is what makes the course files resolve.
+- If the learner does not know their level, run the placement (§3) and decide
+  yourself — the call needs a level.
 - It returns `REJECTED: …` when something is off (same language twice, a level
   that is not CEFR, no profile directory). Fix exactly that and call again once.
 - On success the setup is marked complete and the app stops asking. Then show
@@ -178,7 +167,7 @@ math_setup_profile({
 
 ### 5b. Claude Code / clone mode only
 
-There is no `math_setup_profile` tool outside the Fluent server. There, start
+There is no `math_setup_profile` tool outside the FlowMath server. There, start
 from the templates in `data-examples/`, resolve the directory with
 `main_paths.ensure_data_dir()` and write the 6 files with the Write tool
 (`learner-profile.json` filled in and `preferences.setup_complete = true`; the
@@ -188,11 +177,11 @@ script is for session updates, not bootstrapping.
 ### 6. Optional first lesson
 
 ```markdown
-## 🎓 Want to start your first lesson now?
+## 🎓 Vols fer la primera lliçó ara?
 
-A quick 5-10 min intro session to learn your first 10 words and get familiar with the system.
+Una sessió curta de 5-10 min per veure què saps fer i agafar el ritme del sistema.
 
-Type "yes" to start, "later" to begin on your own.
+Escriu "yes" per començar, "later" per anar-hi pel teu compte.
 ```
 
 If yes, hand off to the `math-learn` skill.
@@ -200,18 +189,18 @@ If yes, hand off to the `math-learn` skill.
 ## Profile Updates (existing profile)
 
 ```markdown
-# 👋 Welcome back, {name}!
+# 👋 De nou per aquí, {name}!
 
-You already have a learning profile.
+Ja tens un perfil d'aprenentatge.
 
-What would you like to do?
+Què vols fer?
 
-1. **Update profile** — change goals, timeline, or preferences
-2. **View current plan** — see your learning schedule
-3. **Reset progress** — start fresh (⚠️ erases all progress!)
-4. **Cancel** — keep everything as is
+1. **Actualitzar el perfil** — canvia objectius, terminis o preferències
+2. **Veure el pla actual** — mira el teu calendari d'estudi
+3. **Reiniciar el progrés** — començar de zero (⚠️ esborra tot el progrés!)
+4. **Cancel·lar** — deixa-ho tot com està
 
-**Type 1, 2, 3, or 4:**
+**Escriu 1, 2, 3 o 4:**
 ```
 
 - **1** — ask which field, then call `math_setup_profile` again with the WHOLE
@@ -228,25 +217,25 @@ What would you like to do?
 
 ### Example 1 — first-time setup flow
 
-Learner runs `/math-setup`. After collecting the answers, compute months,
-show the plan, call `math_setup_profile` once, offer the first lesson.
+Learner runs `/math-setup`. After collecting the answers, run the placement if
+needed, show the plan, call `math_setup_profile` once, offer the first lesson.
 
 ### Example 2 — returning-user profile reset
 
 Learner: "reset my progress, I want to start over"
 
-> You're about to delete:
+> Estàs a punt d'esborrar:
 > - 42 sessions
-> - 6-day streak
-> - 287 vocabulary items
-> - 12 mastered patterns
+> - una ratxa de 6 dies
+> - 287 ítems de repàs
+> - 12 patrons dominats
 >
-> This is irreversible. Type `RESET` (all caps) to confirm, or anything else to cancel.
+> Això és irreversible. Escriu `RESET` (majúscules) per confirmar, qualsevol altra cosa per cancel·lar.
 
 ## Critical Rules
 
 - **Never auto-invoke.** Re-running this can reset a learner's progress. Must be an explicit `/math-setup`.
-- **Confirm twice before reset.** "This will erase X days of progress, Y sessions, and Z mastered words. Proceed? (yes/no)".
+- **Confirm twice before reset.** "This will erase X days of progress, Y sessions, and Z mastered patterns. Proceed? (yes/no)".
 - **Always seed all 6 files** — every other skill assumes they exist.
 - **Back up before reset.** Hooks may not fire here; back up manually to `.backups/pre-reset-<timestamp>/`.
 - **Don't invent data.** Start every file empty — progress, mistakes, mastery all start at zero. The system builds up from real sessions.

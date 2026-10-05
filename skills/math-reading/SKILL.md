@@ -1,21 +1,27 @@
 ---
 name: math-reading
-description: Run an interactive reading comprehension session with a short target-language text followed by main-idea, detail, vocabulary-in-context, inference, and true/false questions. Triggered only when the learner types /math-reading. Presents the text, waits for the learner to read, then asks questions one at a time with immediate feedback, and optionally adds new vocabulary to the spaced-repetition queue.
+description: Run an interactive WORD PROBLEMS session — a short problem statement in the learner's own language, which the learner reads, sets up and solves; the tutor grades the setup (operation choice) and the calculation. Triggered only when the learner types /math-reading. Presents one problem at a time with immediate feedback, and optionally adds the problem's key vocabulary to the spaced-repetition queue.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
 ---
 
-# Reading Comprehension Session
+# Word Problems Session
 
 ## Overview
 
-Present one text (100-500 words depending on level), ask 4-6 comprehension questions, extract vocabulary. Builds passive-to-active bridge: learners decode target-language writing, then answer questions that force recall.
+Present one short word problem, wait for the learner to set it up and solve
+it, then grade the two halves separately: the **setup** (which operation the
+situation calls for) and the **calculation** (the arithmetic after that).
+This is where reading and math meet: most wrong answers are not bad arithmetic
+but a misread statement or a wrong operation — and the feedback must say which.
 
 ## When to Use
 
 Trigger this skill only when the learner types `/math-reading`. The skill is gated with `disable-model-invocation: true` — 15-20 min interactive session with DB writes should never start from an ambiguous prompt.
 
-Skip this skill below A1 mastery 3 — shorter flashcard drills (`/math-vocab`) are more appropriate for very early learners.
+Skip this skill for a learner who has not yet automated the basic facts
+(`facts` mastery < 2) — shorter drills (`/math-vocab`) are more appropriate
+until the arithmetic is not the bottleneck.
 
 ## Instructions
 
@@ -34,209 +40,157 @@ python3 hooks/read-db.py
 *(Claude Code plugin mode, where the repo is not the working directory:
 `python3 "$CLAUDE_PLUGIN_ROOT/hooks/read-db.py"`.)*
 
-Need: `learner-profile` (level, target language, interests), `mastery-db.skills_mastery.reading`.
+Need: `learner-profile` (level, native language, interests), `mastery-db.skills_mastery` (problems), `mistakes-db` (weak `wrong_operation` / `misread` patterns).
 
-**The text is in `target_language`, never in `native_language` — read both fields
-from the preloaded state before writing a single word.** A Catalan-native
-learner of English reads an ENGLISH text with ENGLISH questions; nothing in this
-session is in Catalan except, if at all, a gloss the learner explicitly asks
-for. (Seen live, 2026-09-22: `target_language: "English"`, `native_language:
-"Catalan"`, and the tutor opened with "# 👀 Catalan Reading Practice" and wrote
-the whole passage in Catalan — the reverse of every field it had just read. If
-you notice you are about to write a sentence in the learner's native language
-for the main text or a question, stop and check `target_language` again.)
+**The statement is in the learner's own language** (`native_language` from the
+profile — the language they read school problems in). The math itself is
+universal; there is no "target language" to read. What you grade is the
+math, never the Catalan of their answer.
 
 ### 2. Opening
 
 ```markdown
-# 👀 {target_language} Reading Practice
+# 📖 Problemes
 
-{greeting in {Target}}, {name}!
+{greeting}, {name}!
 
-Today we're practicing **reading comprehension**. I'll show you a short {target_language} text, then ask you questions about it.
+Avui resolem **problemes**: llegiràs un enunciat curt, escriuràs les operacions
+que calen i el resultat, i jo et diré si la idea i el càlcul són bé.
 
-**Focus:** main ideas, details, vocabulary in context
-**Level:** {CEFR}
+**Focus:** triar bé l'operació, després calcular bé
+**Level:** {level}
 **Duration:** 15-20 min
 
 **Tips:**
-- Read the whole text first
-- Don't translate every word — get the gist
-- Use context clues for unknown words
-- Read the questions before rereading the text
+- Llegeix l'enunciat sencer abans de començar
+- Subratlla mentalment la pregunta: què et demanen?
+- Escriu una operació per línia
+- Comprova el resultat al final: té sentit?
 
-**Ready? Let's read!** 📖
+**Comencem!** 💪
 ```
 
-### 3. Pick text type + length
+### 3. Pick problem type + length
 
-A2 types (100-200 words): personal email, short news, advertisement, instructions, simple story, blog post, social media post, info leaflet.
+Match the numbers to the learner's level (the curriculum path in the preloaded
+state names what has been taught) and the topic to `learner-profile.interests`
+in friend mode.
 
-B1 (200-350 words): opinion pieces, longer narratives, structured guides.
+- **One-step** (early): a single operation hiding behind a keyword — "en total", "quants en queden", "el doble de", "repartir entre iguals".
+- **Two-step** (mid): combine + then ×, or a "quants en falten per…" with a comparison.
+- **Multi-step / fractions / proportions** (upper): common denominators, unit rates, change-over-time.
 
-B2+ (350-500): editorials, technical explanations, interviews.
+Rotate the operation the problem *needs* (×, ÷, +, −, mixed) so the learner
+cannot fall into "the last number always gets multiplied".
 
-Match the topic to `learner-profile.focus_areas` when possible.
-
-### 4. Present the text
+### 4. Present the problem
 
 ```markdown
-## 📄 Reading Text {N}
+## Problema {N}
 
-**Topic:** {topic}
-**Type:** {text_type}
-**Length:** ~{word_count} words
+**Enunciat:** {the problem statement, 1-4 sentences, in the learner's language}
 
----
-
-{target-language text — clean formatting, no inline translation}
-
----
-
-Take your time. When you're done, type **"ready"**.
+**Escriu les operacions (una per línia) i el resultat:**
 ```
 
-### 5. Question sequence (one at a time)
+The `**Enunciat:**` line carries the problem; keep it on one line so the
+exercise tracker can fingerprint it. Never reuse a problem presented in the
+last 24h — check the session history and the ALREADY ASKED list first.
 
-Rotate across these types. The headings below are placeholders: write them in
-the learner's target language, never in the language of this file.
+### 5. Grade the two halves
 
-**Main idea:**
-```markdown
-## {"Question 1: Main idea" — the heading written in {Target}}
+When the answer arrives, check in this order:
 
-{question in target language}
+1. **Setup** — does the operation match the situation? Wrong operation or a
+   misread statement is the headline finding (`wrong_operation`, `misread`).
+2. **Calculation** — is the arithmetic after the setup right? (`calculation`,
+   `carrying`, `facts`…)
+3. **Answer form** — unit present, sentence answered, fraction reduced
+   (`unit`, `simplification`, `incomplete`).
 
-a) {option 1}
-b) {option 2}
-c) {option 3}
-
-**Type a, b, or c:**
-```
-
-**Details:**
-```markdown
-## {"Question 2: Detail" — in {Target}}
-
-{specific question about the text}
-
-**Type your answer:**
-```
-
-**Vocabulary in context:**
-```markdown
-## {"Question 3: Vocabulary in context" — in {Target}}
-
-In the text it says "{word/phrase}". What does this mean?
-
-a) {meaning 1}
-b) {meaning 2}
-c) {meaning 3}
-```
-
-**Inference:**
-```markdown
-## {"Question 4: Inference" — in {Target}}
-
-{question requiring inference — not directly stated}
-
-**Answer in {target language}:**
-```
-
-**True / false:**
-```markdown
-## {"Question 5: True or false" — in {Target}}
-
-{statement}
-
-**Type your answer:**
-```
-
-### 6. Feedback per question
+Feedback per question (the `math-feedback-formatter` shape):
 
 ```markdown
-{✅ or ❌}
+{✅ or ❌} {one line}
 
-**Answer:** {correct_answer}
+**Corrections:**
+- ❌ "{their setup}" → **"{the right setup}"** (wrong_operation — "repartir entre iguals" demana ÷, no −)
+- ✅ "{the part that was right}" — {praise}
 
-**Explanation:** {why — reference the text}
+**Correct version:**
+"{the full correct line of work and the answer}"
 
-{If incorrect: **The text says:** "{relevant_quote}"}
-
-**Score: {X}/10**
+**Score: {X}/10** {emoji} {comment}
 
 ---
 ```
 
-### 7. Vocabulary review
+A right setup with a wrong calculation scores 5-7 (the hard part was the
+idea). A wrong setup scores 0-4 even if the arithmetic that followed was
+flawless — the schedule must bring the *choice* back tomorrow.
 
-After the questions:
+### 6. Problem vocabulary review
+
+After each problem (or every few), name the keyword that decided the
+operation:
 
 ```markdown
-## 📚 New Vocabulary from the Text
+## 📚 Claus del problema
 
-| {target_language} | {native_language} | Example from text |
-|-------|---------|-------------------|
-| {word 1} | {meaning} | "{sentence}" |
-| {word 2} | {meaning} | "{sentence}" |
+| Paraula | Què vol dir | Operació |
+|---------|-------------|----------|
+| {keyword 1} | {meaning} | {operation} |
+| {keyword 2} | {meaning} | {operation} |
 
-**Save these for future review?** (They'll enter spaced repetition.)
-
-Type "yes" to add, "no" to skip.
+**Vols que aquestes claus entrin a la cua de repàs?** Escriu "yes" o "no".
 ```
 
-If yes, stage each word for `new_vocabulary[]` in the end-of-session DB update.
+If yes, stage each keyword for `new_vocabulary[]` in the end-of-session DB
+update (the queue schema still uses the language-era field name for facts —
+WP1.7 renames it).
 
-**Never skip straight to the summary without showing this table first.**
-(Measured live, 2026-09-22, test-en, A0 profile: a 150-word text, 80% accuracy
-— meaning real unfamiliar words were in play — went straight from the last
-question's feedback to "New Words Added: 0", no table, no yes/no asked. At
-A0 a text of that length is not free of new words; the step was skipped, not
-genuinely empty.) The table can legitimately have zero rows for an advanced
-learner who already knows the text's whole vocabulary — but for anyone below
-B1, assume there ARE unfamiliar words and look for them before concluding
-there are none.
+**Never skip straight to the summary without showing this table at least
+once** when the session used a keyword the learner had not seen before. The
+table can legitimately have zero rows when every keyword was already known —
+but look for them before concluding there are none.
 
-### 8. Session summary
+### 7. Session summary
 
 ```markdown
-## 📊 Reading Session Complete!
+## 📊 Problemes Session Complete!
 
-**Text:** {title/topic}
-**Length:** {words} words
-**Questions:** {N}
+**Problems:** {N}
 **Accuracy:** {percent}%
 
-### Comprehension Breakdown
-- Main idea: {✅ or ❌}
-- Details: {score}
-- Vocabulary: {score}
-- Inference: {score}
+### Breakdown
+- Setup (operació correcta): {count}/{N}
+- Calculation: {count}/{N}
+- Answer form: {count}/{N}
 
-### New Words Added: {count}
+### New Keywords Added: {count}
 {list}
 
 ### For Next Time
-- {suggestion based on which question type was weakest}
+- {suggestion based on which half was weakest}
 
-**{target-language well done}!** 📖✨
+Molt bé! 📖✨
 
 ### 🚀 Keep going?
-{one concrete next step, e.g. "More [weakest question type] practice would help."}
+{one concrete next step, e.g. "More [setup/answer] practice would help — or drill the facts behind it."}
 
-Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.
 
-### 9. Update all databases
+### 8. Update all databases
 
-Session fields: `command_used`, `skills_practiced: ["reading"]`,
-`skill_scores.reading`, `errors[]` (per question-type weakness: `comprehension`,
-`vocabulary`), `new_vocabulary[]` (words the learner chose to save),
-`focus_next_session[]`.
+Session fields: `command_used`, `skills_practiced: ["problems"]`,
+`skill_scores.problems`, `errors[]` (per half: `wrong_operation`/`misread` for
+setup, `calculation`/`carrying`/… for the arithmetic), `new_vocabulary[]`
+(keywords the learner chose to save), `focus_next_session[]`.
 
-**Persistence is automatic — you write nothing.** The Fluent server folds every
+**Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
 the results file under `~/.fluent/<id>/results/`. Do NOT call `update-db.py`,
@@ -251,64 +205,62 @@ the fields listed above.)*
 
 ## Examples
 
-*(Placeholders. NEVER copy the language of an example into a session — derive both language names from the learner's profile, every turn.)*
+*(Placeholders. NEVER copy the numbers of an example into a session — every problem comes from this learner's level.)*
 
-### Example 1 — reading text
+### Example 1 — wrong setup, right arithmetic
 
-> ## 📄 Reading Text 1
+> ## Problema 2
 >
-> **Topic:** Making weekend plans
-> **Type:** Personal email
-> **Length:** ~75 words
+> **Enunciat:** La Marta té 24 galetes i les vol repartir igualment entre 6 amics. Quantes galetes toquen a cada amic?
 >
-> ---
->
-> {a ~75-word personal email in {Target}, level A2: a greeting, a proposal with a
-> date and a time, a place to meet, one practical remark, a closing}
->
-> ---
->
-> Take your time. When you're done, type **"ready"**.
+> **Escriu les operacions (una per línia) i el resultat:**
 
-### Example 2 — main-idea question on the above
+Learner: "24 − 6 = 18"
 
-> ## {"Question 1: Main idea", written in {Target}}
+> ❌ La idea no és aquesta — "repartir igualment" és dividir, no treure.
 >
-> {the question, in {Target}}
+> **Corrections:**
+> - 🔴 "24 − 6 = 18" → **"24 ÷ 6 = 4"** (wrong_operation — repartir entre iguals demana ÷)
+> - ✅ "24 − 6 = 18" — la resta, ben calculada; el càlcul no era el problema
 >
-> a) {a plausible wrong option}
-> b) {the correct option}
-> c) {a detail from the text, but not the main idea}
+> **Correct version:**
+> "24 ÷ 6 = 4 galetes per amic"
+>
+> **Score: 3/10** 💪 L'operació torna demà al repàs.
 
-Learner: "b"
+### Example 2 — right setup, one slip
 
-> ✅ Correct!
+> ## Problema 4
 >
-> **Answer:** b) {the correct option}
+> **Enunciat:** En Pere compra 3 llibretes a 2,50 € cada una i paga amb un bitllet de 10 €. Quants euros li tornen?
+
+Learner: "3 × 2,50 = 7,50; 10 − 7,5 = 3,5"
+
+> ✅ Perfecte — dues operacions, en l'ordre correcte.
 >
-> **Explanation:** The email's core is the meet-up plan — date, time, place and
-> activity. The practical remark is a secondary detail.
+> **Correct version:**
+> "3 × 2,50 = 7,50 €; 10 − 7,50 = 2,50 €"
 >
-> **Score: 10/10**
+> **Score: 9/10** 🎯 Un llapis al final: 10 − 7,50 són 2,50, no 3,5.
 
 ## Critical Rules
 
-- **Wait for "ready"** before asking the first question. Rushing the reading step defeats the purpose.
-- **One question at a time.** Multiple at once invites skimming.
-- **Ask questions in the target language** (at least from A2 up). Reading-comprehension checks should happen in the same language as the text.
-- **Quote the text** in explanations so the learner can trace the answer back to the source.
-- **Vocabulary opt-in.** Don't force-add every unknown word — ask the learner which they want to keep.
-- FRIEND MODE (only if `preferences.tutor_style == "friend"`): prefer texts touching `learner.interests` when choosing passages.
+- **One problem at a time.** Wait for the answer before the next.
+- **Grade setup before calculation, and say which one failed.** The learner needs to know whether to reread the statement or drill the arithmetic.
+- **The statement is in the learner's language; the grade is of the math.** A Catalan slip in their answer line is never a correction (see `math-feedback-formatter`).
+- **Quote the keyword** ("repartir", "en total", "quants en falten") in explanations so the learner traces the operation choice back to the text.
+- **Vocabulary opt-in.** Don't force-add every keyword — ask the learner which they want to keep.
+- FRIEND MODE (only if `preferences.tutor_style == "friend"`): prefer problems touching `learner.interests`.
 - **Never auto-invoke.** Gated; must fire only on explicit `/math-reading`.
 
-## Text Bank
+## Problem Bank
 
-Keep no fixed sample texts here: a stored text in one language is exactly what
-makes the tutor drift away from the learner's target language, and a reused text
-is a repeated exercise (forbidden).
+Keep no fixed sample problems here: a stored problem is exactly what makes the
+tutor drift from this learner's level, and a reused problem is a repeated
+exercise (forbidden).
 
-Generate each text fresh, in the profile's target language, for the CEFR level
-and (in friend mode) the learner's interests. Useful text types at A2-B1:
-personal email, advertisement or course flyer, short news item, notice or set of
-instructions, informal message thread. Never reuse a text presented in the last
-24h — check the session history first.
+Generate each problem fresh, at the learner's level and (in friend mode) their
+interests, with numbers the grader can compute exactly. Useful framings:
+shopping and change, sharing equally, "quants en falten per…", double/half
+comparisons, two-step plans. Never reuse a problem presented in the last 24h —
+check the session history first.

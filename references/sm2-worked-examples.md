@@ -35,7 +35,7 @@ Mastery transitions use `consecutive_correct >= 5` → +1 level, `consecutive_in
 
 ## Example 1 — correct answer, existing item
 
-**Item:** a vocabulary item (`vocab_{word}`).
+**Item:** a math fact (`fact.x7_x8`).
 **Learner score:** 9/10 → quality = 4.
 
 Before:
@@ -54,7 +54,7 @@ After:
 
 ## Example 2 — wrong answer, existing item
 
-**Item:** "het gebouw" (learner wrote "de gebouw").
+**Item:** `m4.add_carry.007` — 24 + 7 (learner wrote "21", dropping the carry).
 **Score:** 3/10 → quality = 1.
 
 Before:
@@ -75,7 +75,7 @@ After:
 
 ## Example 3 — fifth consecutive correct, mastery bump
 
-**Item:** a grammar rule (`word_order_subordinate`).
+**Item:** a procedure item (`m4.order_ops.003`).
 **Score:** 10/10 → quality = 5.
 
 Before:
@@ -95,7 +95,7 @@ After:
 
 ## Example 4 — third consecutive wrong, mastery drop
 
-**Item:** `formal_informal_confusion` error pattern.
+**Item:** `carrying` error pattern.
 **Score:** 2/10 → quality = 1.
 
 Before:

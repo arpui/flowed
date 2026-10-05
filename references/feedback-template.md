@@ -1,6 +1,6 @@
 # Feedback Template
 
-Canonical per-answer feedback format used by every Fluent practice skill. Referenced by the `math-feedback-formatter` skill.
+Canonical per-answer feedback format used by every FlowMath practice skill. Referenced by the `math-feedback-formatter` skill.
 
 ## Standard Template
 
@@ -12,7 +12,7 @@ Canonical per-answer feedback format used by every Fluent practice skill. Refere
 - ✅ "{correct_part}" — {specific_praise}
 
 **Correct version:**
-"{full_correct_sentence}"
+"{full_correct_answer}"
 
 **Score: {X}/10** {emoji} {short_comment}
 
@@ -25,9 +25,9 @@ Skip the ❌ block if the answer is fully correct. Skip the ✅ block only if tr
 
 | Symbol | Severity | Meaning | Example |
 |--------|----------|---------|---------|
-| 🔴 | Critical | Breaks communication or exam-blocker | Formal/informal mix in formal email; wrong subordinate-clause word order |
-| 🟡 | Moderate | Noticeable but understandable | Preposition error, missing article |
-| 🟢 | Minor | Low priority | Spelling, punctuation, accent marks |
+| 🔴 | Critical | Wrong result or wrong method — the answer cannot stand | `wrong_operation` (added when the problem needed ÷), `procedure` (wrong sequence of steps) |
+| 🟡 | Moderate | Right idea, noticeable slip | `sign` (− where + belongs), `unit` (right number, wrong or missing unit) |
+| 🟢 | Minor | Low priority | `simplification` (6/8 instead of 3/4), untidy final form |
 
 A single answer may contain multiple errors of different severity — tag each.
 
@@ -56,41 +56,41 @@ learner's error profile.
 ## Tone rules
 
 - Encourage before correcting — open with a ✅ or a warm ❌, not a bare "Wrong."
-- Explain why, not just what — "{informal form}" → "{polite form}" (formal_informal — a business email needs the polite form)
+- Explain why, not just what — "3 + 2 × 4 = 20" → "3 + 2 × 4 = 11" (order_of_operations — the multiplication happens before the addition)
 - Name the pattern so the learner generalizes
 - Celebrate progress — "You didn't miss this last time"
 - Emojis on (learner default: `use_emojis: true`)
 
 ## Examples
 
-*(Placeholders. NEVER copy the language of an example into a session — derive both language names from the learner's profile, every turn.)*
+*(Placeholders. NEVER copy the numbers of an example into a session — every exercise comes from this learner's bank item, weak pattern or level.)*
 
 ### Mostly correct
 
-> ✅ Nice — the past tense is solid.
+> ✅ Nice — the method is solid, only the final form is loose.
 >
 > **Corrections:**
-> - 🟢 "{a word from a third language}" → **"{the {Target} word}"** (vocabulary — small slip, that word is not {Target})
-> - ✅ "{their auxiliary + participle}" — perfect
+> - 🟢 "24 + 7 = 31/1" → **"24 + 7 = 31"** (simplification — the answer is a whole number, write it as one)
+> - ✅ "24 + 7" — perfect setup
 >
 > **Correct version:**
-> "{the full corrected sentence in {Target}}"
+> "24 + 7 = 31"
 >
-> **Score: 9/10** 🎯 One minor swap — don't sweat it.
+> **Score: 9/10** 🎯 One tidy-up away — don't sweat it.
 
 ### Critical error
 
-> ❌ Close, but one pattern is costing you points on the exam.
+> ❌ Close, but one pattern is costing you — it has shown up twice this week.
 >
 > **Corrections:**
-> - 🔴 "{their informal opening}" → **"{the polite opening}"** (formal_informal — a formal text needs the polite form)
-> - 🔴 "{their subordinate clause}" → **"{the corrected clause}"** (word_order — the verb moves under subordination)
-> - ✅ "{the part they got right}" — correct
+> - 🔴 "1/4 + 3/8 = 4/12" → **"1/4 + 3/8 = 2/8 + 3/8 = 5/8"** (wrong_operation — denominators are never added; find the common denominator first)
+> - 🔴 "3 + 2 × 4 = 20" → **"3 + 2 × 4 = 11"** (order_of_operations — multiply before adding)
+> - ✅ "3 + 2 × 4" — you copied the expression correctly
 >
 > **Correct version:**
-> "{the full corrected sentence in {Target}}"
+> "3 + 2 × 4 = 11"
 >
-> **Score: 5/10** 💪 Two patterns to drill — both are on the review queue now.
+> **Score: 3/10** 💪 Two patterns to drill — both are on the review queue now.
 
 Each correction is one line: marker, quoted wrong text, `→`, bold quoted
 correction, then `(category — why)` in parentheses. The parenthesis is not

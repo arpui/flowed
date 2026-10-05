@@ -1,11 +1,11 @@
 ---
 name: math-db-updater
-description: Atomically update all 6 Fluent learner databases (learner-profile, progress, mistakes, mastery, spaced-repetition, session-log) at session end by calling hooks/update-db.py with a single JSON payload. Use at the end of every practice session — math-writing, math-vocab, math-speaking, math-reading, math-review, math-learn — to persist the session's errors, review results, new vocabulary, and session metadata.
+description: Atomically update all 6 FlowMath learner databases (learner-profile, progress, mistakes, mastery, spaced-repetition, session-log) at session end by calling hooks/update-db.py with a single JSON payload. Use at the end of every practice session — math-writing, math-vocab, math-speaking, math-reading, math-review, math-learn — to persist the session's errors, review results, new facts, and session metadata.
 ---
 
 # DB Updater
 
-> **Who this is for.** In the Fluent server runtime (the web app) the tutor
+> **Who this is for.** In the FlowMath server runtime (the web app) the tutor
 > NEVER calls this: `accumulate-session.py` persists every graded answer and
 > the server itself runs the Capa B finalization. This skill is the **payload
 > contract** — documentation for maintainers, and the instruction set for the
@@ -48,9 +48,9 @@ Server runtime: never. Claude Code / clone runtime — load this skill whenever
 the tutor:
 
 - **Finalizes a session**: at real session end, to add metadata the
-  per-answer accumulation can't capture (new vocabulary full fields,
+  per-answer accumulation can't capture (new facts full fields,
   review_result qualities, milestones, duration, focus_next_session).
-- Needs to add new vocabulary to the spaced-repetition queue.
+- Needs to add new facts to the spaced-repetition queue.
 - Records new errors, review results, or mastery changes beyond the
   auto-persisted core.
 
@@ -94,10 +94,27 @@ Key blocks the example covers: `skill_scores`, `errors[]`, `new_vocabulary[]`, `
 ### 3. Field notes
 
 - `errors[]` — one entry per distinct mistake this session. Collapse duplicates (same `pattern_id`) before sending; `frequency` is bumped by the script.
-- An error pattern needs {Target} on at least one side of it. A card that asks in {Native} and is answered in {Native} — nothing in {Target} anywhere in the exchange — is not testing {Target} at all, so there is nothing to file: skip it. This is NOT about which language the learner answers in: translation/recognition cards ({Target} word → answer in {Native}, or the reverse) are fine and completely normal, especially at A1 — file those as usual, `correct_answer` in whichever language the card actually asked for. The one thing to rule out is both sides being {Native}: a card built around {Target} vocabulary where the learner answered with a whole {Native} sentence, and the tutor then graded that sentence's OWN {Native} grammar (a gender-agreement slip, a typo) as the "mistake" — that has nothing to do with {Target} and becomes a review item drilling the learner's own language back at them. (Seen live, 2026-09-21: card about "apple", learner answered "Tinc un poma.", tutor filed `correct_answer: "Un"` — a fix to the sentence's Catalan article, no English involved at all. Had it filed "apple"/"poma" as target/native, that would have been fine.)
-- `new_vocabulary[]` — items the learner met for the first time. Fill every field; incomplete entries yield incomplete spaced-repetition records.
+- An error pattern must be about the MATH. A slip in the learner's own-language
+  wording of an explanation (a Catalan spelling or grammar mistake) is not a
+  math error: do not file it. What gets filed is the math failure — the wrong
+  operation, the dropped carry, the misread statement — with `your_answer` and
+  `correct_answer` quoting the numbers or the line of work. (Seen live in the
+  language fork: a native-language article slip got filed as the "mistake" of
+  a target-language card, and days later came back as an exercise drilling the
+  learner's own language. Same trap here: a `misread` of a Catalan statement is
+  filed as `misread` about the MATH asked, never as a language correction.)
+- `new_vocabulary[]` — facts the learner met for the first time (a table entry,
+  an equivalence, a problem keyword). The field keeps the language-era name
+  because the queue schema still uses it (WP1.7 renames it to facts). Fill
+  every field; incomplete entries yield incomplete spaced-repetition records.
 - `review_results[]` — items already in the queue that were reviewed. The script runs SM-2 on each. See the `math-sm2-calculator` skill. Mapping: `quality = floor(score / 2)`.
-- `skill_scores[].correct` counts correct exercises, not a percentage. Accuracy is derived.
+- `skill_scores[]` — use the math skill keys: `computation`, `steps`, `problems`,
+  `reasoning`, `facts`. NOTE (WP1.7): the server's per-button daily counters
+  still key on the language-era names (`writing`/`reading`/`speaking`) taken
+  from the button pressed, and the progress panel seeds those names; math keys
+  flow through `update-db.py` and the panel picks them up from the data, but
+  until WP1.7 the two vocabularies coexist. `skill_scores[].correct` counts
+  correct exercises, not a percentage. Accuracy is derived.
 - `confidence` in `learner-profile.skills` is 0–100 integer; `accuracy` in `progress-db` is 0.0–1.0 float. The script handles the conversion.
 - `milestones[]` — each entry is a bare string OR an object `{ "milestone": <required non-empty string>, "date": <optional YYYY-MM-DD, defaults to the session date> }`. Don't set a nested `session_id`; the script stamps the authoritative top-level one. A malformed entry (neither string nor object, or an object missing/empty `milestone`) exits `1` with no files written. Each milestone becomes both a `session-log.milestones[]` record and a `learner-profile.achievements[]` entry.
 
@@ -124,34 +141,34 @@ python3 "${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/hooks/update-db.py" <<'
   "date": "2026-04-24",
   "duration_minutes": 12,
   "command_used": "/math-review",
-  "skills_practiced": ["vocabulary", "grammar"],
+  "skills_practiced": ["computation", "facts"],
   "skill_scores": {
-    "vocabulary": { "exercises": 3, "correct": 3, "time_minutes": 7 },
-    "grammar":    { "exercises": 2, "correct": 1, "time_minutes": 5 }
+    "computation": { "exercises": 3, "correct": 3, "time_minutes": 7 },
+    "facts":       { "exercises": 2, "correct": 1, "time_minutes": 5 }
   },
   "review_results": [
-    { "item_id": "vocab_word_a", "quality": 5 },
-    { "item_id": "vocab_word_b", "quality": 4 },
-    { "item_id": "vocab_word_c", "quality": 5 },
-    { "item_id": "word_order_subordinate", "quality": 2 },
-    { "item_id": "tenses_past", "quality": 4 }
+    { "item_id": "m4.add_carry.007", "quality": 5 },
+    { "item_id": "m4.add_carry.011", "quality": 4 },
+    { "item_id": "fact.x7_x8", "quality": 5 },
+    { "item_id": "m4.order_ops.003", "quality": 2 },
+    { "item_id": "m4.frac_equiv.002", "quality": 4 }
   ],
   "errors": [
     {
-      "pattern_id": "word_order_subordinate",
-      "category": "word_order",
-      "your_answer": "{the learner's clause, wrong order}",
-      "correct_answer": "{the same clause, right order}",
-      "context": "subordinate clause word order",
+      "pattern_id": "order_of_operations_mixed",
+      "category": "order_of_operations",
+      "your_answer": "3 + 2 × 4 = 20",
+      "correct_answer": "3 + 2 × 4 = 11",
+      "context": "addition before multiplication",
       "severity": "critical"
     }
   ],
-  "focus_next_session": ["Drill subordinate-clause word order"]
+  "focus_next_session": ["Drill precedence: multiply before add"]
 }
 EOF
 ```
 
-### Example 2 — /math-vocab session with a new word
+### Example 2 — /math-vocab session with a new fact
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/hooks/update-db.py" <<'EOF'
@@ -159,15 +176,15 @@ python3 "${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/hooks/update-db.py" <<'
   "session_id": "session-013",
   "date": "2026-04-25",
   "command_used": "/math-vocab",
-  "skills_practiced": ["vocabulary"],
+  "skills_practiced": ["facts"],
   "new_vocabulary": [
     {
-      "item_id": "vocab_kitchen",
+      "item_id": "fact.x7_x8",
       "item_type": "vocabulary",
-      "content": "{the word in the target language}",
-      "answer": "{its translation in the native language}",
-      "category": "household_rooms",
-      "difficulty": "A1",
+      "content": "7 × 8 = ?",
+      "answer": "56",
+      "category": "times_tables",
+      "difficulty": "m4",
       "initial_quality": 4,
       "priority": "medium"
     }
@@ -179,7 +196,7 @@ EOF
 ## Critical Rules
 
 - **Call at session end to finalize** the accumulated state with rich
-  metadata (new vocabulary full fields, review_results qualities, milestones,
+  metadata (new facts full fields, review_results qualities, milestones,
   duration). The per-answer core is already applied automatically; this call
   adds what `accumulate-session.py` can't extract from the transcript.
 - **Repeated calls with the same `session_id` are idempotent** — the script

@@ -1,15 +1,15 @@
 {
-  "_comment": "Canonical example payload for hooks/update-db.py. Only session_id and date are required. Every other field is optional — omit to skip.",
+  "_comment": "Canonical example payload for hooks/update-db.py. Only session_id and date are required. Every other field is optional — omit to skip. Skill keys are the math ones (computation/steps/problems/reasoning/facts); the server's per-button counters still use the language-era names until WP1.7.",
 
   "session_id": "session-005",
   "date": "2026-04-24",
   "duration_minutes": 20,
-  "command_used": "/fluent-learn",
-  "skills_practiced": ["vocabulary", "writing"],
+  "command_used": "/math-learn",
+  "skills_practiced": ["computation", "facts"],
 
   "skill_scores": {
-    "vocabulary": { "exercises": 5, "correct": 4, "time_minutes": 10 },
-    "writing":    { "exercises": 3, "correct": 3, "time_minutes": 10 }
+    "computation": { "exercises": 5, "correct": 4, "time_minutes": 10 },
+    "facts":       { "exercises": 3, "correct": 3, "time_minutes": 10 }
   },
 
   "errors": [
@@ -28,29 +28,29 @@
 
   "new_vocabulary": [
     {
-      "item_id": "het_huis",
+      "item_id": "fact.x7_x8",
       "item_type": "vocabulary",
-      "content": "het huis",
-      "answer": "the house",
-      "category": "essential_nouns",
-      "difficulty": "A1",
+      "content": "7 × 8 = ?",
+      "answer": "56",
+      "category": "times_tables",
+      "difficulty": "m4",
       "initial_quality": 4,
       "priority": "medium"
     }
   ],
 
   "review_results": [
-    { "item_id": "vocab_dag", "quality": 4 },
-    { "item_id": "grammar_omdat_word_order", "quality": 2 }
+    { "item_id": "m4.add_carry.007", "quality": 4 },
+    { "item_id": "m4.order_ops.003", "quality": 2 }
   ],
 
-  "topics_covered": ["articles", "house_vocabulary"],
-  "breakthroughs": ["First correct use of 'het' vs 'de'"],
-  "focus_next_session": ["Drill de/het article gender"],
-  "session_notes": "Strong session. Article gender still tricky.",
+  "topics_covered": ["addition_carry", "times_tables"],
+  "breakthroughs": ["First correct carry in two-digit addition"],
+  "focus_next_session": ["Drill carrying across the tens column"],
+  "session_notes": "Strong session. Precedence still tricky.",
   "achievements_earned": [],
   "milestones": [
-    { "milestone": "Reached 100 words learned", "date": "2026-04-24" },
-    "Completed first full conversation"
+    { "milestone": "Reached 100 facts automated", "date": "2026-04-24" },
+    "Completed first full word problem"
   ]
 }

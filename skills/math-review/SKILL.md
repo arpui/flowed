@@ -1,6 +1,6 @@
 ---
 name: math-review
-description: Run today's spaced-repetition review queue — items scheduled by SM-2 that need reinforcement before the learner forgets them. Triggered only when the learner types /math-review. Pulls due items from spaced-repetition.review_queue.today, generates a targeted exercise for each, evaluates the response, updates SM-2 parameters, and reshelves items into the correct future queue.
+description: Run today's spaced-repetition review queue — math items scheduled by SM-2 that need reinforcement before the learner forgets them. Triggered only when the learner types /math-review. Pulls due items from spaced-repetition.review_queue.today, generates a targeted exercise for each, evaluates the response, updates SM-2 parameters, and reshelves items into the correct future queue.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
 requires: [math-feedback-formatter]
@@ -10,13 +10,13 @@ requires: [math-feedback-formatter]
 
 ## Overview
 
-Replay items the learner learned before, timed so they hit just before the forgetting curve drops them. This is the single most effective session type — the system depends on it running daily. Items the learner gets right get pushed further into the future; items they miss come back tomorrow.
+Replay items the learner solved before, timed so they hit just before the forgetting curve drops them. This is the single most effective session type — the system depends on it running daily. Items the learner gets right get pushed further into the future; items they miss come back tomorrow.
 
 ## When to Use
 
 Trigger this skill only when the learner types `/math-review`. The skill is gated with `disable-model-invocation: true` — mutating SM-2 state from a misread prompt would cascade through every future session.
 
-Skip this skill when the queue is empty — point the learner at the 📚 **Vocabulary** or 🎲 **Surprise me!** buttons instead (never at a slash command: they have no command line).
+Skip this skill when the queue is empty — point the learner at the 📚 **Facts** or 🎲 **Go** buttons instead (never at a slash command: they have no command line).
 
 ## Instructions
 
@@ -52,7 +52,7 @@ If the queue is empty:
 🎉 No reviews due today! Your spaced repetition is up to date.
 
 Want to practice something new? Press 🎲 **Go** to keep practicing, or pick a
-button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats).
+button at the top (🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats).
 ```
 
 The learner has buttons, not a keyboard shortcut. NEVER tell them to type
@@ -64,12 +64,12 @@ simply wrong.
 ```markdown
 # 🔄 Today's Spaced Repetition Review
 
-{greeting in {Target}}, {name}! Time to review items your brain is about to forget. This keeps everything fresh. 🧠
+{greeting}, {name}! Time to review the math your brain is about to forget. This keeps everything fresh. 🧠
 
 **Items Due Today:** {count}
 **Estimated Time:** ~{minutes} min
 
-Why review? Spaced repetition prevents forgetting, moves items into long-term memory, and builds automaticity.
+Why review? Spaced repetition prevents forgetting, moves items into long-term memory, and builds automaticity — especially for facts and procedures.
 
 **Ready? Let's start!** 💪
 ```
@@ -94,35 +94,28 @@ Each item has:
 
 Generate an exercise matched to `item_type`:
 
-- **error_pattern**: load the pattern from `mistakes-db`, create a scenario that forces the correct form. E.g. `formal_informal_confusion` → ask the learner to complete a formal email opening.
-  Check `learner_wrote` first: if it is in a DIFFERENT language than
-  `content`/`answer`, this is a translation-direction item, not a same-language
-  one — `content`/`answer` being in {native_language} does not mean
-  {native_language} is what is being tested. Frame it as translation: show the
-  {target_language} side (from `learner_wrote`, or a fresh sentence using the
-  same words) and ask the learner to produce the {native_language} form, or
-  show the {native_language} `content` and ask "How do you say this in
-  {target_language}?" — never present the {native_language} sentence alone as
-  a same-language fill-in-the-blank (measured live, 2026-09-22, test-en: a
-  translation item became "Complete the sentence with the correct verb form:
-  'Hi ___ dues pomes sobre la taula.'", with no {target_language} anywhere,
-  which reads as a Catalan grammar test). If `learner_wrote` is missing or in
-  the same language as `content`, treat it as an ordinary same-language
-  error pattern as before.
-- **vocabulary**: recognition (target → native), production (native → target), or cloze — rotate modes.
-- **grammar_rule**: a fill-in or error-correction exercise that tests the rule.
+- **error_pattern**: load the pattern from `mistakes-db`, create a fresh
+  exercise that forces the corrected procedure. E.g. a `carrying` pattern →
+  a new two-digit addition that needs a carry; an `order_of_operations`
+  pattern → a mixed-expression to evaluate. The pattern's category names the
+  error class; the exercise must be a NEW problem of that kind, never the
+  original one.
+- **vocabulary** (a math fact in the queue): a flashcard — the fact one way
+  ("7 × 8 = ?"), the reverse ("56 = 7 × ?"), or an equivalence ("1/2 as a
+  decimal?"). Rotate forms.
+- **grammar_rule** (legacy label for a procedure/rule item): a compute or
+  steps exercise that tests the rule.
 
-**Never reuse the same carrier sentence for a recurring skill.** When the same
-`item_id`/skill comes due again (same session or a later one), invent a fresh
-sentence — do not fall back to the one example that comes to mind for that
-rule. (Measured live, 2026-09-22, test-en: "Days, months and seasons" was
-due four times across one review session and every single time produced the
-identical exercise "My birthday is in ___." — the guard even told the tutor
-"you already asked this, use a DIFFERENT exercise" and the very next rewrite
-was the same sentence again. A learner can pass a template like this by
-always answering the same word, which defeats the point of the review.) Vary
-the subject, the verb and the sentence shape, not just the blanked word —
-the same standard as Vocabulary's cloze mode.
+**Never reuse the same carrier problem for a recurring skill.** When the same
+`item_id`/skill comes due again (same session or a later one), generate a
+fresh problem — do not fall back to the one example that comes to mind for
+that rule. (Measured live, 2026-09-22, test-en: one item was due four times
+across one review session and every single time produced the identical
+exercise — the guard even told the tutor "you already asked this, use a
+DIFFERENT exercise" and the very next rewrite was the same problem again. A
+learner can pass a template like this by always answering the same number,
+which defeats the point of the review.) Vary the numbers and the framing, not
+just the digits — the same standard as the never-repeat rule in `rules.md`.
 
 Present one at a time:
 
@@ -135,10 +128,7 @@ Present one at a time:
 
 {exercise}
 
-{"**Type your answer (just the missing word):**" if `exercise` blanks out one word, or
-"**Type your answer (the complete sentence):**" if it wants the corrected sentence whole —
-see math-feedback-formatter's blank-marker rule. Never the bare "Type your
-answer:" when `exercise` contains "___".}
+**Type your answer:**
 ```
 
 ### 4. Evaluate + update SM-2
@@ -148,7 +138,7 @@ Use the `math-feedback-formatter` skill for per-answer feedback.
 Then stage the item for the end-of-session update. Do NOT hand-edit `spaced-repetition.json` — use `review_results[]` in the `math-db-updater` payload:
 
 ```json
-{ "item_id": "vocab_{word}", "quality": 4 }
+{ "item_id": "m4.add_carry.007", "quality": 4 }
 ```
 
 The `update-db.py` script runs the SM-2 math (see `math-sm2-calculator` skill) and rebuilds the queue. Mapping: `quality = floor(score / 2)`.
@@ -185,16 +175,16 @@ Keep going! 💪
 - This week: {count}
 - Next week: {count}
 
-**Streak:** 🔥 {X} {day/days} 🔥
+**Streak:** 🔥 {X} {day_or_days} 🔥
 
 **Tip:** {one line of advice based on accuracy}
 
-{target-language well done}! 🌟
+Molt bé! 🌟
 
 ### 🚀 Keep going?
-{one concrete next step, e.g. "The [N] words needing more practice are due tomorrow — or drill them now."}
+{one concrete next step, e.g. "The [N] items needing more practice are due tomorrow — or drill them now."}
 
-Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.
@@ -205,7 +195,7 @@ Session fields: `command_used`, `skills_practiced`, `skill_scores`,
 `review_results[]` (every item reviewed, with its `quality`), `errors[]` (only
 items answered wrong), `focus_next_session[]` (the 2-3 lowest qualities).
 
-**Persistence is automatic — you write nothing.** The Fluent server folds every
+**Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
 the results file under `~/.fluent/<id>/results/`. Do NOT call `update-db.py`,
@@ -244,9 +234,9 @@ mastery frozen. It is the single input that makes spaced repetition work.
 
 ## Examples
 
-*(Placeholders. NEVER copy the language of an example into a session — derive both language names from the learner's profile, every turn.)*
+*(Placeholders. NEVER copy the numbers of an example into a session — every exercise comes from this learner's queue.)*
 
-### Example 1 — vocabulary review with a wrong answer
+### Example 1 — fact review with a wrong answer
 
 > ## Review 3/12 — 🔴
 >
@@ -254,21 +244,19 @@ mastery frozen. It is the single input that makes spaced repetition work.
 > **Last reviewed:** 6 days ago
 > **Current mastery:** ⭐⭐⭐☆☆
 >
-> **{Target}:** {the word}
->
-> **What does it mean in {Native}?**
+> **7 × 8 = ?**
 
-Learner: *(a near-miss — a word from the same semantic field)*
+Learner: "54"
 
-> ❌ Close — those two are related, but not the same.
+> ❌ Close — that is 6 × 9 territory. The 7-table needs one more pass.
 >
 > **Corrections:**
-> - 🟡 "{their answer}" → **"{the right translation}"** (vocabulary — {the word} is X; {their answer} is Y)
+> - 🔴 "7 × 8 = 54" → **"7 × 8 = 56"** (facts — the 7 × 8 fact was misremembered)
 >
 > **Correct version:**
-> "{the word}" = {the right translation}.
+> "7 × 8 = 56"
 >
-> **Score: 3/10** 💪 Easy to mix up — we'll review this again soon.
+> **Score: 2/10** 💪 Easy to mix up — we'll review this again soon.
 >
 > (Logged: `review_results[]` quality=1 → `interval_days=1, repetitions=0`, stays in today's queue.)
 
@@ -276,17 +264,17 @@ Learner: *(a near-miss — a word from the same semantic field)*
 
 > ## Review 7/12 — 🟡
 >
-> **Type:** grammar_rule
+> **Type:** error_pattern
 > **Last reviewed:** 14 days ago
 > **Current mastery:** ⭐⭐⭐⭐☆
 >
-> **Complete:** "{a sentence in {Target} with a gap where the rule applies}"
+> **Resol pas a pas: 1/4 + 3/8**
 
-Learner: *(the correct form)*
+Learner: "2/8 + 3/8 = 5/8"
 
-> ✅ Perfect — that rule is locked in.
+> ✅ Perfect — common denominator first, exactly the procedure.
 >
-> **Answer:** "{the complete sentence}"
+> **Answer:** "1/4 + 3/8 = 2/8 + 3/8 = 5/8"
 >
 > **Score: 10/10** 🎯
 >
@@ -313,26 +301,29 @@ Learner: *(the correct form)*
   finish, and they are right.
 - **Never build an exercise out of the learner's mistake.** An error-pattern
   item records what they should learn (`answer`, and `content`) and, separately,
-  what they once wrote (`learner_wrote`). Drill the correct form — a gap to
-  fill, a sentence to rewrite, a translation. Never ask them what the correct
-  word for their own typo is: "What is the correct English word for 'ben'?" is
-  not a question, because "ben" is not a word.
+  what they once wrote (`learner_wrote`). Drill the correct procedure on a
+  FRESH problem — a new addition that needs a carry, a new expression with the
+  right precedence. Never re-present their own wrong answer and ask what was
+  wrong with it: "What is wrong with 24 + 7 = 21?" is not a question they can
+  answer without already knowing the answer.
 - **Grade and ask in the same reply.** Feedback on the answer just given, then
   the next exercise, in one message. A reply that only corrects leaves the
   learner staring at a screen with nothing to do — and if they type anything,
   you grade it against the same unchanged question. Six times, if they are
   patient. Never repeat a question the learner has already answered.
-- **Both directions are real exercises. Only one language gets graded.**
-  Asking for the native word ("**Word:** Hello — what is it in {Native}?") is a
-  recognition exercise and a perfectly good one: it tests whether they know what
-  the English word means. Asking them to produce the English is a production
-  exercise. Use both.
-  What you must NEVER do is **grade their own language**. If they write the
-  right meaning with a missing accent or a typo in {Native}, they knew the word:
-  that is a 10. Do not correct it, do not lower the score for it, and above all
-  do not record it — a {Native} spelling mistake filed as an error pattern
-  becomes, days later, an "exercise" drilling their own language back at them.
-  The score and every recorded correction are about the {Target}, always.
+- **Any valid notation is a real answer. Only the math gets graded.**
+  "4 × 3" where you expected "3 × 4", "12" alone where you showed the
+  operation, "0,5" where the key says "1/2" — all correct: the value is what
+  counts, and the learner chose a valid form. Use every form the learner is
+  comfortable with across a session.
+  What you must NEVER do is **grade their notation choice as an error**. If
+  they write a different but equivalent expression, they knew it: that is a
+  10. Do not correct it, do not lower the score for it, and above all
+  do not record it — a notation variant filed as an error pattern becomes,
+  days later, an "exercise" drilling a rule that does not exist. The score and
+  every recorded correction are about the MATH, always. (Exception: when the
+  item explicitly asks for a form — "escriu-ho com a fracció", "pas a pas" —
+  that form is part of the task, and `simplification`/`procedure` apply.)
 - **The marker has to match the score.** 🔴 / ❌ for 0-4, 🟡 for 5-7,
   🟢 / ✅ for 8-10. A "Score: 2/10 🟢" tells a child they did well and badly in
   the same sentence, and they believe the emoji.
@@ -341,23 +332,22 @@ Learner: *(the correct form)*
   plainly, say it will come back another day, and **present the next exercise**.
   Never ask the same question a third time. An adult reads a third identical
   question as a bug; a child reads it as being stuck, and stops.
-- **"Correct version:" is the answer, nothing else.** The word or the sentence,
-  on its own. Explanations, etymology and "it is a popular Catalan dish" go
-  somewhere else — the learner, and the app, read that line as the answer.
+- **"Correct version:" is the answer, nothing else.** The number, the
+  operation, or the line of work, on its own. Explanations and "remember to
+  carry" go somewhere else — the learner, and the app, read that line as the
+  answer.
 - **Never invent a review item.** A review item comes from the queue in the
   preloaded state, with its own id. If the queue is empty there is nothing to
   review: say so and teach something new instead. Do NOT write "Review Item",
   "Last reviewed" or "Current mastery" for something you made up — that tells a
-  child she once knew a word she has never seen, and half the time the word is
-  not even real. Seen live, with an empty queue: fifteen invented "reviews" in a
-  row, including a Spanish word and one that does not exist in any language.
+  child she once solved a problem she has never seen. Seen live, with an empty
+  queue: fifteen invented "reviews" in a row.
 - **One item at a time.** Rushing = false positives.
 - **Vary the exercise.** Never use the same shape twice in a row — not
-  "Rewrite this sentence correctly" five times over, and never the same item
-  twice in one lesson. Alternate between rewriting, filling a gap, translating,
-  answering a question about a short text, and choosing between two forms. A
-  child who sees the same question again assumes the app is broken, and is
-  right.
+  "compute this" five times over, and never the same item twice in one lesson.
+  Alternate between a direct calculation, a choose/compare, a reverse fact
+  ("56 = 7 × ?"), a steps item, and a one-line word problem. A child who sees
+  the same question again assumes the app is broken, and is right.
 - **Let the learner struggle.** If they don't remember, that's useful data (quality 0-2). The algorithm needs honest signals.
 - **Never hand-edit `spaced-repetition.json`.** Queue is rebuilt on every `update-db.py` call.
 

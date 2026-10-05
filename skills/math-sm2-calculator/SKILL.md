@@ -1,13 +1,13 @@
 ---
 name: math-sm2-calculator
-description: SM-2 spaced-repetition algorithm reference for the Fluent language learning system. Use whenever the tutor schedules the next review of a vocabulary item, grammar rule, or error pattern — i.e. after every answered review question. Defines the 0-5 quality scale, interval formula, easiness-factor update, and mastery-level transitions that keep the spaced-repetition database correct.
+description: SM-2 spaced-repetition algorithm reference for the FlowMath system. Use whenever the tutor schedules the next review of a math fact, a procedure, or an error pattern — i.e. after every answered review question. Defines the 0-5 quality scale, interval formula, easiness-factor update, and mastery-level transitions that keep the spaced-repetition database correct.
 ---
 
 # SM-2 Calculator
 
 ## Overview
 
-Fluent uses SM-2 (SuperMemo 2) to decide when the learner next sees an item. This skill is the single source of truth for the algorithm. Every practice skill updates `<data_dir>/spaced-repetition.json` (where `<data_dir>` is resolved by `main_paths.data_dir()`) through these rules after each answered question.
+FlowMath uses SM-2 (SuperMemo 2) to decide when the learner next sees an item. This skill is the single source of truth for the algorithm. Every practice skill updates `<data_dir>/spaced-repetition.json` (where `<data_dir>` is resolved by `main_paths.data_dir()`) through these rules after each answered question.
 
 ## When to Use
 
@@ -106,7 +106,7 @@ python3 hooks/update-db.py <<'EOF'
   "session_id": "session-NNN",
   "date": "YYYY-MM-DD",
   "review_results": [
-    { "item_id": "vocab_{word}", "quality": 4 }
+    { "item_id": "m4.add_carry.007", "quality": 4 }
   ]
 }
 EOF
@@ -130,4 +130,4 @@ Quick version:
 
 ## Why This Matters
 
-SM-2 reviews items just before the learner forgets them, maximizing long-term retention per minute of practice. Wrong scheduling means wasted reviews (too early) or forgotten items (too late). The whole Fluent system rests on these numbers being correct.
+SM-2 reviews items just before the learner forgets them, maximizing long-term retention per minute of practice. Wrong scheduling means wasted reviews (too early) or forgotten items (too late). The whole FlowMath system rests on these numbers being correct.

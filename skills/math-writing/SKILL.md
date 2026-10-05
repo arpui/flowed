@@ -1,25 +1,31 @@
 ---
 name: math-writing
-description: Run an interactive writing practice session (emails, letters, forms, short texts) with systematic error analysis, category-tagged corrections, and detailed feedback. Triggered only when the learner types /math-writing. Selects a scenario matched to mastery, lets the learner compose, then analyzes grammar, register, vocabulary, structure, and spelling before updating all databases.
+description: Run an interactive math REASONING session — the learner explains how they solved something, justifies a claim, or invents a problem that fits an expression, with systematic error analysis on procedure and justification. Triggered only when the learner types /math-writing. Selects a task matched to mastery, lets the learner write their reasoning, then analyzes procedure, operation choice and justification before updating all databases.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
 requires: [math-feedback-formatter]
 ---
 
-# Writing Practice Session
+# Math Reasoning Session
 
 ## Overview
 
-Full-text writing practice with systematic correction. One scenario per session, detailed feedback broken down by severity and category, DB update at end. Mastery-driven scenario selection keeps the task at the right level — challenging, not frustrating.
+Open-ended math practice with systematic correction. One task per turn,
+detailed feedback broken down by severity and category, DB update at end.
+The learner does not compute a single right number here (that is 🎲 Go) — they
+**explain, justify, or invent**: "explica com ho has resolt", "per què
+3 + 2 × 4 no és 20?", "inventa un problema que es resolgui amb 3/4 + 1/8",
+"troba l'error i explica per què". Mastery-driven task selection keeps the
+task at the right level — challenging, not frustrating.
 
 ## When to Use
 
 Trigger this skill only when the learner types `/math-writing`. The skill is gated with `disable-model-invocation: true` — a 15-20 min interactive session with DB writes should never start from an ambiguous prompt.
 
-Writing is the one practice where the learner writes her OWN words. Closed
-exercises — a gap to fill, a sentence to complete — belong to 🎲 Go, which
-drills the same structures. Never set one here, at any level: at A1 the task is
-tiny, but it is still hers to write.
+Reasoning is the one practice where the learner writes her OWN mathematical
+words. Closed exercises — a result to compute, a gap to fill, a sentence to
+complete — belong to 🎲 Go, which drills the same procedures. Never set one
+here, at any level: the task is tiny at m1, but it is still hers to explain.
 
 ## Instructions
 
@@ -38,85 +44,86 @@ python3 hooks/read-db.py
 *(Claude Code plugin mode, where the repo is not the working directory:
 `python3 "$CLAUDE_PLUGIN_ROOT/hooks/read-db.py"`.)*
 
-Need: `learner-profile` (level, target language, focus areas), `mistakes-db` (weak writing patterns), `mastery-db` (writing sub-skills).
+Need: `learner-profile` (level, native language, focus areas), `mistakes-db` (weak procedure patterns: procedure, wrong_operation, misread), `mastery-db` (reasoning sub-skills).
 
 ### 2. Pick the task
 
-**A1 and A2 — guided writing, one short task at a time.** A topic from her own
-life (her pet, her family, her school, her breakfast, her favourite game) and
-the one or two words she should use. If the server's note gives a *Writing
-frame*, the words to use come from it — it is the structure Go is teaching her
-right now. Grade the answer, then set the next short task in the same message.
+**Younger / lower levels (m1-m3 equivalent) — one small explanation at a
+time.** A problem she has just solved in Go, or a tiny claim about her own
+numbers: "explica com vas fer 24 + 7 de cap", "per què 5 × 3 és el mateix que
+3 × 5?", "quina operació necessites per saber quants en falten per 20?". If
+the server's note gives a *Writing frame*, the pattern to explain comes from
+it — it is the procedure Go is teaching her right now. Grade the answer, then
+set the next short task in the same message.
 
-**B1 and above — one scenario per session**, from `mastery-db.skills_mastery`:
+**Upper levels — one task per session**, from `mastery-db.skills_mastery`:
 
-- Formal email (if `writing_formal_email` mastery < 4)
-- Informal email (if `writing_informal_email` < 4)
-- Form filling (if `writing_forms` < 4)
-- Newsletter / personal text (if overall writing < 3)
-- Mixed scenarios (if all ≥ 4)
+- Explain-your-solution (if `reasoning_explain` mastery < 4): "explica com ho has resolt i per què funciona"
+- Find-and-fix-the-error (if `reasoning_error_correction` < 4): a worked solution with one deliberate error — "hi ha un error. Troba'l i explica'l."
+- Invent-a-problem (if `reasoning_invent` < 4): "inventa un problema que es resolgui amb 3/4 + 1/8"
+- Justify-a-claim (if overall reasoning < 3): "té sentit que 1/3 + 1/4 = 2/7? Demostra-ho"
+- Mixed tasks (if all ≥ 4)
 
-Scenarios must match the learner's CEFR level — A2 uses everyday situations, B1+ adds opinion / complaint / inquiry.
+Tasks must match the learner's level — lower levels use everyday quantities, upper levels add proportion, fractions, and multi-step planning.
 
 ### 3. Present the task
 
-At **A1 / A2**:
+At **lower levels**:
 
 ```markdown
-## ✍️ Writing Exercise
+## 📝 Repte de Raonament
 
-**Topic:** {one small topic from her life, in native language}
+**Tema:** {one small topic from the problems she just solved}
 
-**Task:** Write {1-2 | 3-5} sentences in {target_language}.
+**Task:** Explica en {1-2 | 3-5} frases com ho faries / per què funciona.
 
-**Use:** {one or two words or short structures, in target language}
+**Fes servir:** {one or two words or structures: "el doble de", "primers els parèntesis"}
 
-**Write your sentences below:**
+**Escriu el teu raonament a sota:**
 ```
 
-No `___`, no sentence to complete, no sentence to copy, no model answer shown
-before she writes.
+No `___`, nothing to complete, nothing to copy, no model answer shown before
+she writes.
 
-At **B1 and above**:
+At **upper levels**:
 
 ```markdown
-## ✍️ Writing Exercise
+## 📝 Repte de Raonament
 
-**Scenario:** {clear description in native language}
+**Scenario:** {clear description in the learner's language}
 
-**Task:** Write a {type} in {target_language}.
+**Task:** {Explica com ho has resolt | Troba l'error i explica'l | Inventa un problema que es resolgui amb …}
 
 **Requirements:**
-- Length: {X-Y} words
-- Include: {must-include elements}
-- Register: {formal / informal}
-- Level: {CEFR}
+- Length: see the table below
+- Include: the operation(s), the reason they are the right ones, the result
+- Level: {level}
 
-{Optional: example structure for harder tasks}
-
-**Write your {text_type} below:**
+**Escriu el teu raonament a sota:**
 ```
 
-### 4. Wait for the full text
+### 4. Wait for the full answer
 
 Don't correct mid-composition. Let the learner finish.
 
 ### 5. Systematic error analysis
 
-Check every sentence for these categories:
+Check the answer for these categories:
 
-1. **Grammar** — word order, conjugation, clause structure, articles
-2. **Formal/informal** — register consistency
-3. **Vocabulary** — wrong word, English mixing, register-wrong synonyms
-4. **Missing elements** — greeting, closing, required fields
-5. **Spelling** — minor at A2, weightier at B2+
-6. **Structure** — organization, flow, paragraphing
+1. **Procedure** — the sequence of steps is wrong for the task
+2. **Wrong operation** — the justification picks + when the situation needs ×, etc.
+3. **Misread** — the explanation answers a different problem than the one asked
+4. **Missing justification** — right result, no reason given ("per què?" unanswered)
+5. **Calculation** — arithmetic slips inside the explanation
+6. **Form** — the work is not written as asked (one operation per line, units)
 
 Tag each finding with a severity: 🔴 critical, 🟡 moderate, 🟢 minor.
+Categories are the math ones from `math-feedback-formatter` — `procedure`,
+`wrong_operation` and `misread` are the heart of this practice.
 
 ### 6. Detailed feedback
 
-Diverges slightly from the standard `math-feedback-formatter` template because writing answers are multi-sentence. Use this variant:
+Diverges slightly from the standard `math-feedback-formatter` template because reasoning answers are multi-sentence. Use this variant:
 
 ```markdown
 ## Feedback
@@ -139,21 +146,23 @@ mistake never reaches `mistakes-db`:
 - 🟢 "{wrong}" → **"{correct}"** ({category} — {why})
 ```
 
+For reasoning, the quoted parts are often whole steps or claims:
+`- 🔴 "1/4 + 3/8 = 4/12" → **"1/4 + 3/8 = 2/8 + 3/8 = 5/8"** (wrong_operation — denominators are never added)`.
 Group them by severity if the text is long, but never drop the parenthesis.
 Categories: see the `math-feedback-formatter` skill (single source of truth).
 
 ### 📝 Corrected Version
 
 ```
-{fully corrected text}
+{the full corrected reasoning}
 ```
 
 **Score: {X}/10**
 
 **Breakdown:**
-- Grammar: {Y}/10
-- Vocabulary: {Z}/10
-- Structure: {W}/10
+- Procedure: {Y}/10
+- Justification: {Z}/10
+- Calculation: {W}/10
 - Communication: {V}/10
 
 ---
@@ -164,17 +173,17 @@ Categories: see the `math-feedback-formatter` skill (single source of truth).
 If score < 7, offer:
 
 ```markdown
-**Want to try again?** Rewriting with the corrections locks in the patterns.
+**Vols tornar-ho a provar?** Reescriure el raonament amb les correccions fixa el procediment.
 
-Type "rewrite" to try again, or "next" to continue.
+Escriu "rewrite" per tornar-hi, o "next" per continuar.
 ```
 
 ### 8. Session summary
 
 ```markdown
-## 📊 Writing Session Summary
+## 📊 Raonament Session Summary
 
-**Text Type:** {type}
+**Task Type:** {type}
 **Score:** {X}/10
 **Key Takeaways:**
 - {learning 1}
@@ -183,25 +192,25 @@ Type "rewrite" to try again, or "next" to continue.
 
 **Next Time:**
 - Focus on: {weak pattern}
-- Review: {relevant flashcards}
+- Review: {relevant queue items}
 
-{target-language "well done"}! ✍️
+Molt bé! ✍️
 
 ### 🚀 Keep going?
-{one concrete next step, e.g. "Rewrite the text fixing [weak pattern], or try a new one."}
+{one concrete next step, e.g. "Rewrite the explanation fixing [weak pattern], or try a new one."}
 
-Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.
 
 ### 9. Update all databases
 
-Session fields: `command_used`, `skills_practiced: ["writing"]`,
-`skill_scores.writing`, `errors[]` (one per distinct pattern, deduped),
+Session fields: `command_used`, `skills_practiced: ["reasoning"]`,
+`skill_scores.reasoning`, `errors[]` (one per distinct pattern, deduped),
 `focus_next_session[]`.
 
-**Persistence is automatic — you write nothing.** The Fluent server folds every
+**Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
 the results file under `~/.fluent/<id>/results/`. Do NOT call `update-db.py`,
@@ -216,50 +225,46 @@ the fields listed above.)*
 
 ## Examples
 
-*(Placeholders. NEVER copy the language of an example into a session — derive both language names from the learner's profile, every turn.)*
+*(Placeholders. NEVER copy the numbers of an example into a session — every task comes from this learner's level and weak patterns.)*
 
-### Example 1 — formal email task
+### Example 1 — explain-your-solution
 
-> ## ✍️ Writing Exercise
+> ## 📝 Repte de Raonament
 >
-> **Scenario:** ({Native}) You need to cancel an appointment you have on Thursday.
+> **Scenario:** Ahir vas fer 29 + 17 de cap i et va sortir 46.
 >
-> **Task:** Write a formal email to the clinic in {Target}.
+> **Task:** Explica en 2-3 frases com ho vas fer i per què funciona.
 >
 > **Requirements:**
-> - Length: see the table below — 40-60 words is a B1 task, not an A1 one
-> - Include: greeting, reason, request for a new appointment, closing
-> - Register: formal
-> - Level: A2
+> - Length: see the table below — 1-2 sentences is a lower-level task, not an upper-level one
+> - Include: the steps you took, and why they keep the answer right
 >
-> **Write your email below:**
+> **Escriu el teu raonament a sota:**
 
-Learner: *(a 40-word text in {Target} with an informal greeting, a subordinate
-clause in the wrong order, and no closing line)*
+Learner: *(adds 29 + 17 as 30 + 20 − 3, with one arithmetic slip in the middle)*
 
 > ## Feedback
 >
 > ### ✅ What You Did Well
-> - Clear reason for the cancellation.
-> - Correct request structure.
+> - You rounded 29 to 30 and corrected at the end — that is a real strategy.
+> - The final answer is right.
 >
 > ### ❌ Areas to Improve
 >
-> - 🔴 "{informal greeting used}" → **"{formal greeting in {Target}}"** (formal_informal — a formal email needs the polite form; mixed registers cost exam points)
-> - 🔴 "{their subordinate clause}" → **"{corrected clause}"** (word_order — in {Target} this clause puts the verb {where})
-> - 🟡 "{missing closing}" → **"{formal closing in {Target}}"** (missing — a formal email needs a closing line)
+> - 🟡 "30 + 20 = 50" → **"30 + 17 = 47"** (calculation — you added 20 instead of the 17 you were compensating for)
+> - 🟢 "47 − 3 = 46" → **"47 − 1 = 46"** (procedure — you rounded 29 up by 1, so take 1 back, not 3)
 >
 > ### 📝 Corrected Version
 >
 > ```
-> {the full corrected text, in {Target}}
+> 29 + 17 = 30 + 17 − 1 = 47 − 1 = 46
 > ```
 >
-> **Score: 6/10**
-> - Grammar: 6/10 — the subordinate clause tripped you up.
-> - Vocabulary: 8/10 — solid word choice.
-> - Structure: 5/10 — missing proper opening + closing.
-> - Communication: 7/10 — the message was clear despite the issues.
+> **Score: 7/10**
+> - Procedure: 8/10 — the compensation idea is right.
+> - Justification: 6/10 — you did not say why you subtract 1.
+> - Calculation: 7/10 — one slip mid-way.
+> - Communication: 7/10 — clear enough to follow.
 
 Note the correction lines: marker, quoted wrong text, arrow, bold quoted
 correction, then `(category — why)` in parentheses. That is what gets parsed.
@@ -267,44 +272,42 @@ correction, then `(category — why)` in parentheses. That is what gets parsed.
 ## Critical Rules
 
 - **Length follows the level, and the level is in the profile.** A learner who
-  is being asked what "apple" is in English cannot write a 50-word email, and
-  asking is not ambition, it is a wall.
+  is being asked what double of 6 is cannot write a paragraph justifying a
+  fraction claim, and asking is not ambition, it is a wall.
 
   | Level | Ask for |
   |---|---|
-  | A1 | 1-2 sentences of her own, with the words to use named in the task |
-  | A2 | 3-5 sentences of her own: a short note, a message or a postcard |
-  | B1 | 50-70 words: an email with a greeting and a closing |
-  | B2+ | 80-120 words, with an argument to make |
+  | m1-m2 (early) | 1-2 sentences of her own, with the words to use named in the task |
+  | m3-m4 | 3-5 sentences: explain a solution, find one error |
+  | m5 | a full justification: steps + why each step is allowed |
+  | m6+ | invent a problem for an expression, or defend a claim |
 
-  Seen live: an A1 profile asked for a 50-70 word email in the same session as
-  "what is the English word for poma".
-
-
+  Seen live in the language fork: an A1 profile asked for a 50-70 word text in
+  the same session as "what is the word for poma".
 
 - **Never a gap.** No `___`, nothing to complete, nothing to copy — at any level.
   The server rejects a Writing turn that contains one.
-- **A1 / A2: one short task at a time**, graded, then the next. **B1+: one
-  scenario per session** — depth over breadth.
+- **Lower levels: one short task at a time**, graded, then the next. **Upper
+  levels: one task per session** — depth over breadth.
 - **Wait for the full answer** before correcting.
 - **Severity tagging is mandatory.** Fed into `mistakes-db` and drives spaced repetition priority.
 - **Never write files.** The results file under `~/.fluent/<id>/results/` is written by the server, from your graded feedback.
 - **Never auto-invoke.** This skill is gated; must fire only on explicit `/math-writing`.
 
-## Language Reference
+## Notation Reference
 
-This skill deliberately carries **no per-language cheat-sheet**. A fixed example
-language leaks into real sessions: the tutor starts producing that language
-instead of the learner's. Derive the target language from
+This skill deliberately carries **no per-level cheat-sheet of problems**. A
+fixed example leaks into real sessions: the tutor starts producing that
+problem instead of this learner's. Derive the level from
 `learner-profile.json` every turn.
 
-What to check in a formal text, in ANY language:
+What to check in a reasoning answer, ALWAYS:
 
-- the politeness form the language uses, and whether it is consistent throughout
-- opening and closing conventions for the text type
-- clause-order rules that change under subordination or negation
-- date, time and address formats
-- register-appropriate vocabulary (no casual contractions in a formal letter)
+- the operation choice matches the situation the learner describes
+- each step follows from the previous one (one operation per line when showing work)
+- the justification says WHY, not just WHAT
+- the final form matches what was asked (fraction reduced, unit present)
+- notation follows `rules.md`: × ÷ −, fractions a/b, decimal comma — never LaTeX
 
-If a learner needs a recurring per-language reference, keep it in their own
+If a learner needs a recurring reference, keep it in their own
 profile (`learner-profile.json → notes`), not in this shared skill.

@@ -1,16 +1,25 @@
 ---
 name: math-vocab
-description: Run an interactive vocabulary drill session with flashcard-style prompts, spaced repetition, and per-answer feedback. Triggered only when the learner types /math-vocab. Reads spaced-repetition / mistakes / mastery DBs to pick words, presents one word at a time, scores each answer, and calls math-db-updater at the end.
+description: Run an interactive math-facts drill — times tables, doubles and halves, equivalences (1/2 = 0,5), and key problem vocabulary ("el doble de", "quants en falten per"). Flashcard-style prompts, spaced repetition, per-answer feedback. Triggered only when the learner types /math-vocab. Reads spaced-repetition / mistakes / mastery DBs to pick facts, presents one fact at a time, scores each answer, and closes with the review-results block.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
 requires: [math-feedback-formatter]
 ---
 
-# Vocabulary Drill Session
+# Math Facts Drill Session
 
 ## Overview
 
-Flashcard-style vocabulary practice using spaced repetition. One word at a time, immediate feedback, DB update at the end. Interleaves three modes (recognition, production, cloze) to force active recall rather than passive re-reading.
+Flashcard-style practice of the automatic recall layer of math: times
+tables, doubles and halves, fraction/decimal/percent equivalences, and the
+vocabulary that word problems turn on ("el doble de", "la meitat de", "quants
+en falten per…"). One fact at a time, immediate feedback, DB update at the
+end. Interleaves three modes (direct recall, reverse, equivalence/apply) to
+force active recall rather than passive re-reading.
+
+There is no translation direction here: the PROMPT is in the learner's own
+language (Catalan) and the ANSWER is the math fact. Never ask for a word in
+another language — the fact is the point.
 
 ## When to Use
 
@@ -21,21 +30,21 @@ Otherwise ALWAYS run a drill — even with an empty review queue:
 
 - If items are due or mistakes exist, use the priority order in §2.
 - If nothing is due (e.g. fresh profile, empty `focus_areas`), start with 10
-  high-frequency starter words for the learner's level and native language.
-- NEVER emit the session summary with 0 words reviewed. If you have presented
-  no words, you have not run a session — start one instead of closing.
-- **The 10-word floor and the `session_length` target (12 if absent) are not
+  high-frequency facts for the learner's level and START drilling immediately.
+- NEVER emit the session summary with 0 facts reviewed. If you have presented
+  no facts, you have not run a session — start one instead of closing.
+- **The 10-fact floor and the `session_length` target (12 if absent) are not
   suggestions — stopping earlier is not a shorter session, it is an incomplete
-  one.** (Seen live, 2026-09-22: a fresh profile, no `session_length` set, got
-  the summary after 2 words — a fifth of the 10-word floor, a sixth of the
-  default target.) If you are about to write the session summary and fewer than
-  10 words have been presented on a fresh/empty-queue profile, or fewer than the
-  target on any profile, do not close: pick more words (fall back to more
-  starter words, or repeat modes on ones already shown) and keep going instead.
+  one.** (Seen live, 2026-09-22, language fork: a fresh profile got the summary
+  after 2 cards — a fifth of the floor.) If you are about to write the session
+  summary and fewer than 10 facts have been presented on a fresh/empty-queue
+  profile, or fewer than the target on any profile, do not close: pick more
+  facts (fall back to more starter facts, or repeat modes on ones already
+  shown) and keep going instead.
 
 ## Instructions
 
-### 1. Load vocabulary data
+### 1. Load facts data
 
 The `/math-*` command has ALREADY preloaded the learner state into your
 context (the `!` directive at the top of the command). Read it from there — do
@@ -55,7 +64,7 @@ If the helper is unavailable, resolve `<data_dir>` via `main_paths.data_dir()` t
 - `<data_dir>/spaced-repetition.json`
 - `<data_dir>/mistakes-db.json`
 - `<data_dir>/mastery-db.json`
-- `<data_dir>/learner-profile.json` (for target_language, name, level)
+- `<data_dir>/learner-profile.json` (for name, level, native language)
 
 If any are missing, direct the learner to `/math-setup` and stop.
 
@@ -68,131 +77,96 @@ instruction. By default it asks you to OFFER to finish — a warm line and a
 choice between the summary now or a couple more. Only a learner configured with
 `session_stop: "hard"` gets closed without being asked.
 
-### 2. Select words
+### 2. Select facts
 
 Priority order:
 
-1. Items in `spaced-repetition.review_queue.today` with `item_type == "vocabulary"`.
-2. Words from `mistakes-db.json` where `category == "vocabulary"` and `mastery_level <= 2`.
-3. New high-frequency words matching `learner-profile.focus_areas`.
+1. Items in `spaced-repetition.review_queue.today` with `item_type == "vocabulary"` (in FlowMath these are math facts: a table entry, an equivalence, a double).
+2. Patterns from `mistakes-db.json` where `category == "facts"` and `mastery_level <= 2`.
+3. New high-frequency facts matching the learner's level and the curriculum path in the preloaded state (times tables up to the level, doubles/halves, 1/2 = 0,5, 1/4 = 0,25, "quants en falten per…").
 
 Limit: `spaced-repetition.daily_limits.review_items_per_day` (default 20).
 
 4. If all three sources are empty (fresh profile: no due items, no mistakes,
-   no focus areas), use 10 high-frequency A1 words (concrete nouns/verbs:
-   water, house, eat, …) and START drilling immediately. Never ask the learner
-   to choose, never close the session — an empty selection is not an outcome.
+   no focus areas), use 10 high-frequency facts for the level (e.g. ×2, ×5,
+   ×10 tables and doubles to 10) and START drilling immediately. Never ask
+   the learner to choose, never close the session — an empty selection is not
+   an outcome.
 
-**A word labeled `{native_language}:` must actually BE in
-{native_language} — check it is not still an English word before writing the
-card.** (Measured live, 2026-09-22, test-en: meant to translate "full" to
-Catalan ("ple"), the card instead showed `**Catalan:** fill` — not a
-translation at all, just the English word "full" corrupted into the
-similar-looking English word "fill", left untranslated and unrelated to the
-numbers-themed context and answer key around it. A card like this teaches
-nothing and cannot be graded sensibly — the learner has no way to know what is
-even being asked.) Before writing the `{native_language}:` line: (1) confirm
-the value is actually a {native_language} word, not an English one that
-slipped through untranslated or got garbled into a similar-looking English
-word; (2) confirm it is the correct translation, not a look-alike. If
-genuinely unsure, drop the word and pick a different one from the queue or the
-starter list — never invent or guess one to fill a slot.
+**A fact card must have exactly one right answer.** Before writing a card,
+compute the answer yourself. "6 × 7 = ?" has one answer; "think about the
+7-table" has none. If you are genuinely unsure of a fact, drop it and pick a
+different one — never invent or guess one to fill a slot.
 
-### 3. Present one word at a time
+### 3. Present one fact at a time
 
-Your FIRST message in a vocab session MUST be `## Word 1/…` — never the
+Your FIRST message in a facts session MUST be `## Fact 1/…` — never the
 session summary, never a question about what to practice, never an
 explanation. Start drilling immediately; talk is not practice.
-Strictly alternate modes in fixed order: recognition → production → cloze →
-repeat. NEVER present the same mode twice in a row. If the session history
-shows the last mode used, continue the rotation from there. Do not label the
-mode — the format itself shows it. Both directions must appear every 3 words;
-a session that only drills target→native (or only native→target) is a failure.
+Strictly alternate modes in fixed order: direct recall → reverse →
+equivalence/apply → repeat. NEVER present the same mode twice in a row. If the
+session history shows the last mode used, continue the rotation from there. Do
+not label the mode — the format itself shows it.
 
-**Never reuse the same carrier sentence.** In Cloze (and the optional example
-sentence in Recognition/Production), invent a fresh sentence for every word —
-do not fall back to one convenient template with only the target word swapped.
-(Seen live, 2026-09-22: a numbers review queued twelve number-words together
-and every single one got "There are ___ apples on the table." with only the
-number changed — technically a different word each time, but it reads as the
-same question asked twelve times.) Vary the subject, the verb, and the
-sentence shape, not just the blanked word.
+- **Direct recall**: "7 × 8 = ?"
+- **Reverse**: "56 = 7 × ?" / "Quants en falten per 20 si en tens 13?"
+- **Equivalence/apply**: "1/2 com a decimal?", "el doble de 26", "3/4 = ? %"
 
-**Recognition** (target_language → native):
+**Never reuse the same carrier framing.** In the apply mode, invent a fresh
+one-line context for every fact — do not fall back to one convenient template
+with only the number swapped. (Seen live, 2026-09-22, language fork: twelve
+cards in a row got the identical sentence with only the number changed —
+technically different, but it reads as the same question twelve times.) Vary
+the framing, not just the digits.
+
+Card format (the `**Exercise:**` line is what the server's tracker reads to
+fingerprint the item):
 
 ```markdown
-## Word {N}/{total}
+## Fact {N}/{total}
 
-**{target_language}:** {word}
-
-**Context:** {example_sentence}
-
-**What does it mean in {native_language}?**
+**Exercise:** {the fact — "7 × 8 = ?", "56 = 7 × ?", "1/2 = ? (decimal)"}
 
 **Type your answer:**
-```
-
-**Production** (native → target_language):
-
-```markdown
-## Word {N}/{total}
-
-**{native_language}:** {word}
-
-**Use it in a sentence (optional).**
-
-**How do you say this in {target_language}?**
-
-**Type your answer:**
-```
-
-**Cloze** (fill in the blank):
-
-```markdown
-## Word {N}/{total}
-
-**Complete the sentence:**
-
-{target_language sentence with _____ where the word goes}
-
-**Type your answer (just the missing word):**
 ```
 
 ### 4. Feedback after each answer
 
 Use the `math-feedback-formatter` skill's template. Score out of 10, tag severity.
+A wrong fact is a `facts` category error (🔴 if the learner clearly does not
+have it, 🟡 if one digit off a near-miss).
 
 Track the answer for the end-of-session DB update:
 
 - Add to `review_results[]` with `quality = floor(score / 2)` (see `math-sm2-calculator` skill).
-- If the learner met a new word, stage it for `new_vocabulary[]`.
+- If the learner met a new fact, stage it for `new_vocabulary[]` (FlowMath keeps facts in that field — the server's queue schema still uses the language-era name; WP1.7 renames it).
 - If the learner made an error, stage it for `errors[]`.
 
-Do **not** call `update-db.py` after every word — batch at session end.
+Do **not** call `update-db.py` after every fact — batch at session end.
 
-### 5. Session summary (ONLY after presenting ≥1 word — never as a first message)
+### 5. Session summary (ONLY after presenting ≥1 fact — never as a first message)
 
 ```markdown
-## 📚 Vocabulary Session Complete!
+## 📚 Facts Session Complete!
 
-**Words Reviewed:** {N}
+**Facts Reviewed:** {N}
 **Accuracy:** {X}%
-**New Words Learned:** {Y}
-**Words Mastered (→ level 5):** {Z}
+**New Facts Met:** {Y}
+**Facts Mastered (→ level 5):** {Z}
 
-**Strong:** {list words with mastery 4-5}
-**Need more practice:** {list words with mastery 0-2}
+**Strong:** {list facts with mastery 4-5}
+**Need more practice:** {list facts with mastery 0-2}
 
 **Next review:**
-- Tomorrow: {count} words
-- This week: {count} words
+- Tomorrow: {count} facts
+- This week: {count} facts
 
-{target-language "well done"}! 🌟
+Molt bé! 🌟
 
 ### 🚀 Keep going?
-{one concrete next step, e.g. "Let's drill [words with mastery 0-2] once more."}
+{one concrete next step, e.g. "Let's drill [facts with mastery 0-2] once more."}
 
-Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.
@@ -200,10 +174,10 @@ Rule: NEVER close with a bare goodbye — this summary is a pause point, not a f
 ### 6. Update all databases
 
 Session fields: `session_id`, `date`, `duration_minutes`, `command_used`,
-`skills_practiced: ["vocabulary"]`, `skill_scores.vocabulary`, `errors[]`,
+`skills_practiced: ["facts"]`, `skill_scores.facts`, `errors[]`,
 `new_vocabulary[]`, `review_results[]`, `focus_next_session[]`.
 
-**Persistence is automatic — you write nothing.** The Fluent server folds every
+**Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
 the results file under `~/.fluent/<id>/results/`. Do NOT call `update-db.py`,
@@ -228,7 +202,7 @@ closing message, after the summary, send exactly one block:
 ```
 ````
 
-- One entry per queue item you actually practised this session. In a vocabulary drill that is only the words that came from the queue — not the starter words you introduced yourself.
+- One entry per queue item you actually practised this session. In a facts drill that is only the facts that came from the queue — not the starter facts you introduced yourself.
 - `item_id` is copied **verbatim** from the due-items list in the preloaded
   state. Never invent it, never translate it, never tidy it up: an id that is
   not in the queue is discarded on arrival.
@@ -242,88 +216,84 @@ mastery frozen. It is the single input that makes spaced repetition work.
 
 ## Examples
 
-### Example 1 — recognition drill ({Native} → {Target}; placeholders — never copy an example's language)
+### Example 1 — direct recall, correct
 
-> ## Word 1/15
+> ## Fact 1/15
 >
-> **{Native}:** {a native word — e.g. the translation of "the kitchen"}
+> **Exercise:** 6 × 7 = ?
 >
-> **Context:** "{a sentence in the native language}"
->
-> **What does it mean in {Target}?**
->
-> Type your answer:
+> **Type your answer:**
 
-Learner: "{the correct target-language translation}"
+Learner: "42"
 
-> ✅ Exactly.
+> ✅ Exacte — la taula del 6 va sola.
 >
-> **Answer:** {translation}
-> **Meaning:** {brief definition}
-> **Example:** "{native sentence}" ({target translation})
+> **Correct version:**
+> "6 × 7 = 42"
 >
 > **Score: 10/10** 🎯
 >
 > ---
 
-### Example 2 — production with error
+### Example 2 — reverse mode, near miss
 
-> ## Word 7/15
+> ## Fact 7/15
 >
-> **{Target}:** {a target word — e.g. "to write"}
->
-> **How do you say this in {Native}?**
+> **Exercise:** 56 = 7 × ?
 
-Learner: "{their attempt}"
+Learner: "9"
 
-> ✅ Correct — infinitive form.
+> ❌ A prop — 7 × 9 és 63. Compta cap enrere des de 56.
 >
-> Now: can you also give the first-person present? (I write → …)
+> **Corrections:**
+> - 🟡 "7 × 9 = 56" → **"7 × 8 = 56"** (facts — the 7 × 8 fact was misremembered)
+>
+> **Correct version:**
+> "56 = 7 × 8"
+>
+> **Score: 4/10** 💪 This one comes back tomorrow.
 
 ### Example 3 — session end summary
 
-> ## 📚 Vocabulary Session Complete!
+> ## 📚 Facts Session Complete!
 >
-> **Words Reviewed:** 15
+> **Facts Reviewed:** 15
 > **Accuracy:** 80% (12/15)
-> **New Words Learned:** 3
-> **Words Mastered:** 1
+> **New Facts Met:** 3
+> **Facts Mastered:** 1
 >
-> **Need more practice:** {word1}, {word2}, {word3}
+> **Need more practice:** 7 × 8, 6 × 7, 3/4 = ? %
 >
-> **Next review:** Tomorrow 4 words, this week 8 words.
+> **Next review:** Tomorrow 4 facts, this week 8 facts.
 >
-> {well done in the target language}! 🌟
+> Molt bé! 🌟
 
 ## Critical Rules
 
-- **A flashcard needs a word, and not every review item is one.** The review
-  queue holds three kinds of item, and only `item_type: vocabulary` is a word to
-  show on a card. An `error_pattern` is a rule the learner broke — drill it as a
-  rule: a gap to fill, a sentence to correct, a choice between two forms. Its
-  id is not a word. Seen live: `articles_an_apple` turned into a flashcard
-  reading "**English:** an — what does it mean in català?", and
-  `capitalization_English` into "what does *capitalization* mean in català?".
-  Neither is a question, and neither teaches anything.
-
-
-- **One word at a time.** Wait for the learner's answer before showing the next.
+- **A facts card needs one right answer, and not every review item is one.**
+  The review queue holds several kinds of item, and only a fact
+  (`item_type: vocabulary` in the queue schema) goes on a card. An
+  `error_pattern` is a procedure the learner broke — drill it as a procedure:
+  a computation to do, a steps item, a choose/compare. Its id is not a fact.
+  Seen live in the language fork: a rule id turned into a flashcard reading
+  "what does *capitalization* mean?" — neither a question, neither teaches
+  anything. Same trap here: an `order_of_operations` pattern is not "a fact
+  to memorize"; it is a rule to apply on a fresh expression.
+- **One fact at a time.** Wait for the learner's answer before showing the next.
 - **Immediate feedback** after each — use `math-feedback-formatter`.
-- **Alternate modes strictly** (recognition → production → cloze → repeat);
-  never twice the same in a row, never one direction only. (The general form of
-  this rule, and the language-identity and never-repeat rules, come from
-  `prompts/agents/rules.md` — already in your prompt.)
-- **Never a 0-word session.** If every word source is empty, drill 10 A1
-  starter words (§2 step 4). The summary with 0 words reviewed is forbidden.
-- FRIEND MODE (only if `preferences.tutor_style == "friend"`): prefer example
-  sentences involving `learner.interests`.
-- **Use target language** for greetings + transitions when the learner is B1+; for A1-A2 mix target + native.
+- **Alternate modes strictly** (direct → reverse → equivalence/apply →
+  repeat); never twice the same in a row. (The general never-repeat rule comes
+  from `prompts/agents/rules.md` — already in your prompt.)
+- **Never a 0-fact session.** If every fact source is empty, drill 10 starter
+  facts (§2 step 4). The summary with 0 facts reviewed is forbidden.
+- FRIEND MODE (only if `preferences.tutor_style == "friend"`): prefer apply-mode
+  framings involving `learner.interests`.
 - **Never** update the DBs mid-session — batch at end.
 - **Never auto-invoke.** This skill is gated; must fire only on explicit `/math-vocab`.
 
 ## Tips for the Learner (append if they seem tired or unsure)
 
 - Review daily for best retention — spaced repetition depends on it.
-- Focus time on weak words (mastery 0-2), not already-strong ones.
-- Use words in sentences to build contextual memory.
-- Say words out loud even though you're typing.
+- Focus time on weak facts (mastery 0-2), not already-strong ones.
+- Automatic facts free up your working memory for the hard problems — that is what the drill is for.
+- Say facts out loud even though you're typing.

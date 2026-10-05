@@ -1,22 +1,29 @@
 ---
 name: math-speaking
-description: Run an interactive typed conversation session simulating spoken practice — free-flowing dialogue, role-plays, and opinion questions prioritizing communication over perfect grammar. Triggered only when the learner types /math-speaking. Asks questions one at a time in the target language, evaluates clarity and naturalness first and grammar second, and updates all databases at the end.
+description: Run a light MATH TALK session — a short oral-style exchange, typed, about how the learner thinks: what strategy they used, why it works, which answer is faster and why. Triggered only when the learner types /math-speaking. Asks one question at a time in the learner's language, values a clear explanation over perfect formalism, and updates all databases at the end.
 allowed-tools: Read, Write, Bash
 disable-model-invocation: true
 requires: [math-feedback-formatter]
 ---
 
-# Speaking Practice (Typed)
+# Math Talk (Typed)
 
 ## Overview
 
-Conversational practice through typed dialogue. Unlike `/math-writing`, prioritize **communication and naturalness** — grammar errors that don't block meaning are downplayed. Goal: build the learner's confidence to produce target-language output without over-analyzing.
+A light conversational practice: the learner *talks about* math instead of
+only doing it. "Com ho has fet, de cap, 29 + 17?", "per què 5 × 3 és el
+mateix que 3 × 5?", "quina de les dues et surt més ràpid i per què?". Unlike
+`/math-writing`, keep it SHORT — one or two sentences per turn, a warm
+back-and-forth. Goal: make the learner's thinking out loud, so the tutor can
+hear the strategy and the learner can hear it explained back.
 
 ## When to Use
 
 Trigger this skill only when the learner types `/math-speaking`. The skill is gated with `disable-model-invocation: true` — 15-20 min interactive session with DB writes should never start from an ambiguous prompt.
 
-Skip this skill below A1 mastery 2 — the learner needs a basic word bank and verb conjugations first (run `/math-vocab` a few times).
+Skip this skill for a learner who has not yet automated the basic facts
+(`facts` mastery < 2) — they need the facts first (`/math-vocab` a few times)
+before talking about strategies has anything to talk about.
 
 ## Instructions
 
@@ -35,158 +42,139 @@ python3 hooks/read-db.py
 *(Claude Code plugin mode, where the repo is not the working directory:
 `python3 "$CLAUDE_PLUGIN_ROOT/hooks/read-db.py"`.)*
 
-Need: `learner-profile` (level, target language), `mastery-db.skills_mastery.speaking`.
+Need: `learner-profile` (level, native language, interests), `mastery-db.skills_mastery` (reasoning), `mistakes-db` (weak procedure patterns).
 
 ### 2. Opening
 
 ```markdown
-# 🗣️ {target_language} Speaking Practice
+# 🗣️ Math Talk
 
-{greeting in {Target}}, {name}!
+{greeting}, {name}!
 
-Today we're practicing **speaking** through typed conversation. I'll ask you questions or give scenarios, you respond naturally in {target_language} — just like a real conversation.
+Ara parlem de matemàtiques: et faré preguntes curtes sobre **com penses**,
+i m'ho expliques amb les teves paraules. No cal resoldre res gran — cal dir
+com ho faries i per què.
 
-**Focus:** natural expression, fluency, pronunciation (typed)
-**Level:** {CEFR}  
-*(`{CEFR}` = `learner-profile.learner.current_level`, read verbatim — never estimated or guessed. Measured live, 2026-09-22, test-en: a profile with `current_level: "A0"` got a Speaking session opened at "Level: A2", a level nobody set anywhere. Same rule for `{target_language}`/`{native_language}` just above: read them from the profile, never swap or guess which is which —
-measured the same day: target_language "English"/native_language "Catalan" produced "Catalan Speaking Practice", asking the learner to answer IN THEIR OWN native language, backwards.)*
-**Duration:** 15-20 min
+**Focus:** estratègies, per què funcionen, triar la més ràpida
+**Level:** {level}
+*(`{level}` = `learner-profile.learner.current_level`, read verbatim — never estimated or guessed. Measured live, 2026-09-22, language fork: a profile with `current_level: "A0"` got a session opened at "Level: A2", a level nobody set anywhere.)*
+**Duration:** 10-15 min
 
 **Tips:**
-- Think in {target_language}, not {native_language}
-- Don't chase perfect grammar — focus on getting your message across
-- Use complete sentences
-- Be natural and conversational
+- Respon curt: una o dues frases
+- Explica el "com", no només el "quant"
+- Si no estàs segur, digues-ho — també és informació útil
 
-**Ready? Let's chat!** 💬
+**Comencem!** 💬
 ```
 
 ### 3. Pick topic based on mastery
 
-A2 topics:
-1. Personal introductions
-2. Daily routine
-3. Hobbies and interests
-4. Shopping
-5. Making appointments
-6. Asking for directions
-7. Ordering food
-8. Talking about weather
-9. Weekend plans
-10. Work / study
+Early topics:
+1. Com fas el doble d'un nombre de cap?
+2. Per què sumar 9 és com sumar 10 i treure 1?
+3. Quina taula et surt més ràpida? I la més lenta?
+4. Com saps si 7 × 8 fa 54 o 56?
+5. Repartir 20 caramels entre 4: quina operació i per què?
 
-B1+: opinions, comparisons, hypotheticals, complaints, narratives.
+Mid/upper topics: estratègies de càlcul mental, per què (a+b)×c = a×c + b×c,
+com estimar abans de calcular, comparar fraccions sense denominador comú,
+per què multiplicar per 1/2 és dividir per 2.
+
+Anchor topics to what the learner just did in Go/Review when the history
+shows it — talking about a problem they actually solved beats an abstract one.
 
 ### 4. One question at a time
 
 ```markdown
 ## Question {N}: {Topic}
 
-{Question in target language}
+{the question, in the learner's language}
 
-**Type your answer in {target_language}:**
+**Respon amb les teves paraules:**
 ```
 
-Build the conversation naturally — after 3-4 Qs on one topic, transition: `Interessant! Let's talk about something else...`.
-
-Production prompts ("How would you say … in {target_language}") ALWAYS carry
-the source sentence in the NATIVE language — never in the target language
-itself (asking to say a target sentence "in target" is circular: zero learning
-value, never emit it).
+Build the conversation naturally — after 3-4 Qs on one topic, transition:
+`Molt bé! Parlem d'una altra cosa...`. Follow up ONCE on a vague answer
+("i per què funciona?"), then move on. Never interrogate.
 
 ### 5. Evaluate
 
 Check in this order:
 
-1. **Communication** (most important, 0-5 points): was the message clear? Did it answer the question?
-2. **Grammar** (0-3 points): verb conjugation, word order, articles. Note but don't belabor.
-3. **Vocabulary** (0-2 points): appropriate word choice, no English mixing.
+1. **Strategy** (most important, 0-5 points): is there a real method, and does it actually work?
+2. **Justification** (0-3 points): did they say WHY, not just WHAT?
+3. **Accuracy** (0-2 points): is the math they state correct?
 
 Feedback template (variant of `math-feedback-formatter`):
 
 ```markdown
 {✅ or 🟡} {one-line encouragement}
 
-**What you said:**
+**Què has dit:**
 "{their_answer}"
 
-**Communication:** {Clear / Mostly clear / Unclear} ✅
+**Estratègia:** {Real i vàlida / Bona idea, poc clara / No funciona} ✅
 
-**Grammar notes:** (secondary — don't over-focus)
-- {major error → correction, only if communication-blocking}
+**Notes:** (secondary — don't over-focus)
+- {only corrections that matter for the math, in the canonical shape}
 
-**Natural alternative:**
-You could also say: "{more_natural_phrasing}"
+**Una manera de dir-ho:**
+També ho podries explicar així: "{clearer phrasing of the same math}"
 
 **Score: {X}/10**
-- Communication: {Y}/5
-- Grammar: {Z}/3
-- Vocabulary: {W}/2
+- Estratègia: {Y}/5
+- Justificació: {Z}/3
+- Precisió: {W}/2
 
 {encouragement}
 
 ---
 ```
 
-### 6. Role-play (advanced)
+Correction lines, when there are any, still use the canonical shape
+(marker, quoted wrong, arrow, bold right, `(category — why)`) so they reach
+`mistakes-db` — usually `procedure`, `facts` or `misread`.
 
-For B1+ or when the learner is warmed up:
-
-```markdown
-## 🎭 Role-Play
-
-**Scenario:** {description in native language}
-**Your role:** {what the learner plays}
-**I'll be:** {what Claude plays}
-
-Ready? I'll start...
-
----
-
-{first line in target language}
-
-**Your turn:**
-```
-
-### 7. Session summary
+### 6. Session summary
 
 ```markdown
-## 🎉 Speaking Session Complete!
+## 🎉 Math Talk Session Complete!
 
 **Duration:** {X} min
 **Questions Answered:** {N}
 **Topics Covered:** {list}
 
-### Communication Scores
+### Strategy Scores
 **Overall:** {percent}%
-- Clear messages: {count}
-- Natural expression: {rating}/5
+- Clear strategies: {count}
+- Explained the "why": {count}
 - Confidence: Growing! 💪
 
-### Vocabulary Used Well
-- {words}
+### Strategies Used Well
+- {strategies}
 
 ### For Next Time
-- Try using: {new phrase}
-- Practice: {weak area}
+- Prova de fer servir: {new strategy}
+- Repassa: {weak area}
 
-**{target-language well done}!** 🌟
+Molt bé! 🌟
 
 ### 🚀 Keep going?
-{one concrete next step, e.g. "One more round on [topic] using [new phrase]."}
+{one concrete next step, e.g. "One more round on [topic], explaining each step."}
 
-Press 🎲 **Go** to keep practicing, or pick a button at the top (🎓 Review · 📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).
+Press 🎲 **Go** to keep practicing, or pick a button at the top (🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End).
 ```
 
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.
 
-### 8. Update all databases
+### 7. Update all databases
 
-Session fields: `command_used`, `skills_practiced: ["speaking"]`,
-`skill_scores.speaking`, `errors[]` (only communication-blocking ones — don't
-flood mistakes-db with minor speaking slips), `focus_next_session[]`.
+Session fields: `command_used`, `skills_practiced: ["reasoning"]`,
+`skill_scores.reasoning`, `errors[]` (only strategy-breaking ones — don't
+flood mistakes-db with minor talk slips), `focus_next_session[]`.
 
-**Persistence is automatic — you write nothing.** The Fluent server folds every
+**Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
 the results file under `~/.fluent/<id>/results/`. Do NOT call `update-db.py`,
@@ -201,46 +189,45 @@ the fields listed above.)*
 
 ## Examples
 
-*(Placeholders. NEVER copy the language of an example into a session — derive both language names from the learner's profile, every turn.)*
+*(Placeholders. NEVER copy the numbers of an example into a session — anchor every question to this learner's level and recent work.)*
 
-### Example 1 — personal intro
+### Example 1 — strategy question
 
-> ## Question 1: Introductions
+> ## Question 1: Càlcul mental
 >
-> {"Tell me about yourself. Where are you from?" — asked in {Target}}
-> ({the same question in {Native}, for A1-A2 learners})
+> Com fas 29 + 17 de cap? Explica-ho en una o dues frases.
 
-Learner: *(two sentences in {Target}: name, origin, where they live now — with
-one preposition slip)*
+Learner: "faig 30 + 17 i després trec 1"
 
-> ✅ Clear and natural!
+> ✅ Exacte — compensar i tornar. Aquesta és una estratègia de veritat.
 >
-> **What you said:** "{their reply}"
+> **Què has dit:** "faig 30 + 17 i després trec 1"
 >
-> **Communication:** Clear ✅
+> **Estratègia:** Real i vàlida ✅
 >
-> **Grammar notes:**
-> - 🟢 "{their preposition}" → **"{the right one}"** (prepositions — origin takes {the right one}). Small slip; the message was still crystal clear.
+> **Score: 10/10** — i ara digues-ho amb una operació: 29 + 17 = 30 + 17 − 1 = 46.
+
+### Example 2 — a strategy that doesn't work
+
+> ## Question 3: Taules
 >
-> **Score: 9/10** — keep going, that flowed well.
+> Saps 6 × 7? Com ho esbrinaries si no te'n recordessis?
+
+Learner: "sumo 6 + 7"
+
+> 🟡 Bona intuïció — les taules són sumes repetides — però 6 + 7 és una suma, no sis setens.
+>
+> **Corrections:**
+> - 🟡 "6 + 7" → **"6 + 6 + 6 + 6 + 6 + 6 (sis vegades set)"** (procedure — multiplicar és sumar el mateix nombre diverses vegades)
+>
+> **Score: 5/10** 💪 La idea de sumar és la correcta; la manera d'usar-la, demà al repàs.
 
 ## Critical Rules
 
-- **Communication first.** A clear message with a missed article scores better than a grammatically perfect but confusing answer.
+- **Strategy first.** A real method explained loosely scores better than a memorized slogan with no understanding.
 - **One question at a time.** Wait for reply before next.
-- **Stay in the target language** for questions and transitions. Drop to native only for explanations.
-- **Praise natural expression.** If the learner uses a hesitation marker or discourse particle of {Target} correctly, call it out — those are fluency markers.
-- **Don't over-correct.** A speaking session with 20 red marks kills confidence.
-- FRIEND MODE (only if `preferences.tutor_style == "friend"`): pick role-play scenarios involving `learner.interests`.
+- **Talk in the learner's language.** Math talk is about thinking; the thinking happens in their language. The math notation follows `rules.md`.
+- **Praise real strategies.** If the learner invents a valid shortcut, call it out by name — that is the signal that their thinking counts.
+- **Don't over-correct.** A talk session with 20 red marks kills the willingness to explain. Correct only what breaks the math.
+- FRIEND MODE (only if `preferences.tutor_style == "friend"`): anchor questions to problems from `session_log.last_session` and `learner.interests`.
 - **Never auto-invoke.** Gated; must fire only on explicit `/math-speaking`.
-
-## Language Reference
-
-No per-language filler list is kept here on purpose: a fixed example language
-leaks into sessions. Every language has its own hesitation markers and
-discourse particles ("well…", "actually…", "so…", "right"), and using them is a
-genuine fluency signal.
-
-Derive them from the profile's target language, and when the learner uses one
-correctly, name it and praise it — that is the cue that they are thinking in the
-language rather than translating.
