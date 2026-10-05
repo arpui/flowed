@@ -30,6 +30,27 @@ def clear_caches():
     main_paths.backups_dir.cache_clear()
 
 
+_ISOLATED = None
+
+
+def isolated_lib_paths() -> str:
+    """A copy of scripts/lib-paths.sh with no .env anywhere near it.
+
+    lib-paths.sh loads <root>/.env at source time (so a FLOWED_HOME in .env is
+    honored by every script). The repo's own .env is a live machine file —
+    FLOWED_HOME, model ports — and must not leak into tests of the fallback
+    rule or of the loader itself. Sourcing the repo copy directly made those
+    tests machine-dependent; sourcing this copy keeps them hermetic.
+    """
+    global _ISOLATED
+    if _ISOLATED is None:
+        _ISOLATED = tempfile.TemporaryDirectory(prefix="flowmath-libpaths-")
+        scripts = Path(_ISOLATED.name) / "scripts"
+        scripts.mkdir()
+        shutil.copy(REPO_ROOT / "scripts" / "lib-paths.sh", scripts / "lib-paths.sh")
+    return str(Path(_ISOLATED.name) / "scripts" / "lib-paths.sh")
+
+
 class FluentPathsTest(unittest.TestCase):
     def setUp(self):
         self._saved_env = {k: os.environ.get(k) for k in MANAGED_ENV}
@@ -193,7 +214,11 @@ class ProfilesRootTest(unittest.TestCase):
         os.environ.pop("FLOWED_HOME", None)
 
     def shell(self) -> str:
-        lib = REPO_ROOT / "scripts" / "lib-paths.sh"
+        # Source a COPY of lib-paths.sh outside the repo: the library now loads
+        # <root>/.env at source time (so FLOWED_HOME in .env is honored), and the
+        # repo's own .env is a live machine file that must not leak into the
+        # fallback rule under test.
+        lib = isolated_lib_paths()
         return subprocess.run(["bash", "-c", f'source "{lib}"; echo "$FLOWED_HOME_DIR"'],
                               capture_output=True, text=True, env=dict(os.environ)).stdout.strip()
 
@@ -232,7 +257,7 @@ class LoadEnvTest(unittest.TestCase):
                 Path(d, ".env").write_text(env_text)
             env = {k: v for k, v in os.environ.items() if not k.startswith(("FLOWED_", "FLUENT_"))}
             env.update(extra_env or {})
-            script = (f'set -euo pipefail; source "{REPO_ROOT}/scripts/lib-paths.sh"; '
+            script = (f'set -euo pipefail; source "{isolated_lib_paths()}"; '
                       f'flowed_load_env "{d}"; '
                       'echo "$FLOWED_DEEP_PORT|${FLOWED_DEEP_BACKEND:-}|${FLOWED_ENV_FILE:+yes}"')
             r = subprocess.run(["bash", "-c", script], capture_output=True, text=True, env=env)

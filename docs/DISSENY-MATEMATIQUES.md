@@ -1,6 +1,6 @@
 # Disseny — mòdul d'aprenentatge de matemàtiques (fork paral·lel de FlowEd)
 
-**Data:** 2026-10-04 · **Estat:** esborrany per decidir. **No toca res de `flowed` en producció**: tot el que descriu aquí es farà en un directori nou, en paral·lel.
+**Data:** 2026-10-04 · **Estat:** decisions D1–D10 validades per l'Albert (2026-10-05, totes segons la recomanació). **Fase 0 en execució**: fork creat a `~/projects/flowmath` (snapshot de l'estat de producció committat, `FLOWED_HOME=~/.flowmath`, web de proves a `4200` funcionant, fix del `lib-paths.sh` pel `FLOWED_HOME` de l'`.env`). **No toca res de `flowed` en producció.**
 
 **Objectiu:** aprofitar el màxim de l'arquitectura de FlowEd (tutor d'idiomes amb LLM local) per construir un tutor de matemàtiques amb la mateixa base: competències, banc d'exercicis tancats amb correcció determinista, SM-2, lliçó del dia, camí de progrés i web multi-usuari. La diferència pedagògica central: en lloc de corregir frases, **l'alumne resol per operacions parcials (passos) que porten al resultat, i el sistema li demana i avalua els passos**.
 
@@ -40,7 +40,7 @@ El projecte ja va fer (2026-09-24, `docs/PLA-EXERCICIS-TANCATS.md`) el gir que m
 | Marca | **FlowMath** (provisional). Skills/comandes/eines `fluent-*` → `math-*` |
 | Dades | `FLOWED_HOME=~/.flowmath` (ja és una variable, `hooks/main_paths.py:41-55`); perfils `<nom>-math` (p. ex. `naia-math`) |
 | Ports web | 4200+ (`FLOWED_WEBS="test-math:4200 …"` al `.env` del fork) |
-| Models | **Compartits**: el fork apunta al mateix llama.cpp (port 12322). Els servidors web són lectors del endpoint; no hi ha conflicte. Si mai es vol aïllar, `FLOWED_DEEP_PORT` propi |
+| Models | **Remot de proves** (acord 2026-10-05): `192.168.31.102:12321`, idèntic al local (Qwen3-14B-Q4_K_M). Ja configurat al fork: `FLOWED_DEEP_BASE_URL` apuntant-hi i `FLOWED_DEEP_MANAGED=0` perquè cap script del fork en pugui un de local. **El model local (12322) només es puja quan calgui** — la feina s'organitza per no necessitar-lo: el camí del banc (Go/Review/Fets) no usa model, i l'únic que el necessita (e2e amb tutor, Fase 3) es pot provar contra el remot |
 | Producció | Zero canvis a `~/projects/flowed`. El fork té el seu `.env`, els seus pidfiles (`/tmp/fluent-web-N.pid` → es reanomenaran), les seves proves |
 
 ### 2.2 El renombrat `fluent-` → `math-`: radiografia exacta
@@ -256,7 +256,7 @@ Amb la Fase 1 ja hi ha un tutor de matemàtiques usable: Go/Review/Fets sobre ba
 | D7 | Notació al web | Unicode / KaTeX | Unicode; KaTeX només si cal fracció vertical (WP4.3) |
 | D8 | TTS a matemàtiques | keep / off | **Off** (no hi ha llengua meta que sentir) |
 | D9 | Quines pràctiques obertes a la v1 | problemes verbals + raonament / cap | Problemes verbals sí (és on el model aporta); `math talk` després |
-| D10 | Models compartits o propis | mateix endpoint 12322 / port propi | Compartit (són lectors; cap conflicte) |
+| D10 | Models compartits o propis | mateix endpoint 12322 / port propi | **Resolt (2026-10-05):** proves contra el remot `192.168.31.102:12321` (idèntic); el model local es puja només quan calgui |
 
 ## 7. Riscos
 
