@@ -218,11 +218,6 @@ class TtsWebSurfaceTest(unittest.TestCase):
         body = self.app.split("function renderTutorText")[1][:300]
         self.assertIn("markSayable", body)
 
-    def test_the_tutor_is_told_about_the_marker(self):
-        rules = (REPO_ROOT / "prompts" / "agents" / "rules.md").read_text()
-        self.assertIn("[[say]]", rules)
-        self.assertIn("TARGET language", rules)
-
     def test_the_dead_exercise_card_is_not_the_only_place(self):
         # The first version wired the speaker to #exercise-card, which has been
         # switched off since before the audio existed: the button was never

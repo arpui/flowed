@@ -895,68 +895,6 @@ export function topicsNote(topics: readonly string[], seed: number, level?: stri
 }
 
 /**
- * What Vocabulary may draw its cards from.
- *
- * The review queue holds words AND rules the learner broke, and reaches the tutor
- * as one flat list. skills/math-vocab/SKILL.md says an `error_pattern` is not a
- * word and cites `articles_an_apple` as the live case; the tutor still made
- * flashcards of "an", "on", "goes" and "capitalització". So the server says which
- * due items are words, and that the rest are not. Null when there is nothing to say.
- */
-export function vocabularyDueNote(
-  sr: unknown,
-  today: string,
-  covered: readonly string[] = [],
-  max = 5,
-  langs: { native?: string; target?: string } = {}
-): string | null {
-  const items = (sr as { items?: Record<string, Record<string, unknown>> })?.items ?? {};
-  const words: string[] = [];
-  let rules = 0;
-  for (const id of dueItemIds(sr, today)) {
-    const it = items[id] ?? {};
-    if (String(it.type ?? it.item_type ?? "") !== "vocabulary") {
-      rules++;
-      continue;
-    }
-    const content = String(it.content ?? "").trim();
-    if (!content || covered.includes(normalizeExercise(content))) continue;
-    if (words.length < max) {
-      words.push(`"${content}"` + (it.answer ? ` (${String(it.answer)})` : ""));
-    }
-  }
-  const bits: string[] = [];
-  if (words.length) {
-    bits.push(`Words due for review today — use these for your cards first: ${words.join(", ")}.`);
-  }
-  // With nothing due (right after the Lesson, everything was rescheduled) the tutor
-  // picked its own "words": an, de, on — cards for an article and two prepositions.
-  bits.push(
-    `Every card is a noun, verb or adjective with its meaning — never an article ` +
-      `("a", "an", "the"), a preposition ("on", "of", "in") or a piece of a grammar sentence.`
-  );
-  if (rules) {
-    bits.push(
-      `The review queue also holds grammar and spelling items: those are rules, not words — ` +
-        `never turn one into a flashcard.`
-    );
-  }
-  // The two card templates of the skill, mixed up on the learner's screen:
-  // "Català: finestra — Què vol dir en català?" asks for the meaning, in Catalan, of
-  // a Catalan word.
-  if (langs.native && langs.target) {
-    bits.push(
-      `A card shows a word in one language and asks for it in the other: a word written in ` +
-        `${langs.native} asks "How do you say it in ${langs.target}?", a word written in ` +
-        `${langs.target} asks "What does it mean in ${langs.native}?". Never ask for a word's ` +
-        `meaning in the language it is already written in.`
-    );
-  }
-  bits.push(`Say nothing about this note.`);
-  return bits.join(" ");
-}
-
-/**
  * What the server tells the tutor about the lesson in progress: STATE, not a
  * script.
  *
@@ -1291,22 +1229,12 @@ export function feedbackFollowsGrading(
   return false;
 }
 
-/**
- * The tutor sometimes swaps which language is being practiced with which is
- * native. Measured live, 2026-09-22, test-en: with target_language "English"
- * and native_language "Catalan", a Speaking session opened "## 🗣 Catalan
- * Speaking Practice" and told the learner to "Respon en català" — the whole
- * practice ran in the learner's OWN language, which teaches nothing. Ground
- * truth is on the server (the profile), so this is checked directly rather
- * than guessed at: the session's own opening heading must name the target
- * language, not the native one.
- */
 /** This app is text-only: no picture, photo, image or diagram is ever shown to
  *  the learner. Measured 2026-09-22: the small local model kept inventing "Look
  *  at the picture below. Describe what you see." around the curriculum's
  *  "There is/There are" example ("___ a book on the table."), across several
  *  turns and even a fresh session, despite the skill saying not to — a
- *  deterministic catch is needed, the same as languageDirectionGuard below. */
+ *  deterministic catch is needed. */
 export function pictureGuard(text: string): string | null {
   const re =
     /\b(?:look at the (?:picture|photo|image|diagram)\b|in the (?:picture|photo|image)\s+(?:below|above)\b|describe what you see)/i;
@@ -1341,25 +1269,6 @@ export function writingBlankGuard(text: string, command?: string | null): string
     `from her life, the one or two words she should use ("Use: ..."), and how many sentences to write — ` +
     `no "___", nothing to complete, nothing to copy.`
   );
-}
-
-export function languageDirectionGuard(text: string, target?: string, native?: string): string | null {
-  if (!target || !native || target.trim().toLowerCase() === native.trim().toLowerCase()) return null;
-  const m = /^#{1,6}\s*([^\n]*Speaking Practice[^\n]*)/im.exec(text);
-  if (!m) return null;
-  const heading = (m[1] ?? "").trim();
-  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const hasNative = new RegExp(`\\b${esc(native)}\\b`, "i").test(heading);
-  const hasTarget = new RegExp(`\\b${esc(target)}\\b`, "i").test(heading);
-  if (hasNative && !hasTarget) {
-    return (
-      `This Speaking session opened as "${heading}" — but the learner's target language is ` +
-      `${target}, and ${native} is only their NATIVE language, never what Speaking practices. ` +
-      `Write the turn again with the heading and every instruction about which language to ` +
-      `speak correctly naming ${target}, not ${native}.`
-    );
-  }
-  return null;
 }
 
 export function turnGuard(st: TurnGuardState): string | null {
@@ -2041,56 +1950,6 @@ export function stripTemplateBraces(text: string): string {
     // The Reading skill's own heading instruction, copied as is (14B,
     // 2026-09-29): `## {"Question 1: Main idea" — in English}` → the quoted part.
     .replace(/\{\s*"([^"\n{}]{1,80})"\s*[—–-][^{}\n]{0,60}\}/gu, "$1");
-}
-
-const SCRIPTS: Array<{ re: RegExp; langs: string[] }> = [
-  { re: /[㐀-鿿豈-﫿]/u, langs: ["chinese", "japanese", "mandarin", "cantonese"] },
-  { re: /[぀-ヿ]/u, langs: ["japanese"] },
-  { re: /[가-힯ᄀ-ᇿ]/u, langs: ["korean"] },
-  { re: /[Ѐ-ӿ]/u, langs: ["russian", "ukrainian", "bulgarian", "serbian", "belarusian", "macedonian"] },
-  { re: /[Ͱ-Ͽ]/u, langs: ["greek"] },
-  { re: /[؀-ۿ]/u, langs: ["arabic", "persian", "farsi", "urdu"] },
-  { re: /[֐-׿]/u, langs: ["hebrew", "yiddish"] },
-  { re: /[ऀ-ॿ]/u, langs: ["hindi", "marathi", "nepali"] },
-  { re: /[฀-๿]/u, langs: ["thai"] },
-];
-
-/** Characters of a script that is neither the target nor the native language
- *  — 14B, Reading, 2026-09-27: "they played on the swings, 滑梯, and…" in a
- *  text for an A1 learner of English, then a question about that word. */
-export function foreignScript(text: string, target?: string, native?: string): RegExp | null {
-  const mine = [target, native].map((l) => String(l ?? "").trim().toLowerCase());
-  for (const s of SCRIPTS) {
-    if (s.langs.some((l) => mine.includes(l))) continue;
-    if (s.re.test(text)) return new RegExp(`${s.re.source}+`, "gu");
-  }
-  return null;
-}
-
-export function foreignScriptGuard(text: string, target?: string, native?: string): string | null {
-  const re = foreignScript(text, target, native);
-  if (!re) return null;
-  const sample = (String(text).match(re) ?? []).slice(0, 3).join(", ");
-  return (
-    `Your reply contains words in another writing system (${sample}). The learner is learning ` +
-    `${target ?? "the target language"} and reads ${native ?? "her own language"}; she cannot read ` +
-    `these. Write the whole turn again using only ${target ?? "the target language"} (and ` +
-    `${native ?? "her language"} where the practice allows it), with an ordinary word in their place.`
-  );
-}
-
-/** Last resort when the rewrite still carries them: drop the characters and
- *  tidy what is left ("swings, 滑梯, and" → "swings, and"). */
-export function stripForeignScript(text: string, target?: string, native?: string): string {
-  let out = String(text ?? "");
-  for (let re = foreignScript(out, target, native); re; re = foreignScript(out, target, native)) {
-    out = out.replace(re, "");
-  }
-  return out
-    .replace(/[ \t]+([,.;:!?])/g, "$1")
-    .replace(/([,;:])(\s*[,;:])+/g, "$1")
-    .replace(/(["“'‘])\s*(["”'’])/g, "")
-    .replace(/[ \t]{2,}/g, " ");
 }
 
 /** The feedback a learner must see, rebuilt from the tutor's own

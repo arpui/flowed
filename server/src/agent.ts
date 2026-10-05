@@ -19,7 +19,6 @@ import {
   KNOWN_SCORE,
   scoreOfReply,
   writingLengthNote,
-  vocabularyDueNote,
   parseTopics,
   exerciseOnlyOf,
   isExerciseGuard,
@@ -43,15 +42,11 @@ import {
   parseFeedback,
   alignMarkersToScore,
   stripTemplateBraces,
-  foreignScriptGuard,
-  stripForeignScript,
-  foreignScript,
   feedbackFromRecord,
   spliceFeedback,
   withAnswerInFront,
   alignLessonHeader,
   turnGuard,
-  languageDirectionGuard,
   pictureGuard,
   writingBlankGuard,
   hasExerciseHeader,
@@ -1560,13 +1555,11 @@ export class Agent {
   }
 
   /**
-   * After the guards, two things the learner must never be left with
-   * (tutor-bench, 2026-09-27 — docs/MODELBENCH.md):
-   *  - words in a script she cannot read, still there after the rewrite
-   *    (foreignScriptGuard asked for one): dropped;
-   *  - an answer graded in math_record_answer with nothing of it on screen
-   *    ("Waiting for your answer! ⏱️"): the feedback is rebuilt from the call
-   *    and put before whatever the reply says.
+   * After the guards, one thing the learner must never be left with
+   * (tutor-bench, 2026-09-27 — docs/MODELBENCH.md): an answer graded in
+   * math_record_answer with nothing of it on screen ("Waiting for your
+   * answer! ⏱️") — the feedback is rebuilt from the call and put before
+   * whatever the reply says.
    */
   private repairShownText(
     sessionId: string,
@@ -1576,15 +1569,7 @@ export class Agent {
     heldTextPartIds: string[],
   ): void {
     try {
-      const langs = this.learnerLanguages();
       const texts = view().parts.filter((p) => (p as { type?: string }).type === "text") as Array<{ id?: string; text?: string }>;
-      for (const p of texts) {
-        const t = String(p.text ?? "");
-        if (p.id && foreignScript(t, langs.target, langs.native)) {
-          this.db.updatePart(String(p.id), { type: "text", text: stripForeignScript(t, langs.target, langs.native) });
-          this.logGuard(sessionId, "foreign script dropped", t);
-        }
-      }
       if (!recordArgs || this.answerInFront.get(sessionId) !== true) return;
       const shown = view().parts.some((p) => {
         const q = p as { type?: string; text?: string };
@@ -1699,7 +1684,6 @@ export class Agent {
         this.answerInFront.get(sessionId) === true && graded !== null && graded >= KNOWN_SCORE
           ? (this.lastAsked.get(sessionId) ?? [])
           : [];
-      const langs = this.learnerLanguages();
       // Snapshot now: the "already asked" branch below calls pacingNote()
       // again mid-turn, which reassigns this.assignedCompetence to whatever
       // curriculum.py picks next. The exercise text that ends up on screen
@@ -1711,10 +1695,8 @@ export class Agent {
       // "Number: one" into an unrelated articles_plurals exercise that had
       // nothing to do with numbers.
       const compAtStart = this.assignedCompetence.get(sessionId) ?? null;
-      const note = foreignScriptGuard(text, langs.target, langs.native)
-        ?? pictureGuard(text)
+      const note = pictureGuard(text)
         ?? writingBlankGuard(text, this.currentCommand.get(sessionId))
-        ?? languageDirectionGuard(text, langs.target, langs.native)
         ?? turnGuard({
         inLesson,
         pending: lesson.pending,
@@ -2041,20 +2023,6 @@ export class Agent {
     };
   }
 
-  /** Native and target language from the profile, in English ("Catalan", "English"). */
-  private learnerLanguages(): { native?: string; target?: string } {
-    try {
-      const prof = JSON.parse(
-        fs.readFileSync(path.join(this.dataDir(), "learner-profile.json"), "utf8")
-      );
-      const pick = (v: unknown) =>
-        typeof v === "string" && v.trim() && !v.includes("{") ? v.trim() : undefined;
-      return { native: pick(prof?.learner?.native_language), target: pick(prof?.learner?.target_language) };
-    } catch {
-      return {};
-    }
-  }
-
   /** The learner's CEFR level from the profile, upper-cased, or undefined. */
   private learnerLevel(): string | undefined {
     try {
@@ -2352,24 +2320,6 @@ export class Agent {
       // from her own life, per math-writing's own SKILL.md) unless a
       // teacher's topic (topics.txt) sets one explicitly.
       return [free, w, topics].filter(Boolean).join(" ") || null;
-    }
-    if (this.currentCommand.get(sessionId) === "math-vocab") {
-      let v: string | null = null;
-      try {
-        const sr = JSON.parse(
-          fs.readFileSync(path.join(this.dataDir(), "spaced-repetition.json"), "utf8")
-        );
-        v = vocabularyDueNote(sr, todayISO(), this.lessonPlan().covered, 5, this.learnerLanguages());
-      } catch {
-        /* no queue: the skill's own rules apply */
-      }
-      // A due word is a review the learner already owes; the competence waits. NOT any
-      // `v`: vocabularyDueNote() always says something (the "every card is a noun…" rule),
-      // and treating that as a due word dropped the competence in every Vocabulary turn
-      // (measured 2026-09-21, curriculum 201107: 0 of 15 turns assigned).
-      const dueWords = Boolean(v && v.includes("Words due for review today"));
-      if (dueWords) this.assignedCompetence.delete(sessionId);
-      return [free, v, dueWords ? null : compNote ?? topics].filter(Boolean).join(" ") || null;
     }
     return [free, compNote ?? topics].filter(Boolean).join(" ") || null;
   }

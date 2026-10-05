@@ -69,7 +69,7 @@
       "piper/piper and voices/<voice>.onnx, the voice's language taken from its name (en_* -> English).",
       "Install with: scripts/flowed-tts.sh install en_GB-alba-medium"
     ],
-    "enabled": true,
+    "enabled": false,
     "cache_max_mb": 200,
     "timeout_ms": 20000
   },

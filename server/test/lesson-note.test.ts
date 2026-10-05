@@ -26,7 +26,6 @@ import {
   followsCompetence,
   followsAssigned,
   feedbackFollowsGrading,
-  vocabularyDueNote,
   writingLengthNote,
   parseTopics,
   exerciseOnlyOf,
@@ -848,27 +847,6 @@ check("and an empty fingerprint never reaches the list",
       graded: false, closing: false, answering: "you are writing a short note to a friend" })));
 }
 
-// Vocabulary draws its cards from the words, not from the rules.
-{
-  const sr = { items: {
-    mat: { type: "vocabulary", content: "matí", answer: "morning", due_date: "2026-09-13" },
-    win: { type: "vocabulary", content: "finestra", answer: "window", due_date: "2026-09-13" },
-    art: { type: "error_pattern", content: "I eat an apple", answer: "I eat an apple", due_date: "2026-09-13" },
-    old: { type: "vocabulary", content: "casa", answer: "house", due_date: "2026-09-13" },
-  } };
-  const n = vocabularyDueNote(sr, "2026-09-13", ["casa"]) ?? "";
-  check("it lists the due words with their answers", n.includes('"matí" (morning)') && n.includes('"finestra" (window)'), n);
-  check("a word she already knows is not offered", !n.includes('"casa"'), n);
-  check("and the rules are named as not-words", n.includes("rules, not words") && !n.includes("I eat an apple"), n);
-  check("only words due: no rules line", !(vocabularyDueNote({ items: { mat: sr.items.mat } }, "2026-09-13") ?? "").includes("rules"));
-  check("nothing due: still says what a card is",
-    (vocabularyDueNote({ items: {} }, "2026-09-13") ?? "").includes("never an article"));
-  check("and there is no word list to offer",
-    !(vocabularyDueNote({ items: {} }, "2026-09-13") ?? "").includes("Words due"));
-  const ag7 = fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8");
-  check("Vocabulary gets it", ag7.includes('=== "math-vocab"') && ag7.includes("vocabularyDueNote(sr, todayISO()"));
-}
-
 // The closing reply has to grade the last answer (days 083631, temp06 day 3).
 {
   const st = { inLesson: true, pending: 0, coveredToday: [] as string[], asked: [] as string[], graded: false, closing: true,
@@ -945,7 +923,7 @@ check("and an empty fingerprint never reaches the list",
   check("not this note when it closes the session", !(turnGuard({ ...st, closing: true }) ?? "").includes("not answered anything"));
 }
 
-// Vocabulary: a graded reply must ask the next card; and the card says which language.
+// Vocabulary: a graded reply must ask the next card.
 {
   const st = { inLesson: false, pending: 0, coveredToday: [] as string[], asked: [] as string[],
                graded: true, closing: false, answering: "casa", oneAtATime: true };
@@ -955,16 +933,9 @@ check("and an empty fingerprint never reaches the list",
   check("not when it closes the session", turnGuard({ ...st, closing: true }) === null);
   check("not when there was no answer (a button)", turnGuard({ ...st, answering: null }) === null);
   check("not when it does ask", turnGuard({ ...st, asked: ["gat"] }) === null);
-  const n = vocabularyDueNote({ items: {} }, "2026-09-13", [], 5, { native: "Catalan", target: "English" }) ?? "";
-  check("the note names the two directions",
-    n.includes('written in Catalan asks "How do you say it in English?"') &&
-    n.includes('written in English asks "What does it mean in Catalan?"'), n);
-  check("no languages, no such sentence",
-    !(vocabularyDueNote({ items: {} }, "2026-09-13") ?? "").includes("How do you say it in"));
   const ag8 = fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8");
-  check("the server passes the flag and the languages",
-    ag8.includes('oneAtATime: this.currentCommand.get(sessionId) === "math-vocab"') &&
-    ag8.includes("this.learnerLanguages()"));
+  check("the server passes the one-at-a-time flag",
+    ag8.includes('oneAtATime: this.currentCommand.get(sessionId) === "math-vocab"'));
 }
 
 {
@@ -1177,12 +1148,9 @@ check("and an empty fingerprint never reaches the list",
   check("agent asks hooks/curriculum.py next, only in Mix and Vocabulary",
     ag.includes('"hooks", "curriculum.py"') && ag.includes('"next", "--auto"') &&
       ag.includes('cmdNow === "math-learn" || cmdNow === "math-vocab"'));
-  check("with nothing due the vocabulary note still speaks but names no due words (so it must not stop the competence)",
-    !(vocabularyDueNote({ items: {} }, "2026-09-13") ?? "").includes("Words due for review today") &&
-      Boolean(vocabularyDueNote({ items: {} }, "2026-09-13")));
   check("Vocabulary is only handed competences with words", ag.includes('args.push("--vocab")'));
-  check("the competence note replaces the topics note, and yields to a due word",
-    ag.includes("compNote ?? topics") && ag.includes("dueWords ? null : compNote ?? topics") && ag.includes('v.includes("Words due for review today")'));
+  check("the competence note replaces the topics note",
+    ag.includes("compNote ?? topics"));
   check("the guard state, the note log and the record all carry the competence",
     // compAtStart: the competence snapshotted before pacingNote() can reassign it mid-turn
     ag.includes("competence: inLesson ? null : compAtStart") &&
