@@ -14,12 +14,12 @@
 
   "errors": [
     {
-      "pattern_id": "verb_conjugation_3rd_person",
-      "category": "grammar",
-      "subcategory": "verb_conjugation",
-      "your_answer": "Hij spreek",
-      "correct_answer": "Hij spreekt",
-      "context": "3rd person singular",
+      "pattern_id": "carrying_24_+_7_=_31",
+      "category": "carrying",
+      "subcategory": "addition_carry",
+      "your_answer": "24 + 7 = 21",
+      "correct_answer": "24 + 7 = 31",
+      "context": "two-digit addition with carry",
       "difficulty_score": 0.7,
       "severity": "critical",
       "notes": "optional free text"

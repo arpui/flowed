@@ -118,7 +118,7 @@ SESSION_PAYLOAD = {
     },
     "errors": [{
         "pattern_id": "verb_spreek",
-        "category": "grammar",
+        "category": "calculation",
         "subcategory": "verb_conjugation",
         "your_answer": "Hij spreek",
         "correct_answer": "Hij spreekt",
@@ -530,41 +530,41 @@ class ErrorTwinsTest(unittest.TestCase):
                             "correct_answer": right, "context": "", "severity": "moderate"}],
                 "new_vocabulary": [], "review_results": []}
 
-    def test_the_same_sentence_under_another_category_is_not_a_second_item(self):
-        self._run(self._err("capitalization_i_speak_english_on_mondays", "capitalization",
-                            "i speak english on mondays", "I speak English on Mondays"))
+    def test_the_same_answer_under_another_category_is_not_a_second_item(self):
+        self._run(self._err("place_value_247_+_38_=_285", "place_value",
+                            "247 + 38 = 185", "247 + 38 = 285"))
         before = set(self._items())
-        payload = self._err("grammar_I_speak_English_on_M", "grammar",
-                            "i speak english on mondays", "I speak English on Mondays")
+        payload = self._err("calculation_247_+_38_=_285", "calculation",
+                            "247 + 38 = 185", "247 + 38 = 285")
         payload["session_id"] = "session-u"
         self._run(payload)
         self.assertEqual(set(self._items()), before)
 
     def test_a_capital_in_the_id_is_not_a_second_item(self):
-        self._run(self._err("agreement_she_goes_to_school", "agreement", "She go to school",
-                            "She goes to school"))
+        self._run(self._err("carrying_247_+_38_=_285", "carrying", "247 + 38 = 185",
+                            "247 + 38 = 285"))
         before = set(self._items())
-        payload = self._err("agreement_She_goes_to_school", "agreement", "She go to school",
-                            "She goes to school.")
+        payload = self._err("Carrying_247_+_38_=_285", "carrying", "247 + 38 = 185",
+                            "247 + 38 = 285.")
         payload["session_id"] = "session-u"
         self._run(payload)
         self.assertEqual(set(self._items()), before)
 
-    def test_different_sentences_stay_different(self):
-        self._run(self._err("agreement_she_goes_to_school", "agreement", "She go to school",
-                            "She goes to school"))
-        payload = self._err("agreement_he_has_two_brothers", "agreement", "He have two brothers",
-                            "He has two brothers")
+    def test_different_answers_stay_different(self):
+        self._run(self._err("carrying_247_+_38_=_285", "carrying", "247 + 38 = 185",
+                            "247 + 38 = 285"))
+        payload = self._err("carrying_158_+_45_=_203", "carrying", "158 + 45 = 103",
+                            "158 + 45 = 203")
         payload["session_id"] = "session-u"
         self._run(payload)
-        self.assertIn("agreement_he_has_two_brothers", self._items())
+        self.assertIn("carrying_158_+_45_=_203", self._items())
 
     def test_short_forms_are_never_merged(self):
-        self._run(self._err("articles_an", "articles", "a", "an"))
-        payload = self._err("prepositions_an", "prepositions", "on", "an")
+        self._run(self._err("sign_+", "sign", "-", "+"))
+        payload = self._err("wrong_operation_+", "wrong_operation", "×", "+")
         payload["session_id"] = "session-u"
         self._run(payload)
-        self.assertIn("prepositions_an", self._items())
+        self.assertIn("wrong_operation_+", self._items())
 
 
 if __name__ == "__main__":

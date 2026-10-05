@@ -3,8 +3,12 @@
 
 The tutor's prompts, the deep evaluator's rubric and the transcript parser each
 used to carry their own list. Anything the parser did not recognize became
-"grammar" silently, so mistakes-db collapsed into a single category. These tests
-fail the moment the three drift apart again.
+the default category silently, so mistakes-db collapsed into a single category.
+These tests fail the moment the three drift apart again.
+
+WP1.4 replaced the 15 FlowEd grammar categories with the 12 math classes of
+docs/DISSENY-MATEMATIQUES.md §4.4; the machinery (SSOT + aliases + sync test)
+is the same one the language fork shipped with.
 """
 import importlib.util
 import re
@@ -32,18 +36,46 @@ class NormalizeTest(unittest.TestCase):
             self.assertEqual(db_schema.normalize_error_category(cat), cat)
 
     def test_hyphens_spaces_and_case(self):
-        self.assertEqual(db_schema.normalize_error_category("word-order"), "word_order")
-        self.assertEqual(db_schema.normalize_error_category("Word Order"), "word_order")
-        self.assertEqual(db_schema.normalize_error_category(" FORMAL_INFORMAL "), "formal_informal")
+        self.assertEqual(db_schema.normalize_error_category("order-of-operations"), "order_of_operations")
+        self.assertEqual(db_schema.normalize_error_category("Order Of Operations"), "order_of_operations")
+        self.assertEqual(db_schema.normalize_error_category(" WRONG_OPERATION "), "wrong_operation")
 
     def test_aliases(self):
-        self.assertEqual(db_schema.normalize_error_category("preposition"), "prepositions")
-        self.assertEqual(db_schema.normalize_error_category("pronoun"), "pronouns")
-        self.assertEqual(db_schema.normalize_error_category("inference"), "comprehension")
+        # The tutor names the slip in everyday words, in any of the three
+        # languages a Catalan classroom mixes.
+        self.assertEqual(db_schema.normalize_error_category("signe"), "sign")
+        self.assertEqual(db_schema.normalize_error_category("transport"), "carrying")
+        self.assertEqual(db_schema.normalize_error_category("ordre d'operacions"), "order_of_operations")
+        self.assertEqual(db_schema.normalize_error_category("taula"), "facts")
+        self.assertEqual(db_schema.normalize_error_category("simplificació"), "simplification")
+        self.assertEqual(db_schema.normalize_error_category("valor posicional"), "place_value")
+        self.assertEqual(db_schema.normalize_error_category("càlcul"), "calculation")
+        self.assertEqual(db_schema.normalize_error_category("incomplet"), "incomplete")
+
+    def test_every_alias_lands_on_a_canonical_category(self):
+        for alias, canon in db_schema.ERROR_CATEGORY_ALIASES.items():
+            self.assertIn(canon, db_schema.ERROR_CATEGORIES, f"alias {alias!r}")
+            self.assertEqual(db_schema.normalize_error_category(alias), canon)
+
+    def test_legacy_language_categories_are_accepted_but_deprecated(self):
+        # Stored language-era ids (and the #tags of the language curriculum
+        # files still shipped in the fork) keep their shape instead of
+        # collapsing into the default. The tutor-facing surfaces do not offer
+        # them; see LEGACY_ERROR_CATEGORIES in db_schema.py. One language name
+        # is deliberately redirected to its math counterpart by an alias:
+        # "comprehension" → "misread".
+        aliased = set(db_schema.ERROR_CATEGORY_ALIASES)
+        for cat in db_schema.LEGACY_ERROR_CATEGORIES:
+            if cat in aliased:
+                continue
+            self.assertEqual(db_schema.normalize_error_category(cat), cat)
+        self.assertEqual(db_schema.normalize_error_category("comprehension"), "misread")
+        self.assertNotIn("grammar", db_schema.ERROR_CATEGORIES)
 
     def test_unknown_falls_back(self):
-        self.assertEqual(db_schema.normalize_error_category("correct verb form"), "grammar")
-        self.assertEqual(db_schema.normalize_error_category(""), "grammar")
+        self.assertEqual(db_schema.normalize_error_category("correct verb form"), "calculation")
+        self.assertEqual(db_schema.normalize_error_category(""), "calculation")
+        self.assertEqual(db_schema.DEFAULT_ERROR_CATEGORY, "calculation")
 
 
 class SurfacesInSyncTest(unittest.TestCase):
@@ -55,6 +87,15 @@ class SurfacesInSyncTest(unittest.TestCase):
         self.assertIsNotNone(m, "tools.ts has no ERROR_CATEGORIES array")
         listed = re.findall(r'"([a-z_]+)"', m.group(1))
         self.assertEqual(listed, list(db_schema.ERROR_CATEGORIES))
+
+    def test_server_alias_map_matches_python(self):
+        """normalizeCategory's aliases must be the same map as
+        ERROR_CATEGORY_ALIASES, or the tool rejects what the parser accepts."""
+        src = (REPO_ROOT / "server" / "src" / "tools.ts").read_text(encoding="utf-8")
+        m = re.search(r"const aliases: Record<string, string> = \{(.*?)\};", src, re.S)
+        self.assertIsNotNone(m, "tools.ts has no aliases map")
+        listed = dict(re.findall(r'"([^"]+)":\s*"([a-z_]+)"', m.group(1)))
+        self.assertEqual(listed, db_schema.ERROR_CATEGORY_ALIASES)
 
     def test_rubric_and_tool_schema_are_derived_from_that_array(self):
         src = (REPO_ROOT / "server" / "src" / "tools.ts").read_text(encoding="utf-8")
@@ -84,14 +125,14 @@ class WritingFeedbackIsParseableTest(unittest.TestCase):
         return self.ps.parse_error_patterns([("assistant", body + "\n\n**Score: 6/10**\n")])
 
     def test_canonical_line_is_captured_with_its_category(self):
-        pats = self._patterns('- 🟡 "in Monday" → **"on Monday"** (prepositions — days take "on")')
+        pats = self._patterns('- 🟡 "24 + 7 = 21" → **"24 + 7 = 31"** (carrying — the carried 1 was dropped)')
         self.assertEqual(len(pats), 1)
-        self.assertEqual(pats[0]["category"], "prepositions")
+        self.assertEqual(pats[0]["category"], "carrying")
 
     def test_hyphenated_category_is_normalized(self):
-        pats = self._patterns('- 🔴 "I yesterday went" → **"I went yesterday"** (word-order — adverb last)')
+        pats = self._patterns('- 🔴 "3 + 2 × 4 = 20" → **"3 + 2 × 4 = 11"** (order-of-operations — multiply before adding)')
         self.assertEqual(len(pats), 1)
-        self.assertEqual(pats[0]["category"], "word_order")
+        self.assertEqual(pats[0]["category"], "order_of_operations")
 
     def test_writing_skill_template_uses_the_parseable_shape(self):
         skill = (REPO_ROOT / "skills/math-writing/SKILL.md").read_text(encoding="utf-8")

@@ -1777,10 +1777,11 @@ export function parseFeedback(text: string): ParsedFeedback | null {
     const wrong = (m[1] ?? "").trim();
     const right = (m[2] ?? "").trim();
     if (!wrong || !right || wrong === right) continue;
-    // "(agreement — with he/she/it the verb takes -s)": the category is the
+    // "(carrying — the carried 1 was dropped)": the category is the
     // part before the dash, the rest is the explanation.
     const note = (m[3] ?? "").trim();
-    const category = (note.split(/[—–-]/)[0] ?? "").trim().toLowerCase() || "grammar";
+    // Fallback mirrors DEFAULT_ERROR_CATEGORY in hooks/db_schema.py.
+    const category = (note.split(/[—–-]/)[0] ?? "").trim().toLowerCase() || "calculation";
     corrections.push({
       wrong, right,
       category: category.replace(/\s+/g, "_").slice(0, 32),

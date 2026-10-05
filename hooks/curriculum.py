@@ -32,7 +32,14 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from db_schema import ERROR_CATEGORIES  # noqa: E402
+from db_schema import ERROR_CATEGORIES, LEGACY_ERROR_CATEGORIES  # noqa: E402
+
+# The language curriculum files (curriculum/en-*.md) still ship in the fork and
+# use the FlowEd grammar names as `#tags`; the math taxonomy (WP1.4) replaced
+# them in ERROR_CATEGORIES. Until the math curriculum lands (WP1.1), tags and
+# item-id heads may be either generation — new content should use the math
+# names, legacy names keep validating.
+ALL_CATEGORY_NAMES = frozenset(ERROR_CATEGORIES) | frozenset(LEGACY_ERROR_CATEGORIES)
 import bank as bank_mod  # noqa: E402
 
 STATES = ("unseen", "introduced", "practicing", "consolidated", "mastered")
@@ -280,7 +287,7 @@ def validate_curriculum(cur: dict) -> list[str]:
         if c["section"].lower().startswith("vocab") and not c["words"]:
             out.append(f"{c['id']}: vocabulari sense Words")
         for tag in c["tags"]:
-            if tag.startswith("#") and tag[1:] not in ERROR_CATEGORIES:
+            if tag.startswith("#") and tag[1:] not in ALL_CATEGORY_NAMES:
                 out.append(f"{c['id']}: Tags desconegut {tag} (categories: {', '.join(ERROR_CATEGORIES)})")
         if not c["section"].lower().startswith("vocab") and not c["tags"]:
             out.append(f"{c['id']}: sense Tags (les respostes no es podran assignar a aquesta competència)")
@@ -817,11 +824,11 @@ def _record_category(rec: dict) -> str | None:
     """The kind of mistake/item: from the queue item id (`agreement_she_goes…`), else the first correction."""
     item = str(rec.get("item_id") or "")
     head = item.split("_", 1)[0]
-    if head in ERROR_CATEGORIES:
+    if head in ALL_CATEGORY_NAMES:
         return head
     for c in rec.get("corrections") or []:
         cat = str((c or {}).get("category") or "").strip().lower()
-        if cat in ERROR_CATEGORIES:
+        if cat in ALL_CATEGORY_NAMES:
             return cat
     return None
 

@@ -116,8 +116,10 @@ def check_patterns(d: Path):
     cats = collections.Counter(p.get("category") for p in patterns.values())
     print(f"  total          : {len(patterns)}")
     print(f"  per categoria  : {dict(cats)}")
-    if len(cats) == 1 and "grammar" in cats:
-        print("  ⚠ tot és 'grammar': la taxonomia torna a col·lapsar")
+    # Collapse detector: everything landing on the default category
+    # (DEFAULT_ERROR_CATEGORY in hooks/db_schema.py — "calculation").
+    if len(cats) == 1 and "calculation" in cats:
+        print("  ⚠ tot és 'calculation': la taxonomia torna a col·lapsar")
     ranked = sorted(patterns.items(), key=lambda kv: -(kv[1].get("frequency") or 0))[:5]
     for pid, p in ranked:
         idle = days_since(p.get("last_seen") or p.get("last_occurred"))

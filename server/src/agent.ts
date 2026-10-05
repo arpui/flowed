@@ -1887,7 +1887,10 @@ export class Agent {
       const answer = (this.lastAnswer.get(sessionId) ?? "").trim();
       if (!answer) return;
       const corrections = parsed.corrections
-        .map((c) => ({ ...c, category: normalizeCategory(c.category) ?? "grammar" }))
+        // Unrecognized label → the default category, mirroring
+        // DEFAULT_ERROR_CATEGORY in hooks/db_schema.py ("calculation": a slip
+        // is the most common unknown in math practice).
+        .map((c) => ({ ...c, category: normalizeCategory(c.category) ?? "calculation" }))
         .filter((c) => c.wrong && c.right);
       // The exercise THIS answer was for — captured by the caller before
       // `this.lastAsked` was overwritten with whatever this same reply asks

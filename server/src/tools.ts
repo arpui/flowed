@@ -35,41 +35,129 @@ function bashAllowed(command: string): boolean {
 
 // ---- deep-evaluation tool (port of plugin's math_deep_evaluate) ----------
 
-// Canonical error categories. SINGLE SOURCE: ERROR_CATEGORIES in
-// hooks/db_schema.py — tests/test_error_categories.py fails if these
-// two lists drift apart. Used by the deep rubric AND by math_record_answer's
-// validation, so a category the parser would silently turn into "grammar" is
-// rejected at the moment it is written instead.
+// Canonical error categories (math taxonomy, DISSENY-MATEMATIQUES §4.4).
+// SINGLE SOURCE: ERROR_CATEGORIES in hooks/db_schema.py —
+// tests/test_error_categories.py fails if these two lists drift apart, and
+// also checks the alias map below matches ERROR_CATEGORY_ALIASES there. Used
+// by the deep rubric AND by math_record_answer's validation, so a category the
+// parser would silently turn into the default ("calculation") is rejected at
+// the moment it is written instead. The language-era categories live only in
+// LEGACY_ERROR_CATEGORIES (Python side, for stored data and curriculum tags):
+// the tutor must never emit them, so they are deliberately NOT accepted here.
 export const ERROR_CATEGORIES = [
-  "grammar",
-  "word_order",
-  "tenses",
-  "agreement",
-  "articles",
-  "prepositions",
-  "pronouns",
-  "vocabulary",
-  "spelling",
-  "punctuation",
-  "capitalization",
-  "formal_informal",
-  "register",
-  "missing",
-  "comprehension",
+  "calculation",
+  "sign",
+  "place_value",
+  "carrying",
+  "order_of_operations",
+  "wrong_operation",
+  "procedure",
+  "facts",
+  "simplification",
+  "unit",
+  "misread",
+  "incomplete",
 ] as const;
 
 const CATEGORY_SET = new Set<string>(ERROR_CATEGORIES);
 
 export function normalizeCategory(raw: unknown): string | null {
   const c = String(raw ?? "").trim().toLowerCase().replace(/[-\s]+/g, "_");
+  // Surface terms in Catalan, Spanish and English; mirrors
+  // ERROR_CATEGORY_ALIASES in hooks/db_schema.py (kept in sync by
+  // tests/test_error_categories.py). Accents survive the normalization, so
+  // accented spellings are listed as written.
   const aliases: Record<string, string> = {
-    wordorder: "word_order",
-    preposition: "prepositions",
-    pronoun: "pronouns",
-    tense: "tenses",
-    inference: "comprehension",
-    detail: "comprehension",
-    reading: "comprehension",
+    "calculo": "calculation",
+    "cálculo": "calculation",
+    "càlcul": "calculation",
+    "compta": "calculation",
+    "comptar": "calculation",
+    "calcular": "calculation",
+    "arithmetic": "calculation",
+    "aritmética": "calculation",
+    "aritmètica": "calculation",
+    "signe": "sign",
+    "signo": "sign",
+    "minus": "sign",
+    "plus": "sign",
+    "negatiu": "sign",
+    "positiu": "sign",
+    "valor_posicional": "place_value",
+    "posicio": "place_value",
+    "posició": "place_value",
+    "posicion": "place_value",
+    "unitats_desenes_centenes": "place_value",
+    "ones_tens_hundreds": "place_value",
+    "carry": "carrying",
+    "carries": "carrying",
+    "carried": "carrying",
+    "carry_over": "carrying",
+    "transport": "carrying",
+    "transportar": "carrying",
+    "arrestando": "carrying",
+    "arrestament": "carrying",
+    "llevadas": "carrying",
+    "ordre": "order_of_operations",
+    "orden": "order_of_operations",
+    "ordre_d'operacions": "order_of_operations",
+    "orden_de_operaciones": "order_of_operations",
+    "orden_operaciones": "order_of_operations",
+    "operation_order": "order_of_operations",
+    "operator_precedence": "order_of_operations",
+    "precedence": "order_of_operations",
+    "bodmas": "order_of_operations",
+    "pemdas": "order_of_operations",
+    "operacio_equivocada": "wrong_operation",
+    "operació_equivocada": "wrong_operation",
+    "operacion_equivocada": "wrong_operation",
+    "operación_equivocada": "wrong_operation",
+    "wrong_op": "wrong_operation",
+    "operation_choice": "wrong_operation",
+    "procediment": "procedure",
+    "procedimiento": "procedure",
+    "sequencia": "procedure",
+    "seqüència": "procedure",
+    "method": "procedure",
+    "mètode": "procedure",
+    "fet_basic": "facts",
+    "fet_bàsic": "facts",
+    "basic_fact": "facts",
+    "hecho_basico": "facts",
+    "hecho_básico": "facts",
+    "taula": "facts",
+    "taules": "facts",
+    "tabla": "facts",
+    "tablas": "facts",
+    "times_table": "facts",
+    "times_tables": "facts",
+    "multiplicar": "facts",
+    "memorization": "facts",
+    "simplificacio": "simplification",
+    "simplificació": "simplification",
+    "simplificación": "simplification",
+    "simplify": "simplification",
+    "simplified": "simplification",
+    "unsimplified": "simplification",
+    "not_simplified": "simplification",
+    "lowest_terms": "simplification",
+    "unitat": "unit",
+    "units": "unit",
+    "unidad": "unit",
+    "unidades": "unit",
+    "measurement": "unit",
+    "lectura": "misread",
+    "enunciat": "misread",
+    "enunciado": "misread",
+    "reading": "misread",
+    "misreading": "misread",
+    "comprehension": "misread",
+    "problem_statement": "misread",
+    "incomplet": "incomplete",
+    "incompleto": "incomplete",
+    "partial": "incomplete",
+    "unfinished": "incomplete",
+    "half_done": "incomplete",
   };
   const canon = aliases[c] ?? c;
   return CATEGORY_SET.has(canon) ? canon : null;

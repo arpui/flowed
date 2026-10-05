@@ -23,67 +23,159 @@ CURRENT_SCHEMA_VERSION = 1
 #   2. server/src/tools.ts  -> DEEP_RUBRIC (what the deep evaluator may emit)
 #   3. skills/math-feedback-formatter/SKILL.md and
 #      references/feedback-template.md (what the tutor is told to use)
-# Anything unrecognized silently became "grammar", which is how mistakes-db
-# used to collapse into a single category.
+# Anything unrecognized silently became the default category, which is how
+# mistakes-db used to collapse into a single category.
+#
+# Math taxonomy (docs/DISSENY-MATEMATIQUES.md §4.4), replacing the 15 language
+# categories of the FlowEd original — those now live in LEGACY_ERROR_CATEGORIES.
 ERROR_CATEGORIES = (
-    "grammar",
-    "word_order",
-    "tenses",
-    "agreement",
-    "articles",
-    "prepositions",
-    "pronouns",
-    "vocabulary",
-    "spelling",
-    "punctuation",
-    "capitalization",
-    "formal_informal",
-    "register",
-    "missing",
-    "comprehension",
+    "calculation",          # lliscada de càlcul: mètode bé, número malament
+    "sign",                 # signe +/− (o >/<) canviat o perdut
+    "place_value",          # valor posicional: unitats / desenes / centenes
+    "carrying",             # transport / arrestament oblidat o mal fet
+    "order_of_operations",  # passos fets en un ordre de precedència erroni
+    "wrong_operation",      # tria l'operació equivocada amb els números bons
+    "procedure",            # seqüència de passos incorrecta per a la tasca
+    "facts",                # fet bàsic no recordat: taules, dobles, meitats
+    "simplification",       # fracció no simplificada / forma final incorrecta
+    "unit",                 # unitat absent o errònia
+    "misread",              # llegeix malament l'enunciat
+    "incomplete",           # deixa la feina a mitges
 )
 
-# Spellings seen in the wild (models, older prompts) -> canonical name.
+# Surface terms a tutor or learner would actually write — Catalan, Spanish and
+# English — -> canonical id. Normalization lowercases and turns hyphens and
+# spaces into underscores but KEEPS accents, so accented spellings are listed
+# exactly as written. (Same pattern as the old grammar aliases: the tutor names
+# the slip in everyday words, "(transport — …)", and every unmapped label used
+# to collapse into one category.)
 ERROR_CATEGORY_ALIASES = {
-    "wordorder": "word_order",
-    "preposition": "prepositions",
-    "pronoun": "pronouns",
-    "tense": "tenses",
-    "informal_formal": "formal_informal",
-    "reading": "comprehension",
-    "inference": "comprehension",
-    "detail": "comprehension",
-    # Labels seen in live tutor output. It writes the grammatical term, not our
-    # taxonomy ("(past tense — …)"), and every unmapped one silently collapsed
-    # into "grammar", which is how a tense problem and a missing article ended
-    # up looking like the same weakness.
-    "past": "tenses",
-    "present": "tenses",
-    "future": "tenses",
-    "past_tense": "tenses",
-    "present_tense": "tenses",
-    "verb_tense": "tenses",
-    "verb": "tenses",
-    "conjugation": "tenses",
-    "article": "articles",
-    "capitalisation": "capitalization",
-    "caps": "capitalization",
-    "word_choice": "vocabulary",
-    "wording": "vocabulary",
-    "plural": "agreement",
-    "singular": "agreement",
-    "number": "agreement",
-    "subject_verb": "agreement",
-    "formality": "formal_informal",
-    "typo": "spelling",
+    # calculation
+    "calculo": "calculation",
+    "cálculo": "calculation",
+    "càlcul": "calculation",
+    "compta": "calculation",
+    "comptar": "calculation",
+    "calcular": "calculation",
+    "arithmetic": "calculation",
+    "aritmética": "calculation",
+    "aritmètica": "calculation",
+    # sign
+    "signe": "sign",
+    "signo": "sign",
+    "minus": "sign",
+    "plus": "sign",
+    "negatiu": "sign",
+    "positiu": "sign",
+    # place_value
+    "valor_posicional": "place_value",
+    "posicio": "place_value",
+    "posició": "place_value",
+    "posicion": "place_value",
+    "unitats_desenes_centenes": "place_value",
+    "ones_tens_hundreds": "place_value",
+    # carrying
+    "carry": "carrying",
+    "carries": "carrying",
+    "carried": "carrying",
+    "carry_over": "carrying",
+    "transport": "carrying",
+    "transportar": "carrying",
+    "arrestando": "carrying",
+    "arrestament": "carrying",
+    "llevadas": "carrying",
+    # order_of_operations
+    "ordre": "order_of_operations",
+    "orden": "order_of_operations",
+    "ordre_d'operacions": "order_of_operations",
+    "orden_de_operaciones": "order_of_operations",
+    "orden_operaciones": "order_of_operations",
+    "operation_order": "order_of_operations",
+    "operator_precedence": "order_of_operations",
+    "precedence": "order_of_operations",
+    "bodmas": "order_of_operations",
+    "pemdas": "order_of_operations",
+    # wrong_operation
+    "operacio_equivocada": "wrong_operation",
+    "operació_equivocada": "wrong_operation",
+    "operacion_equivocada": "wrong_operation",
+    "operación_equivocada": "wrong_operation",
+    "wrong_op": "wrong_operation",
+    "operation_choice": "wrong_operation",
+    # procedure
+    "procediment": "procedure",
+    "procedimiento": "procedure",
+    "sequencia": "procedure",
+    "seqüència": "procedure",
+    "method": "procedure",
+    "mètode": "procedure",
+    # facts
+    "fet_basic": "facts",
+    "fet_bàsic": "facts",
+    "basic_fact": "facts",
+    "hecho_basico": "facts",
+    "hecho_básico": "facts",
+    "taula": "facts",
+    "taules": "facts",
+    "tabla": "facts",
+    "tablas": "facts",
+    "times_table": "facts",
+    "times_tables": "facts",
+    "multiplicar": "facts",
+    "memorization": "facts",
+    # simplification
+    "simplificacio": "simplification",
+    "simplificació": "simplification",
+    "simplificación": "simplification",
+    "simplify": "simplification",
+    "simplified": "simplification",
+    "unsimplified": "simplification",
+    "not_simplified": "simplification",
+    "lowest_terms": "simplification",
+    # unit
+    "unitat": "unit",
+    "units": "unit",
+    "unidad": "unit",
+    "unidades": "unit",
+    "measurement": "unit",
+    # misread
+    "lectura": "misread",
+    "enunciat": "misread",
+    "enunciado": "misread",
+    "reading": "misread",
+    "misreading": "misread",
+    "comprehension": "misread",
+    "problem_statement": "misread",
+    # incomplete
+    "incomplet": "incomplete",
+    "incompleto": "incomplete",
+    "partial": "incomplete",
+    "unfinished": "incomplete",
+    "half_done": "incomplete",
 }
 
-# Accepted but deprecated: ids already stored in existing mistakes-db files.
+# Accepted but deprecated: the 15 language categories of the FlowEd original.
+# The fork has no migrated language mistakes-db data, but the language
+# curriculum files it still ships (curriculum/en-A1.md, en-A2.md — replaced by
+# the math curriculum in WP1.1) use these names as `#tags`, and curriculum.py
+# validates tags against ERROR_CATEGORIES ∪ this tuple. Keeping them here (not
+# in ERROR_CATEGORIES) means: stored language-era ids keep their shape instead
+# of collapsing into the default, while the tutor-facing surfaces (tools.ts,
+# skills, feedback template) only ever offer the 12 math classes. The five
+# even-older FlowEd ids ("writing", "pronunciation", "reflexive", "subject",
+# "gerund") are dropped outright — nothing in the fork references them.
+# Drop this tuple together with the language content (C10).
 LEGACY_ERROR_CATEGORIES = (
-    "writing", "pronunciation", "reflexive", "subject", "gerund",
+    "grammar", "word_order", "tenses", "agreement", "articles",
+    "prepositions", "pronouns", "vocabulary", "spelling", "punctuation",
+    "capitalization", "formal_informal", "register", "missing", "comprehension",
 )
 
-DEFAULT_ERROR_CATEGORY = "grammar"
+# Fallback for unrecognized labels. "calculation" because a one-off arithmetic
+# slip is by far the most common unknown in math practice; "procedure" (the
+# other plausible fallback) over-claims a structural weakness when most
+# unknowns are single slips, and would pollute the error profile.
+DEFAULT_ERROR_CATEGORY = "calculation"
 
 
 def normalize_error_category(raw) -> str:

@@ -25,8 +25,8 @@ TEMPLATES = REPO_ROOT / "data-examples"
 
 FEEDBACK = (
     '❌ Almost!\n\n**Corrections:**\n'
-    '- 🔴 "go" → **"went"** (tenses — past simple)\n\n'
-    '**Correct version:**\n"I went to the beach yesterday"\n\n'
+    '- 🔴 "21" → **"31"** (carrying — the carried 1 was dropped)\n\n'
+    '**Correct version:**\n"24 + 7 = 31"\n\n'
     '**Score: 5/10** 🟡\n'
 )
 
@@ -73,7 +73,7 @@ class CapaABTest(unittest.TestCase):
                         json.dumps({"type": "text", "text": text})))
 
         msg("m1", "user", '{"learner": {"name": "Test"}, "computed": {"next_session_id": "session-001"}}')
-        msg("m2", "user", "I go to the beach yesterday")
+        msg("m2", "user", "24 + 7 = 21")
         msg("m3", "assistant", FEEDBACK)
         db.commit()
         db.close()
@@ -93,13 +93,13 @@ class CapaABTest(unittest.TestCase):
     def test_capa_b_keeps_what_capa_a_recorded(self):
         self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
         patterns_a, items_a = self._state()
-        self.assertIn("tenses_went", patterns_a, "Capa A did not record the error pattern")
-        self.assertIn("tenses_went", items_a, "Capa A did not queue the pattern for review")
+        self.assertIn("carrying_31", patterns_a, "Capa A did not record the error pattern")
+        self.assertIn("carrying_31", items_a, "Capa A did not queue the pattern for review")
 
         self._run("persist-session.py", "ses_T", "--dir", str(self.dir))
         patterns_b, items_b = self._state()
-        self.assertIn("tenses_went", patterns_b, "Capa B erased the error pattern Capa A had recorded")
-        self.assertIn("tenses_went", items_b, "Capa B erased the spaced-repetition item")
+        self.assertIn("carrying_31", patterns_b, "Capa B erased the error pattern Capa A had recorded")
+        self.assertIn("carrying_31", items_b, "Capa B erased the spaced-repetition item")
         self.assertEqual(patterns_a, patterns_b)
         self.assertEqual(items_a, items_b)
 
@@ -190,11 +190,11 @@ class StructuredRecordsTest(CapaABTest):
             "session_id": "ses_T",
             "ts": int(time.time() * 1000),
             "skill": "writing",
-            "exercise": "Translate: vaig anar a la platja ahir",
-            "learner_answer": "I go to the beach yesterday",
+            "exercise": "Compute: 24 + 7",
+            "learner_answer": "24 + 7 = 21",
             "score": 5,
             "corrections": [
-                {"wrong": "go", "right": "went", "category": "tenses", "severity": "critical"}
+                {"wrong": "21", "right": "31", "category": "carrying", "severity": "critical"}
             ],
         }
         record.update(overrides)
@@ -214,17 +214,17 @@ class StructuredRecordsTest(CapaABTest):
         self.assertEqual(self._log().get("exercises_completed"), 1,
                          "the same answer was counted by both the record and the parser")
         mistakes = json.loads((self.dir / "mistakes-db.json").read_text(encoding="utf-8"))
-        self.assertIn("tenses_went", mistakes["error_patterns"])
-        self.assertEqual(mistakes["error_patterns"]["tenses_went"]["frequency"], 1)
+        self.assertIn("carrying_31", mistakes["error_patterns"])
+        self.assertEqual(mistakes["error_patterns"]["carrying_31"]["frequency"], 1)
 
     def test_record_carries_the_category_the_tutor_declared(self):
         self._write_record(corrections=[
-            {"wrong": "in Monday", "right": "on Monday", "category": "prepositions"}
+            {"wrong": "-5", "right": "+5", "category": "sign"}
         ])
         self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
         mistakes = json.loads((self.dir / "mistakes-db.json").read_text(encoding="utf-8"))
-        self.assertEqual(mistakes["error_patterns"]["prepositions_on_Monday"]["category"],
-                         "prepositions")
+        self.assertEqual(mistakes["error_patterns"]["sign_+5"]["category"],
+                         "sign")
 
     def test_the_item_is_named_after_the_right_answer_not_the_slip(self):
         """A mistake is evidence. It is not the thing to be learned.
@@ -235,18 +235,18 @@ class StructuredRecordsTest(CapaABTest):
         'ben'?". Seen live on test-en, 2026-09-19.
         """
         self._write_record(corrections=[
-            {"wrong": "ben", "right": "welcome", "category": "vocabulary"}
+            {"wrong": "42", "right": "43", "category": "facts"}
         ])
         self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
         pats = json.loads((self.dir / "mistakes-db.json").read_text(encoding="utf-8"))["error_patterns"]
-        self.assertIn("vocabulary_welcome", pats)
-        self.assertNotIn("vocabulary_ben", pats)
+        self.assertIn("facts_43", pats)
+        self.assertNotIn("facts_42", pats)
 
         sr = json.loads((self.dir / "spaced-repetition.json").read_text(encoding="utf-8"))
-        item = sr["items"]["vocabulary_welcome"]
-        self.assertEqual(item["content"], "welcome", "the item studies the word, not the typo")
-        self.assertEqual(item["answer"], "welcome")
-        self.assertEqual(item["learner_wrote"], "ben", "the slip is kept as context only")
+        item = sr["items"]["facts_43"]
+        self.assertEqual(item["content"], "43", "the item studies the right answer, not the slip")
+        self.assertEqual(item["answer"], "43")
+        self.assertEqual(item["learner_wrote"], "42", "the slip is kept as context only")
 
     def test_a_t0_from_another_day_is_not_this_session_s_past(self):
         """The id is a counter, and counters restart.
@@ -289,22 +289,22 @@ class StructuredRecordsTest(CapaABTest):
             "ps", REPO_ROOT / "hooks" / "persist-session.py")
         ps = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ps)
-        self.assertEqual(ps.pattern_id_for("articles", "banana", "un"), "articles_un")
-        self.assertEqual(ps.pattern_id_for("articles", "banana", ""), "articles_banana",
+        self.assertEqual(ps.pattern_id_for("carrying", "25", "24"), "carrying_24")
+        self.assertEqual(ps.pattern_id_for("carrying", "25", ""), "carrying_25",
                          "with no correct form there is nothing else to key on")
         src = (REPO_ROOT / "hooks" / "persist-session.py").read_text()
         self.assertNotIn('pid = f"{cat}_{m.group(1)', src,
                          "the prose parser is keying on the wrong answer again")
 
-    def test_three_typos_of_one_word_are_one_item(self):
-        for wrong in ("goob bye", "gudbye", "good by"):
+    def test_three_slips_of_one_answer_are_one_item(self):
+        for wrong in ("3l", "31l", "3-1"):
             self._write_record(corrections=[
-                {"wrong": wrong, "right": "goodbye", "category": "vocabulary"}
+                {"wrong": wrong, "right": "31", "category": "calculation"}
             ])
         self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
         pats = json.loads((self.dir / "mistakes-db.json").read_text(encoding="utf-8"))["error_patterns"]
-        vocab = [k for k in pats if k.startswith("vocabulary_")]
-        self.assertEqual(vocab, ["vocabulary_goodbye"], vocab)
+        calc = [k for k in pats if k.startswith("calculation_")]
+        self.assertEqual(calc, ["calculation_31"], calc)
 
     def test_record_with_item_id_advances_sm2_and_survives_capa_b(self):
         self._write_record(item_id="example_item_id", sm2_quality=5)
@@ -326,10 +326,10 @@ class StructuredRecordsTest(CapaABTest):
         The merge key is the learner's answer, so a second exercise means a
         second answer — which is what a real session looks like.
         """
-        self._append_msg("m4", "user", "She have two cats")
+        self._append_msg("m4", "user", "12 - 5 = 5")
         self._append_msg("m5", "assistant",
-                         'Almost.\n\n**Corrections:**\n- 🟡 "have" → **"has"** '
-                         '(agreement — third person)\n\n**Score: 6/10**\n')
+                         'Almost.\n\n**Corrections:**\n- 🟡 "5" → **"7"** '
+                         '(calculation — 12 − 5 is 7)\n\n**Score: 6/10**\n')
         self._write_record()
         self._run("accumulate-session.py", "--session-id", "ses_T", "--dir", str(self.dir))
         self.assertEqual(self._log().get("exercises_completed"), 2,

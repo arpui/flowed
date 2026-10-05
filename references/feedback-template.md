@@ -35,25 +35,22 @@ A single answer may contain multiple errors of different severity — tag each.
 
 These feed `mistakes-db.json`:
 
-- `grammar` — conjugation, clause structure, general morphology
-- `word_order` — position of verb, object, adverb, negation
-- `tenses` — wrong tense or aspect
-- `agreement` — subject-verb, gender, number
-- `articles` — definite / indefinite / zero article
-- `prepositions` — wrong or missing preposition
-- `pronouns` — wrong or missing pronoun
-- `vocabulary` — wrong word, native-language mixing, register-wrong synonym
-- `spelling` — misspelling, accents, diacritics
-- `punctuation` — commas, apostrophes, final punctuation
-- `capitalization` — upper/lower case
-- `formal_informal` — wrong politeness form for the situation
-- `register` — tone mismatch (too casual / too stiff) beyond politeness forms
-- `missing` — omitted greeting, closing, required element
-- `comprehension` — reading/listening answer that misreads the source
+- `calculation` — arithmetic slip: right method, wrong number
+- `sign` — a +/− (or >/<) changed or dropped
+- `place_value` — digits misaligned: units / tens / hundreds
+- `carrying` — carry or borrow forgotten or done wrong
+- `order_of_operations` — steps done in the wrong precedence order
+- `wrong_operation` — right numbers, wrong operation (+ instead of ×)
+- `procedure` — wrong sequence of steps for the task
+- `facts` — basic fact not recalled: times tables, doubles, halves
+- `simplification` — fraction not reduced / answer not in the required form
+- `unit` — missing or wrong unit
+- `misread` — the problem statement was read wrong
+- `incomplete` — work left half-done
 
 Use these names exactly, in lowercase with underscores. They are the single
 source of truth (`ERROR_CATEGORIES` in `hooks/db_schema.py`): a label
-that is not on the list is silently filed as `grammar`, which destroys the
+that is not on the list is silently filed as `calculation`, which destroys the
 learner's error profile.
 
 ## Tone rules
