@@ -318,13 +318,17 @@ function renderTutorText(el, text) {
 // background instead of relying on bold alone to be noticed.
 const MODE_LINE_FULL_RE = /^type your answer \(the complete sentence\):?$/i;
 const MODE_LINE_WORD_RE = /^type your answer \(just the missing word\):?$/i;
+// Math bank cards (WP1.3) end with a bare "**Type your answer:**" — no
+// parenthetical, because there is no gap: the learner writes the result.
+const MODE_LINE_MATH_RE = /^type your answer:?$/i;
 function paintModeLine(el) {
   if (!el || !el.querySelectorAll) return;
   for (const s of el.querySelectorAll("strong")) {
-    s.classList.remove("mode-flag", "mode-flag-full", "mode-flag-word");
+    s.classList.remove("mode-flag", "mode-flag-full", "mode-flag-word", "mode-flag-math");
     const t = (s.textContent || "").trim();
     if (MODE_LINE_FULL_RE.test(t)) s.classList.add("mode-flag", "mode-flag-full");
     else if (MODE_LINE_WORD_RE.test(t)) s.classList.add("mode-flag", "mode-flag-word");
+    else if (MODE_LINE_MATH_RE.test(t)) s.classList.add("mode-flag", "mode-flag-math");
   }
 }
 
@@ -1804,10 +1808,14 @@ function lastTutorText() {
 // shown, rather than a wrong one.
 const FULL_SENTENCE_RE = /\*\*Type your answer \(the complete sentence\):?\*\*/i;
 const MISSING_WORD_RE = /\*\*Type your answer \(just the missing word\):?\*\*/i;
+// Math bank cards (WP1.3): "**Type your answer:**" with no parenthetical —
+// the learner writes the result of a problem, not a gap in a sentence.
+const MATH_ANSWER_RE = /\*\*Type your answer:?\*\*/i;
 
 function blankExerciseMode(text) {
   if (FULL_SENTENCE_RE.test(text)) return "full";
   if (MISSING_WORD_RE.test(text)) return "word";
+  if (MATH_ANSWER_RE.test(text)) return "math";
   return null;
 }
 
@@ -1817,7 +1825,8 @@ function blankExerciseMode(text) {
 const SKILL_LINE_RE = /^(\s*\*{0,2}skill:?\*{0,2}\s*[^\n]*)$/im;
 function injectModeHint(text, mode) {
   const hint =
-    mode === "full" ? " — ✍️ ESCRIU LA FRASE SENCERA!" : mode === "word" ? " — 🔤 NOMÉS LA PARAULA" : "";
+    mode === "full" ? " — ✍️ ESCRIU LA FRASE SENCERA!" : mode === "word" ? " — 🔤 NOMÉS LA PARAULA"
+    : mode === "math" ? " — 🧮 ESCRIU EL RESULTAT" : "";
   if (!hint || !SKILL_LINE_RE.test(text)) return text;
   return text.replace(SKILL_LINE_RE, (m) => m + hint);
 }
@@ -1845,6 +1854,9 @@ function refreshExerciseCard(snap = true) {
         badge.hidden = false;
       } else if (missingWord) {
         badge.textContent = "🔤 Només la paraula";
+        badge.hidden = false;
+      } else if (mode === "math") {
+        badge.textContent = "🧮 Escriu el resultat";
         badge.hidden = false;
       } else {
         badge.hidden = true;

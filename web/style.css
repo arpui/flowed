@@ -357,6 +357,11 @@ footer#composer.expanded button#expand {
 .mode-flag-word {
   color: var(--accent);
 }
+/* Math cards (WP1.3): the bare "**Type your answer:**" line — blue, so it
+   reads as "result", not as the green language modes. */
+.mode-flag-math {
+  color: #2f6fb0;
+}
 .exercise-card.ex-full-sentence {
   border-left-color: var(--writing-accent);
   background: var(--writing-bg);

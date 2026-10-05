@@ -62,6 +62,12 @@ const { stripMachineBlocks } = new Function(
   `${machineBlock}; return { stripMachineBlocks };`
 )() as { stripMachineBlocks: (t: string) => string };
 
+// The exercise-card mode markers (WP1.3 adds the bare math one).
+const modeBlock = slice("const FULL_SENTENCE_RE", "function refreshExerciseCard");
+const { blankExerciseMode, injectModeHint } = new Function(
+  `${modeBlock}; return { blankExerciseMode, injectModeHint };`
+)() as { blankExerciseMode: (t: string) => string | null; injectModeHint: (t: string, m: string | null) => string };
+
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown) {
   if (cond) console.log(`  ok   ${name}`);
@@ -103,6 +109,21 @@ check("a cloze is still an exercise",
   isOpenExercise("Fill in the blank: I ____ to school every day.") === true);
 check("feedback with a score is not an open exercise",
   isOpenExercise("Good! Score: 8/10") === false);
+
+// --- the card's mode markers (WP1.3: math adds a bare "Type your answer:") ---
+
+check("the two language markers still decide the mode",
+  blankExerciseMode("**Sentence:** I ___ swim.\n\n**Type your answer (just the missing word):**") === "word" &&
+  blankExerciseMode("**Sentence to correct:** \"He play.\n\n**Type the correct sentence:**") === null);
+check("the bare math marker is its own mode",
+  blankExerciseMode("**Problem:** 1/4 + 3/8\n\n**Type your answer:**") === "math");
+check("the math marker does not steal the parenthesized ones",
+  blankExerciseMode("**Type your answer (the complete sentence):**") === "full");
+check("no marker, no mode, no hint",
+  blankExerciseMode("**Sentence:** I ___ swim.") === null &&
+  injectModeHint("**Skill:** Fraccions", null) === "**Skill:** Fraccions");
+check("the math hint lands on the Skill line, in Catalan",
+  injectModeHint("**Skill:** Fraccions", "math").includes("🧮 ESCRIU EL RESULTAT"));
 
 // --- no slash commands reach the screen ------------------------------------
 

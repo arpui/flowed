@@ -11,7 +11,11 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import mathgrade  # noqa: E402
 
 NUMBERS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven",
            "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"]
@@ -247,8 +251,103 @@ def _full_sentence(item: dict) -> str:
     return re.sub(r"\s+([.,!?])", r"\1", whole).strip()
 
 
+# ---- math bank types (DISSENY-MATEMATIQUES §4.1/§4.3, WP1.3) -----------------
+# compute/choose/compare items carry a `problem` instead of a `sentence` and are
+# graded by hooks/mathgrade.py (exact rational arithmetic), not by canon/OSA.
+# `choose` exists in BOTH domains: the language one blanks a "___" in a
+# sentence, the math one offers options for a problem — the presence of
+# `problem` (and absence of `sentence`) is what tells them apart.
+
+MATH_TYPES = ("compute", "choose", "compare")
+
+_MATH_EMPTY = set(mathgrade.EMPTY_ANSWERS) | {"no se", "no ho se", "no sé", "no ho sé", "i don't know"}
+
+# v1 (deliberate, §4.3): the three symbols plus the Catalan words a nine-year-old
+# writes. ">=" and friends are NOT accepted — the item's options are >, <, =.
+_COMPARE_WORDS = {
+    ">": ">", "major que": ">", "major": ">", "més gran que": ">", "mes gran que": ">", "gran que": ">",
+    "<": "<", "menor que": "<", "menor": "<", "menys que": "<", "petit que": "<", "petita que": "<",
+    "=": "=", "igual": "=", "igual que": "=", "igual a": "=",
+}
+
+
+def _is_math_item(item: dict) -> bool:
+    t = item.get("type")
+    if t in ("compute", "compare"):
+        return True
+    return t == "choose" and "problem" in item and "sentence" not in item
+
+
+def _math_is_empty(text: str) -> bool:
+    t = str(text or "").strip().lower().strip("?!.").strip()
+    return t in _MATH_EMPTY
+
+
+def _normalize_compare(text: str) -> str | None:
+    t = re.sub(r"\s+", " ", str(text or "").strip().lower().replace("’", "'").strip(".,;:!? "))
+    return _COMPARE_WORDS.get(t)
+
+
+def _math_correct_version(item: dict) -> str:
+    """"Correct version:" for a math item: the problem with the answer filled in."""
+    prob = str(item.get("problem", ""))
+    ans = str(item["answer"])
+    if item.get("type") == "compare":
+        for ph in ("○", "◯", "⃝", "…"):
+            if ph in prob:
+                return prob.replace(ph, ans)
+        return f"{prob} {ans}".strip()
+    if item.get("type") == "choose":
+        # a pick from options, not an equation: "Quina operació…? → 5×2"
+        return f"{prob} → {ans}"
+    try:
+        mathgrade._parse_with_unit(ans)  # "12 cm" is still a value: use "="
+        return f"{prob} = {ans}"
+    except mathgrade.ParseError:
+        return f"{prob} → {ans}"
+
+
+def _grade_math(item: dict, raw_answer: str) -> dict:
+    full = _math_correct_version(item)
+    t = item.get("type")
+    if t == "compare":
+        if _math_is_empty(raw_answer):
+            return {"score": 0, "verdict": "empty", "note": item.get("why", ""), "correct_version": full}
+        got = _normalize_compare(raw_answer)
+        if got == str(item["answer"]).strip():
+            return {"score": 10, "verdict": "correct", "note": "", "correct_version": full}
+        return {"score": 3, "verdict": "wrong", "note": item.get("why", ""), "correct_version": full,
+                "got": str(raw_answer).strip()}
+    given = str(raw_answer or "").strip()
+    if t == "choose":
+        # Options can be non-numeric ("5×2" as a CHOICE of operation, not an
+        # evaluation): exact text first, then mathgrade for numeric variants.
+        norm = {str(a).strip().lower() for a in [item["answer"], *item.get("also_accept", [])]}
+        if given.lower() in norm:
+            return {"score": 10, "verdict": "correct", "note": "", "correct_version": full}
+        r = mathgrade.grade_single(item["answer"], given, item.get("also_accept", []))
+        # A discrete choice has no "almost": picking a DIFFERENT option is wrong
+        # even when it is one digit off (the language path's same-lesson-other-
+        # word rule, in math clothes).
+        if r["verdict"] == "near":
+            r = {"score": 3, "verdict": "wrong", "note": item.get("why", ""), "expected": r.get("expected"),
+                 "got": r.get("got")}
+        r["correct_version"] = full
+        return r
+    # compute: "1/4 + 3/8 = 5/8" typed as a full equation grades the result.
+    if given.count("=") == 1:
+        given = given.rsplit("=", 1)[1]
+    r = mathgrade.grade_single(item["answer"], given, item.get("also_accept", []))
+    if r["verdict"] in ("wrong", "empty") and not r.get("note"):
+        r["note"] = item.get("why", "")  # the language path's rule: wrong explains
+    r["correct_version"] = full
+    return r
+
+
 def grade(item: dict, raw_answer: str, comp: dict | None = None) -> dict:
     """Deterministic verdict. Does not touch progress — the caller records it."""
+    if _is_math_item(item):
+        return _grade_math(item, raw_answer)
     answers = [item["answer"], *item.get("also_accept", [])]
     full = _full_sentence(item)
     if item["type"] == "correct":

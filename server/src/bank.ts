@@ -17,9 +17,15 @@
 export interface BankItem {
   id: string;
   competence: string;
-  type: "complete" | "choose" | "meaning" | "translate" | "correct";
+  type: "complete" | "choose" | "meaning" | "translate" | "correct" | "compute" | "compare";
   instruction: string;
-  sentence: string;
+  /** Language items blank a "___" inside a sentence; math items carry a
+   *  `problem` instead (DISSENY-MATEMATIQUES §4.1). */
+  sentence?: string;
+  problem?: string;
+  /** Optional math-only: the error class a WRONG verdict is filed under
+   *  (db_schema ERROR_CATEGORIES); defaults to "calculation". */
+  error_class?: string;
   context: string;
   answer: string;
   also_accept: string[];
@@ -29,10 +35,23 @@ export interface BankItem {
 
 export interface BankGrade {
   score: number;
-  verdict: "correct" | "typo" | "wrong" | "empty";
+  verdict: "correct" | "typo" | "near" | "wrong" | "empty";
   note: string;
   correct_version: string;
+  /** What the learner typed, as mathgrade parsed it (math items). */
+  got?: string;
   item: BankItem;
+}
+
+/** compute/compare are math-only; `choose` exists in both domains — the
+ *  language one blanks a sentence, the math one offers options for a problem.
+ *  Same rule as hooks/bank.py `_is_math_item`. */
+export function isMathItem(item: BankItem): boolean {
+  return (
+    item.type === "compute" ||
+    item.type === "compare" ||
+    (item.type === "choose" && Boolean(item.problem) && !item.sentence)
+  );
 }
 
 const DEPTH_LABEL: Record<string, string> = { light: "Easy", normal: "Medium", deep: "Hard" };
@@ -54,8 +73,15 @@ export function bankExerciseCard(
   const tag = `<span class="comp-tag"${credited ? ` data-credit="${credited}"` : ""}>${item.competence}</span>`;
   // Not "Writing": that is its own practice now (📝, open production). A bank
   // card is grammar or vocabulary, and the header said Writing on every one.
-  const kind = /(^|\.)vocab_/.test(item.competence) ? "Vocabulary" : "Grammar";
+  const kind = isMathItem(item) ? "Calculation" : /(^|\.)vocab_/.test(item.competence) ? "Vocabulary" : "Grammar";
   const head = `## Exercise ${exerciseNumber}: ${kind} (${difficulty}) ${competenceName} ${tag}`;
+  if (isMathItem(item)) {
+    // Math card: the problem, the options when the answer is a pick, and the
+    // math marker line (web/app.js recognizes "**Type your answer:**" as mode
+    // "math" — the two parenthesized language markers keep working unchanged).
+    const opts = item.options?.length ? `\n**Options:** ${item.options.join("   ·   ")}` : "";
+    return `${head}\n\n**Problem:** ${item.problem}${opts}\n\n**Type your answer:**`;
+  }
   if (item.type === "meaning") {
     return `${head}\n\n**Meaning:** ${item.instruction} ${item.sentence}\n**Word:** ___`;
   }
@@ -69,6 +95,7 @@ export function bankExerciseCard(
 }
 
 export function bankFeedback(g: BankGrade): string {
+  if (isMathItem(g.item)) return mathFeedback(g);
   const known = g.score >= 8; // KNOWN_SCORE, pacing.ts
   const marker = known ? "✅" : g.verdict === "typo" ? "🟡" : "❌";
   const lead = known
@@ -86,6 +113,44 @@ export function bankFeedback(g: BankGrade): string {
         ? "👍 Correct!"
         : g.verdict === "typo"
           ? "One letter away. Try the next one!"
+          : "Keep practising — you'll get it.";
+  return (
+    `${lead}\n\n**Corrections:**\n${correctionLine}\n\n**Correct version:**\n"${g.correct_version}"\n\n` +
+    `**Score: ${g.score}/10** ${closing}`
+  );
+}
+
+/** Math verdicts (compute/choose/compare, graded by hooks/mathgrade.py): the
+ *  same parseable contract persist-session.parse_error_patterns reads — a
+ *  severity marker aligned with the score (✅ / 🟡 near / 🔴 wrong), a
+ *  `- ❌ "got" → **"right"** (category — why)` correction ONLY when the
+ *  answer was wrong or near, "Correct version:" = the problem with the answer
+ *  filled in, and the "**Score: N/10**" line. Category: near is always
+ *  "calculation" (a transcription slip); wrong uses the item's optional
+ *  `error_class` (db_schema ERROR_CATEGORIES) and falls back to "calculation". */
+function mathFeedback(g: BankGrade): string {
+  const known = g.score >= 8; // KNOWN_SCORE, pacing.ts
+  const marker = known ? "✅" : g.verdict === "near" ? "🟡" : "🔴";
+  const lead = known
+    ? `${marker} Perfect! "${g.correct_version}" is right.`
+    : g.verdict === "near"
+      ? `${marker} Almost — ${g.note}.`
+      : `${marker} Not quite — the correct answer is "${g.correct_version}".`;
+  const category = g.verdict === "near" ? "calculation" : String(g.item.error_class || "calculation");
+  const why = g.verdict === "near" ? g.note : g.item.why || g.note || "revisa el càlcul";
+  const got = String(g.got ?? "");
+  const correctionLine = known
+    ? `- ✅ "${g.correct_version}" — exactly right.`
+    : got
+      ? `- ❌ "${got}" → **"${g.correct_version}"** (${category} — ${why})`
+      : `- ❌ → **"${g.correct_version}"** (${category} — ${why})`; // empty answer: nothing was written
+  const closing =
+    g.score >= 10
+      ? "🎉 Perfect! You got it right on the first try. Keep up the good work!"
+      : known
+        ? "👍 Correct!"
+        : g.verdict === "near"
+          ? "Very close — read the note and try the next one!"
           : "Keep practising — you'll get it.";
   return (
     `${lead}\n\n**Corrections:**\n${correctionLine}\n\n**Correct version:**\n"${g.correct_version}"\n\n` +

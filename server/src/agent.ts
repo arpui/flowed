@@ -685,16 +685,32 @@ export class Agent {
   ): void {
     const score = Math.round(Number(graded.score ?? 0));
     const correctVersion = String(graded.correct_version ?? "");
-    const category = vocab ? "vocabulary" : graded.verdict === "typo" ? "spelling" : "grammar";
+    const item = (graded.item ?? {}) as Record<string, unknown>;
+    const itemType = String(item.type ?? "");
+    // Same dispatch as hooks/bank.py and bank.ts: math items (compute/compare,
+    // or a choose built on a `problem`) are graded by mathgrade and filed under
+    // the math taxonomy; language items keep the vocab/spelling/grammar split.
+    const isMath =
+      itemType === "compute" || itemType === "compare" ||
+      (itemType === "choose" && item.problem && !item.sentence);
+    const verdict = String(graded.verdict ?? "");
+    const category = isMath
+      ? verdict === "near" ? "calculation" : String(item.error_class || "calculation")
+      : vocab ? "vocabulary" : verdict === "typo" ? "spelling" : "grammar";
     const record = {
       record_id: `${sessionId}:bank:${Date.now()}`,
       session_id: sessionId,
       ts: Date.now(),
-      skill: vocab ? "vocabulary" : "grammar",
-      exercise: String((graded.item as Record<string, unknown> | undefined)?.["sentence"] ?? ""),
+      skill: isMath ? "computation" : vocab ? "vocabulary" : "grammar",
+      exercise: String(item.problem ?? item.sentence ?? ""),
       learner_answer: this.lastAnswer.get(sessionId) ?? "",
       score,
-      corrections: score >= 8 ? [] : [{ wrong: "", right: correctVersion, category, severity: "moderate" }],
+      corrections: score >= 8 ? [] : [{
+        wrong: isMath ? String(graded.got ?? "") : "",
+        right: correctVersion,
+        category,
+        severity: isMath && verdict !== "near" && verdict !== "empty" ? "critical" : "moderate",
+      }],
       competency: competenceId,
       // A Review exercise answers a queue item (a failed bank item, or an old
       // error pattern placed in this competence): the record names it, and
