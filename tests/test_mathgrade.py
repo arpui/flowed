@@ -372,6 +372,11 @@ class TestAlgebraic(unittest.TestCase):
         v = mg.grade_algebraic("5x+5", "3x + 5 + 2x", problem="3x + 5 + 2x")
         self.assertEqual((3, "wrong"), (v["score"], v["verdict"]))
         self.assertEqual("procedure", v["category"])
+        # the correction names what she WROTE, not its canonical form: the
+        # copy's canonical form is the answer's own form, and the feedback line
+        # would show the same expression on both sides of the arrow (test-m7,
+        # WP1.1-live).
+        self.assertEqual("3x + 5 + 2x", v["got"])
         # reordered-but-unsimplified still passes (documented limitation)
         self.assertEqual(10, mg.grade_algebraic("5x+5", "2x + 5 + 3x",
                                                 problem="3x + 5 + 2x")["score"])

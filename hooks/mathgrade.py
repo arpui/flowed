@@ -710,7 +710,12 @@ def grade_algebraic(expected, given, also_accept=(), problem=None) -> dict:
                 return _verdict(3, "wrong",
                                 "has tornat a escriure l'enunciat tal com era: "
                                 "l'objectiu és TRANSFORMAR l'expressió",
-                                expected=poly_form(exp), got=poly_form(got),
+                                # the learner's OWN text, not the canonical form:
+                                # the copy's canonical form equals the answer's,
+                                # and the correction line would then read
+                                # "3x + 12" → "… → 3x + 12" — right on both
+                                # sides, marked wrong (seen live, test-m7).
+                                expected=poly_form(exp), got=str(given).strip(),
                                 category="procedure", error_class="procedure")
         except ParseError:
             pass
