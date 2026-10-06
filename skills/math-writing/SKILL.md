@@ -127,6 +127,15 @@ Don't correct mid-composition. Let the learner finish.
 
 ### 5. Systematic error analysis
 
+**Delegate the grade to `math_deep_evaluate`** — exactly like 📖 Problemes
+does: `task='explain'` when she explained a solution, `'error-analysis'`
+when she found and explained an error, `'compare-strategies'` when she
+chose between two ways; `answer=` her full text verbatim; `context=` the
+task as you just presented it + the expected procedure or key points + her
+level and language. ONE call per answer, only with her real submitted text.
+Present its evaluation in the format of §6. If it returns
+`DEEP UNAVAILABLE`, grade yourself on the four dimensions below.
+
 Grade the four dimensions of the WP3.1 rubric — the same ones
 `math_deep_evaluate` judges (task='explain' | 'error-analysis' |
 'compare-strategies'; the server's rubric maps the score onto the closed
@@ -142,6 +151,16 @@ path's 10/7/3 bands):
 4. **Communication** — is the math written clearly: notation, units, one
    operation per line (`misread` when the explanation answers a different
    problem than the one asked)
+
+**Anchor the score to the bands before writing it** (the closed path's
+10/7/3 scale — the same anchors the deep evaluator uses):
+- a bare answer — no operations, no reason («Està bé.» / «El resultat és
+  27.») — is **0-4 even when the number is right**; the number alone never
+  scores above 4;
+- sound procedure with one calculation slip, or a thin one-line
+  justification, is **5-7**;
+- full work shown, correct, with the WHY stated is **8-10** — a complete
+  short answer is NOT docked below 8 for being short or plain.
 
 Tag each finding with a severity: 🔴 critical, 🟡 moderate, 🟢 minor.
 Categories are the math ones from `math-feedback-formatter` — `procedure`,
@@ -196,15 +215,27 @@ The persistence fallback parses exactly that; a heading like
 ---
 ```
 
-### 7. Optional rewrite
+Every correction line starts with `-` — the accumulator parses only lines
+shaped `- 🔴 "wrong" → **"right"** (category — why)`; a correction without
+the leading dash is silently dropped and the mistake never reaches
+`mistakes-db`.
 
-If score < 7, offer:
+Right after the feedback, call `math_record_answer` ONCE with
+`skill: "reasoning"`, the score and the corrections you just showed (see
+`math-feedback-formatter` §5) — that call is what stores the answer; your
+text is for the learner.
 
-```markdown
-**Vols tornar-ho a provar?** Reescriure el raonament amb les correccions fixa el procediment.
+### 7. Next task — always, in the same message
 
-Escriu "rewrite" per tornar-hi, o "next" per continuar.
-```
+After EVERY grade, present the next task in the SAME message: the grade and
+the next task travel together. Never end a graded turn with only «escriu
+"rewrite" per tornar-hi, o "next" per continuar» — the learner answers with
+math, not with menu words, and a turn that waits for a menu word stalls the
+session.
+
+The rewrite offer is allowed at most ONCE per session, and only as a
+one-line aside under the new task («si vols, reescriu el raonament d'abans
+amb les correccions abans d'aquest»). It is never the only path forward.
 
 ### 8. Session summary
 
@@ -319,6 +350,9 @@ correction, then `(category — why)` in parentheses. That is what gets parsed.
 - **Lower levels: one short task at a time**, graded, then the next. **Upper
   levels: one task per session** — depth over breadth.
 - **Wait for the full answer** before correcting.
+- **After every grade, the next task travels in the same message** (§7). A
+  graded turn that only offers «rewrite o next» stalls the session: the
+  learner answers with math, not with menu words.
 - **Severity tagging is mandatory.** Fed into `mistakes-db` and drives spaced repetition priority.
 - **Never write files.** The results file under `~/.flowmath/<id>/results/` is written by the server, from your graded feedback.
 - **Never auto-invoke.** This skill is gated; must fire only on explicit `/math-writing`.

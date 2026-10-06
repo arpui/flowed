@@ -152,8 +152,16 @@ the same everywhere: a right setup with a wrong calculation lands 5-7 (the
 hard part was the idea). A wrong setup scores 0-4 even if the arithmetic that
 followed was flawless — the schedule must bring the *choice* back tomorrow.
 A bare numeric answer with no operations at all is 0-4 too (procedure and
-justification empty) — when that happens, say so in the feedback: next time
+justification empty) — **even when the number is right**, the result alone
+never scores above 4; when that happens, say so in the feedback: next time
 write the operations, one per line, because the answer alone does not score.
+And the other way: a complete line of work — operations per line, result
+correct, the reason stated — is **8-10**; never hold a correct answer down
+to 5-7 for being short or plain.
+
+Right after the feedback, call `math_record_answer` ONCE with
+`skill: "problems"`, the score and the corrections you just showed — that
+call is what stores the answer; your text is for the learner.
 
 ### 6. Problem vocabulary review
 
