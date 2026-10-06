@@ -1195,21 +1195,6 @@ export class Agent {
     // learner's own message.
     const note = this.pacingNote(sessionId);
     this.logNote(sessionId, note);
-    if (note) {
-      const prev = this.noteStall.get(sessionId);
-      const turns = prev && prev.note === note ? prev.turns + 1 : 1;
-      this.noteStall.set(sessionId, { note, turns });
-      if (this.noteStall.size > 500) this.noteStall.clear();
-      // The stall warning is about the LESSON not advancing. Free practice's note is
-      // a list of what she already knows, and it legitimately stays the same for
-      // as long as nothing new is answered correctly.
-      if (turns === 4 && this.currentCommand.get(sessionId) === "math-review") {
-        console.log(
-          `[Fluent] ⚠ session ${sessionId}: the pacing note has not changed in 4 turns — ` +
-            `the lesson is not advancing. Note: ${note.slice(0, 120)}`
-        );
-      }
-    }
 
     // Keep the request inside the model's context. Without this the turn fails
     // outright — seen live: 41808 tokens against a 40960 window — and the
@@ -1242,6 +1227,28 @@ export class Agent {
     if (this.bankEnabled() && this.currentCommand.get(sessionId) === "math-review") {
       const reviewOutcome = this.tryBankReviewTurn(sessionId, agent);
       if (reviewOutcome) return reviewOutcome;
+    }
+
+    // The stall warning is about the LESSON not advancing — and it only means
+    // anything on a turn the MODEL answers. The bank paths above return before
+    // this line: they advance the lesson deterministically, and a note that
+    // stays identical across bank turns is the normal shape of a finished plan
+    // re-serving a weak card (seen live on test-m7, WP1.1-live: four identical
+    // "lesson is COMPLETE" notes while the bank served and graded
+    // m7.factor_letters.001 — the lesson was advancing fine). Free practice's
+    // note is a list of what she already knows, and it legitimately stays the
+    // same for as long as nothing new is answered correctly.
+    if (note) {
+      const prev = this.noteStall.get(sessionId);
+      const turns = prev && prev.note === note ? prev.turns + 1 : 1;
+      this.noteStall.set(sessionId, { note, turns });
+      if (this.noteStall.size > 500) this.noteStall.clear();
+      if (turns === 4 && this.currentCommand.get(sessionId) === "math-review") {
+        console.log(
+          `[Fluent] ⚠ session ${sessionId}: the pacing note has not changed in 4 turns — ` +
+            `the lesson is not advancing. Note: ${note.slice(0, 120)}`
+        );
+      }
     }
 
     if (note) history = [...history, { role: "system", content: note }];

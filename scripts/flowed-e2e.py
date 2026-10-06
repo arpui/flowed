@@ -636,6 +636,8 @@ def run(args, quiet: bool = False) -> Report | int:
         return run_math_journey(args, cli, prof_dir, rep, quiet)
     if args.scenario == "steps2":
         return run_steps_v2(args, cli, prof_dir, rep, quiet)
+    if args.scenario == "algebra":
+        return run_algebra(args, cli, prof_dir, rep, quiet)
     if args.scenario == "reasoning":
         return run_reasoning(args, cli, prof_dir, rep, quiet)
     if args.scenario == "problems":
@@ -793,7 +795,12 @@ def run_math_journey(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> R
         rep.check(not back, "cap exercici contestat bé no torna dins la lliçó",
                   back[0] if back else "")
         if variant == "steps":
-            kinds = {g["card"].get("type") for g in graded if g["card"]}
+            # The queue is all steps; a WEAK pick after it (next_target drawing
+            # on a weak mistake pattern — m4.word_problems.001 since the
+            # problems scenario runs) may be any type. The assertion is about
+            # the lesson the seed asked for, so it covers the seeded ids.
+            kinds = {g["card"].get("type") for g in graded
+                     if g["card"] and g["card"]["id"] in set(MATH_STEPS_IDS)}
             rep.check(kinds == {"steps"}, "l'escenari steps només ha vist targetes de passos",
                       ", ".join(sorted(map(str, kinds))))
 
@@ -907,8 +914,15 @@ def run_math_journey(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> R
     # Only the REVIEW lesson cards come from the SR queue, so only those carry
     # an item_id in their record. Go cards are fresh bank picks with no queue
     # entry — they must NOT have one. Every lesson card answered right must be
-    # keyed, or its SM-2 schedule never advances.
-    lesson_right = [i for i in dict.fromkeys(served) if first_kind.get(i) == "right"]
+    # keyed, or its SM-2 schedule never advances — but "lesson card" here means
+    # a SEEDED queue card: the lesson may also serve a WEAK pick, a
+    # reinforcement drawn from a weak mistake pattern (seen live on test-math:
+    # m4.word_problems.001, weak since the problems scenario runs). A weak pick
+    # is not a queue item: its record carries no item_id by design and its
+    # schedule does not move (the steps-card check below relies on exactly
+    # that). So the keying requirement covers the seeded ids only.
+    lesson_right = [i for i in dict.fromkeys(served)
+                    if first_kind.get(i) == "right" and i in set(ids)]
     unkeyed = [i for i in lesson_right if i not in rec_ids]
     rep.check(not unkeyed,
               "les targetes de la lliçó es registren amb l'item_id de la cua",
@@ -1622,6 +1636,342 @@ def run_steps_v2(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> Repor
     if args.transcript:
         Path(args.transcript).expanduser().write_text(
             f"# Sessió v2 pas a pas e2e — {prof_dir.name} — {sid}\n\n"
+            + "\n\n---\n\n".join(transcript), encoding="utf-8")
+        print(f"\ntranscripció: {args.transcript}")
+
+    if quiet:
+        bad = [lbl for ok, lbl, _ in rep.rows if not ok]
+        print(f"  → {len(rep.rows) - len(bad)}/{len(rep.rows)} bé"
+              + (f" · falla: {', '.join(bad)}" if bad else ""))
+        return rep
+    rep.render()
+    return rep
+
+
+# ---- WP1.1-live: the m7 algebra scenario (test-m7:4201) ----------------------
+#
+# The live verification WP1.1 deliberately skipped: a 1r ESO profile against the
+# real server, with the algebraic grader deciding. In ONE lesson:
+#
+#   * the m7 curriculum resolves for the profile — the path bar and every card
+#     carry m7.* competences. (The ladder places a learner at the LOWEST
+#     uncertified level of the subject, so the profile needs its m4 certified —
+#     the same provisioning as tests/test_curriculum.py's m7 test.)
+#   * an algebraic answer written differently but equivalently ("4x + 5x + 10"
+#     for "9x + 10", not the answer nor its also_accept) grades 10: polynomial
+#     equivalence, not string match;
+#   * a sign slip ("-2x + 12" for "-2x - 12") grades wrong and is filed under
+#     the "sign" category — in the Corrections line AND in the .records record;
+#   * retyping the problem ("3(x+4)" for "3 · (x + 4)") is caught as
+#     "procedure" even though it is trivially equivalent: the task was to
+#     TRANSFORM the expression;
+#   * a steps card from m7.props_grouping runs the v2 incremental path: one
+#     operation per message, notes in between, ONE record with the trace;
+#   * the level test machinery with Compute:/Steps: checks runs end to end
+#     through the CLI path the WP1.1 tests use (checkpoint_start/answer), live
+#     against this profile: 12 bank questions, all right, verdict "pass".
+
+MATH_ALG_IDS = [
+    "m7.syntax_letters.011",        # 5x + 10 + 4x → 9x + 10 (answered unsimplified)
+    "m7.distributive_letters.005",  # -2 · (x + 6) → -2x - 12 (answered with a sign slip)
+    "m7.distributive_letters.009",  # 3 · (x + 4) → 3x + 12 (answered as a verbatim retype)
+    "m7.value_numeric.002",         # prose substitution, numeric answer (the numeric path on m7)
+    "m7.props_grouping.002",        # steps card: the v2 path, one step per message
+]
+MATH_ALG_SCRIPT: dict[str, str] = {
+    "m7.syntax_letters.011": "4x + 5x + 10",    # equivalent, NOT the answer nor its also_accept
+    "m7.distributive_letters.005": "-2x + 12",  # the sign slip
+    "m7.distributive_letters.009": "3(x+4)",    # the literal copy of the problem
+    "m7.value_numeric.002": "4",
+}
+MATH_ALG_STEPS: dict[str, list[str]] = {
+    "m7.props_grouping.002": ["(5 + 15) + 37", "20 + 37", "57"],
+}
+
+
+def run_algebra(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> Report | int:
+    from db_schema import ERROR_CATEGORIES
+    transcript: list[str] = []
+    started = time.time()
+    today = date.today().isoformat()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+
+    sid = cli.new_session()
+    print(f"perfil {prof_dir.name} · port {args.port} · algebra (m7, WP1.1-live) · cua {len(MATH_ALG_IDS)}")
+    seed_math_review(prof_dir, MATH_ALG_IDS)
+    # seed_math_review archives certificates.json with the rest of the path
+    # state; without the m4 certificate the ladder would open math-m4 for this
+    # profile, not math-m7. Put it back AFTER the seed, before the first card.
+    (prof_dir / "certificates.json").write_text(json.dumps(
+        [{"language": "math", "level": "M4", "date": "2026-10-01",
+          "type": "checkpoint", "result": "pass"}], indent=2) + "\n", encoding="utf-8")
+    print(f"sessió {sid}")
+
+    # --- the curriculum this profile resolves to (CLI, the server's own finder)
+    cu = _load_module("math_curriculum", "hooks/curriculum.py")
+    cf = cu.find_curriculum(REPO, prof_dir)
+    rep.check(bool(cf) and cf.name == "math-m7.md",
+              "el currículum que resol per aquest perfil és math-m7.md",
+              cf.name if cf else "(cap)")
+
+    replies: list[str] = []
+    graded: list[dict] = []          # reply, card, kind ("scripted"/"right"/"step")
+    served: list[str] = []
+    first_kind: dict[str, str] = {}
+    log_path = prof_dir / f"math-web-{args.port}.log"
+
+    def press(cmd: str, label: str) -> str:
+        t = time.time()
+        body = tutor_text(cli.command(sid, cmd))
+        replies.append(body)
+        transcript.append(f"## {label}\n\n{body}")
+        print(f"  [{label}] → {time.time() - t:.0f}s")
+        return body
+
+    def say(answer: str) -> str:
+        t = time.time()
+        body = tutor_text(cli.say(sid, answer))
+        replies.append(body)
+        transcript.append(f"## resposta {len(replies)}: «{answer[:120]}»\n\n{body}")
+        flags = []
+        if not MARKER.search(body): flags.append("sense marcador")
+        if "Correct version:" not in body: flags.append("sense versió correcta")
+        if not SCORE.search(body): flags.append("sense nota")
+        print(f"  {len(replies)} «{answer[:40]}» → {time.time() - t:.0f}s"
+              + (f"  ⚠ {', '.join(flags)}" if flags else "  ok"))
+        return body
+
+    def say_step(answer: str, final: bool) -> str:
+        body = tutor_text(cli.say(sid, answer))
+        replies.append(body)
+        transcript.append(f"## pas «{answer[:60]}»\n\n{body}")
+        graded_note = bool(SCORE.search(body))
+        print(f"  «{answer[:40]}» → {'FINAL' if graded_note else 'pas'}"
+              + ("  ⚠ nota on no tocava" if graded_note != final else "")
+              + ("" if graded_note or "Correct version:" not in body else "  ⚠ versió correcta a mig camí"))
+        return body
+
+    def score_of(reply: str) -> int | None:
+        m = SCORE.search(reply)
+        return int(re.split(r"\s*/\s*", m.group(0))[0]) if m else None
+
+    # --- the path bar (📊): m7 competences, never the m4 pilot's --------------
+    view = (cli._call("/api/math/path") or {}).get("data") or {}
+    comp_ids = [it["id"] for sec in (view.get("sections") or []) for it in (sec.get("items") or [])]
+    rep.check(view.get("available") and view.get("level") == "m7" and comp_ids
+              and all(str(i).startswith("m7.") for i in comp_ids),
+              "la barra del camí pinta competències m7",
+              f"nivell {view.get('level')} · {len(comp_ids)} competències")
+
+    # --- 🔁 Review: the m7 lesson ---------------------------------------------
+    txt = press("math-review", "🔁 Review")
+    card = bank_card(txt)
+    rep.check(card is not None, "la lliçó s'obre amb una targeta del banc",
+              txt.strip().splitlines()[0][:70] if txt.strip() else "(buit)")
+    plan_file = prof_dir / ".daily" / f"lesson-{today}.json"
+    try:
+        total = int(json.loads(plan_file.read_text()).get("total") or 0)
+    except (OSError, ValueError):
+        total = 0
+    rep.check(total >= len(MATH_ALG_IDS), "el pla fa la lliçó amb la cua sembrada d'm7", f"{total} exercicis")
+
+    steps_final: dict[str, tuple[str, int | None]] = {}   # steps item -> (final reply, score)
+    steps_notes: list[str] = []
+    closed = False
+    for _ in range(total + 4):
+        card = bank_card(txt)
+        if card is None:
+            break
+        served.append(card["id"])
+        iid = card["id"]
+        if card.get("type") == "steps" and MATH_ALG_STEPS.get(iid) and iid not in steps_final:
+            # the v2 path: one operation per message; only the last one grades.
+            rep.check("Pas 1 de" in txt and "Una operació per línia:" in txt,
+                      "la targeta de passos d'm7 demana NOMÉS la primera operació (v2)",
+                      txt[:120].replace("\n", " "))
+            lines = MATH_ALG_STEPS[iid]
+            for k, line in enumerate(lines):
+                body = say_step(line, k == len(lines) - 1)
+                if k < len(lines) - 1:
+                    steps_notes.append(body)
+                else:
+                    steps_final[iid] = (body, score_of(body))
+                    graded.append({"reply": body, "card": card, "kind": "right"})
+                    first_kind.setdefault(iid, "right")
+            txt = steps_final[iid][0]
+        elif iid in MATH_ALG_SCRIPT and first_kind.get(iid) is None:
+            body = say(MATH_ALG_SCRIPT[iid])
+            graded.append({"reply": body, "card": card, "kind": "scripted"})
+            first_kind[iid] = "scripted"
+            txt = body
+        else:
+            # a re-served card (the bank brings back what was missed) or an
+            # unexpected one: answer it exactly right.
+            body = say(math_answer(card, "right"))
+            graded.append({"reply": body, "card": card, "kind": "right"})
+            first_kind.setdefault(iid, "right")
+            txt = body
+        if CLOSING.search(txt):
+            closed = True
+            break
+    rep.check(closed, "la lliçó es tanca quan el pla s'ha completat",
+              f"{len(served)} targetes servides, pla {total}")
+    tags = {str((bank_card(t) or {}).get("competence", "")) for t in replies if bank_card(t)}
+    rep.check(all(t.startswith("m7.") for t in tags) and bool(tags),
+              "totes les targetes servides són de competències m7", ",".join(sorted(tags))[:90])
+
+    # --- the algebraic verdicts, on screen -------------------------------------
+    def reply_for(iid: str) -> str:
+        for g in graded:
+            if g["card"] and g["card"]["id"] == iid and g["kind"] == "scripted":
+                return g["reply"]
+        return ""
+
+    eq_body = reply_for("m7.syntax_letters.011")
+    rep.check((score_of(eq_body) or 0) == 10 and "✅" in eq_body,
+              "«4x + 5x + 10» contra «9x + 10»: forma equivalent, 10/10",
+              f"{score_of(eq_body)}/10")
+    sign_body = reply_for("m7.distributive_letters.005")
+    sign_cats = re.findall(r"→ \*\*\"[^\"]+\"\*\* \((\w+)", sign_body)
+    rep.check(sign_body and (score_of(sign_body) or 99) <= 5 and "sign" in sign_cats,
+              "«-2x + 12» contra «-2x - 12»: error de signe, categoria «sign» al feedback",
+              f"{score_of(sign_body)}/10 · cats {sign_cats}")
+    lit_body = reply_for("m7.distributive_letters.009")
+    lit_cats = re.findall(r"→ \*\*\"[^\"]+\"\*\* \((\w+)", lit_body)
+    rep.check(lit_body and (score_of(lit_body) or 99) <= 5 and "procedure" in lit_cats,
+              "«3(x+4)» com a resposta de «3 · (x + 4)»: còpia literal, categoria «procedure»",
+              f"{score_of(lit_body)}/10 · cats {lit_cats}")
+    rep.check(all(c in ERROR_CATEGORIES for c in sign_cats + lit_cats),
+              "les categories són de la taxonomia matemàtica",
+              ",".join(sign_cats + lit_cats) if (sign_cats + lit_cats) else "(cap)")
+
+    # --- the v2 steps card ------------------------------------------------------
+    if steps_final:
+        iid, (body, sc) = next(iter(steps_final.items()))
+        rep.check(sc == 10 and "**Passos:**" in body,
+                  f"la targeta de passos d'm7 es tanca amb 10/10 i la traça anotada", f"{sc}/10")
+        rep.check(bool(steps_notes) and all(not SCORE.search(n) and "Correct version:" not in n
+                                            for n in steps_notes),
+                  "les notes per pas no qualifiquen (només l'últim missatge tanca l'exercici)",
+                  f"{len(steps_notes)} notes")
+
+    # --- 🏁 End: the summary and the persistence -------------------------------
+    txt = press("math-end", "🏁 End")
+    rep.check(bool(txt.strip()), "el tutor fa el resum de tancament", f"{len(txt)} car.")
+    wait_quiet(prof_dir)
+
+    # --- the records: the category must reach .records too ----------------------
+    rec_lines: list[dict] = []
+    rf = prof_dir / ".records" / f"{sid}.jsonl"
+    if rf.exists():
+        for line in rf.read_text().splitlines():
+            try:
+                rec_lines.append(json.loads(line))
+            except ValueError:
+                pass
+    bank_graded = [g for g in graded if g["card"]]
+    rep.check(len(rec_lines) >= len(bank_graded),
+              "cada resposta del banc arriba a .records/",
+              f"{len(rec_lines)} registres per a {len(bank_graded)} respostes")
+
+    def rec_for(iid: str, wrong: bool) -> dict:
+        for r in rec_lines:
+            if r.get("item_id") == iid and ((r.get("score") or 0) < 8) == wrong:
+                return r
+        return {}
+
+    sign_rec = rec_for("m7.distributive_letters.005", wrong=True)
+    rep.check((sign_rec.get("corrections") or [{}])[0].get("category") == "sign",
+              "el registre de l'error de signe porta la categoria «sign»",
+              json.dumps(sign_rec.get("corrections"))[:120] if sign_rec else "(sense registre)")
+    lit_rec = rec_for("m7.distributive_letters.009", wrong=True)
+    rep.check((lit_rec.get("corrections") or [{}])[0].get("category") == "procedure",
+              "el registre de la còpia literal porta la categoria «procedure»",
+              json.dumps(lit_rec.get("corrections"))[:120] if lit_rec else "(sense registre)")
+    eq_rec = rec_for("m7.syntax_letters.011", wrong=False)
+    rep.check((eq_rec.get("score") or 0) == 10 and not eq_rec.get("corrections"),
+              "la forma equivalent es registra com a 10, sense correccions",
+              json.dumps({k: eq_rec.get(k) for k in ("score", "corrections")})[:120] if eq_rec
+              else "(sense registre)")
+    if steps_final:
+        iid = next(iter(steps_final))
+        st_rec = rec_for(iid, wrong=False)
+        trace = st_rec.get("steps") or []
+        rep.check(st_rec.get("skill") == "steps" and len(trace) == len(MATH_ALG_STEPS[iid])
+                  and all(s.get("ok") for s in trace) and not any("propagated" in s for s in trace),
+                  "el registre de passos d'm7 porta la traça v2 sencera (cap pas propagat)",
+                  json.dumps(trace)[:140] if trace else "(sense steps)")
+
+    # --- SM-2: right advances, the two slips come back tomorrow -----------------
+    sr = {}
+    try:
+        sr = json.loads((prof_dir / "spaced-repetition.json").read_text()).get("items") or {}
+    except (OSError, ValueError):
+        pass
+    moved = [i for i in ("m7.syntax_letters.011", "m7.value_numeric.002", "m7.props_grouping.002")
+             if sr.get(i, {}).get("due_date") == today or (sr.get(i, {}).get("repetitions") or 0) < 1]
+    rep.check(not moved, "els ítems encertats deixen d'estar pendents (SM-2 avançat)", ",".join(moved))
+    back = [i for i in ("m7.distributive_letters.005", "m7.distributive_letters.009")
+            if sr.get(i, {}).get("due_date") != tomorrow or (sr.get(i, {}).get("repetitions") or 0) != 0]
+    rep.check(not back, "els dos lliscaments algebraics tornen demà amb reps 0",
+              ",".join(f"{i}:{sr.get(i, {}).get('due_date')}" for i in back))
+
+    results = sorted((prof_dir / "results").glob("*.md"), key=lambda f: f.stat().st_mtime) \
+        if (prof_dir / "results").is_dir() else []
+    rep.check(bool(results) and results[-1].stat().st_mtime >= started,
+              "el fitxer de resultats es escriu al tancament",
+              results[-1].name if results else "(cap)")
+
+    # --- the level test machinery, live on this profile (the WP1.1 CLI path) ----
+    try:
+        M7 = cu.load_curriculum(REPO / "curriculum" / "math-m7.md")
+        start = cu.checkpoint_start(prof_dir, M7, today, force=True, stem="math-m7", root=REPO)
+        rep.check(bool(start.get("ok")), "la prova de nivell arrenca (checks Compute:/Steps:)",
+                  str(start.get("text", ""))[:80].replace("\n", " "))
+        total_cp = int(start.get("total") or 0)
+        rep.check(total_cp == 12, "el pla de la prova fa 12 preguntes (checkpoint_items)", str(total_cp))
+        r, asked_cp, n_compute, n_steps = None, 0, 0, 0
+        for _ in range(total_cp + 2):
+            run = cu._read_json(cu.run_file(prof_dir), None)
+            if not run:
+                break
+            item = run["items"][run["i"]]
+            b = item.get("bank") or {}
+            if b.get("type") == "steps":
+                ans = "\n".join(s["expect"] for s in b.get("steps", []))
+                n_steps += 1
+            elif b:
+                ans = str(b.get("answer", ""))
+                n_compute += 1
+            else:
+                ans = str(item.get("answer", "")).split(" / ")[0].strip()
+            asked_cp += 1
+            r = cu.checkpoint_answer(prof_dir, M7, today, ans, root=REPO)
+            if r.get("done"):
+                break
+        res = (r or {}).get("result") or {}
+        rep.check(bool((r or {}).get("done")) and asked_cp == total_cp,
+                  "la prova es completa pregunta a pregunta", f"{asked_cp} de {total_cp}")
+        rep.check(n_steps > 0 and n_compute > 0,
+                  "la prova barreja preguntes compute i de passos del banc d'm7",
+                  f"compute {n_compute} · steps {n_steps}")
+        rep.check(res.get("correct") == res.get("items") and res.get("result") == "pass",
+                  "12/12 i veredicte «pass»: els checks Compute:/Steps: es resolen en viu",
+                  json.dumps({k: res.get(k) for k in ("correct", "items", "result")}))
+    except Exception as e:
+        rep.check(False, "la prova de nivell en viu (CLI)", f"{type(e).__name__}: {e}")
+
+    # --- no CEFR leak, no server warnings ---------------------------------------
+    all_text = "\n".join(replies)
+    leaks = [m.group(0) for m in CEFR_LEAK.finditer(on_screen(all_text))]
+    rep.check(not leaks, "cap menció de nivell CEFR en una sessió d'm7", leaks[0] if leaks else "")
+    warns = [l for l in log_path.read_text(errors="ignore").splitlines()
+             if "⚠" in l and sid in l] if log_path.exists() else []
+    rep.check(not warns, "cap avís del servidor per aquesta sessió", warns[0][:90] if warns else "")
+
+    if args.transcript:
+        Path(args.transcript).expanduser().write_text(
+            f"# Sessió àlgebra m7 e2e — {prof_dir.name} — {sid}\n\n"
             + "\n\n---\n\n".join(transcript), encoding="utf-8")
         print(f"\ntranscripció: {args.transcript}")
 
@@ -2840,12 +3190,15 @@ def main() -> int:
     ap.add_argument("--transcript", help="write everything the tutor said to this file")
     ap.add_argument("--user", default="opencode", help="basic-auth user (default: opencode)")
     ap.add_argument("--password", help="basic-auth password (default: the profile's .web-password)")
-    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "reasoning", "problems", "days", "curriculum", "ladder"), default="lesson",
+    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "algebra", "reasoning", "problems", "days", "curriculum", "ladder"), default="lesson",
                     help="lesson (WP1.9, per defecte): 🔁 Review amb la cua sembrada (compute/compare/"
                          "steps, la primera de passos fallida a propòsit) + 🎲 Go + 📚 Facts + 🏁 End i la "
                          "persistència · review: només la lliçó · steps: una lliçó només de targetes de "
                          "passos · go: només targetes del banc a pràctica lliure · facts: només el drill "
-                         "de fets · reasoning (WP3.3): 📝 Raonament obert — el tutor planteja una tasca "
+                         "de fets · algebra (WP1.1-live, perfil m7): lliçó d'àlgebra — forma equivalent "
+                         "que val 10, lliscament de signe amb categoria «sign», còpia literal de "
+                         "l'enunciat atrapada com a «procedure», targeta de passos en camí v2 i prova "
+                         "de nivell Compute:/Steps: per la via CLI · reasoning (WP3.3): 📝 Raonament obert — el tutor planteja una tasca "
                          "d'explicar, l'alumne respon amb un lliscament deliberat i el feedback ha de "
                          "venir amb correccions de la taxonomia matemàtica (rúbrica WP3.1) · "
                          "problems (WP3.2): 📖 Problemes — targeta tancada del banc (enunciat en prosa, "

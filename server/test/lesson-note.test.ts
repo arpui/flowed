@@ -824,6 +824,16 @@ check("and an empty fingerprint never reaches the list",
   check("no CEFR writing table in the server",
     !pc.includes("export function writingLengthNote") && !ag5.includes("writingLengthNote("));
   check("the stall warning is the Lesson's", ag5.includes('turns === 4 && this.currentCommand.get(sessionId) === "math-review"'));
+  // WP1.1-live (test-m7, 2026-10-06): the warning fired on a bank-only lesson —
+  // the bank advances the lesson without the model, and a finished plan
+  // re-serving a weak card keeps the note identical for 4+ turns while the
+  // lesson advances fine. The tracking must live on the model path, after the
+  // bank dispatches return.
+  const stallAt = ag5.indexOf("this.noteStall.set(sessionId");
+  const bankReviewAt = ag5.indexOf("this.tryBankReviewTurn(sessionId, agent)");
+  check("the stall warning only runs on model-path turns (after the bank dispatch)",
+    bankReviewAt !== -1 && stallAt !== -1 && stallAt > bankReviewAt,
+    { stallAt, bankReviewAt });
 }
 
 {
