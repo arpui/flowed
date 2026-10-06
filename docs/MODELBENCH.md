@@ -280,3 +280,76 @@ cobreix), a 📝 aplica la rúbrica ell mateix sense passar pel
 `math_deep_evaluate` (el skill no mana la crida; a 📖 sí que la fa), i el
 `wordProblemTaskGuard` tenia un forat — la classe d'expressió pura no
 incloïa `÷` — arreglat amb el WP3.4 (`53af5a8`).
+
+### Experiment de calibratge per prompt (2026-10-06, itera­cions 1-2, `57502b8`+`6544559`)
+
+Intent de portar el 14B a la porta amb **canvis de prompt només** — les
+bandes 10/8-9/5-7/0-4, el seu mapatge, `CORRECTION_RE`, els guards i
+l'alumne fix, intactes:
+
+1. **DEEP_RUBRIC** (`tools.ts`): tres àncores few-shot (pelada→3,
+   lliscament→6, completa→9) i la regla «els punts venen de la FEINA
+   MOSTRADA, mai del número final».
+2. **math-writing**: àncores de banda per a l'auto-jutge; prohibició de
+   categories inventades («justification» → `incomplete`/`procedure`);
+   anti-bucle (després de cada nota, la tasca següent al mateix missatge;
+   reescriptura com a molt una per sessió); crida explícita a
+   `math_record_answer` i delegació a `math_deep_evaluate`.
+3. **math-reading**: àncora dura (pelada mai puja de 4) i tou (completa mai
+   baixa de 8); presentació canònica (capçalera `**Corrections:**` + cada
+   correcció amb guió `-`); problema nou al mateix missatge; mai
+   re-corregir després del «no» a les claus.
+
+| | baseline | calib1a | calib1b | calib2a | calib2b |
+|---|---|---|---|---|---|
+| contract | 10/12 | 9/12 | 12/12 | **12/12** | **12/12** |
+| taxonomy | 12/12 | 11/12 | 9/12 | **12/12** | **12/12** |
+| **band_ok** | **6/12** | 10/12 | 8/12 | **10/12** | **9/12** |
+| continues | 9/12 | 12/12 | 11/12 | 11/12 | **12/12** |
+| grade_clean | 22/22 | 21/22 | 19/19 | 19/20 | 17/17 |
+| bare (mediana) | 1/4 (7.0) | 4/4 (3.5) | 3/4 (3.5) | 4/4 (3.5) | 3/4 (3.5) |
+| correct (mediana) | 2/4 (6.0) | 2/4 (6.5) | 0/4 (3.5) | 1/4 (4.0) | 1/4 (4.5) |
+
+**Què es va moure (el que era del model, es va arreglar):**
+
+- `bare`: 1/4 amb mediana 7 → 14/16 amb mediana 3.5. L'error central
+  (to a la dimensió justification) corregit amb les àncores.
+- `continues`: 9/12 → 46/48. El bucle «escriu rewrite o next» desapareix:
+  la nota i la tasca següent viatgen juntes.
+- `taxonomy`: la categoria inventada «justification» (que l'acumulador
+  classifica com a `calculation`) eliminada amb la prohibició explícita.
+- `contract`: la derivada de presentació a 📖 (capçalera i guió `-` que
+  queien en refluixar l'avaluació) corregida amb la regla explícita.
+- Els errors *reals* de banda del model: de ~5/12 (baseline) a **1/24**
+  (les dues passades de la iteració 2): només un `bare` amb 5/10.
+
+**Veredicte: NO SUFICIENT** — `band_ok` 10/12 i 9/12 no arriben a la porta
+(≥11/12), però la residual **ja no és calibratge del model**: de les 5
+bandes fallides de la iteració 2, 4 són artifacts de l'alumne fix. La
+resposta «correct» sembrada per a `compare-strategies` («la multiplicació
+és més ràpida que sumar») no quepa a tasques de resta («quants en falten
+per 20») i el model la corregeix bé (`misread`/`wrong_operation`) però el
+bench la compta com a fallada del tutor; a la baseline, la meitat dels
+`correct` de 📖 queien per l'`infer_op` de l'alumne (default `+` en
+històries de resta o repartiment: «quants euros em queden», «48 paquets en
+vehicles de 6»). El sostre de `band_ok` amb aquest alumne és ~10/12: la
+porta és inabastable sense tocar l'alumne — i no s'ha tocat.
+
+El que el 14B continua sense fer (informatiu, invariable en 4 runs): mai
+crida `math_record_answer` a les obertes (tots els registres són derivats
+del text — la xarxa del servidor ho cobreix), i a 📝 no delega mai a
+`math_deep_evaluate` malgrat skill i comandament (s'auto-jutja amb les
+àncores del skill — que funcionen).
+
+**Recomanació (per a Fase 4/5):**
+
+- **WP3.5 — arreglar l'alumne fix abans de tornar a mesurar**: la resposta
+  canned de `compare-strategies` s'ha de generar de l'operació real de la
+  tasca (o sembrar `generic` quan no quepi), i `infer_op` ha de
+  reconèixer «quants en queden / quedar-se'n» com a resta. Amb les àncores
+  actuals, el sostre previst seria 11-12/12.
+- **Postura de producte**: la pràctica oberta ja calibra bé les bandes amb
+  prompt; mantenir-la **gated per a alumnes reals** fins al WP3.5, amb els
+  guards i el registre derivat com a xarxa. La compliant d'eines (registre,
+  delegació) no ve amb prompt — necessita un model més gran o tooling més
+  directe.
