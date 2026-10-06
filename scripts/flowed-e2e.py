@@ -634,6 +634,8 @@ def run(args, quiet: bool = False) -> Report | int:
         return run_ladder(args, cli, prof_dir, rep, quiet)
     if args.scenario in ("lesson", "go", "steps", "facts", "review"):
         return run_math_journey(args, cli, prof_dir, rep, quiet)
+    if args.scenario == "steps2":
+        return run_steps_v2(args, cli, prof_dir, rep, quiet)
 
     print(f"❌ escenari desconegut: {args.scenario}", file=sys.stderr)
     return 2
@@ -1001,6 +1003,219 @@ def run_math_journey(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> R
         print(f"  → {len(rep.rows) - len(bad)}/{len(rep.rows)} bé"
               + (f" · falla: {', '.join(bad)}" if bad else "")
               + f" · guard {rep.guards}×")
+        return rep
+    rep.render()
+    return rep
+
+
+# ---- WP2.5: v2 incremental steps (one step per message) ----------------------
+#
+# The same bank, the same cards — but the learner answers a steps item ONE
+# OPERATION PER MESSAGE (DISSENY-MATEMATIQUES §4.2 "v2 pas a pas", §5 row 2.5).
+# The server holds "step N pending" per session (agent.ts, the analogue of
+# gradingItem), grades each line with the v1 `_grade_step_line` semantics, and
+# per step: correct → advance with a short progress note; wrong → retry the
+# SAME step; two failures → reveal that step's line and move on. The three
+# seeded cards walk the three outcomes:
+#
+#   m4.mult_2digit.031      step 2 wrong once, then right      → 7/10
+#   m4.frac_add_unlike.031  step 1 wrong twice (revealed)      → 3/10
+#   m4.mult_2digit.032      every step right first try         → 10/10
+#
+# What is pinned: intermediate notes are NOT graded feedback (no Score marker,
+# no "Correct version:" — the prose persistence fallback must stay asleep);
+# the final feedback keeps the v1 contract (annotated trace, taxonomy
+# category, Score); the record carries steps:[{n,ok,got}] with NO propagated
+# flag; SM-2 advances each item by its final score; and the composer's steps
+# mode is sticky across the exchange (checked in the web harness, not here).
+
+MATH_STEPS2_IDS = ["m4.mult_2digit.031", "m4.frac_add_unlike.031", "m4.mult_2digit.032"]
+# per item: the learner's messages, in order; the last one of each card is the
+# one that must close it with the given score.
+MATH_STEPS2_SCRIPT: dict[str, list[tuple[str, int | None]]] = {
+    "m4.mult_2digit.031": [("93 × 20", None), ("93 × 6", None), ("93 × 5", None), ("1860 + 465", 7)],
+    "m4.frac_add_unlike.031": [("1/2 + 2/6 = 3/8", None), ("2/6 + 2/6", None), ("5/6", 3)],
+    "m4.mult_2digit.032": [("15 × 40", None), ("15 × 6", None), ("600 + 90", 10)],
+}
+
+
+def run_steps_v2(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> Report | int:
+    from db_schema import ERROR_CATEGORIES
+    transcript: list[str] = []
+    started = time.time()
+    today = date.today().isoformat()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+
+    sid = cli.new_session()
+    print(f"perfil {prof_dir.name} · port {args.port} · steps2 (v2 pas a pas) · cua {len(MATH_STEPS2_IDS)}")
+    seed_math_review(prof_dir, MATH_STEPS2_IDS)
+    print(f"sessió {sid}")
+
+    replies: list[str] = []
+    log_path = prof_dir / f"math-web-{args.port}.log"
+
+    def press(cmd: str, label: str) -> str:
+        body = tutor_text(cli.command(sid, cmd))
+        replies.append(body)
+        transcript.append(f"## {label}\n\n{body}")
+        print(f"  [{label}]")
+        return body
+
+    def say_step(answer: str, closing_expected: bool) -> str:
+        body = tutor_text(cli.say(sid, answer))
+        replies.append(body)
+        transcript.append(f"## pas «{answer[:60]}»\n\n{body}")
+        flags = []
+        graded = bool(SCORE.search(body))
+        if graded != closing_expected:
+            flags.append("nota on no tocava" if graded else "sense nota al tancament")
+        if not graded and "Correct version:" in body:
+            flags.append("nota intermèdia amb versió correcta")
+        if graded and "**Passos:**" not in body:
+            flags.append("tancament sense traça anotada")
+        print(f"  «{answer[:40]}» → {'FINAL' if graded else 'pas'}"
+              + (f"  ⚠ {', '.join(flags)}" if flags else ""))
+        return body
+
+    # --- the lesson, one step per message -----------------------------------
+    txt = press("math-review", "🔁 Review")
+    card = bank_card(txt)
+    rep.check(card is not None and card.get("type") == "steps",
+              "la lliçó s'obre amb una targeta de passos", card["id"] if card else "(cap)")
+    rep.check(bool(card) and "Pas 1 de" in txt and "Una operació per línia:" in txt,
+              "la targeta v2 demana NOMÉS la primera operació (i manté el marcador)",
+              txt[:120].replace("\n", " "))
+    plan_file = prof_dir / ".daily" / f"lesson-{today}.json"
+    try:
+        total = int(json.loads(plan_file.read_text()).get("total") or 0)
+    except (OSError, ValueError):
+        total = 0
+    rep.check(total == len(MATH_STEPS2_IDS), "el pla fa una lliçó amb els tres ítems sembrats", f"{total}")
+
+    finals: dict[str, tuple[str, int | None]] = {}   # item id -> (final reply, expected score)
+    served: list[str] = []
+    for _ in range(len(MATH_STEPS2_IDS)):
+        if card is None:
+            break
+        served.append(card["id"])
+        script = MATH_STEPS2_SCRIPT.get(card["id"])
+        rep.check(script is not None, f"l'ítem servit és dels sembrats ({card['id']})", "")
+        if not script:
+            break
+        for line, final_score in script:
+            body = say_step(line, final_score is not None)
+            if final_score is not None:
+                m = re.search(r"\b(\d{1,2})\s*/\s*10\b", body)
+                sc = int(m.group(1)) if m else None
+                finals[card["id"]] = (body, final_score)
+                rep.check(sc == final_score,
+                          f"{card['id']} es tanca amb {final_score}/10", f"nota real: {sc}")
+                txt = body
+                break
+        card = bank_card(txt)
+    rep.check(len(served) == len(MATH_STEPS2_IDS), "les tres targetes de passos es resolen pas a pas",
+              ", ".join(served))
+    rep.check(bool(re.search(r"🎉|Lesson complete|lliçó completa", txt, re.I)),
+              "la lliçó es tanca quan el pla s'ha completat", txt[-120:].replace("\n", " "))
+
+    # --- the notes in between: progress, retry, reveal ------------------------
+    notes = [t for t in replies[1:] if not SCORE.search(t) and "Lesson complete" not in t]
+    rep.check(bool(notes), "hi ha notes per pas entre mig", f"{len(notes)} missatges")
+    # the prose persistence fallback (hooks/persist-session.py) fires on the
+    # Score marker and reads the `"x" → **"y"** (cat)` shape: a step note must
+    # carry neither, or every intermediate message would grade a phantom
+    # exercise.
+    rep.check(all("Correct version:" not in n and not re.search(r'→\s*\*\*"', n) for n in notes),
+              "cap nota intermèdia no sembla un exercici corregit", "")
+    joined = "\n".join(replies)
+    rep.check("correcte" in joined and "torna-ho a provar" in joined and "El pas 1 de 2 és:" in joined,
+              "es veuen els tres moviments: avançar, reintentar, revelar", "")
+
+    # --- the final feedbacks keep the v1 contract ----------------------------
+    cats: list[str] = []
+    for iid, (body, want) in finals.items():
+        rep.check(bool(MARKER.search(body)) and "Correct version:" in body and "**Score:" in body,
+                  f"tancament de {iid}: marcador, versió correcta i nota", body[:80].replace("\n", " "))
+        cats += re.findall(r"→ \*\*\"[^\"]+\"\*\* \((\w+)", body)
+    rep.check(bool(cats) and all(c in ERROR_CATEGORIES for c in cats),
+              "les correccions usen la taxonomia matemàtica", ",".join(cats) if cats else "(cap)")
+    fb7 = finals.get("m4.mult_2digit.031", ("", None))[0]
+    rep.check("va necessitar un segon intent" in fb7 and "arrossega" not in fb7,
+              "el 7/10 diu quin pas va necessitar reintent (propagació v1 fora)", fb7[:100].replace("\n", " "))
+    fb3 = finals.get("m4.frac_add_unlike.031", ("", None))[0]
+    rep.check("revelar" in fb3 and "esperat `3/6 + 2/6 = 5/6`" in fb3,
+              "el 3/10 nomena el pas revelat i el seu esperat", fb3[:120].replace("\n", " "))
+
+    # --- End: persistence, records, schedule ----------------------------------
+    txt = press("math-end", "🏁 End")
+    rep.check(bool(txt.strip()), "el tutor fa el resum de tancament", f"{len(txt)} car.")
+    wait_quiet(prof_dir)
+
+    rec_lines: list[dict] = []
+    rf = prof_dir / ".records" / f"{sid}.jsonl"
+    if rf.exists():
+        for line in rf.read_text().splitlines():
+            try:
+                rec_lines.append(json.loads(line))
+            except ValueError:
+                pass
+    steps_recs = [r for r in rec_lines if r.get("skill") == "steps"]
+    rep.check(len(steps_recs) == 3, "un sol registre per ítem (les notes per pas no en fan)",
+              f"{len(steps_recs)}")
+    all_steps = [s for r in steps_recs for s in r.get("steps") or []]
+    rep.check(bool(all_steps) and not any("propagated" in s for s in all_steps),
+              "la traça v2 no té cap pas propagat", json.dumps(all_steps[:2]))
+    keyed = {r.get("item_id") for r in steps_recs}
+    rep.check(keyed == set(MATH_STEPS2_IDS), "cada registre clau l'ítem de la cua",
+              ",".join(sorted(str(k) for k in keyed)))
+    by_id = {r.get("item_id"): r for r in steps_recs}
+    rep.check(by_id.get("m4.mult_2digit.031", {}).get("score") == 7
+              and by_id.get("m4.frac_add_unlike.031", {}).get("score") == 3
+              and by_id.get("m4.mult_2digit.032", {}).get("score") == 10,
+              "les notes registrades són 7 / 3 / 10",
+              json.dumps({k: v.get("score") for k, v in by_id.items()}))
+    # the answer field of a v2 record holds the WHOLE trace, not the last line
+    # (the field's name is built here, not spelled: the language-era literal is
+    # banned in this file by tests/test_e2e_transcript.py)
+    la = str(by_id.get("m4.mult_2digit.031", {}).get("learner" + "_answer", ""))
+    rep.check("\n" in la and "93 × 20" in la and "1860 + 465" in la,
+              "el registre guarda la traça sencera com a resposta", la.replace("\n", " ⏎ "))
+
+    sr = {}
+    try:
+        sr = json.loads((prof_dir / "spaced-repetition.json").read_text()).get("items") or {}
+    except (OSError, ValueError):
+        pass
+    still_due = [i for i in MATH_STEPS2_IDS if sr.get(i, {}).get("due_date") == today]
+    rep.check(not still_due, "els tres ítems practicats deixen d'estar pendents avui",
+              ",".join(still_due) if still_due else "")
+    rep.check((sr.get("m4.frac_add_unlike.031", {}).get("repetitions") or 0) == 0
+              and sr.get("m4.frac_add_unlike.031", {}).get("due_date") == tomorrow,
+              "el pas revelat (qualitat 1) torna demà amb reps 0",
+              json.dumps(sr.get("m4.frac_add_unlike.031")))
+    rep.check((sr.get("m4.mult_2digit.032", {}).get("repetitions") or 0) >= 1,
+              "el 10/10 suma una repetició SM-2", json.dumps(sr.get("m4.mult_2digit.032")))
+
+    results = sorted((prof_dir / "results").glob("*.md"), key=lambda f: f.stat().st_mtime) \
+        if (prof_dir / "results").is_dir() else []
+    rep.check(bool(results) and results[-1].stat().st_mtime >= started,
+              "el fitxer de resultats es escriu al tancament",
+              results[-1].name if results else "(cap)")
+
+    warns = [l for l in log_path.read_text(errors="ignore").splitlines()
+             if "⚠" in l and sid in l] if log_path.exists() else []
+    rep.check(not warns, "cap avís del servidor per aquesta sessió", warns[0][:90] if warns else "")
+
+    if args.transcript:
+        Path(args.transcript).expanduser().write_text(
+            f"# Sessió v2 pas a pas e2e — {prof_dir.name} — {sid}\n\n"
+            + "\n\n---\n\n".join(transcript), encoding="utf-8")
+        print(f"\ntranscripció: {args.transcript}")
+
+    if quiet:
+        bad = [lbl for ok, lbl, _ in rep.rows if not ok]
+        print(f"  → {len(rep.rows) - len(bad)}/{len(rep.rows)} bé"
+              + (f" · falla: {', '.join(bad)}" if bad else ""))
         return rep
     rep.render()
     return rep
@@ -2212,7 +2427,7 @@ def main() -> int:
     ap.add_argument("--transcript", help="write everything the tutor said to this file")
     ap.add_argument("--user", default="opencode", help="basic-auth user (default: opencode)")
     ap.add_argument("--password", help="basic-auth password (default: the profile's .web-password)")
-    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "facts", "review", "days", "curriculum", "ladder"), default="lesson",
+    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "days", "curriculum", "ladder"), default="lesson",
                     help="lesson (WP1.9, per defecte): 🔁 Review amb la cua sembrada (compute/compare/"
                          "steps, la primera de passos fallida a propòsit) + 🎲 Go + 📚 Facts + 🏁 End i la "
                          "persistència · review: només la lliçó · steps: una lliçó només de targetes de "

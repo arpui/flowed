@@ -10,6 +10,7 @@ import { runTurn, type ToolDefinition, type TurnPart, type ModelConfig, type Too
 import { buildTools, normalizeCategory, type DeepEvaluator } from "./tools";
 import { loadCommand } from "./commands";
 import { bankExerciseCard, bankFeedback, difficultyLabel, type BankItem, type BankGrade } from "./bank";
+import { stepsV2Init, stepsV2Handle, stepsV2Note, stepsV2Resume, type StepsV2State } from "./steps";
 import {
   resolveSessionTarget,
   resolveStopMode,
@@ -198,6 +199,11 @@ export class Agent {
     {
       competence: string; itemId: string; practice?: "go" | "review";
       queueId?: string | null; item?: BankItem; vocab?: boolean; name?: string; depth?: string;
+      /** WP2.5: a steps item served v2-style (one step per message). The
+       *  per-session analogue of `gradingItem`: which step is pending and how
+       *  many attempts it has had. Cleared with the item when the trace is
+       *  finalized (or abandoned by a practice switch). */
+      stepsV2?: StepsV2State;
     }
   >();
   /** The review item the server handed the tutor for the exercise now on
@@ -210,8 +216,18 @@ export class Agent {
    *  `followed` is set once the tutor's exercise was seen to be about it. */
   private assignedCompetence = new Map<string, AssignedCompetence & { followed?: boolean; shown?: boolean }>();
   private gradingCompetence = new Map<string, AssignedCompetence & { followed?: boolean; shown?: boolean }>();
-  /** Items dispensed today, so the queue is not handed out twice. */
+  /** Items dispensed today, so the queue is not handed out twice — the MODEL
+   *  review path's list (pacingNote pre-assigns from it). */
   private usedItems = new Map<string, string[]>();
+  /** The BANK review path's own served list (queueIds it handed out). Kept
+   *  apart from `usedItems` on purpose: pacingNote pre-assigns a due item on
+   *  EVERY turn for the model path, and on the bank path those pre-assignments
+   *  are never served — mixing the two lists made review-pick skip the first
+   *  due item of every lesson (fixed in e0057b4 by filtering the current
+   *  pick), and a v2 steps exchange, which spans many turns on ONE item while
+   *  pacingNote advances its pick each turn, broke that single-pick filter
+   *  both ways (found by the WP2.5 e2e: items skipped, then re-served). */
+  private bankUsedItems = new Map<string, string[]>();
   /** Weak patterns already drilled this session, and the one in hand. */
   /** What each practice has asked today, keyed "<session>|<command>". */
   private askedByPractice = new Map<string, string[]>();
@@ -796,31 +812,80 @@ export class Agent {
    * Returns null to let the model take the turn (no bank item at all): Review
    * then works exactly as before.
    */
+  /** A server-authored tutor message (no model): the v2 per-step notes go out
+   *  through this, with the same idle/persistence events a bank card emits. */
+  private emitBankText(sessionId: string, agent: string, text: string): TurnOutcome {
+    const msg = this.createAssistantMessage(sessionId, agent, this.models.deep);
+    const part = this.db.insertPart(msg.id, sessionId, { type: "text", text });
+    this.emit({ type: "message.part.updated", properties: { part } });
+    this.emit({ type: "session.progress", properties: { sessionID: sessionId, ...this.sessionProgress(sessionId) } });
+    this.emit({ type: "session.idle", properties: { sessionID: sessionId } });
+    this.runAutoPersistence(sessionId);
+    const view = () => this.db.getMessageView(msg);
+    return { info: view().info, parts: view().parts, debug: this.debugStatus(sessionId) };
+  }
+
+  /**
+   * WP2.5 — one message of a v2 steps exchange. Grades the line against the
+   * pending step (hooks/bank.py `grade-step`, i.e. the v1 `_grade_step_line`
+   * semantics), advances / retries / reveals per server/src/steps.ts, and on
+   * the last step closes the trace (hooks/bank.py `finalize-steps`, which
+   * writes progress once — a half-finished exchange records NOTHING, so an
+   * abandoned item stays due exactly as it was).
+   *
+   * "v1" = the learner wrote the WHOLE trace at once (2+ non-blank lines):
+   * the deliberate escape hatch — the item falls back to the all-at-once
+   * grader unchanged. "error" = the grader could not run; the caller lets the
+   * model take the turn rather than grade against a stale guess.
+   */
+  private stepsV2Grade(
+    sessionId: string,
+    prev: { competence: string; itemId: string; item?: BankItem; stepsV2?: StepsV2State },
+    answerText: string
+  ): { kind: "v1" } | { kind: "error" } | { kind: "note"; text: string } | { kind: "final"; graded: Record<string, unknown> } {
+    const state = prev.stepsV2;
+    const item = prev.item;
+    if (!state || !item) return { kind: "v1" };
+    const lines = answerText.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    if (lines.length >= 2) {
+      delete prev.stepsV2; // "tota la traça de cop": v1 grades it, unchanged
+      return { kind: "v1" };
+    }
+    const step = (item.steps ?? [])[state.stepIdx];
+    if (!step) {
+      delete prev.stepsV2;
+      return { kind: "v1" };
+    }
+    const g = this.runBankCli([
+      "grade-step", "--competence", prev.competence, "--item-id", prev.itemId,
+      "--step", String(step.n), "--line", answerText,
+    ]);
+    const verdict = typeof g?.["verdict"] === "string" ? g["verdict"] : "";
+    if (!g || g["error"] || !["correct", "near", "wrong"].includes(verdict)) {
+      console.log(`[Fluent] 🏦 session ${sessionId}: v2 grade-step FAILED for ${prev.competence}/${prev.itemId} step ${step.n}`);
+      return { kind: "error" };
+    }
+    const move = stepsV2Handle(item, state, verdict as "correct" | "near" | "wrong", answerText);
+    if (!move.done) {
+      return { kind: "note", text: stepsV2Note(item, move) };
+    }
+    const graded = this.runBankCli([
+      "finalize-steps", "--competence", prev.competence, "--item-id", prev.itemId,
+      "--results", JSON.stringify(state.results),
+    ]);
+    if (!graded || graded["error"]) {
+      console.log(`[Fluent] 🏦 session ${sessionId}: v2 finalize-steps FAILED for ${prev.competence}/${prev.itemId}`);
+      return { kind: "error" };
+    }
+    return { kind: "final", graded };
+  }
+
   private tryBankReviewTurn(sessionId: string, agent: string): TurnOutcome | null {
     let feedback = "";
     let credited: "yes" | "no" | undefined;
     if (this.assignedBankItem.get(sessionId)?.practice === "go") this.assignedBankItem.delete(sessionId);
     const prev = this.assignedBankItem.get(sessionId);
     const answering = this.answerInFront.get(sessionId) === true;
-
-    if (prev && answering) {
-      const graded = this.runBankCli([
-        "answer", "--competence", prev.competence, "--item-id", prev.itemId,
-        "--answer", this.lastAnswer.get(sessionId) ?? "",
-      ]);
-      if (!graded || graded["error"]) {
-        console.log(`[Fluent] 🏦 session ${sessionId}: review grade FAILED for ${prev.competence}/${prev.itemId}`);
-        return null;
-      }
-      this.appendBankRecord(sessionId, prev.competence, Boolean(prev.vocab), graded, prev.queueId);
-      this.creditBankAnswer(sessionId, true, prev.queueId ?? prev.itemId);
-      feedback = bankFeedback(graded as unknown as BankGrade) + "\n\n";
-      const score = Number((graded as Record<string, unknown>)["score"] ?? 0);
-      credited = score >= KNOWN_SCORE ? "yes" : "no";
-      this.assignedBankItem.delete(sessionId);
-      console.log(`[Fluent] 🏦 session ${sessionId}: review graded ${prev.competence}/${prev.itemId}` +
-        `${prev.queueId ? ` (queue ${prev.queueId})` : ""} = ${score}/10`);
-    }
 
     const lesson = this.lessonState();
     const emit = (text: string) => {
@@ -833,6 +898,48 @@ export class Agent {
       const view = () => this.db.getMessageView(msg);
       return { info: view().info, parts: view().parts, debug: this.debugStatus(sessionId) };
     };
+
+    if (prev && answering) {
+      // WP2.5: a v2 steps item is graded one step per message. An intermediate
+      // step answer gets a short progress note (no Score marker — the prose
+      // persistence fallback stays asleep) and the turn ends there.
+      if (prev.stepsV2) {
+        const v2 = this.stepsV2Grade(sessionId, prev, this.lastAnswer.get(sessionId) ?? "");
+        if (v2.kind === "note") return emit(v2.text);
+        if (v2.kind === "error") return null;
+        if (v2.kind === "final") {
+          // the record's learner_answer is the whole trace, not the last line
+          this.lastAnswer.set(sessionId, (prev.stepsV2?.results ?? [])
+            .map((r) => String(r.got ?? "")).join("\n"));
+          this.appendBankRecord(sessionId, prev.competence, Boolean(prev.vocab), v2.graded, prev.queueId);
+          this.creditBankAnswer(sessionId, true, prev.queueId ?? prev.itemId);
+          feedback = bankFeedback(v2.graded as unknown as BankGrade) + "\n\n";
+          const score = Number(v2.graded["score"] ?? 0);
+          credited = score >= KNOWN_SCORE ? "yes" : "no";
+          this.assignedBankItem.delete(sessionId);
+          console.log(`[Fluent] 🏦 session ${sessionId}: review v2 steps graded ${prev.competence}/${prev.itemId}` +
+            `${prev.queueId ? ` (queue ${prev.queueId})` : ""} = ${score}/10`);
+        }
+      }
+      if (!prev.stepsV2) {
+        const graded = this.runBankCli([
+          "answer", "--competence", prev.competence, "--item-id", prev.itemId,
+          "--answer", this.lastAnswer.get(sessionId) ?? "",
+        ]);
+        if (!graded || graded["error"]) {
+          console.log(`[Fluent] 🏦 session ${sessionId}: review grade FAILED for ${prev.competence}/${prev.itemId}`);
+          return null;
+        }
+        this.appendBankRecord(sessionId, prev.competence, Boolean(prev.vocab), graded, prev.queueId);
+        this.creditBankAnswer(sessionId, true, prev.queueId ?? prev.itemId);
+        feedback = bankFeedback(graded as unknown as BankGrade) + "\n\n";
+        const score = Number((graded as Record<string, unknown>)["score"] ?? 0);
+        credited = score >= KNOWN_SCORE ? "yes" : "no";
+        this.assignedBankItem.delete(sessionId);
+        console.log(`[Fluent] 🏦 session ${sessionId}: review graded ${prev.competence}/${prev.itemId}` +
+          `${prev.queueId ? ` (queue ${prev.queueId})` : ""} = ${score}/10`);
+      }
+    }
 
     if (lesson.total > 0 && lesson.pending <= 0) {
       // Finished: a fixed closing, not a model turn. Pressing Review again on
@@ -847,9 +954,11 @@ export class Agent {
     }
 
     // Pressed Review again with an exercise already on screen: show that one
-    // again rather than skipping it.
+    // again rather than skipping it. A v2 exchange mid-trace re-shows the
+    // PENDING STEP, not the opening card (WP2.5).
     const still = this.assignedBankItem.get(sessionId);
     if (still && !answering && still.item) {
+      if (still.stepsV2) return emit(stepsV2Resume(still.item, still.stepsV2));
       const card = bankExerciseCard(still.item, lesson.done + 1, difficultyLabel(still.depth ?? "normal"),
         still.name ?? still.competence);
       return emit(card);
@@ -857,13 +966,13 @@ export class Agent {
 
     // pacingNote runs before this turn and, on the model lesson path, pre-assigns
     // the next due item (assignedItem) and pushes it into usedItems. On the BANK
-    // review path that item is never served — the bank picks its own — so leaving
-    // it in the used list makes review-pick skip the FIRST due item of every
-    // lesson and fill the lesson with weak picks instead of the seeded queue.
-    // Drop the model-path pick from the list we hand review-pick; the bank's own
-    // served items (queueIds pushed below) stay.
-    const modelPick = this.assignedItem.get(sessionId)?.id;
-    const used = (this.usedItems.get(sessionId) ?? []).filter((id) => id !== modelPick);
+    // review path that item is never served — the bank picks its own — so the
+    // bank keeps its OWN served list (bankUsedItems): mixing the two made
+    // review-pick skip the first due item of every lesson (e0057b4), and with
+    // v2's many turns per card even filtering the current pick is not enough
+    // (items got skipped, then re-served). The bank's used list holds only
+    // queueIds it actually handed out.
+    const used = this.bankUsedItems.get(sessionId) ?? [];
     const picked = this.runBankCli(["review-pick", "--used", used.join(","), "--last", prev?.competence ?? ""]);
     const retired = Array.isArray(picked?.["retired"]) ? (picked!["retired"] as unknown[]).length : 0;
     if (retired) console.log(`[Fluent] 🏦 session ${sessionId}: retired ${retired} old queue item(s) with no safe competence`);
@@ -874,16 +983,22 @@ export class Agent {
     const item = picked["item"] as BankItem;
     const queueId = (picked["queue_id"] as string | null) ?? null;
     if (queueId && !used.includes(queueId)) used.push(queueId);
-    this.usedItems.set(sessionId, used.slice(-60));
+    this.bankUsedItems.set(sessionId, used.slice(-60));
     const entry = {
       competence: String(picked["competence"]), itemId: item.id, practice: "review" as const, queueId, item,
       vocab: Boolean(picked["vocab"]), name: String(picked["competence_name"] ?? picked["competence"]),
       depth: String(picked["depth"] ?? "normal"),
+      // WP2.5: steps items are served v2 — one step per message. The v1
+      // all-at-once grader stays reachable: a first answer with 2+ lines
+      // falls back to it (stepsV2Grade), and the e2e "tota la traça de cop"
+      // path exercises exactly that.
+      stepsV2: item.type === "steps" ? stepsV2Init() : undefined,
     };
     this.assignedBankItem.set(sessionId, entry);
-    const card = bankExerciseCard(item, lesson.done + 1, difficultyLabel(entry.depth), entry.name, credited);
+    const card = bankExerciseCard(item, lesson.done + 1, difficultyLabel(entry.depth), entry.name, credited,
+      entry.stepsV2 ? "v2" : undefined);
     console.log(`[Fluent] 🏦 session ${sessionId}: review ${picked["source"]} → ${entry.competence}/${item.id}` +
-      `${queueId ? ` for ${queueId}` : ""}`);
+      `${queueId ? ` for ${queueId}` : ""}${entry.stepsV2 ? " (v2)" : ""}`);
     return emit(feedback + card);
   }
 
@@ -916,19 +1031,38 @@ export class Agent {
     const prev = this.assignedBankItem.get(sessionId);
     if (prev && this.answerInFront.get(sessionId) === true) {
       const answerText = this.lastAnswer.get(sessionId) ?? "";
-      const graded = this.runBankCli([
-        "answer", "--competence", prev.competence, "--item-id", prev.itemId, "--answer", answerText,
-      ]);
-      if (!graded || graded["error"]) {
-        console.log(`[Fluent] 🏦 session ${sessionId}: bank grade FAILED for ${prev.competence}/${prev.itemId} — ${JSON.stringify(graded)}`);
-        return null; // something is off — let the model take this turn rather than drop the answer
+      // WP2.5: v2 steps exchange — one step per message (see stepsV2Grade).
+      if (prev.stepsV2) {
+        const v2 = this.stepsV2Grade(sessionId, prev, answerText);
+        if (v2.kind === "note") return this.emitBankText(sessionId, agent, v2.text);
+        if (v2.kind === "error") return null;
+        if (v2.kind === "final") {
+          this.lastAnswer.set(sessionId, (prev.stepsV2?.results ?? [])
+            .map((r) => String(r.got ?? "")).join("\n"));
+          this.appendBankRecord(sessionId, prev.competence, Boolean(competence.vocab), v2.graded);
+          this.creditBankAnswer(sessionId, false, prev.itemId);
+          feedback = bankFeedback(v2.graded as unknown as BankGrade) + "\n\n";
+          const score = Number(v2.graded["score"] ?? 0);
+          credited = score >= KNOWN_SCORE ? "yes" : "no";
+          this.assignedBankItem.delete(sessionId);
+          console.log(`[Fluent] 🏦 session ${sessionId}: bank v2 steps graded ${prev.competence}/${prev.itemId} = ${score}/10 (credited=${credited})`);
+        }
       }
-      this.appendBankRecord(sessionId, prev.competence, Boolean(competence.vocab), graded);
-      this.creditBankAnswer(sessionId, false, prev.itemId);
-      feedback = bankFeedback(graded as unknown as BankGrade) + "\n\n";
-      const score = Number((graded as Record<string, unknown>)["score"] ?? 0);
-      credited = score >= KNOWN_SCORE ? "yes" : "no";
-      console.log(`[Fluent] 🏦 session ${sessionId}: bank graded ${prev.competence}/${prev.itemId} = ${score}/10 (credited=${credited})`);
+      if (!prev.stepsV2) {
+        const graded = this.runBankCli([
+          "answer", "--competence", prev.competence, "--item-id", prev.itemId, "--answer", answerText,
+        ]);
+        if (!graded || graded["error"]) {
+          console.log(`[Fluent] 🏦 session ${sessionId}: bank grade FAILED for ${prev.competence}/${prev.itemId} — ${JSON.stringify(graded)}`);
+          return null; // something is off — let the model take this turn rather than drop the answer
+        }
+        this.appendBankRecord(sessionId, prev.competence, Boolean(competence.vocab), graded);
+        this.creditBankAnswer(sessionId, false, prev.itemId);
+        feedback = bankFeedback(graded as unknown as BankGrade) + "\n\n";
+        const score = Number((graded as Record<string, unknown>)["score"] ?? 0);
+        credited = score >= KNOWN_SCORE ? "yes" : "no";
+        console.log(`[Fluent] 🏦 session ${sessionId}: bank graded ${prev.competence}/${prev.itemId} = ${score}/10 (credited=${credited})`);
+      }
     } else if (prev) {
       // An answer was expected but this turn is not one (e.g. a button press
       // switching away from Go and back, or a retried request). Returning
@@ -944,6 +1078,10 @@ export class Agent {
       // `still && !answering` below in tryBankReviewTurn) keeps the card on
       // screen and the pointer in sync — no model turn, no desync.
       console.log(`[Fluent] 🏦 session ${sessionId}: bank turn re-shown (no answer in front, prev=${prev.competence}/${prev.itemId})`);
+      if (prev.item && prev.stepsV2) {
+        // v2 mid-trace: re-show the pending step, not the opening card.
+        return this.emitBankText(sessionId, agent, stepsV2Resume(prev.item, prev.stepsV2));
+      }
       if (prev.item) {
         const exerciseNumber = this.gradedSoFar(sessionId).count + 1;
         const card = bankExerciseCard(
@@ -971,12 +1109,16 @@ export class Agent {
     const item = picked["item"] as BankItem;
 
     const exerciseNumber = this.gradedSoFar(sessionId).count + 1;
+    // WP2.5: steps items go v2 (one step per message) in Go too — same
+    // dispatch as 🎓 Review; the multi-line first answer escapes to v1.
+    const stepsV2 = item.type === "steps" ? stepsV2Init() : undefined;
     const card = bankExerciseCard(
-      item, exerciseNumber, difficultyLabel(String(picked["depth"] ?? "normal")), competence.name, credited
+      item, exerciseNumber, difficultyLabel(String(picked["depth"] ?? "normal")), competence.name, credited,
+      stepsV2 ? "v2" : undefined
     );
     this.assignedBankItem.set(sessionId, {
       competence: competence.id, itemId: item.id, practice: "go", item, name: competence.name,
-      depth: String(picked["depth"] ?? "normal"),
+      depth: String(picked["depth"] ?? "normal"), stepsV2,
     });
 
     const msg = this.createAssistantMessage(sessionId, agent, this.models.deep);

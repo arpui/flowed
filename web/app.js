@@ -1854,10 +1854,22 @@ function injectModeHint(text, mode) {
   return text.replace(SKILL_LINE_RE, (m) => m + hint);
 }
 
+// WP2.5: a v2 steps exchange spans several messages, and only the OPENING
+// card carries the "**Una operació per línia:**" marker — the per-step notes
+// deliberately do not repeat it (they must not look like graded exercises to
+// the persistence fallback). So the composer mode cannot be re-detected every
+// turn: once a steps card is seen, the mode stays sticky until the exchange
+// ends — a graded feedback (Score marker) or a card of another mode clears
+// it. Session state, not marker re-detection.
+let stepsExchangeActive = false;
+
 function refreshExerciseCard(snap = true) {
   const last = lastTutorText();
   const split = last ? splitFeedbackQuestion(last.text) : { question: "" };
-  const mode = split.question ? blankExerciseMode(split.question) : null;
+  const detected = split.question ? blankExerciseMode(split.question) : null;
+  if (detected === "steps") stepsExchangeActive = true;
+  else if (detected !== null || (last && SCORE_RE.test(last.text))) stepsExchangeActive = false;
+  const mode = detected ?? (stepsExchangeActive ? "steps" : null);
   // WP1.8: while the exercise on screen asks for a result (the math bank
   // marker), the composer gets a numeric keypad; every other exercise
   // reverts to the text keyboard. A steps card (WP2.4) is the exception

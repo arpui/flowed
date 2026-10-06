@@ -1,3 +1,5 @@
+import { stepsV2CardTail } from "./steps.ts";
+
 /**
  * Offline exercise bank: card text + feedback text, matching the visual
  * format the tutor writes today (measured live, nes-en, 2026-09-24 —
@@ -68,6 +70,10 @@ export interface BankGrade {
   /** steps items only: the first failure's category and step number. */
   error_class?: string;
   failed_step?: number;
+  /** steps items only (WP2.5): which interaction produced the trace — v1
+   *  all-at-once (propagation) or v2 one-step-per-message (no propagation).
+   *  Only the lead sentence differs; the parseable contract does not. */
+  mode?: "v1" | "v2";
   item: BankItem;
 }
 
@@ -97,7 +103,13 @@ export function bankExerciseCard(
   exerciseNumber: number,
   difficulty: string,
   competenceName: string,
-  credited?: "yes" | "no"
+  credited?: "yes" | "no",
+  /** steps items only (WP2.5): "v2" asks for the FIRST operation only — the
+   *  rest of the trace is collected one step per message (server/src/steps.ts).
+   *  The "**Una operació per línia:**" marker line stays on the card either
+   *  way: web/app.js detects it to switch the composer, and the mode then
+   *  stays sticky across the exchange without re-detecting it. */
+  stepsMode?: "v1" | "v2"
 ): string {
   const tag = `<span class="comp-tag"${credited ? ` data-credit="${credited}"` : ""}>${item.competence}</span>`;
   // Not "Writing": that is its own practice now (📝, open production). A bank
@@ -112,6 +124,12 @@ export function bankExerciseCard(
     // "**Type your answer:**" is the answer marker) and adds the fixed
     // "**Una operació per línia:**" line — web/app.js detects THAT to switch
     // the composer to the multi-line placeholder (no numeric keypad).
+    if (stepsMode === "v2") {
+      // WP2.5: same card, but it asks for the FIRST operation only; the
+      // server collects the rest one step per message (server/src/steps.ts).
+      return `${head}\n\n**Problem:** ${item.problem}\n\n**Una operació per línia:**\n\n` +
+        stepsV2CardTail(item);
+    }
     return `${head}\n\n**Problem:** ${item.problem}\n\n**Una operació per línia:**\n\n**Type your answer:**`;
   }
   if (isMathItem(item)) {
@@ -187,13 +205,24 @@ function stepsFeedback(g: BankGrade): string {
     const why = s.why ? ` — ${s.why}` : "";
     return `- ❌ ${s.n} · esperat \`${want}\` · ${got}${why}`;
   });
-  const failStep = firstFail ? itemSteps.find((s) => s.n === firstFail.n) ?? null : null;
+  // v1: the first non-propagated failure. v2 (WP2.5): a retried-then-correct
+  // step has ok=true so there is no failed trace entry — the correction still
+  // names the step that needed the retry, which finalize_steps put in
+  // failed_step. (For v1 failed_step === firstFail.n, so this changes nothing
+  // there.)
+  const failStep = firstFail
+    ? itemSteps.find((s) => s.n === firstFail.n) ?? null
+    : g.failed_step != null
+      ? itemSteps.find((s) => s.n === g.failed_step) ?? null
+      : null;
   const lead = known
     ? `${marker} Perfect! Tot el procediment és correcte.`
     : g.verdict === "near"
       ? `${marker} Gairebé — ${g.note}.`
       : firstFail
-        ? `${marker} El pas ${firstFail.n} falla; els de després arrosseguen l'error.`
+        ? g.mode === "v2"
+          ? `${marker} El pas ${firstFail.n} no et sortia; te'l vaig haver de revelar.`
+          : `${marker} El pas ${firstFail.n} falla; els de després arrosseguen l'error.`
         : `${marker} Not quite.`;
   const category = g.verdict === "near" ? "calculation" : String(g.error_class || g.item.error_class || "calculation");
   const why = failStep?.why || g.note || "revisa el procediment";

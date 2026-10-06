@@ -468,6 +468,93 @@ def _grade_steps(item: dict, raw_answer: str) -> dict:
             "error_class": first_cat, "failed_step": first_fail, "steps": trace}
 
 
+# ---- v2 incremental steps (WP2.5, §4.2 "v2 pas a pas") -----------------------
+# The learner solves a steps item ONE STEP PER MESSAGE. The session state —
+# which item, which step pending, failed attempts on it — lives in the server
+# (server/src/agent.ts + server/src/steps.ts); these two functions are the
+# stateless half:
+#
+#   grade_step(item, n, line)      one line against step n, reusing
+#                                  `_grade_step_line` verbatim (form AND value,
+#                                  `accept` alternates, near-slip). Writes NO
+#                                  progress: the item is only recorded when the
+#                                  trace is complete.
+#   finalize_steps(item, results)  the record payload from the per-step
+#                                  results, in `_grade_steps`' shape so the
+#                                  feedback renderer, the .records writer and
+#                                  SM-2 read a v2 record exactly like a v1 one.
+#
+# v2 has NO propagation — every step was attempted on its own merits — so the
+# trace entries carry no `propagated` flag. The score mirrors v1's scale
+# exactly (the §7 "one slip, not three" rule survives):
+#   every step right on the first try            → 10 ("correct")
+#   every step right, but one needed a retry     → 7  ("near")
+#   a step had to be revealed (2 failed tries)   → 3  ("wrong")
+# `failed_step`/`error_class` name the first step that FAILED outright (a
+# revealed one) when there is one, else the first step that needed a retry;
+# a revealed step's category is its own error_class, a retried step's is
+# "calculation" when its first slip was a digit slip (the v1 near rule).
+
+def grade_step(item: dict, step_n, line: str) -> dict:
+    """Grade ONE learner line against step `step_n` of a steps item (v2)."""
+    step = next((s for s in item.get("steps", []) if s.get("n") == step_n), None)
+    if step is None:
+        return {"error": f"step {step_n!r} not in item {item.get('id')!r}"}
+    r = _grade_step_line(step, str(line or ""))
+    exp, val = str(step.get("expect", "")), str(step.get("value", ""))
+    r["error_class"] = ("calculation" if r["verdict"] == "near"
+                        else str(step.get("error_class") or "calculation"))
+    r["why"] = str(step.get("why", ""))
+    r["expect_line"] = f"{exp} = {val}" if val and val != exp else exp
+    return r
+
+
+def finalize_steps(item: dict, results: list[dict]) -> dict:
+    """The v2 record payload (see the block above). `results` is one entry per
+    step, in order: {n, ok, got, attempts, revealed?, first_wrong?, near?}."""
+    full = _steps_correct_version(item)
+    steps = item.get("steps", [])
+    by_n = {r.get("n"): r for r in results}
+    trace = [{"n": s.get("n"), "ok": bool((by_n.get(s.get("n")) or {}).get("ok")),
+              "got": (by_n.get(s.get("n")) or {}).get("got")} for s in steps]
+    revealed = next((s for s in steps if not (by_n.get(s.get("n")) or {}).get("ok")), None)
+    retried = next((s for s in steps
+                    if (by_n.get(s.get("n")) or {}).get("ok")
+                    and int((by_n.get(s.get("n")) or {}).get("attempts") or 1) > 1), None)
+    if revealed is None and retried is None:
+        return {"score": 10, "verdict": "correct", "note": "", "correct_version": full,
+                "steps": trace, "mode": "v2"}
+    bad = revealed if revealed is not None else retried
+    r = by_n.get(bad.get("n")) or {}
+    near = bool(r.get("near")) and revealed is None
+    cat = "calculation" if near else str(bad.get("error_class") or "calculation")
+    if revealed is None:
+        return {"score": 7, "verdict": "near",
+                "note": f"el pas {bad.get('n')} va necessitar un segon intent",
+                "correct_version": full, "got": str(r.get("first_wrong") or ""),
+                "error_class": cat, "failed_step": bad.get("n"), "steps": trace, "mode": "v2"}
+    return {"score": 3, "verdict": "wrong",
+            "note": f"el pas {bad.get('n')} no et sortia; te'l vaig haver de revelar",
+            "correct_version": full, "got": str(r.get("first_wrong") or r.get("got") or ""),
+            "error_class": cat, "failed_step": bad.get("n"), "steps": trace, "mode": "v2"}
+
+
+def answer_and_record_steps(root: Path, curriculum_stem: str, item_id: str, competence_id: str,
+                            results: list[dict], data_dir: str | os.PathLike, today: str,
+                            comp: dict | None = None) -> dict:
+    """finalize_steps + the progress write answer_and_record does (v2: the
+    item is recorded once, when its trace is complete)."""
+    items = {it["id"]: it for it in load_bank(root, curriculum_stem, competence_id, data_dir)}
+    item = items.get(item_id)
+    if not item:
+        return {"error": f"item {item_id!r} not found in bank for {competence_id}"}
+    result = finalize_steps(item, results)
+    prog = _load_progress(data_dir)
+    prog.setdefault(competence_id, {})[item_id] = {"date": today, "correct": result["score"] >= 8}
+    _save_progress(data_dir, prog)
+    return {**result, "item": item}
+
+
 def _grade_math(item: dict, raw_answer: str) -> dict:
     full = _math_correct_version(item)
     t = item.get("type")

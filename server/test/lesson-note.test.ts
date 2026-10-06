@@ -652,10 +652,15 @@ check("and the queue is not handed out twice in a session",
 // WP1.9: pacingNote pre-assigns a due item (model path) into usedItems before
 // tryBankReviewTurn runs. On the bank path that item is never served, so leaving
 // it in the used list made review-pick skip the FIRST due item of every lesson
-// and fill it with weak picks. The bank review must drop the model-path pick.
-check("the bank review drops the model-path pick from the used list",
-  ag4.includes("const modelPick = this.assignedItem.get(sessionId)?.id") &&
-  ag4.includes(".filter((id) => id !== modelPick)"));
+// and fill it with weak picks. WP2.5 strengthened the separation: the bank keeps
+// its OWN served list (bankUsedItems) instead of filtering the current model
+// pick — a v2 steps exchange spans many turns on one item while pacingNote
+// advances its pick every turn, which broke the single-pick filter both ways
+// (items skipped, then re-served).
+check("the bank review keeps its own served list, apart from the model path's",
+  ag4.includes("private bankUsedItems = new Map<string, string[]>();") &&
+  ag4.includes("const used = this.bankUsedItems.get(sessionId) ?? [];") &&
+  ag4.includes("this.bankUsedItems.set(sessionId, used.slice(-60));"));
 
 // --- a repeat has to be a repeat -------------------------------------------
 // The first --repeat 3 gave one usable run, one on a lesson that run 1 had

@@ -1801,7 +1801,7 @@ def main(argv: list[str] | None = None) -> int:
     vp = sub.add_parser("validate", help="check a curriculum file")
     vp.add_argument("--curriculum", required=True)
     bkp = sub.add_parser("bank", help="offline exercise bank: pick | answer (JSON out)")
-    bkp.add_argument("action", choices=("pick", "answer", "review-pick"))
+    bkp.add_argument("action", choices=("pick", "answer", "review-pick", "grade-step", "finalize-steps"))
     bkp.add_argument("--competence", default="")
     bkp.add_argument("--used", default="", help="review-pick: queue ids already used this session, comma-separated")
     bkp.add_argument("--last", default="", help="review-pick: competence asked last")
@@ -1812,6 +1812,12 @@ def main(argv: list[str] | None = None) -> int:
     bkp.add_argument("--today", default=date.today().isoformat())
     bkp.add_argument("--item-id", default="", help="required for action=answer")
     bkp.add_argument("--answer", default="", help="the learner's raw text; required for action=answer")
+    # WP2.5 v2 incremental steps: grade one line against one step, then close
+    # the trace. The session state (which step is pending) lives in the server.
+    bkp.add_argument("--step", type=int, default=0, help="grade-step: the step number to grade")
+    bkp.add_argument("--line", default="", help="grade-step: the learner's single line")
+    bkp.add_argument("--results", default="[]",
+                     help="finalize-steps: JSON list of per-step results, in step order")
     a = ap.parse_args(argv)
     if a.cmd == "rebuild":
         root = Path(__file__).resolve().parent.parent
@@ -1880,6 +1886,24 @@ def main(argv: list[str] | None = None) -> int:
         if not a.item_id:
             print(json.dumps({"error": "--item-id required for action=answer"}))
             return 2
+        if a.action == "grade-step":
+            items = {it["id"]: it for it in bank_mod.load_bank(root, stem, a.competence, a.data)}
+            item = items.get(a.item_id)
+            if not item:
+                print(json.dumps({"error": f"item {a.item_id!r} not found in bank for {a.competence}"}))
+                return 0
+            print(json.dumps(bank_mod.grade_step(item, a.step, a.line), ensure_ascii=False))
+            return 0
+        if a.action == "finalize-steps":
+            try:
+                results = json.loads(a.results or "[]")
+            except ValueError:
+                print(json.dumps({"error": "--results must be a JSON list"}))
+                return 2
+            out = bank_mod.answer_and_record_steps(root, stem, a.item_id, a.competence,
+                                                   results, a.data, a.today, comp)
+            print(json.dumps(out, ensure_ascii=False))
+            return 0
         out = bank_mod.answer_and_record(root, stem, a.item_id, a.competence, a.answer, a.data, a.today, comp)
         print(json.dumps(out, ensure_ascii=False))
         return 0
