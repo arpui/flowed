@@ -31,7 +31,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
 from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
-M_LEVELS = ["m1", "m2", "m3", "m4", "m5", "m6"]  # math level scale (D3)
+M_LEVELS = ["m1", "m2", "m3", "m4", "m5", "m6", "m7"]  # math scale (D3: m1–m6 primària; WP1.1 afegeix m7 = 1r ESO; m8/m9 = 2n/3r ESO quan arribin)
 MOTIVATIONS = ["school", "exam", "practice", "personal"]
 PLACEHOLDER = lambda v: isinstance(v, str) and v.strip().startswith("{") and v.strip().endswith("}")
 

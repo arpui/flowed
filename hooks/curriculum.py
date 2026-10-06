@@ -41,6 +41,7 @@ from db_schema import ERROR_CATEGORIES, LEGACY_ERROR_CATEGORIES  # noqa: E402
 # names, legacy names keep validating.
 ALL_CATEGORY_NAMES = frozenset(ERROR_CATEGORIES) | frozenset(LEGACY_ERROR_CATEGORIES)
 import bank as bank_mod  # noqa: E402
+import mathgrade  # noqa: E402  (closed math checks: Compute: / Steps:, WP1.1)
 
 STATES = ("unseen", "introduced", "practicing", "consolidated", "mastered")
 # Contribution of a competence to the level bar. 100 % = every `core` competence
@@ -601,7 +602,13 @@ def last_checkpoint_day(path: dict) -> str | None:
 # the cut (close_course). The test's answers are not practice: they are kept in the run and in
 # the checkpoint entry, not in the records.
 
-CLOSED_TYPES = ("Complete", "Correct", "Meaning")
+# WP1.1 adds the two closed MATH check types: `Compute:` (one value or one
+# expression, graded by hooks/mathgrade.py — exact rational arithmetic, or
+# polynomial equivalence when the answer carries letters) and `Steps:` (the
+# expected trace written "step 1 ; step 2 ; …", graded line by line with the
+# bank's own per-step grader). The level test has always been closed — these
+# are the math shape of the same idea, no model involved.
+CLOSED_TYPES = ("Complete", "Correct", "Meaning", "Compute", "Steps")
 
 
 def run_file(data_dir) -> Path:
@@ -626,9 +633,44 @@ def _blank_filled(prompt: str, alt: str) -> str:
     return text
 
 
+def _grade_math_check(check: dict, text: str) -> bool:
+    """A closed `Compute:` check: the expected answer is a value (graded by
+    mathgrade.grade_single) or an expression (graded by polynomial
+    equivalence, WP1.1). A 7/10 "near" is not a pass — the level test wants
+    the exact answer, the same KNOWN_SCORE bar the bank path uses."""
+    alts = [a for a in check.get("alternatives", []) if a != check["answer"]]
+    try:
+        mathgrade._parse_with_unit(check["answer"])
+        r = mathgrade.grade_single(check["answer"], text, alts)
+    except mathgrade.ParseError:
+        # the prompt is the exercise's own expression: retyping it verbatim is
+        # not a transformation (grade_algebraic's verbatim guard).
+        r = mathgrade.grade_algebraic(check["answer"], text, alts, problem=check.get("prompt"))
+    return r["score"] >= 8
+
+
+def _grade_steps_check(check: dict, text: str) -> bool:
+    """A closed `Steps:` check: the answer is the expected trace written
+    "step 1 ; step 2 ; …"; the learner writes one operation per line and
+    every expected step must have a matching line, in order (the bank's
+    per-line grader, WP2.2/2.3 — a near slip is not a pass)."""
+    expected = [s.strip() for s in check["answer"].split(" ; ") if s.strip()]
+    lines = [ln.strip() for ln in str(text or "").splitlines() if ln.strip()]
+    if not expected or len(lines) < len(expected):
+        return False
+    return all(bank_mod._grade_step_line({"expect": e, "value": e, "accept": []}, ln)["verdict"]
+               == "correct" for e, ln in zip(expected, lines))
+
+
 def grade_check(check: dict, text: str) -> bool:
     """Is `text` an accepted answer to this closed check? Case, punctuation and contractions'
-    apostrophes do not matter; the answer may be the missing words or the whole sentence."""
+    apostrophes do not matter; the answer may be the missing words or the whole sentence.
+    The math types (WP1.1) bypass the language normalizer entirely — they are graded
+    by mathgrade / the per-step grader."""
+    if check["type"] == "Compute":
+        return _grade_math_check(check, text)
+    if check["type"] == "Steps":
+        return _grade_steps_check(check, text)
     got = _norm(text)
     if not got:
         return False
@@ -656,19 +698,34 @@ def grade_check(check: dict, text: str) -> bool:
 def _question(check: dict, i: int, total: int) -> str:
     b = check.get("bank")
     if b:
-        head = {"complete": "Complete the sentence:", "choose": "Choose and complete:", "correct": "Correct the sentence:",
-                "meaning": "Which word means:", "translate": "Translate:"}.get(b["type"], "Complete the sentence:")
-        body = b["sentence"]
-        if b["type"] in ("meaning", "translate"):
-            body = f"{b.get('instruction', '')} {b['sentence']}".strip()
-        if b["type"] == "choose" and b.get("options"):
-            body += "  (" + " / ".join(b["options"]) + ")"
+        if "sentence" in b:
+            head = {"complete": "Complete the sentence:", "choose": "Choose and complete:", "correct": "Correct the sentence:",
+                    "meaning": "Which word means:", "translate": "Translate:"}.get(b["type"], "Complete the sentence:")
+            body = b["sentence"]
+            if b["type"] in ("meaning", "translate"):
+                body = f"{b.get('instruction', '')} {b['sentence']}".strip()
+            if b["type"] == "choose" and b.get("options"):
+                body += "  (" + " / ".join(b["options"]) + ")"
+        else:
+            # WP1.1: a math bank item — the problem IS the question, and the
+            # bank's own grader (compute/choose/compare/steps) decides.
+            head = {"compute": "Calcula:", "choose": "Quina operació resol el problema?",
+                    "compare": "Compara (>, < o =):", "steps": "Resol-ho pas a pas."}.get(b["type"], "Resol:")
+            body = f"{b.get('instruction', '')} {b.get('problem', '')}".strip()
+            if b.get("options") and b["type"] in ("choose", "compare"):
+                body += "  (" + " / ".join(b["options"]) + ")"
         return f"## Level test — question {i}/{total}\n\n**{head}** {body}\n\n**Type your answer:**"
-    head = {"Complete": "Complete the sentence:", "Correct": "Correct the sentence:", "Meaning": "Which word means:"}[check["type"]]
+    head = {"Complete": "Complete the sentence:", "Correct": "Correct the sentence:",
+            "Meaning": "Which word means:", "Compute": "Calcula:",
+            "Steps": "Resol-ho pas a pas (una línia per pas)."}.get(
+                check["type"], "Complete the sentence:")
     return f"## Level test — question {i}/{total}\n\n**{head}** {check['prompt']}\n\n**Type your answer:**"
 
 
 def _expected(check: dict) -> str:
+    b = check.get("bank")
+    if b and b.get("type") == "steps":
+        return " ; ".join(bank_mod._steps_correct_version(b).splitlines())
     return " / ".join(a.strip() for a in check["answer"].split("/") if a.strip())
 
 
@@ -700,12 +757,13 @@ def _bank_checkpoint_items(root, stem: str, cid: str, data_dir, today: str, used
     not practised in the last 7 days — a test, not a replay of this week.
     """
     items = bank_mod.load_bank(Path(root), stem, cid, data_dir)
-    # The level test asks one short question with one short answer, and its
-    # question shape is built from `sentence`. Math items (compute/compare,
-    # and the WP2.2 steps traces — a whole worked solution, not an answer)
-    # have no sentence and do not fit that shape: they stay out of the test,
-    # which falls back to the curriculum's own closed `Check:` examples.
-    items = [it for it in items if "sentence" in it]
+    # The level test asks one short question with one short answer. Language
+    # items bring a `sentence`; math items bring a `problem` (WP1.1: compute/
+    # choose/compare, and the WP2.2 steps traces — a whole worked solution,
+    # one line per step). Both shapes fit the test now: the question is built
+    # from whichever field exists, and a math item is graded by the bank's own
+    # grader (checkpoint_answer), never by the language normalizer.
+    items = [it for it in items if "sentence" in it or "problem" in it]
     if not items:
         return []
     prog = bank_mod._load_progress(data_dir).get(cid, {})
@@ -717,9 +775,11 @@ def _bank_checkpoint_items(root, stem: str, cid: str, data_dir, today: str, used
             return 1 if (date.fromisoformat(today) - date.fromisoformat(rec["date"])).days < 7 else 0
         except (ValueError, KeyError):
             return 0
-    fresh = [it for it in items if (cid, it["sentence"]) not in used]
+    def prompt_of(it) -> str:
+        return it.get("sentence") or it.get("problem")
+    fresh = [it for it in items if (cid, prompt_of(it)) not in used]
     fresh.sort(key=lambda it: (recent(it), items.index(it)))
-    return [{"cid": cid, "type": BANK_TO_CHECK.get(it["type"], "Complete"), "prompt": it["sentence"],
+    return [{"cid": cid, "type": BANK_TO_CHECK.get(it["type"], "Complete"), "prompt": prompt_of(it),
              "answer": " / ".join([it["answer"], *it.get("also_accept", [])]), "bank": it} for it in fresh]
 
 
@@ -1006,7 +1066,10 @@ def rebuild_path(data_dir: str | os.PathLike, cur: dict, cfg: dict = CFG, save: 
 # machinery but never a ladder: ladder() filters curricula by language first, so
 # a math profile only ever compares m-levels and an English profile only ever
 # compares CEFR ones. The index is only meaningful within one subject.
-LEVELS = ("A0", "A1", "A2", "B1", "B2", "C1", "C2", "M1", "M2", "M3", "M4", "M5", "M6")
+# WP1.1 extends the math ladder with M7 = 1r ESO (docs/competencies1eso.md —
+# the algebra-operativa curriculum). The ladder has room for M8/M9 = 2n/3r
+# ESO when those curricula land; nothing reserves them yet.
+LEVELS = ("A0", "A1", "A2", "B1", "B2", "C1", "C2", "M1", "M2", "M3", "M4", "M5", "M6", "M7")
 
 
 def _lvl(level: str) -> int:

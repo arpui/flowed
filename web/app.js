@@ -398,7 +398,7 @@ const paceEl = $("#pace");
 // (2026-09-22, Albert; math scale D3, WP1.7). `p.lesson.level` already
 // carries the learner's current level — lessonState() upper-cases it, hence
 // the toLowerCase() here. Level unknown → stays hidden (fails safe).
-const M_ORDER = ["m0", "m1", "m2", "m3", "m4", "m5", "m6"];
+const M_ORDER = ["m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7"];  // m7 = 1r ESO (WP1.1); m8/m9 reserved for 2n/3r ESO
 function problemsUnlocked(level) {
   const i = M_ORDER.indexOf(String(level || "").trim().toLowerCase());
   return i >= M_ORDER.indexOf("m2");

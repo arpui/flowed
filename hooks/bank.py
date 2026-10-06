@@ -561,6 +561,18 @@ def answer_and_record_steps(root: Path, curriculum_stem: str, item_id: str, comp
     return {**result, "item": item}
 
 
+def _is_algebraic_answer(answer) -> bool:
+    """True when the expected answer is an EXPRESSION, not a value: the m7
+    algebra items ("5x + 5", "4(2x + 3)") are graded by polynomial
+    equivalence (mathgrade.grade_algebraic), everything a number — including
+    "12 cm" — keeps the numeric path."""
+    try:
+        mathgrade._parse_with_unit(answer)
+        return False
+    except mathgrade.ParseError:
+        return True
+
+
 def _grade_math(item: dict, raw_answer: str) -> dict:
     full = _math_correct_version(item)
     t = item.get("type")
@@ -575,13 +587,18 @@ def _grade_math(item: dict, raw_answer: str) -> dict:
         return {"score": 3, "verdict": "wrong", "note": item.get("why", ""), "correct_version": full,
                 "got": str(raw_answer).strip()}
     given = str(raw_answer or "").strip()
+    algebraic = _is_algebraic_answer(item["answer"])
     if t == "choose":
         # Options can be non-numeric ("5×2" as a CHOICE of operation, not an
         # evaluation): exact text first, then mathgrade for numeric variants.
         norm = {str(a).strip().lower() for a in [item["answer"], *item.get("also_accept", [])]}
         if given.lower() in norm:
             return {"score": 10, "verdict": "correct", "note": "", "correct_version": full}
-        r = mathgrade.grade_single(item["answer"], given, item.get("also_accept", []))
+        if algebraic:
+            r = mathgrade.grade_algebraic(item["answer"], given, item.get("also_accept", []),
+                                          problem=item.get("expression") or item.get("problem"))
+        else:
+            r = mathgrade.grade_single(item["answer"], given, item.get("also_accept", []))
         # A discrete choice has no "almost": picking a DIFFERENT option is wrong
         # even when it is one digit off (the language path's same-lesson-other-
         # word rule, in math clothes).
@@ -593,7 +610,13 @@ def _grade_math(item: dict, raw_answer: str) -> dict:
     # compute: "1/4 + 3/8 = 5/8" typed as a full equation grades the result.
     if given.count("=") == 1:
         given = given.rsplit("=", 1)[1]
-    r = mathgrade.grade_single(item["answer"], given, item.get("also_accept", []))
+    if algebraic:
+        # WP1.1: an expression answer is equivalent-or-not by polynomial
+        # form; the verdict carries the §4.4 category (sign/incomplete/...).
+        r = mathgrade.grade_algebraic(item["answer"], given, item.get("also_accept", []),
+                                      problem=item.get("expression") or item.get("problem"))
+    else:
+        r = mathgrade.grade_single(item["answer"], given, item.get("also_accept", []))
     if r["verdict"] in ("wrong", "empty") and not r.get("note"):
         r["note"] = item.get("why", "")  # the language path's rule: wrong explains
     r["correct_version"] = full

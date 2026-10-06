@@ -20,9 +20,18 @@ Public API (WP1.3 will wire this into hooks/bank.py; nothing is wired yet):
   grade_step(expected, line, strict_form=False) -> verdict dict
       One line of a worked solution: "expr", "expr = value" or "value".
 
+  parse_poly(text) -> dict {monomial -> Fraction}      (WP1.1, algebraic)
+  poly_form(poly) -> str                               readable canonical form
+  grade_algebraic(expected, given, also_accept=(), problem=None) -> verdict
+      Expression answers graded by POLYNOMIAL EQUIVALENCE (5x+5 == 5+5x ==
+      5(x+1)), with a §4.4 error category on wrong answers. See the
+      "algebraic (WP1.1)" section for the accepted notation and the mapping.
+
   CLI: python3 hooks/mathgrade.py eval "1 1/2 + 1/4"
        python3 hooks/mathgrade.py grade "3/4" "0,75"
        python3 hooks/mathgrade.py step "2/8 + 3/8" "1/4+3/8 = 2/8+3/8"
+       python3 hooks/mathgrade.py poly "3x + 5 + 2x"
+       python3 hooks/mathgrade.py agrade "5x + 5" "5 + 5x"
 
 Notation decisions (v1, deliberate):
   * Decimal comma "3,5" and decimal point "3.5" both work; "×", "·", "÷",
@@ -60,6 +69,7 @@ from fractions import Fraction
 __all__ = [
     "ParseError", "Parsed", "parse_expr",
     "grade_single", "grade_step",
+    "parse_poly", "poly_form", "grade_algebraic",
     "EMPTY_ANSWERS",
 ]
 
@@ -472,6 +482,248 @@ def grade_step(expected, line, strict_form=False) -> dict:
                     matched_sides=[], sides=detail, form_mode=exp_is_form)
 
 
+# ------------------------------------------------- algebraic (WP1.1) ---------
+# The polynomial counterpart of parse_expr, for the m7 "Joc de les Propietats"
+# (docs/competencies1eso.md, docs/AlgebraNumericaBasica.md): the learner
+# manipulates EXPRESSIONS ("3x + 5 + 2x" -> "5x + 5"), so the answer is not a
+# value but an equivalence class of writings.
+#
+# Accepted notation (deliberately close to parse_expr's):
+#   * single-letter variables (x, y, z, a, b...); multi-letter names are a
+#     ParseError ("cm" is a unit, not a variable);
+#   * + - * ( ) and unary minus, integer coefficients; a division of two
+#     constants is a coefficient ("x/2", "6x ÷ 3") — dividing by an expression
+#     is a ParseError (fractions coefficients only when trivial);
+#   * powers with a non-negative integer exponent <= 6, expanded: x^2, x²,
+#     x·x, (x+1)^2;
+#   * juxtaposition: "3x", "2(x+1)", "x(x+5)", "xy", "(x+1)(x+2)" all insert
+#     an implicit *. NEVER a digit after a variable: "x5" stays invalid.
+#
+# Canonical form: the EXPANDED dict {monomial -> Fraction}, monomial = sorted
+# tuple of (var, exponent) pairs, () = constant. Two expressions are
+# equivalent iff their canonical forms match: 5x+5 == 5+5x == 5(x+1),
+# x(x+5) == x^2+5x, -2(x+4) == -2x-8.
+#
+# grade_algebraic verdicts (parallel to grade_single):
+#   correct 10  — canonical forms match (or an also_accept does)
+#   near     7  — the forms differ in EXACTLY ONE monomial coefficient and
+#                 that coefficient is a one-digit Damerau-OSA slip of the
+#                 expected one (the _near_slip rule, on the coefficient)
+#   wrong    3  — with a `category` from the §4.4 taxonomy:
+#                 * "procedure"     — the learner retyped the problem verbatim
+#                                     (with `problem` given): nothing was
+#                                     transformed; an extra term the answer
+#                                     has no trace of (6y+8z+x); or several
+#                                     monomials off
+#                 * "sign"          — one coefficient differs and is exactly
+#                                     the negation of the expected one
+#                                     (-2x+8 for -2x-8)
+#                 * "incomplete"    — the learner dropped a whole term and
+#                                     changed nothing else (6y for 6y+8z)
+#                 * "wrong_operation" — exactly one coefficient differs, is
+#                                     not a sign flip nor a digit slip
+#                                     (3(x+4) -> 3x+4: the constant kept a
+#                                     wrong value — the operation applied to
+#                                     the packet was the wrong one)
+#   empty    0
+# The category is reported in the verdict ("category" and "error_class", the
+# steps path's key) so the caller can file one mistake pattern per answer.
+# KNOWN LIMITATION (documented, WP1.1): equivalence grading accepts ANY
+# equivalent writing, so a learner who reorders without simplifying ("2x + 5
+# + 3x" for "3x + 5 + 2x") scores 10; only the verbatim retype is caught.
+# Requiring a shorter form (fewer terms than the problem) is a possible
+# refinement, not wired.
+
+_ALG_VAR = re.compile(r"^[a-zA-Z]$")
+_SUPS = str.maketrans({"²": "^2", "³": "^3", "⁴": "^4"})
+_MAX_POLY_POW = 6
+
+
+def _normalize_alg(text) -> str:
+    """Notation normalization for algebraic input: parse_expr's operators
+    plus superscripts and juxtaposition. Raises ParseError on thousand
+    separators (same guard as _normalize)."""
+    if text is None:
+        return ""
+    s = str(text).strip().translate(_OPS).translate(_SUPS)
+    s = s.replace("^", "**")
+    s = re.sub(r"(?<=\d),(?=\d)", ".", s)
+    if _THOUSANDS.search(s):
+        raise ParseError("thousand separators are not accepted (write 1000000)")
+    # implicit multiplication; a digit AFTER a variable is never joined ("x5"
+    # stays a syntax error — the draft's notation is 3x, 4·x, x(x+5)).
+    s = re.sub(r"(\d)\s*(?=[a-zA-Z(])", r"\1*", s)
+    s = re.sub(r"([a-zA-Z)])\s*(?=\()", r"\1*", s)
+    s = re.sub(r"([a-zA-Z)])\s*(?=[a-zA-Z(])", r"\1*", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def _mono_mul(m1: tuple, m2: tuple) -> tuple:
+    d = dict(m1)
+    for v, e in m2:
+        d[v] = d.get(v, 0) + e
+    return tuple(sorted((v, e) for v, e in d.items() if e))
+
+
+def _poly_add(a: dict, b: dict, sign=1) -> dict:
+    out = dict(a)
+    for k, c in b.items():
+        out[k] = out.get(k, Fraction(0)) + sign * c
+    return {k: v for k, v in out.items() if v}
+
+
+def _poly_mul(a: dict, b: dict) -> dict:
+    out: dict = {}
+    for ma, ca in a.items():
+        for mb, cb in b.items():
+            k = _mono_mul(ma, mb)
+            out[k] = out.get(k, Fraction(0)) + ca * cb
+    return {k: v for k, v in out.items() if v}
+
+
+def _poly_eval(node) -> dict:
+    """Evaluate a node to the expanded dict {monomial -> Fraction}."""
+    if isinstance(node, ast.Constant):
+        v = Fraction(node.value) if isinstance(node.value, int) else Fraction(str(node.value))
+        if isinstance(node.value, bool):
+            raise ParseError("only plain numbers are allowed")
+        return {(): v} if v else {}
+    if isinstance(node, ast.Name):
+        if not _ALG_VAR.match(node.id):
+            raise ParseError(f"only single-letter variables are allowed, got {node.id!r}")
+        return {((node.id, 1),): Fraction(1)}
+    if isinstance(node, ast.UnaryOp):
+        if not isinstance(node.op, (ast.UAdd, ast.USub)):
+            raise ParseError(f"operator {type(node.op).__name__} is not allowed")
+        p = _poly_eval(node.operand)
+        return p if isinstance(node.op, ast.UAdd) else {k: -c for k, c in p.items()}
+    if isinstance(node, ast.BinOp):
+        op = node.op
+        if isinstance(op, ast.Add):
+            return _poly_add(_poly_eval(node.left), _poly_eval(node.right))
+        if isinstance(op, ast.Sub):
+            return _poly_add(_poly_eval(node.left), _poly_eval(node.right), sign=-1)
+        if isinstance(op, ast.Mult):
+            return _poly_mul(_poly_eval(node.left), _poly_eval(node.right))
+        if isinstance(op, ast.Div):
+            right = _poly_eval(node.right)
+            if list(right) != [()]:
+                raise ParseError("can only divide by a number, not by an expression")
+            if right[()] == 0:
+                raise ParseError("division by zero")
+            return {k: c / right[()] for k, c in _poly_eval(node.left).items()}
+        if isinstance(op, ast.Pow):
+            base = _poly_eval(node.left)
+            exp = _poly_eval(node.right)
+            if list(exp) != [()] or exp[()].denominator != 1:
+                raise ParseError("only integer exponents are allowed")
+            n = int(exp[()])
+            if n < 0:
+                raise ParseError("negative exponents are not allowed")
+            if n > _MAX_POLY_POW:
+                raise ParseError(f"exponent too large (max {_MAX_POLY_POW})")
+            out: dict = {(): Fraction(1)}
+            for _ in range(n):
+                out = _poly_mul(out, base)
+            return out
+    raise ParseError(f"{type(node).__name__} is not allowed")
+
+
+def parse_poly(text) -> dict:
+    """Parse an algebraic expression into its canonical expanded polynomial
+    {monomial -> Fraction}. Raises ParseError on anything unsupported."""
+    s = _normalize_alg(text)
+    if not s:
+        raise ParseError("empty expression")
+    try:
+        tree = ast.parse(s, mode="eval")
+    except SyntaxError as e:
+        raise ParseError(f"cannot parse {text!r}") from e
+    return _poly_eval(tree.body)
+
+
+def _mono_render(m: tuple) -> str:
+    return "".join(v if e == 1 else f"{v}^{e}" for v, e in m)
+
+
+def poly_form(poly: dict) -> str:
+    """Readable rendering of a canonical polynomial: highest total degree
+    first, variables alphabetical within a monomial."""
+    items = sorted(((k, v) for k, v in poly.items() if v),
+                   key=lambda kv: (-sum(e for _, e in kv[0]), kv[0]))
+    if not items:
+        return "0"
+    out = []
+    for i, (m, c) in enumerate(items):
+        mp = _mono_render(m)
+        if not mp:
+            t = _fmt_frac(abs(c))
+        elif c in (1, -1):
+            t = mp
+        else:
+            t = f"{_fmt_frac(abs(c))}{mp}"
+        out.append(("-" if c < 0 else "") + t if i == 0
+                   else (" - " if c < 0 else " + ") + t)
+    return "".join(out)
+
+
+def _algebraic_category(exp: dict, got: dict) -> tuple[str, str]:
+    """The §4.4 category of a wrong algebraic answer (see the block comment).
+    Returns ("near", "") when it is a one-coefficient digit slip instead."""
+    only_e = [k for k in exp if k not in got]
+    only_g = [k for k in got if k not in exp]
+    diff = [k for k in exp if k in got and exp[k] != got[k]]
+    if len(only_e) + len(only_g) + len(diff) == 1:
+        if diff:
+            k = diff[0]
+            ce, cg = exp[k], got[k]
+            if _near_slip(_fmt_frac(cg), _fmt_frac(ce)):
+                return "near", ""
+            if cg == -ce:
+                return "sign", f"el signe del terme «{poly_form({k: ce})}» està canviat"
+            return "wrong_operation", (f"el terme «{poly_form({k: ce})}» surt com a "
+                                       f"«{poly_form({k: cg})}»")
+        if only_e:
+            return "incomplete", f"falta el terme «{poly_form({only_e[0]: exp[only_e[0]]})}»"
+        return "procedure", f"hi ha un terme de més: «{poly_form({only_g[0]: got[only_g[0]]})}»"
+    return "procedure", "l'expressió no és equivalent a la resposta"
+
+
+def grade_algebraic(expected, given, also_accept=(), problem=None) -> dict:
+    """Grade an expression answer by POLYNOMIAL equivalence (see the block
+    comment above). `problem`, when given, is the exercise's own expression:
+    an answer that just retypes it verbatim is "procedure" — the task was to
+    TRANSFORM the expression, and equivalence alone cannot see that."""
+    if _is_empty(given):
+        return _verdict(0, "empty", "resposta buida")
+    exp = parse_poly(expected)
+    accepts = [parse_poly(a) for a in also_accept]
+    try:
+        got = parse_poly(given)
+    except ParseError as e:
+        return _verdict(3, "wrong", f"no s'ha entès l'expressió ({e})",
+                        expected=poly_form(exp), got=str(given).strip())
+    if problem is not None:
+        try:
+            if (re.sub(r"\s+", "", _normalize_alg(given))
+                    == re.sub(r"\s+", "", _normalize_alg(problem))):
+                return _verdict(3, "wrong",
+                                "has tornat a escriure l'enunciat tal com era: "
+                                "l'objectiu és TRANSFORMAR l'expressió",
+                                expected=poly_form(exp), got=poly_form(got),
+                                category="procedure", error_class="procedure")
+        except ParseError:
+            pass
+    if got == exp or any(got == a for a in accepts):
+        return _verdict(10, "correct", "", expected=poly_form(exp), got=poly_form(got))
+    cat, note = _algebraic_category(exp, got)
+    if cat == "near":
+        return _verdict(7, "near", f"gairebé: s'escriu «{poly_form(exp)}»",
+                        expected=poly_form(exp), got=poly_form(got))
+    return _verdict(3, "wrong", note, expected=poly_form(exp), got=poly_form(got),
+                    category=cat, error_class=cat)
+
+
 # -------------------------------------------------------------------- CLI ---
 
 def _to_json(obj):
@@ -483,7 +735,8 @@ def _to_json(obj):
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     usage = ('usage: mathgrade.py eval EXPR | grade EXPECTED GIVEN [--accept V]... [--unit U]'
-             ' | step EXPECTED LINE [--strict-form]')
+             ' | step EXPECTED LINE [--strict-form]'
+             ' | poly EXPR | agrade EXPECTED GIVEN [--accept V]... [--problem P]')
     if not argv:
         print(usage, file=sys.stderr)
         return 2
@@ -492,6 +745,24 @@ def main(argv=None):
         if cmd == "eval" and len(argv) >= 2:
             p = parse_expr(argv[1])
             print(json.dumps({"value": str(p.value), "form": p.form}))
+            return 0
+        if cmd == "poly" and len(argv) >= 2:
+            p = parse_poly(argv[1])
+            print(json.dumps({"form": poly_form(p),
+                              "terms": {_mono_render(k): str(v) for k, v in p.items()}}))
+            return 0
+        if cmd == "agrade" and len(argv) >= 3:
+            rest = argv[3:]
+            accepts, prob = [], None
+            i = 0
+            while i < len(rest):
+                if rest[i] == "--accept" and i + 1 < len(rest):
+                    accepts.append(rest[i + 1]); i += 2
+                elif rest[i] == "--problem" and i + 1 < len(rest):
+                    prob = rest[i + 1]; i += 2
+                else:
+                    print(usage, file=sys.stderr); return 2
+            print(json.dumps(grade_algebraic(argv[1], argv[2], accepts, prob), default=_to_json))
             return 0
         if cmd == "grade" and len(argv) >= 3:
             rest = argv[3:]
