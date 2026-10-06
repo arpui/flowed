@@ -1,6 +1,6 @@
 # Disseny — mòdul d'aprenentatge de matemàtiques (fork paral·lel de FlowEd)
 
-**Data:** 2026-10-04 · **Estat:** decisions D1–D10 validades per l'Albert (2026-10-05, totes segons la recomanació). **Fase 0 en execució**: fork creat a `~/projects/flowmath` (snapshot de l'estat de producció committat, `FLOWED_HOME=~/.flowmath`, web de proves a `4200` funcionant, fix del `lib-paths.sh` pel `FLOWED_HOME` de l'`.env`). **No toca res de `flowed` en producció.**
+**Data:** 2026-10-06 · **Estat:** decisions D1–D10 validades per l'Albert (2026-10-05, totes segons la recomanació). **Fase 0 i Fase 1 (menys WP1.1 i WP1.9) fetes; WP2.1 feta; WP2.2–2.4 en execució.** Commits al fork: WP0.1 `917a81b` · WP0.2 renombrat `b1cf5cb` · WP0.1b `276f39f` · WP0.3 `392a78f` · WP1.2 mathgrade `1bf06db` · WP1.4 taxonomia `daec108` · WP1.5 generador+banc pilot `df329b5` · WP1.3 banc math `7cfe42d` · WP1.6 skills/comandes `2e44f79` · WP2.1 ítems de passos `2e55ae6` · WP1.7+1.8 perfil m1–m6/web `2ae6a8e`. Suite: 572 tests Python OK + 12 harnessos server OK. Pendent: **WP1.1** (currículum real — feina de l'Albert; ha d'incloure les competències `m4.add_carry` i `m4.div_2x1` que crea el pilot, amb línies `Bank:` per competència), **WP1.9** (e2e contra el remot) i **WP2.2–2.4** (servei + correcció per línia + traça). **No toca res de `flowed` en producció.**
 
 **Objectiu:** aprofitar el màxim de l'arquitectura de FlowEd (tutor d'idiomes amb LLM local) per construir un tutor de matemàtiques amb la mateixa base: competències, banc d'exercicis tancats amb correcció determinista, SM-2, lliçó del dia, camí de progrés i web multi-usuari. La diferència pedagògica central: en lloc de corregir frases, **l'alumne resol per operacions parcials (passos) que porten al resultat, i el sistema li demana i avalua els passos**.
 
@@ -204,6 +204,20 @@ Dificultat: 🔴 gran · 🟡 mitjana · 🟢 petita. Tots al fork; cap toca `fl
 | 1.9 | Posar al dia la suite de tests (molts tenen literals d'idioma) + un e2e matemàtic bàsic | 🟡 | tot F1 |
 
 Amb la Fase 1 ja hi ha un tutor de matemàtiques usable: Go/Review/Fets sobre banc (sense model, instantani), Lliçó del dia, SM-2, camí, checkpoints, ratxes.
+
+**Llista de deutes per a WP1.9** (recollida dels informes WP1.3–1.8, 2026-10-06):
+- `scripts/flowed-e2e.py`: regex `LEVEL_Q` d'era-idioma i ruta de log `/tmp/math-web` en lloc de `$DATA_DIR`; cal reescriure'l per al camí math (etiquetes web exactes a `2ae6a8e`: 🎲 Go / 🔁 Review / 📚 Facts / 📝 Raonament / 📖 Problemes / 🗣️ Math talk / 📊 Stats / 🏁 End).
+- Camp `new_vocabulary` al payload d'eines (nom d'era-idioma; renombrar amb llegir-el-vell).
+- `pacing.ts` `writingLengthNote()`: indexat A1..C2 amb tasques email/postcard; retorna null per a m-nivells — math-ificar-lo o esborrar-lo.
+- `pacing.ts` `NOT_AN_EXERCISE`: llista de paraules d'habilitat lingüística (deny-list, funciona, però les kind-words math depenen del filtre "(Easy)").
+- `curriculum.py` `competency_of()`: especial per `skill=="vocabulary"` i prefix `vocabulary_` (mort per a math, inofensiu).
+- `update-db.py:629` `item_type` per defecte `"vocabulary"`; `persist-session.py:248-252,340` i `accumulate-session.py:225,386` per defecte `"writing"/"speaking"/"vocabulary"` quan parsegen prosa de feedback.
+- `read-db.py` (comentaris ~120–124) explica la rationale `{Native}/{Target}` de drills d'idioma; plantilla spaced-repetition amb placeholder `{error_pattern|vocabulary|grammar_rule}`.
+- `~/.fluent` rutes legacy a `learner.md` (agents).
+- Comptadors daily indexats per comanda (revisar coherència amb reasoning/problems/facts).
+- `agent.ts` `learnerLevel()/lessonState()` posen el nivell en majúscules ("M4"): `curriculum._lvl` i `app.js` normalitzen, però **tot comparador nou ha de fer lowercase**.
+- `test_tts.py`: assertions de l'era TTS (WP0.3 va netejar guards — verificar què queda).
+- `math_deep_evaluate` task enum → es resol al WP3.1, no ara.
 
 ### Fase 2 — Passos / operacions parcials (la peça demanada)
 
