@@ -113,7 +113,7 @@ class FakeTutor:
             # wall clock does not move between simulated days, so every day is
             # "session-001@<today>": the T0 snapshot of day 1 is found on day 2.
             payload = {"session_id": "session-001", "date": self.today(), "duration_minutes": 5,
-                       "exercises": [], "errors": [], "new_vocabulary": [],
+                       "exercises": [], "errors": [], "new_facts": [],
                        "review_results": [{"item_id": r["item_id"], "quality": r["score"] // 2}
                                           for r in self.results.get(sid, [])]}
             seed.update(self.prof, payload)
@@ -167,7 +167,7 @@ class DaysAgainstFakeTutorTest(unittest.TestCase):
         yesterday = (date.today() - timedelta(days=1)).isoformat()
         seed.update(tmp, {"session_id": "seed", "date": yesterday, "duration_minutes": 1,
                           "exercises": [], "errors": [], "review_results": [],
-                          "new_vocabulary": [
+                          "new_facts": [
                               {"item_id": f"vocabulary_{en}", "item_type": "vocabulary",
                                "content": ca, "answer": en, "category": "vocabulary",
                                "priority": "medium"} for ca, en in WORDS]})

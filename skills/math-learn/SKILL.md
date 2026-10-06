@@ -203,13 +203,13 @@ Press 🎲 **Go** to keep practicing, or pick a button at the top (🔁 Review �
 Rule: NEVER close with a bare goodbye — this summary is a pause point, not a farewell. The session ends only when the learner says so or starts something else.
 
 Session fields that a manual persistence call would carry: `command_used`,
-`skills_practiced`, `skill_scores`, `errors[]`, `new_vocabulary[]` (new facts),
+`skills_practiced`, `skill_scores`, `errors[]`, `new_facts[]` (new facts),
 `review_results[]`, `breakthroughs[]`, `focus_next_session[]`, `session_notes`.
 
 **Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
-the results file under `~/.fluent/<id>/results/`. Do NOT call `update-db.py`,
+the results file under `~/.flowmath/<id>/results/`. Do NOT call `update-db.py`,
 do NOT call `persist-session.py`, do NOT write any file: you have no write tool,
 those calls are denied by the allow-list, and each denial eats context. Your only
 persistence job is to grade in the canonical feedback format — that is what the

@@ -875,7 +875,13 @@ def competency_of(cur: dict, rec: dict) -> tuple[str | None, str]:
     explicit = str(rec.get("competency") or "")
     if explicit in ids:
         return explicit, "record"
-    is_vocab = str(rec.get("skill") or "").lower() == "vocabulary" or str(rec.get("item_id") or "").startswith("vocabulary_")
+    # The word-list branch: a record about a WORD of a competence's `Words:`.
+    # Language-era spelling ("vocabulary") kept for old records; the math
+    # spelling is "facts" (C7) — a fact or problem keyword is placed the same
+    # way, against the competence's word list (WP1.9).
+    skill = str(rec.get("skill") or "").lower()
+    item_id = str(rec.get("item_id") or "")
+    is_vocab = skill in ("vocabulary", "facts") or item_id.startswith(("vocabulary_", "fact_"))
     if is_vocab:
         cid, _ = _vocab_hit(cur, rec)
         if cid:
@@ -884,7 +890,7 @@ def competency_of(cur: dict, rec: dict) -> tuple[str | None, str]:
             return None, "vocab-without-word"
         # A record the tutor labelled "vocabulary" but that is really a sentence exercise (measured 2026-09-21,
         # curriculum 211700: "Suggest a place to go…" / "mine" filed as vocabulary): tag it as grammar.
-        if str(rec.get("item_id") or "").startswith("vocabulary_"):
+        if item_id.startswith(("vocabulary_", "fact_")):
             return None, "word-not-in-list"
         cid, why = _tag_grammar(cur, rec)
         return (cid, why) if cid else (None, "word-not-in-list")

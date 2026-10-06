@@ -621,12 +621,16 @@ def update_spaced_repetition(sr: dict, session: dict, is_new_session: bool = Tru
                 "score": review.get("score", 0),
             })
 
-    for vocab in session.get("new_vocabulary", []):
+    # New facts the learner met for the first time (WP1.9): the field is
+    # `new_facts` now; `new_vocabulary` is still READ (old drafts and payloads
+    # from before the rename) but never written. Default item type: a math fact,
+    # not "vocabulary".
+    for vocab in session.get("new_facts", session.get("new_vocabulary", [])):
         item_id = vocab["item_id"]
         if item_id not in items:
             items[item_id] = {
                 "id": item_id,
-                "type": vocab.get("item_type", "vocabulary"),
+                "type": vocab.get("item_type", "facts"),
                 "content": vocab.get("content", ""),
                 "answer": vocab.get("answer", ""),
                 "category": vocab.get("category", ""),

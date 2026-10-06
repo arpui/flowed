@@ -113,9 +113,9 @@ def material() -> list[dict]:
 def introduce(item: dict) -> dict:
     """The payload fragment that makes the hook create this item."""
     if item["kind"] == "vocab":
-        return {"new_vocabulary": [{"item_id": item["id"], "item_type": "vocabulary",
-                                    "content": item["content"], "answer": item["answer"],
-                                    "category": "vocabulary", "priority": "medium"}]}
+        return {"new_facts": [{"item_id": item["id"], "item_type": "facts",
+                               "content": item["content"], "answer": item["answer"],
+                               "category": "facts", "priority": "medium"}]}
     return {"errors": [{"pattern_id": item["id"], "category": item["category"],
                         "your_answer": item["wrong"], "correct_answer": item["right"],
                         "context": "", "severity": "moderate"}]}
@@ -254,7 +254,7 @@ def main() -> int:
     for n in range(args.days):
         day = (start + timedelta(days=n)).isoformat()
         payload = {"session_id": f"seed-{n:02d}", "date": day, "duration_minutes": 12,
-                   "exercises": [], "errors": [], "review_results": [], "new_vocabulary": []}
+                   "exercises": [], "errors": [], "review_results": [], "new_facts": []}
         for m in early:
             if intro_day[m["id"]] == n:
                 frag = introduce(m)

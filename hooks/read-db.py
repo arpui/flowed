@@ -116,13 +116,14 @@ def ranked_due_items(items: dict, today: str) -> list:
         entry = {
             k: item.get(k) for k in (
                 # `learner_wrote` matters for `error_pattern` items: it is the
-                # only signal that `content`/`answer` is a translation-direction
-                # item (correct_answer in {Native}, the learner's own answer in
-                # {Target}) rather than a same-language drill. Dropped here, the
-                # review skill saw a bare {Native} sentence with no language
-                # context and built a {Native}-only cloze that looked like
-                # {Native} itself was the skill under test (seen live,
-                # 2026-09-22, test-en: "Hi ___ dues pomes sobre la taula.").
+                # only signal of WHAT the learner actually did wrong — the
+                # expression she wrote (a dropped carry, a sign flipped, 51 for
+                # 15) against the correct one. Dropped here, the review skill
+                # saw a bare problem with no trace of the slip and built a
+                # generic drill of the same expression instead of attacking the
+                # mistake (seen live in the language fork, 2026-09-22, where the
+                # same field distinguished a translation-direction card from a
+                # same-language one).
                 "id", "type", "content", "answer", "learner_wrote", "category",
                 "difficulty", "priority",
             ) if item.get(k) is not None

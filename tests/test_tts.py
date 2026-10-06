@@ -6,6 +6,11 @@ the cache, refusing to guess a voice). What these checks protect is the
 property that makes the feature safe to ship half-installed: **off by default,
 and invisible when off**. A 🔊 button that fails is worse than no button, and a
 server that will not start because a voice is missing is far worse than silence.
+
+WP1.9 note: in FlowMath TTS is OFF by decision (DISSENY-MATEMATIQUES D8 — there
+is no target language to listen to). The machinery is kept dormant rather than
+deleted: it is shared history with the language fork, and these checks are what
+keep it dormant safely — the config assertion below pins the decision.
 """
 import json
 import subprocess
@@ -21,6 +26,11 @@ class TtsConfigTest(unittest.TestCase):
 
     def test_the_block_exists(self):
         self.assertIn("tts", self.config, "config/fluent.json has no tts block")
+
+    def test_math_ships_it_off(self):
+        # DISSENY-MATEMATIQUES D8: no target language to listen to. If someone
+        # flips this to true, it must be a deliberate decision, not a merge.
+        self.assertIs(self.config["tts"].get("enabled"), False)
 
     def test_no_machine_paths_in_the_shared_config(self):
         # config/fluent.json travels between machines (rsync, git); piper and its

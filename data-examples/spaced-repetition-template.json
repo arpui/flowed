@@ -19,7 +19,7 @@
   "items": {
     "example_item_id": {
       "item_id": "{unique_identifier}",
-      "item_type": "{error_pattern|vocabulary|grammar_rule}",
+      "item_type": "{error_pattern|fact|bank_item}",
       "easiness_factor": 2.5,
       "interval_days": 1,
       "repetitions": 0,

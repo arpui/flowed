@@ -26,10 +26,10 @@
     }
   ],
 
-  "new_vocabulary": [
+  "new_facts": [
     {
       "item_id": "fact.x7_x8",
-      "item_type": "vocabulary",
+      "item_type": "facts",
       "content": "7 × 8 = ?",
       "answer": "56",
       "category": "times_tables",

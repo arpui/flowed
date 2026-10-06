@@ -126,7 +126,7 @@ SESSION_PAYLOAD = {
         "severity": "critical",
         "difficulty_score": 0.7
     }],
-    "new_vocabulary": [{
+    "new_facts": [{
         "item_id": "het_huis",
         "item_type": "vocabulary",
         "content": "het huis",
@@ -233,8 +233,8 @@ class UpdateDbSmokeTest(unittest.TestCase):
     def test_optional_vocab_fields_passthrough(self):
         payload = json.loads(json.dumps(SESSION_PAYLOAD))
         payload["session_id"] = "session-021"
-        payload["new_vocabulary"] = [dict(
-            SESSION_PAYLOAD["new_vocabulary"][0],
+        payload["new_facts"] = [dict(
+            SESSION_PAYLOAD["new_facts"][0],
             pos="noun", cefr_level="A1", forms={"plural": "de huizen"},
         )]
         proc = self._run(payload)
@@ -258,6 +258,20 @@ class UpdateDbSmokeTest(unittest.TestCase):
         huis = sr["items"]["het_huis"]
         for k in ("pos", "cefr_level", "forms"):
             self.assertNotIn(k, huis, f"{k} added even though payload omitted it")
+
+    def test_the_old_new_vocabulary_spelling_is_still_read(self):
+        # WP1.9 renamed the payload block to `new_facts`. Drafts and payloads
+        # written before the rename carry `new_vocabulary`; update-db reads the
+        # old spelling so an in-flight session is not silently dropped. Same
+        # read-old/write-new discipline as the FLUENT_*→FLOWED_* env names.
+        payload = json.loads(json.dumps(SESSION_PAYLOAD))
+        payload["session_id"] = "session-023"
+        payload["new_vocabulary"] = payload.pop("new_facts")
+        proc = self._run(payload)
+        self.assertEqual(proc.returncode, 0,
+                         msg=f"stdout={proc.stdout!r} stderr={proc.stderr!r}")
+        sr = json.loads((self.tmp / "data" / "spaced-repetition.json").read_text())
+        self.assertIn("het_huis", sr["items"])
 
     def test_future_schema_refuses_write_exit_2(self):
         p = self.tmp / "data" / "learner-profile.json"
@@ -528,7 +542,7 @@ class ErrorTwinsTest(unittest.TestCase):
         return {"session_id": "session-t", "date": "2026-04-24", "duration_minutes": 5,
                 "errors": [{"pattern_id": pid, "category": category, "your_answer": wrong,
                             "correct_answer": right, "context": "", "severity": "moderate"}],
-                "new_vocabulary": [], "review_results": []}
+                "new_facts": [], "review_results": []}
 
     def test_the_same_answer_under_another_category_is_not_a_second_item(self):
         self._run(self._err("place_value_247_+_38_=_285", "place_value",

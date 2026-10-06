@@ -73,6 +73,20 @@ def save_draft(data_dir: str, draft: dict):
     os.replace(str(tmp), str(p))
 
 
+def _logged_session_ids(data_dir: str) -> list:
+    """The session numbers already finalised in session-log.json — the pool a
+    new draft number must not collide with (see the rotation check). Only real
+    "session-NNN" ids count: the template ships a placeholder entry whose id is
+    the bare "001", and that must not push every learner to session-002."""
+    try:
+        log = json.loads((Path(data_dir).expanduser() / "session-log.json")
+                         .read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [s["session_id"] for s in log.get("sessions", [])
+            if isinstance(s, dict) and re.fullmatch(r"session-\d+", str(s.get("session_id", "")))]
+
+
 def run_update_db(payload: dict, data_dir: str) -> bool:
     cmd = [sys.executable, str(UPDATE_DB)]
     env = os.environ.copy()
@@ -222,7 +236,7 @@ def _results_report(payload: dict) -> dict:
 def rebuild_skill_scores(payload: dict):
     scores = {}
     for e in payload.get("exercises", []):
-        skill = e.get("type", "writing")
+        skill = e.get("type", "computation")  # math skill keys (C7); was "writing"
         s = scores.setdefault(skill, {"exercises": 0, "correct": 0})
         s["exercises"] += 1
         if e.get("score", 0) >= 8:
@@ -291,13 +305,30 @@ def main():
     draft = load_draft(data_dir)
 
     # --- SESSION ROTATION CHECK ---
-    # If the session_id computed from the transcript differs from the draft's,
-    # this is a new session: reset the draft and re-accumulate from scratch.
+    # The draft belongs to ONE live session. It used to rotate on the session
+    # NUMBER parsed from the transcript — but that number only appears in the
+    # read-db state block, which is pinned to the system prompt and never
+    # stored as a part, so the parse always fell back to "session-001": every
+    # session of a day folded into one draft, and update-db kept restoring one
+    # T0 snapshot while re-applying a payload that mixed two sessions' answers
+    # (a seeded review queue got its due dates moved by the PREVIOUS session's
+    # records before the learner answered a single card). Rotate on the SQLite
+    # session id the server passes us instead, and give each live session its
+    # own number: one past the highest already in the session-log or already
+    # used by the outgoing draft — a crashed session was applied but never
+    # logged, and its number must not be reused.
     computed_sid = ps.parse_session_id_from_context(transcript_all) if transcript_all else ""
-    draft_sid = draft.get("session_id")
-    if draft_sid and computed_sid and draft_sid != computed_sid:
-        print(f"[Fluent] 🔄 New session detected ({draft_sid} → {computed_sid}), resetting draft")
-        draft = {}  # reset for new session
+    live_sid = draft.get("live_session")
+    if not draft or (live_sid and live_sid != session_id):
+        n = 0
+        for old in [draft.get("session_id", "")] + _logged_session_ids(data_dir):
+            m = re.search(r"(\d+)", str(old))
+            if m:
+                n = max(n, int(m.group(1)))
+        draft = {"session_id": f"session-{n + 1:03d}"}
+        print(f"[Fluent] 🔄 New session detected ({live_sid or '—'} → {session_id}): "
+              f"fresh draft {draft['session_id']}")
+    draft["live_session"] = session_id
 
     # Review block: it arrives ONCE, in the closing message, which usually
     # carries no new grade. So it is parsed from the full transcript on every
@@ -383,7 +414,7 @@ def main():
     merged_errors = rec_errors + prose_errors
     skill_scores = {}
     for ex in merged_exercises:
-        sc = skill_scores.setdefault(ex.get("type", "writing"), {"exercises": 0, "correct": 0})
+        sc = skill_scores.setdefault(ex.get("type", "computation"), {"exercises": 0, "correct": 0})  # C7
         sc["exercises"] += 1
         if ex.get("score", 0) >= 8:
             sc["correct"] += 1
@@ -403,7 +434,9 @@ def main():
         "skill_scores": draft.get("skill_scores", {}),
         "exercises": merged_exercises,
         "errors": merged_errors,
-        "new_vocabulary": draft.get("new_vocabulary", []),
+        # WP1.9: written as `new_facts`; a draft from before the rename still
+        # carries `new_vocabulary` and is read from there.
+        "new_facts": draft.get("new_facts", draft.get("new_vocabulary", [])),
         "review_results": draft.get("review_results", []),
         "focus_next_session": draft.get("focus_next_session", []),
         "milestones": [],

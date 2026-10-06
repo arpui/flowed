@@ -18,7 +18,6 @@ import {
   countGradedInText,
   KNOWN_SCORE,
   scoreOfReply,
-  writingLengthNote,
   parseTopics,
   exerciseOnlyOf,
   isExerciseGuard,
@@ -843,7 +842,7 @@ export class Agent {
         feedback +
           `## 🎉 Lesson complete!\n\nYou did all ${lesson.total} exercises of today's review. Well done!\n\n` +
           `Press 🎲 **Go** to keep practicing, or pick a button at the top ` +
-          `(📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End).`
+          `(🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End).`
       );
     }
 
@@ -856,7 +855,15 @@ export class Agent {
       return emit(card);
     }
 
-    const used = this.usedItems.get(sessionId) ?? [];
+    // pacingNote runs before this turn and, on the model lesson path, pre-assigns
+    // the next due item (assignedItem) and pushes it into usedItems. On the BANK
+    // review path that item is never served — the bank picks its own — so leaving
+    // it in the used list makes review-pick skip the FIRST due item of every
+    // lesson and fill the lesson with weak picks instead of the seeded queue.
+    // Drop the model-path pick from the list we hand review-pick; the bank's own
+    // served items (queueIds pushed below) stay.
+    const modelPick = this.assignedItem.get(sessionId)?.id;
+    const used = (this.usedItems.get(sessionId) ?? []).filter((id) => id !== modelPick);
     const picked = this.runBankCli(["review-pick", "--used", used.join(","), "--last", prev?.competence ?? ""]);
     const retired = Array.isArray(picked?.["retired"]) ? (picked!["retired"] as unknown[]).length : 0;
     if (retired) console.log(`[Fluent] 🏦 session ${sessionId}: retired ${retired} old queue item(s) with no safe competence`);
@@ -2358,7 +2365,6 @@ export class Agent {
       ? this.topicsNoteFor(sessionId)
       : null;
     if (this.currentCommand.get(sessionId) === "math-writing") {
-      const w = writingLengthNote(this.learnerLevel());
       // No forced structure any more (Albert, 2026-09-24): Writing used to
       // borrow the exact grammar competence Go was drilling THIS turn
       // (writingFrameFor -> curriculum.py's writing_frame), so the two felt
@@ -2367,7 +2373,10 @@ export class Agent {
       // that reinforcement is no longer needed -- Writing is free (topic
       // from her own life, per math-writing's own SKILL.md) unless a
       // teacher's topic (topics.txt) sets one explicitly.
-      return [free, w, topics].filter(Boolean).join(" ") || null;
+      // WP1.9: the old `writingLengthNote` (an A1..C2 table of email/postcard
+      // tasks) is gone — it returned null for every m-level, and the task
+      // length is the math-writing skill's own m1-m3 / upper-level table.
+      return [free, topics].filter(Boolean).join(" ") || null;
     }
     return [free, compNote ?? topics].filter(Boolean).join(" ") || null;
   }

@@ -189,7 +189,14 @@ def parse_learner_name(transcript):
 
 
 def parse_session_id_from_context(transcript):
-    """Extract session_id from the computed section."""
+    """Extract session_id from the computed section.
+
+    Dead in practice: the read-db state block that carries next_session_id is
+    pinned to the SYSTEM prompt and never stored as a part, so no transcript
+    contains it and this always falls back to "session-001". The live number
+    now comes from the draft — see draft_number_for(); this stays only as the
+    fallback for sessions whose draft has already rotated away (the sweeper).
+    """
     for role, text in transcript[:5]:
         m = re.search(r'"next_session_id"\s*:\s*"(session-\d+)"', text)
         if m:
@@ -197,6 +204,22 @@ def parse_session_id_from_context(transcript):
             num = int(m.group(1).split('-')[1])
             return f"session-{num:03d}"
     return "session-001"
+
+
+def draft_number_for(data_dir, live_session_id):
+    """The session NUMBER Capa A (accumulate-session) assigned to this live
+    session, read from session-draft.json. Capa B must land on the same
+    session_id or the two layers write two different sessions and update-db's
+    idempotency (restore T0, re-apply) can't line them up. None when the draft
+    belongs to another session — e.g. the sweeper finalising an old one."""
+    try:
+        draft = json.loads((Path(data_dir).expanduser() / "session-draft.json")
+                           .read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if draft.get("live_session") == live_session_id and str(draft.get("session_id", "")).startswith("session-"):
+        return draft["session_id"]
+    return None
 
 
 def _feedback_of(text):
@@ -243,15 +266,20 @@ def parse_exercises(transcript):
         if len(prompt_cut) >= 2:
             question = prompt_cut[0].strip().replace('##', '').strip()[:200] or question
 
-        # Determine exercise type from the whole feedback text.
+        # Determine exercise type from the whole feedback text — the five math
+        # skill keys (C7, WP1.9). The language-era defaults (writing/speaking/
+        # vocabulary/reading) named skills this product no longer has; a prose
+        # fallback that invents them writes phantom skill_scores entries.
         seg = text.lower()
-        exercise_type = "writing"
-        if any(w in seg for w in ['say', 'tell me', 'answer in', 'speaking', '🗣', 'speak']):
-            exercise_type = "speaking"
-        elif any(w in seg for w in ['flashcard', 'vocab', 'translate', 'means']):
-            exercise_type = "vocabulary"
-        elif any(w in seg for w in ['read', 'reading', 'comprehension', 'text']):
-            exercise_type = "reading"
+        exercise_type = "computation"
+        if any(w in seg for w in ['steps', 'passos', 'operació per línia']):
+            exercise_type = "steps"
+        elif any(w in seg for w in ['flashcard', 'fact', 'fets', 'taula de multiplicar', 'equival', 'doble', 'meitat']):
+            exercise_type = "facts"
+        elif any(w in seg for w in ['problema', 'word problem', 'problemes']):
+            exercise_type = "problems"
+        elif any(w in seg for w in ['explica', 'justifica', 'raonament', 'per què']):
+            exercise_type = "reasoning"
 
         exercises.append({
             "type": exercise_type,
@@ -337,7 +365,7 @@ def records_to_payload(records):
         except (TypeError, ValueError):
             score = 0
         exercises.append({
-            "type": (rec.get("skill") or "writing"),
+            "type": (rec.get("skill") or "computation"),  # math skill keys (C7); was "writing"
             "question": str(rec.get("exercise", ""))[:200],
             "learner_answer": str(rec.get("learner_answer", ""))[:500],
             "correct_answer": "",
@@ -549,6 +577,10 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
     """Build the report JSON for update-db.py."""
     learner_slug = parse_learner_name(transcript)
     computed_session_id = parse_session_id_from_context(transcript)
+    # Capa A already gave this live session its number in the draft; use the
+    # same one so both layers fold into ONE update-db session (idempotent).
+    if not override_session_id and data_dir_for_records:
+        computed_session_id = draft_number_for(data_dir_for_records, session_id) or computed_session_id
     if override_session_id:
         computed_session_id = override_session_id
 
@@ -643,7 +675,7 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
         "exercises": exercises,
         "errors": errors,              # consumed by update-db.py
         "error_patterns": error_patterns,  # kept for the results markdown table
-        "new_vocabulary": [],
+        "new_facts": [],  # WP1.9: renamed from new_vocabulary (update-db still reads the old key)
         "review_results": review_results,
         "focus_next_session": [],
         "session_notes": "Persisted automatically from opencode transcript.",
@@ -673,7 +705,7 @@ def save_results_file(learner_slug, session_id, exercises, accuracy, report, dat
     filepath = results_dir / filename
     
     lines = [
-        f"# Language Learning Session - {session_id}",
+        f"# Math Learning Session - {session_id}",
         f"**Date:** {report['date']} · **Duration:** {report['duration_minutes']} min · **Skill:** math-learn",
         "",
         f"## Summary",
@@ -796,10 +828,15 @@ def main():
     print(f"[Fluent] 👤 Learner: {learner_slug}")
     print(f"[Fluent] 📊 Session: {computed_sid}, {report['total_exercises']} exercises, {report['accuracy']*100:.0f}% accuracy")
     
-    # Refuse to persist sessions with no completed (graded) exercises.
+    # Nothing to persist: a session with no graded exercise (the learner opened
+    # it and left). This is DONE, not a failure — exit 0 so the caller marks it
+    # finalised. It used to exit 1, which told the 30-min sweeper "failed, try
+    # again", so it re-ran Capa B for that session EVERY minute forever; each
+    # retry re-entered update-db's T0 machinery and could roll a freshly-seeded
+    # spaced-repetition queue back over (seen live in the WP1.9 e2e).
     if report['total_exercises'] == 0:
-        print("[Fluent] ⚠️  No graded exercises found in this session — skipping (nothing to persist).", file=sys.stderr)
-        sys.exit(1)
+        print("[Fluent] ⚠️  No graded exercises found in this session — nothing to persist.")
+        sys.exit(0)
     
     if args.dry_run:
         print(json.dumps(report, indent=2, ensure_ascii=False))

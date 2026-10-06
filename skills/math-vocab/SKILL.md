@@ -139,7 +139,7 @@ have it, 🟡 if one digit off a near-miss).
 Track the answer for the end-of-session DB update:
 
 - Add to `review_results[]` with `quality = floor(score / 2)` (see `math-sm2-calculator` skill).
-- If the learner met a new fact, stage it for `new_vocabulary[]` (FlowMath keeps facts in that field — the server's queue schema still uses the language-era name; WP1.7 renames it).
+- If the learner met a new fact, stage it for `new_facts[]` (WP1.9 renamed it from the language-era `new_vocabulary[]`; the persistence scripts still read the old spelling).
 - If the learner made an error, stage it for `errors[]`.
 
 Do **not** call `update-db.py` after every fact — batch at session end.
@@ -175,12 +175,12 @@ Rule: NEVER close with a bare goodbye — this summary is a pause point, not a f
 
 Session fields: `session_id`, `date`, `duration_minutes`, `command_used`,
 `skills_practiced: ["facts"]`, `skill_scores.facts`, `errors[]`,
-`new_vocabulary[]`, `review_results[]`, `focus_next_session[]`.
+`new_facts[]`, `review_results[]`, `focus_next_session[]`.
 
 **Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
-the results file under `~/.fluent/<id>/results/`. Do NOT call `update-db.py`,
+the results file under `~/.flowmath/<id>/results/`. Do NOT call `update-db.py`,
 do NOT call `persist-session.py`, do NOT write any file: you have no write tool,
 those calls are denied by the allow-list, and each denial eats context. Your only
 persistence job is to grade in the canonical feedback format — that is what the

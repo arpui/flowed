@@ -145,9 +145,9 @@ operation:
 **Vols que aquestes claus entrin a la cua de repàs?** Escriu "yes" o "no".
 ```
 
-If yes, stage each keyword for `new_vocabulary[]` in the end-of-session DB
-update (the queue schema still uses the language-era field name for facts —
-WP1.7 renames it).
+If yes, stage each keyword for `new_facts[]` in the end-of-session DB
+update (WP1.9 renamed it from the language-era `new_vocabulary[]`; the
+persistence scripts still read the old spelling).
 
 **Never skip straight to the summary without showing this table at least
 once** when the session used a keyword the learner had not seen before. The
@@ -187,13 +187,13 @@ Rule: NEVER close with a bare goodbye — this summary is a pause point, not a f
 
 Session fields: `command_used`, `skills_practiced: ["problems"]`,
 `skill_scores.problems`, `errors[]` (per half: `wrong_operation`/`misread` for
-setup, `calculation`/`carrying`/… for the arithmetic), `new_vocabulary[]`
+setup, `calculation`/`carrying`/… for the arithmetic), `new_facts[]`
 (keywords the learner chose to save), `focus_next_session[]`.
 
 **Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
-the results file under `~/.fluent/<id>/results/`. Do NOT call `update-db.py`,
+the results file under `~/.flowmath/<id>/results/`. Do NOT call `update-db.py`,
 do NOT call `persist-session.py`, do NOT write any file: you have no write tool,
 those calls are denied by the allow-list, and each denial eats context. Your only
 persistence job is to grade in the canonical feedback format — that is what the

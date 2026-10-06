@@ -28,7 +28,8 @@ Practice sessions now persist in **two layers**:
    auto-applied entry, so it finalizes over the incremental state — no
    duplication.
 
-   **Known gap (2026-09-13):** `new_vocabulary`, `review_results`, `milestones`
+   **Known gap (2026-09-13):** `new_facts` (WP1.9; read as `new_vocabulary` in
+   older payloads), `review_results`, `milestones`
    and `focus_next_session` are structured fields that no automatic layer can
    extract from prose, so in the server runtime they are currently always
    empty. `review_results` is the one that matters: it is the ONLY input that
@@ -89,7 +90,7 @@ Exit codes: `0` success, `1` validation error, `2` I/O error.
 ${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/references/db-updater-payload.example.json
 ```
 
-Key blocks the example covers: `skill_scores`, `errors[]`, `new_vocabulary[]`, `review_results[]`, `topics_covered`, `breakthroughs`, `focus_next_session`, `session_notes`, `achievements_earned`, `milestones`.
+Key blocks the example covers: `skill_scores`, `errors[]`, `new_facts[]`, `review_results[]`, `topics_covered`, `breakthroughs`, `focus_next_session`, `session_notes`, `achievements_earned`, `milestones`.
 
 ### 3. Field notes
 
@@ -103,10 +104,10 @@ Key blocks the example covers: `skill_scores`, `errors[]`, `new_vocabulary[]`, `
   a target-language card, and days later came back as an exercise drilling the
   learner's own language. Same trap here: a `misread` of a Catalan statement is
   filed as `misread` about the MATH asked, never as a language correction.)
-- `new_vocabulary[]` — facts the learner met for the first time (a table entry,
-  an equivalence, a problem keyword). The field keeps the language-era name
-  because the queue schema still uses it (WP1.7 renames it to facts). Fill
-  every field; incomplete entries yield incomplete spaced-repetition records.
+- `new_facts[]` — facts the learner met for the first time (a table entry,
+  an equivalence, a problem keyword). WP1.9 renamed it from the language-era
+  `new_vocabulary[]`; the scripts still read the old spelling in old payloads.
+  Fill every field; incomplete entries yield incomplete spaced-repetition records.
 - `review_results[]` — items already in the queue that were reviewed. The script runs SM-2 on each. See the `math-sm2-calculator` skill. Mapping: `quality = floor(score / 2)`.
 - `skill_scores[]` — use the math skill keys: `computation`, `steps`, `problems`,
   `reasoning`, `facts`. NOTE (WP1.7): the server's per-button daily counters
@@ -177,10 +178,10 @@ python3 "${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/hooks/update-db.py" <<'
   "date": "2026-04-25",
   "command_used": "/math-vocab",
   "skills_practiced": ["facts"],
-  "new_vocabulary": [
+  "new_facts": [
     {
       "item_id": "fact.x7_x8",
-      "item_type": "vocabulary",
+      "item_type": "facts",
       "content": "7 × 8 = ?",
       "answer": "56",
       "category": "times_tables",

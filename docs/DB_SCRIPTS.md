@@ -73,14 +73,14 @@ python3 "${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/hooks/update-db.py" <<'
       "notes": "optional free text"
     }
   ],
-  "new_vocabulary": [
+  "new_facts": [
     {
-      "item_id": "het_huis",
-      "item_type": "vocabulary",
-      "content": "het huis",
-      "answer": "the house",
-      "category": "essential_nouns",
-      "difficulty": "A1",
+      "item_id": "fact.x7_x8",
+      "item_type": "facts",
+      "content": "7 × 8 = ?",
+      "answer": "56",
+      "category": "times_tables",
+      "difficulty": "m4",
       "initial_quality": 4,
       "priority": "medium"
     }
@@ -152,8 +152,9 @@ holding process dies.
   `session-NNN`.
 - `spaced-repetition.json` items preserve `consecutive_correct/incorrect`,
   `mastery_level`, `total_reviews`, `priority`, `content`, `answer`,
-  `category`, `difficulty` — supply these in `new_vocabulary` payloads so new
-  items are fully populated.
+  `category`, `difficulty` — supply these in `new_facts` payloads so new
+  items are fully populated. (`new_facts` is the WP1.9 name; the old
+  `new_vocabulary` spelling is still read in payloads written before it.)
 - `milestones[]` accepts **either** a bare string **or** an object
   `{ "milestone": <required non-empty string>, "date": <optional YYYY-MM-DD,
   defaults to the session date> }`. A nested `session_id` is ignored — the

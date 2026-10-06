@@ -314,7 +314,7 @@ function main() {
             try {
               const content = fs.readFileSync(path.join(resultsDir, f), "utf8");
               // Check for enriched Capa B data markers
-              if (content.includes("new_vocabulary") || content.includes("review_results") || content.includes("milestones") || content.includes("focus_next_session")) {
+              if (content.includes("new_facts") || content.includes("new_vocabulary") || content.includes("review_results") || content.includes("milestones") || content.includes("focus_next_session")) {
                 existingResults = true;
                 break;
               }

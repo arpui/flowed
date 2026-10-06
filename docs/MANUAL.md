@@ -403,7 +403,8 @@ transcripció sencera a cada torn (`parse_review_results`), descarta els
 Sense aquest bloc, un ítem es queda amb `interval_days: 1` i `repetitions: 0`
 per sempre: entra a la cua i no en surt mai.
 
-Les entrades de `new_vocabulary` poden portar els camps opcionals `pos`,
+Les entrades de `new_facts` (WP1.9; abans `new_vocabulary`, que els scripts
+encara llegeixen en payloads antics) poden portar els camps opcionals `pos`,
 `cefr_level` i `forms` (p. ex. `{"word": "…", "translation": "…", "pos": "noun",
 "cefr_level": "A2", "forms": {"plural": "…"}}`): es desen si el payload els
 inclou, i els payloads antics sense aquests camps funcionen igual que sempre.

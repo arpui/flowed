@@ -411,8 +411,19 @@ function normalizeLabel(raw: string): string {
  *  distinct questions hide behind it — observed, in a real plan file. */
 const NOT_AN_EXERCISE = new Set([
   "easy", "medium", "hard", "critical", "review", "spaced review", "drill", "new",
+  // Language-era skill words: kept as a deny-list — old transcripts and the
+  // preserved language path still carry them, and a fingerprinted category
+  // hides fifteen real questions behind one word.
   "vocabulary", "grammar", "spelling", "capitalization", "writing", "reading",
   "speaking", "listening", "translation", "practice",
+  // Math kind-words (C7 / the bank card headings of bank.ts: "Calculation",
+  // "Steps"). WP1.9: a card heading's parenthetical is the difficulty, but a
+  // tutor that writes "**Exercise:** Steps" or a heading without "(Easy)"
+  // must not fingerprint the KIND. Catalan spellings too — the tutor answers
+  // in the learner's language.
+  "calculation", "computation", "steps", "problems", "word problem", "reasoning",
+  "facts", "math talk", "càlcul", "computació", "passos", "problemes", "raonament",
+  "fets",
   // Priority tags on a review card ("Review (High Priority)") are not exercises.
   "high priority", "medium priority", "low priority", "critical priority", "priority",
   "high", "low",
@@ -818,36 +829,10 @@ export function practiceNote(
   return bits.join(" ");
 }
 
-/**
- * How much a Writing exercise asks for, by level — the table of
- * skills/math-writing/SKILL.md, said by the server where the tutor reads it.
- * The skill's table was an instruction nobody checked: an A2 profile was asked
- * for an email with a greeting, plans for two days and a sign-off, which is a
- * B1 task. Null when the level is unknown (then the skill decides).
- */
-export function writingLengthNote(level?: string | null): string | null {
-  const l = String(level ?? "").trim().toUpperCase();
-  const ask: Record<string, string> = {
-    A1: "1-2 sentences of her own about one small topic from her life, with the one or two words she should use named in the task (\"Use: I have, It is\")",
-    A2: "3-5 sentences of her own: a short note, a message or a postcard",
-    B1: "50-70 words: an email with a greeting and a closing",
-    B2: "80-120 words, with an argument to make",
-    C1: "80-120 words, with an argument to make",
-    C2: "80-120 words, with an argument to make",
-  };
-  const want = ask[l];
-  if (!want) return null;
-  const low = l === "A1" || l === "A2";
-  return (
-    `This learner's level is ${l}. Any writing exercise you set asks for ${want}` +
-    (low
-      ? ` — not an email or a letter, no long list of requirements, and never a gap to fill or a sentence ` +
-        `to complete: that is Go's job. Here she writes her own words. One short task at a time: grade it, ` +
-        `then set the next one in the same message`
-      : ``) +
-    `. Say nothing about this note.`
-  );
-}
+// (WP1.9: `writingLengthNote` — the A1..C2 table of email/postcard writing
+// tasks — is deleted. It returned null for every m-level, and the length of a
+// math REASONING task is the math-writing skill's own m1-m3 / upper-level
+// table, which the tutor reads in its system prompt.)
 
 /**
  * Topics the teacher (or the parent) wants practised — `topics.txt` in the
@@ -1273,14 +1258,14 @@ export function writingBlankGuard(text: string, command?: string | null): string
   const t = String(text || "");
   // The feedback half of a reply quotes her text and the corrected version;
   // only the task she is being given matters here.
-  const cut = t.search(/#{1,3}\s*(?:✍️|📝)?\s*Writing (?:Exercise|Task)|\*\*Task:?\*\*/i);
+  const cut = t.search(/#{1,3}\s*(?:✍️|📝)?\s*(?:Writing|Raonament|Reasoning)\s*(?:Exercise|Task)?|\*\*Task:?\*\*/i);
   const task = cut >= 0 ? t.slice(cut) : t;
-  if (!/___+/.test(task) && !/\b(?:fill in the (?:gap|blank)s?|complete the sentences?)\b/i.test(task)) return null;
+  if (!/___+/.test(task) && !/\b(?:fill in the (?:gap|blank)s?|complete the sentences?|completa|emplena els? buits?)\b/i.test(task)) return null;
   return (
-    `This is Writing: she writes her own sentences. A gap to fill or a sentence to complete is a Go ` +
-    `exercise, not a Writing task. Write the turn again with an open task instead: one small topic ` +
-    `from her life, the one or two words she should use ("Use: ..."), and how many sentences to write — ` +
-    `no "___", nothing to complete, nothing to copy.`
+    `This is Raonament (📝): she explains her own mathematical thinking. A gap to fill or a sentence to ` +
+    `complete is a Go exercise, not a reasoning task. Write the turn again with an open task instead: one ` +
+    `small thing to explain, justify or invent ("explica com ho has resolt", "per què 3 + 2 × 4 no és ` +
+    `20?", "inventa un problema que es resolgui amb 3/4 + 1/8") — no "___", nothing to complete, nothing to copy.`
   );
 }
 
