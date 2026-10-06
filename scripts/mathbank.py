@@ -21,6 +21,39 @@ Template families are selected per competence by a `Bank: <family>` line in the
 curriculum .md (a key `hooks/curriculum.py` ignores; this script reads it).
 Fallback for the pilot ids: DEFAULT_FAMILY_BY_ID.
 
+WP2.1 adds the `steps` families (DISSENY-MATEMATIQUES §4.2): worked-solution
+templates that emit a FULL expected trace — every step carries `expect` (the
+form the method demands), `value` (its exact value), `accept` (alternative
+lines), `error_class` (the §4.4 taxonomy, validated against
+`db_schema.ERROR_CATEGORIES`) and `why`. They are written to SEPARATE files
+`<competence>__steps.json` in a `steps/` SUBDIRECTORY of the bank dir
+(default: `curriculum/bank/<stem>/steps/`) and carry `status: "generated"` —
+deliberately NOT validated/reviewed, because the steps grader (WP2.3) does
+not exist yet. Three independent guards keep them unserved until WP2.3 wires
+`grade_step` and flips the status:
+  * `hooks/bank.py` `load_bank` opens exactly `<competence>.json` — never a
+    `__steps` sibling, never a subdirectory;
+  * `load_bank` filters `status in (validated, reviewed)`, so even a stem
+    that matched would return nothing;
+  * the subdirectory is invisible to every non-recursive `glob("*.json")`
+    (bank_left, _bank_index) AND to the one-level `bank/*/*.json` glob of
+    tests/test_bank_review.py TheWholeBank — which grades every item it
+    finds with `bank.grade`, and would crash on a steps item (no `sentence`).
+    (A sibling dir like `bank/math-m4-steps/` would still match that glob;
+    a nested `steps/` under the stem does not.)
+Generate them with an explicit `--family <steps family>` (a competence's
+`Bank:` line names its compute family; steps families are chosen per run,
+not per competence).
+
+Steps validation before writing (fail loudly, on top of the rules above):
+  * every step's `expect` and `value` parse via mathgrade.parse_expr and
+    agree in value; every `accept` entry is an alternative line for that
+    value (bare expression or "lhs = rhs", all sides equal);
+  * the LAST step's value equals the item answer; the answer equals the
+    problem's value (the template's own Fraction computation, re-derived by
+    the evaluator — the same two-path rule);
+  * `error_class` is one of the 12 canonical classes; step `n` is sequential.
+
 Validation before writing (fail loudly, never emit a bad item):
   * the problem string parses with mathgrade.parse_expr and its value equals
     the template's own Fraction computation (two independent paths);
@@ -35,7 +68,15 @@ Validation before writing (fail loudly, never emit a bad item):
 CLI:
   python3 scripts/mathbank.py gen --curriculum curriculum/math-m4.md \
       --competence m4.mult_2digit --n 30 [--seed N] [--out DIR] [--date YYYY-MM-DD]
+  python3 scripts/mathbank.py gen --curriculum curriculum/math-m4.md \
+      --competence m4.mult_2digit --family partial_products --n 12 [--seed N] [--out DIR]
   python3 scripts/mathbank.py validate --curriculum curriculum/math-m4.md [--competence ID] [--out DIR]
+
+With an explicit --family the competence does not need a `Bank:` line (and for
+the not-yet-in-the-curriculum steps pilots, m4.add_carry / m4.div_2x1, it does
+not need to exist in the .md either — the curriculum entry is proposed in the
+WP2.1 report). Without --out, steps families write to
+curriculum/bank/<stem>/steps/ (compute families: curriculum/bank/<stem>/).
 
 STDLIB ONLY (same rule as hooks/).
 """
@@ -54,9 +95,11 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "hooks"))
 
+import db_schema  # noqa: E402  (hooks/db_schema.py — ERROR_CATEGORIES, the §4.4 SSOT)
 import mathgrade  # noqa: E402  (hooks/mathgrade.py — the grader itself)
 
-__all__ = ["FAMILIES", "build_item", "validate_item", "validate_file", "GenError"]
+__all__ = ["FAMILIES", "STEPS_FAMILIES", "build_item", "validate_item",
+           "validate_file", "GenError"]
 
 
 class GenError(Exception):
@@ -261,6 +304,201 @@ DEFAULT_FAMILY_BY_ID = {
 }
 
 
+# ------------------------------------------------------- steps families (WP2.1) ---
+# §4.2: a `steps` item is a worked solution — the FULL expected trace. Each
+# family returns a dict with keys:
+#   type ("steps"), instruction, problem, method, answer, value (Fraction),
+#   why, steps: [{n, expect, value, accept, error_class, why}, ...]
+# `expect` is the FORM the method demands (grade_step form-matches it);
+# `value` is the step's exact value as a canonical string; `accept` lists
+# alternative lines for that step (bare expression or "lhs = rhs").
+# `error_class` is the class of slip expected AT that step — the taxonomy
+# (db_schema.ERROR_CATEGORIES) that becomes the mistake pattern id in §4.2.
+
+STEPS_INSTRUCTION = "Resol-ho pas a pas. Una línia per pas."
+
+
+def partial_products(rng: random.Random) -> dict:
+    """2x2 multiplication by partial products: split the second factor into
+    tens + units, two multiplications, one summing step."""
+    for _ in range(500):
+        a = rng.randint(12, 99)
+        b = rng.randint(11, 99)
+        if b % 10:  # a units digit, or the split is one trivial step
+            break
+    else:
+        raise GenError("partial_products: no 2x2 pair with a units digit in 500 draws")
+    bt, bu = (b // 10) * 10, b % 10
+    v1, v2, tot = a * bt, a * bu, a * b
+    return {
+        "type": "steps",
+        "method": "partial_products",
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{a} × {b}",
+        "answer": str(tot),
+        "value": Fraction(tot),
+        "steps": [
+            {"n": 1, "expect": f"{a} × {bt}", "value": str(v1),
+             "accept": [f"{a} * {bt}", f"{a} × {bt} = {v1}"],
+             "error_class": "procedure",
+             "why": f"Separa {b} en {bt} + {bu} i multiplica {a} × {bt}."},
+            {"n": 2, "expect": f"{a} × {bu}", "value": str(v2),
+             "accept": [f"{a} * {bu}", f"{a} × {bu} = {v2}"],
+             "error_class": "calculation",
+             "why": f"Ara les unitats: {a} × {bu}."},
+            {"n": 3, "expect": f"{v1} + {v2}", "value": str(tot),
+             "accept": [f"{v1} + {v2} = {tot}"],
+             "error_class": "carrying",
+             "why": "Suma els dos productes parcials."},
+        ],
+        "why": (f"{b} = {bt} + {bu}: {a} × {bt} = {v1} i {a} × {bu} = {v2}; "
+                f"{v1} + {v2} = {tot}."),
+    }
+
+
+def partial_sums(rng: random.Random) -> dict:
+    """2-digit addition with carrying, decomposed: tens, units, combine.
+    The units column is required to carry (that is what the method teaches)."""
+    for _ in range(500):
+        a = rng.randint(13, 89)
+        b = rng.randint(13, 89)
+        if a % 10 + b % 10 >= 10 and a + b < 100:
+            break
+    else:
+        raise GenError("partial_sums: no carrying pair under 100 in 500 draws")
+    at, au = (a // 10) * 10, a % 10
+    bt, bu = (b // 10) * 10, b % 10
+    tens, units, tot = at + bt, au + bu, a + b
+    return {
+        "type": "steps",
+        "method": "partial_sums",
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{a} + {b}",
+        "answer": str(tot),
+        "value": Fraction(tot),
+        "steps": [
+            {"n": 1, "expect": f"{at} + {bt}", "value": str(tens),
+             "accept": [f"{at} + {bt} = {tens}"],
+             "error_class": "procedure",
+             "why": f"Separa desenes i unitats: {a} = {at} + {au}, {b} = {bt} + {bu}."},
+            {"n": 2, "expect": f"{au} + {bu}", "value": str(units),
+             "accept": [f"{au} + {bu} = {units}"],
+             "error_class": "carrying",
+             "why": f"Suma les unitats: {au} + {bu} = {units}, que passa de 9 (transport)."},
+            {"n": 3, "expect": f"{tens} + {units}", "value": str(tot),
+             "accept": [f"{tens} + {units} = {tot}"],
+             "error_class": "carrying",
+             "why": "Ajunta les desenes amb les unitats."},
+        ],
+        "why": (f"{a} + {b}: desenes {at} + {bt} = {tens}, unitats {au} + {bu} = {units}; "
+                f"{tens} + {units} = {tot}."),
+    }
+
+
+def common_denominator(rng: random.Random) -> dict:
+    """Sum of unlike-denominator fractions as a trace: rewrite both over the
+    common denominator, add numerators, and (when reducible) a third
+    simplification step. Same draw rules as the compute family frac_add_unlike."""
+    want_reducible = rng.random() < 0.5
+    for _ in range(2000):
+        d1 = rng.randint(2, 12)
+        d2 = rng.randint(2, 12)
+        if d1 == d2:
+            continue
+        if d1 > d2:
+            d1, d2 = d2, d1
+        n1 = rng.randint(1, d1 - 1)
+        n2 = rng.randint(1, d2 - 1)
+        L = _lcm(d1, d2)
+        num = n1 * (L // d1) + n2 * (L // d2)
+        if (math.gcd(num, L) > 1) != want_reducible:
+            continue
+        break
+    else:
+        raise GenError(f"common_denominator: no pair with reducible={want_reducible} in 2000 draws")
+    s = Fraction(n1, d1) + Fraction(n2, d2)
+    a1, a2 = n1 * (L // d1), n2 * (L // d2)
+    g = math.gcd(num, L)
+    steps = [
+        {"n": 1, "expect": f"{a1}/{L} + {a2}/{L}", "value": _fmt_frac(s),
+         "accept": [f"{a1}/{L}+{a2}/{L}", f"{a1}/{L} + {a2}/{L} = {_fmt_frac(s)}"],
+         "error_class": "procedure",
+         "why": f"Escriu {n1}/{d1} com a {a1}/{L} i {n2}/{d2} com a {a2}/{L} "
+                f"(denominador comú {L})."},
+        {"n": 2, "expect": f"{num}/{L}", "value": _fmt_frac(Fraction(num, L)),
+         "accept": [f"{num}/{L} = {_fmt_frac(Fraction(num, L))}"],
+         "error_class": "calculation",
+         "why": "Suma els numeradors; el denominador no canvia."},
+    ]
+    why = (f"Denominador comú {L}: {n1}/{d1} = {a1}/{L} i {n2}/{d2} = {a2}/{L}; "
+           f"suma els numeradors ({a1} + {a2} = {num}).")
+    if g > 1:
+        steps.append(
+            {"n": 3, "expect": _fmt_frac(s), "value": _fmt_frac(s),
+             "accept": [],
+             "error_class": "simplification",
+             "why": f"Simplifica {num}/{L} dividint numerador i denominador per {g}."})
+        why += f" Simplifica {num}/{L} dividint per {g}."
+    return {
+        "type": "steps",
+        "method": "common_denominator",
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{n1}/{d1} + {n2}/{d2}",
+        "answer": _fmt_frac(s),
+        "value": s,
+        "steps": steps,
+        "why": why,
+    }
+
+
+def long_division(rng: random.Random) -> dict:
+    """2÷1 division WITH remainder: biggest multiple not exceeding the
+    dividend, the subtraction that leaves the remainder, and the result
+    written as a mixed number (quotient + remainder/divisor) so the answer
+    is the exact value of the problem."""
+    for _ in range(500):
+        a = rng.randint(12, 99)
+        b = rng.randint(2, 9)
+        q, r = divmod(a, b)
+        if r and q >= 2 and math.gcd(r, b) == 1:
+            break
+    else:
+        raise GenError("long_division: no 2x1 pair with a reduced remainder in 500 draws")
+    m = b * q
+    return {
+        "type": "steps",
+        "method": "long_division",
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{a} ÷ {b}",
+        "answer": _fmt_frac(Fraction(a, b)),
+        "value": Fraction(a, b),
+        "steps": [
+            {"n": 1, "expect": f"{b} × {q}", "value": str(m),
+             "accept": [f"{b} * {q}", f"{b} × {q} = {m}"],
+             "error_class": "facts",
+             "why": f"El múltiple de {b} més gran que no sobrepassi {a}: {b} × {q} = {m}."},
+            {"n": 2, "expect": f"{a} - {m}", "value": str(r),
+             "accept": [f"{a} - {m} = {r}"],
+             "error_class": "calculation",
+             "why": f"Resta'l a {a}: el que en sobra ({r}) és el residu."},
+            {"n": 3, "expect": f"{q} {r}/{b}", "value": _fmt_frac(Fraction(a, b)),
+             "accept": [f"{a}/{b}"],
+             "error_class": "procedure",
+             "why": f"Quocient {q} i residu {r}: {a} ÷ {b} = {q} {r}/{b}."},
+        ],
+        "why": (f"{b} × {q} = {m} és el múltiple de {b} que més s'acosta a {a} sense "
+                f"sobrepassar-lo; {a} - {m} = {r} és el residu: {a} ÷ {b} = {q} {r}/{b}."),
+    }
+
+
+STEPS_FAMILIES = {
+    "partial_products": partial_products,
+    "partial_sums": partial_sums,
+    "common_denominator": common_denominator,
+    "long_division": long_division,
+}
+
+
 # ------------------------------------------------------------- curriculum ---
 
 _BANK_LINE = re.compile(r"^Bank:\s*(\S+)\s*$")
@@ -298,13 +536,110 @@ def competence_exists(curriculum_path: Path, competence_id: str) -> bool:
 
 REQUIRED_FIELDS = ("id", "competence", "type", "instruction", "problem", "answer",
                    "also_accept", "options", "why", "status", "source")
-ITEM_TYPES = ("compute", "choose", "compare")
+ITEM_TYPES = ("compute", "choose", "compare", "steps")
 _ID_RE = re.compile(r"^[A-Za-z0-9_.-]+\.\d{3,}$")
+
+STEPS_REQUIRED_FIELDS = ("id", "competence", "type", "instruction", "problem",
+                         "method", "steps", "answer", "why", "status", "source")
+STEP_REQUIRED_KEYS = ("n", "expect", "value", "accept", "error_class", "why")
+
+
+def _accept_ok(acc, want: Fraction | None) -> bool:
+    """An `accept` entry is an alternative line for a step: a bare expression
+    or "lhs = rhs" (grade_step splits on the LAST '='). Every side must parse
+    and equal the step's value — an accept that means something else is a
+    template bug, not a learner variant."""
+    if want is None:
+        return False
+    t = str(acc)
+    if t.count("=") > 1:
+        return False
+    sides = t.rsplit("=", 1) if "=" in t else [t]
+    for s in sides:
+        try:
+            if mathgrade.parse_expr(s).value != want:
+                return False
+        except mathgrade.ParseError:
+            return False
+    return True
+
+
+def _validate_steps_item(item: dict) -> list[str]:
+    """Invariants of a §4.2 steps item. Status MUST be "generated": the steps
+    grader (WP2.3) does not exist yet, and bank.py only serves
+    validated/reviewed — so these items stay invisible until it is wired."""
+    errs: list[str] = []
+    for f in STEPS_REQUIRED_FIELDS:
+        if f not in item:
+            errs.append(f"missing field {f!r}")
+    if errs:
+        return errs
+    if item["status"] != "generated":
+        errs.append(f"steps status {item['status']!r} must be 'generated' "
+                    "(WP2.3 flips it once grade_step is wired)")
+    if not _ID_RE.match(item["id"]):
+        errs.append(f"bad id {item['id']!r}")
+    if not item["id"].startswith(item["competence"] + "."):
+        errs.append(f"id {item['id']!r} does not start with competence {item['competence']!r}")
+    steps = item["steps"]
+    if not isinstance(steps, list) or not steps:
+        errs.append("steps must be a non-empty list")
+        return errs
+    last_val: Fraction | None = None
+    for i, st in enumerate(steps):
+        tag = f"step {i + 1}"
+        if not isinstance(st, dict):
+            errs.append(f"{tag}: not an object")
+            continue
+        for k in STEP_REQUIRED_KEYS:
+            if k not in st:
+                errs.append(f"{tag}: missing {k!r}")
+        if st.get("n") != i + 1:
+            errs.append(f"{tag}: n is {st.get('n')!r}, expected {i + 1}")
+        if st.get("error_class") not in db_schema.ERROR_CATEGORIES:
+            errs.append(f"{tag}: error_class {st.get('error_class')!r} is not one of "
+                        f"the §4.4 taxonomy {db_schema.ERROR_CATEGORIES}")
+        if not str(st.get("why", "")).strip():
+            errs.append(f"{tag}: empty why")
+        ev = vv = None
+        try:
+            ev = mathgrade.parse_expr(st.get("expect")).value
+        except mathgrade.ParseError as e:
+            errs.append(f"{tag}: expect {st.get('expect')!r} does not parse: {e}")
+        try:
+            vv = mathgrade.parse_expr(st.get("value")).value
+        except mathgrade.ParseError as e:
+            errs.append(f"{tag}: value {st.get('value')!r} does not parse: {e}")
+        if ev is not None and vv is not None and ev != vv:
+            errs.append(f"{tag}: expect {st.get('expect')!r} -> {ev} != value {vv}")
+        for acc in st.get("accept", []):
+            if not _accept_ok(acc, vv):
+                errs.append(f"{tag}: accept {acc!r} is not an alternative line "
+                            f"for value {st.get('value')!r}")
+        if vv is not None:
+            last_val = vv
+    try:
+        aval = mathgrade.parse_expr(item["answer"]).value
+    except mathgrade.ParseError as e:
+        errs.append(f"answer does not parse: {e}")
+        aval = None
+    try:
+        pval = mathgrade.parse_expr(item["problem"]).value
+    except mathgrade.ParseError as e:
+        errs.append(f"problem does not parse: {e}")
+        pval = None
+    if aval is not None and pval is not None and pval != aval:
+        errs.append(f"answer value {aval} != problem value {pval}")
+    if aval is not None and last_val is not None and last_val != aval:
+        errs.append(f"last step value {last_val} != answer value {aval}")
+    return errs
 
 
 def validate_item(item: dict) -> list[str]:
     """Every invariant an item must satisfy before it may be written. Returns
     a list of problems (empty = good). Never trusts the template."""
+    if item.get("type") == "steps":
+        return _validate_steps_item(item)
     errs: list[str] = []
     for f in REQUIRED_FIELDS:
         if f not in item:
@@ -413,9 +748,12 @@ def validate_file(path: Path) -> list[str]:
 def build_item(family: str, rng: random.Random, competence_id: str, seq: int,
                source: str) -> dict:
     """One candidate item: template value vs evaluator value must agree."""
+    if family in STEPS_FAMILIES:
+        return _build_steps_item(family, rng, competence_id, seq, source)
     if family not in FAMILIES:
         raise GenError(f"unknown template family {family!r} "
-                       f"(known: {', '.join(sorted(FAMILIES))})")
+                       f"(known: {', '.join(sorted(FAMILIES))}, "
+                       f"steps: {', '.join(sorted(STEPS_FAMILIES))})")
     cand = FAMILIES[family](rng)
     # The two independent computations must agree before anything is rendered.
     if cand["value"] is not None:
@@ -450,16 +788,72 @@ def build_item(family: str, rng: random.Random, competence_id: str, seq: int,
     return item
 
 
+def _build_steps_item(family: str, rng: random.Random, competence_id: str, seq: int,
+                      source: str) -> dict:
+    """One candidate steps item. Same two-path rule as compute: the template's
+    Fraction value is re-derived from the PROBLEM STRING by the evaluator; plus
+    every step's expect/value/accept must be consistent (validate_item)."""
+    cand = STEPS_FAMILIES[family](rng)
+    try:
+        pval = mathgrade.parse_expr(cand["problem"]).value
+    except mathgrade.ParseError as e:
+        raise GenError(f"{family}: generated problem {cand['problem']!r} "
+                       f"does not parse: {e}") from e
+    if pval != cand["value"]:
+        raise GenError(f"{family}: template value {cand['value']} != evaluator "
+                       f"value {pval} for {cand['problem']!r}")
+    aval = mathgrade.parse_expr(cand["answer"]).value
+    if aval != cand["value"]:
+        raise GenError(f"{family}: answer {cand['answer']!r} -> {aval} != {cand['value']}")
+    item = {
+        "id": f"{competence_id}.{seq:03d}",
+        "competence": competence_id,
+        "type": "steps",
+        "instruction": cand["instruction"],
+        "problem": cand["problem"],
+        "method": cand["method"],
+        "steps": cand["steps"],
+        "answer": cand["answer"],
+        "why": cand["why"],
+        # NOT validated/reviewed on purpose: bank.py serves those, and the
+        # steps grader (WP2.3) does not exist yet. WP2.3 flips this when it
+        # wires grade_step into the bank path.
+        "status": "generated",
+        "source": source,
+    }
+    errs = validate_item(item)
+    if errs:
+        raise GenError(f"{family}: generated an invalid item: " + "; ".join(errs))
+    return item
+
+
 def generate(curriculum_path: Path, competence_id: str, n: int, seed: int,
-             out_dir: Path, day: str) -> tuple[Path, list[dict]]:
-    """Append n new validated items to <out_dir>/<competence>.json. Ids continue
-    the existing numbering; problems already in the file are never duplicated."""
-    if not competence_exists(curriculum_path, competence_id):
-        raise GenError(f"{competence_id}: not a competence of {curriculum_path.name}")
-    family = bank_family_for(curriculum_path, competence_id)
+             out_dir: Path | None, day: str, family: str | None = None) -> tuple[Path, list[dict]]:
+    """Append n new items to <out_dir>/<competence>.json (compute families) or
+    <out_dir>/<competence>__steps.json (steps families — never served until
+    WP2.3, see the module docstring). `out_dir=None` means the curriculum's
+    bank dir; steps families default into its `steps/` subdirectory. Ids
+    continue the existing numbering; problems already in the file are never
+    duplicated. With an explicit `family` the curriculum's `Bank:` line (and
+    even the competence's presence in the .md) is not consulted — used for
+    the steps pilots whose curriculum entries WP1.1 still has to add."""
+    if family is None:
+        if not competence_exists(curriculum_path, competence_id):
+            raise GenError(f"{competence_id}: not a competence of {curriculum_path.name}")
+        family = bank_family_for(curriculum_path, competence_id)
+    if family not in FAMILIES and family not in STEPS_FAMILIES:
+        raise GenError(f"unknown template family {family!r} "
+                       f"(known: {', '.join(sorted(FAMILIES))}, "
+                       f"steps: {', '.join(sorted(STEPS_FAMILIES))})")
+    is_steps = family in STEPS_FAMILIES
+    if out_dir is None:
+        out_dir = _default_out(curriculum_path)
+        if is_steps:
+            out_dir = Path(out_dir) / "steps"
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{competence_id}.json"
+    suffix = "__steps" if is_steps else ""
+    path = out_dir / f"{competence_id}{suffix}.json"
     existing = []
     if path.exists():
         existing = json.loads(path.read_text(encoding="utf-8"))
@@ -520,7 +914,14 @@ def main(argv=None) -> int:
     g.add_argument("--competence", required=True)
     g.add_argument("--n", type=int, required=True)
     g.add_argument("--seed", type=int, default=42)
+    g.add_argument("--family", default=None,
+                   help="template family; default: the competence's `Bank:` line. "
+                        "Steps families (partial_products, partial_sums, "
+                        "common_denominator, long_division) must be named here "
+                        "and write <competence>__steps.json with status generated.")
     g.add_argument("--out", type=Path, default=None)
+    g.add_argument("--type", default=None, choices=["steps"],
+                   help="steps items (type is otherwise inferred from --family)")
     g.add_argument("--date", default=None, help="YYYY-MM-DD stamped into source (default: today)")
 
     v = sub.add_parser("validate", help="re-check every written file of a curriculum")
@@ -533,20 +934,31 @@ def main(argv=None) -> int:
         if a.cmd == "gen":
             if a.n <= 0:
                 raise GenError("--n must be positive")
+            if a.type == "steps":
+                if a.family is None:
+                    raise GenError("--type steps needs --family "
+                                   f"(steps families: {', '.join(sorted(STEPS_FAMILIES))})")
+                if a.family not in STEPS_FAMILIES:
+                    raise GenError(f"--type steps needs a steps family, not {a.family!r}")
             day = a.date or _date.today().isoformat()
             path, new = generate(a.curriculum, a.competence, a.n, a.seed,
-                                 a.out or _default_out(a.curriculum), day)
+                                 a.out, day, family=a.family)
             shown = _rel(path)
+            fam = a.family or bank_family_for(a.curriculum, a.competence)
             print(f"{shown}: +{len(new)} items "
-                  f"({new[0]['id']} … {new[-1]['id']}), family "
-                  f"{bank_family_for(a.curriculum, a.competence)}")
+                  f"({new[0]['id']} … {new[-1]['id']}), family {fam}")
             return 0
         if a.cmd == "validate":
             out_dir = a.out or _default_out(a.curriculum)
             if a.competence:
-                files = [out_dir / f"{a.competence}.json"]
+                files = [f for f in (out_dir / f"{a.competence}.json",
+                                     out_dir / "steps" / f"{a.competence}__steps.json")
+                         if f.exists()]
             else:
                 files = sorted(out_dir.glob("*.json")) if out_dir.is_dir() else []
+                steps_dir = out_dir / "steps"
+                if steps_dir.is_dir():
+                    files += sorted(steps_dir.glob("*.json"))
             if not files:
                 print(f"validate: no files under {out_dir}", file=sys.stderr)
                 return 1

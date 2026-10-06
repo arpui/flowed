@@ -1,0 +1,530 @@
+[
+  {
+    "id": "m4.add_carry.001",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "27 + 16",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "20 + 10",
+        "value": "30",
+        "accept": [
+          "20 + 10 = 30"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 27 = 20 + 7, 16 = 10 + 6."
+      },
+      {
+        "n": 2,
+        "expect": "7 + 6",
+        "value": "13",
+        "accept": [
+          "7 + 6 = 13"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 7 + 6 = 13, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "30 + 13",
+        "value": "43",
+        "accept": [
+          "30 + 13 = 43"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "43",
+    "why": "27 + 16: desenes 20 + 10 = 30, unitats 7 + 6 = 13; 30 + 13 = 43.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.002",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "48 + 44",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "40 + 40",
+        "value": "80",
+        "accept": [
+          "40 + 40 = 80"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 48 = 40 + 8, 44 = 40 + 4."
+      },
+      {
+        "n": 2,
+        "expect": "8 + 4",
+        "value": "12",
+        "accept": [
+          "8 + 4 = 12"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 8 + 4 = 12, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "80 + 12",
+        "value": "92",
+        "accept": [
+          "80 + 12 = 92"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "92",
+    "why": "48 + 44: desenes 40 + 40 = 80, unitats 8 + 4 = 12; 80 + 12 = 92.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.003",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "67 + 17",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "60 + 10",
+        "value": "70",
+        "accept": [
+          "60 + 10 = 70"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 67 = 60 + 7, 17 = 10 + 7."
+      },
+      {
+        "n": 2,
+        "expect": "7 + 7",
+        "value": "14",
+        "accept": [
+          "7 + 7 = 14"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 7 + 7 = 14, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "70 + 14",
+        "value": "84",
+        "accept": [
+          "70 + 14 = 84"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "84",
+    "why": "67 + 17: desenes 60 + 10 = 70, unitats 7 + 7 = 14; 70 + 14 = 84.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.004",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "16 + 24",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "10 + 20",
+        "value": "30",
+        "accept": [
+          "10 + 20 = 30"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 16 = 10 + 6, 24 = 20 + 4."
+      },
+      {
+        "n": 2,
+        "expect": "6 + 4",
+        "value": "10",
+        "accept": [
+          "6 + 4 = 10"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 6 + 4 = 10, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "30 + 10",
+        "value": "40",
+        "accept": [
+          "30 + 10 = 40"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "40",
+    "why": "16 + 24: desenes 10 + 20 = 30, unitats 6 + 4 = 10; 30 + 10 = 40.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.005",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "77 + 16",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "70 + 10",
+        "value": "80",
+        "accept": [
+          "70 + 10 = 80"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 77 = 70 + 7, 16 = 10 + 6."
+      },
+      {
+        "n": 2,
+        "expect": "7 + 6",
+        "value": "13",
+        "accept": [
+          "7 + 6 = 13"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 7 + 6 = 13, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "80 + 13",
+        "value": "93",
+        "accept": [
+          "80 + 13 = 93"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "93",
+    "why": "77 + 16: desenes 70 + 10 = 80, unitats 7 + 6 = 13; 80 + 13 = 93.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.006",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "48 + 32",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "40 + 30",
+        "value": "70",
+        "accept": [
+          "40 + 30 = 70"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 48 = 40 + 8, 32 = 30 + 2."
+      },
+      {
+        "n": 2,
+        "expect": "8 + 2",
+        "value": "10",
+        "accept": [
+          "8 + 2 = 10"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 8 + 2 = 10, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "70 + 10",
+        "value": "80",
+        "accept": [
+          "70 + 10 = 80"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "80",
+    "why": "48 + 32: desenes 40 + 30 = 70, unitats 8 + 2 = 10; 70 + 10 = 80.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.007",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "26 + 24",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "20 + 20",
+        "value": "40",
+        "accept": [
+          "20 + 20 = 40"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 26 = 20 + 6, 24 = 20 + 4."
+      },
+      {
+        "n": 2,
+        "expect": "6 + 4",
+        "value": "10",
+        "accept": [
+          "6 + 4 = 10"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 6 + 4 = 10, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "40 + 10",
+        "value": "50",
+        "accept": [
+          "40 + 10 = 50"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "50",
+    "why": "26 + 24: desenes 20 + 20 = 40, unitats 6 + 4 = 10; 40 + 10 = 50.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.008",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "46 + 18",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "40 + 10",
+        "value": "50",
+        "accept": [
+          "40 + 10 = 50"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 46 = 40 + 6, 18 = 10 + 8."
+      },
+      {
+        "n": 2,
+        "expect": "6 + 8",
+        "value": "14",
+        "accept": [
+          "6 + 8 = 14"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 6 + 8 = 14, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "50 + 14",
+        "value": "64",
+        "accept": [
+          "50 + 14 = 64"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "64",
+    "why": "46 + 18: desenes 40 + 10 = 50, unitats 6 + 8 = 14; 50 + 14 = 64.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.009",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "59 + 33",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "50 + 30",
+        "value": "80",
+        "accept": [
+          "50 + 30 = 80"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 59 = 50 + 9, 33 = 30 + 3."
+      },
+      {
+        "n": 2,
+        "expect": "9 + 3",
+        "value": "12",
+        "accept": [
+          "9 + 3 = 12"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 9 + 3 = 12, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "80 + 12",
+        "value": "92",
+        "accept": [
+          "80 + 12 = 92"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "92",
+    "why": "59 + 33: desenes 50 + 30 = 80, unitats 9 + 3 = 12; 80 + 12 = 92.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.010",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "39 + 47",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "30 + 40",
+        "value": "70",
+        "accept": [
+          "30 + 40 = 70"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 39 = 30 + 9, 47 = 40 + 7."
+      },
+      {
+        "n": 2,
+        "expect": "9 + 7",
+        "value": "16",
+        "accept": [
+          "9 + 7 = 16"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 9 + 7 = 16, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "70 + 16",
+        "value": "86",
+        "accept": [
+          "70 + 16 = 86"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "86",
+    "why": "39 + 47: desenes 30 + 40 = 70, unitats 9 + 7 = 16; 70 + 16 = 86.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.011",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "19 + 27",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "10 + 20",
+        "value": "30",
+        "accept": [
+          "10 + 20 = 30"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 19 = 10 + 9, 27 = 20 + 7."
+      },
+      {
+        "n": 2,
+        "expect": "9 + 7",
+        "value": "16",
+        "accept": [
+          "9 + 7 = 16"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 9 + 7 = 16, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "30 + 16",
+        "value": "46",
+        "accept": [
+          "30 + 16 = 46"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "46",
+    "why": "19 + 27: desenes 10 + 20 = 30, unitats 9 + 7 = 16; 30 + 16 = 46.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.add_carry.012",
+    "competence": "m4.add_carry",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "14 + 27",
+    "method": "partial_sums",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "10 + 20",
+        "value": "30",
+        "accept": [
+          "10 + 20 = 30"
+        ],
+        "error_class": "procedure",
+        "why": "Separa desenes i unitats: 14 = 10 + 4, 27 = 20 + 7."
+      },
+      {
+        "n": 2,
+        "expect": "4 + 7",
+        "value": "11",
+        "accept": [
+          "4 + 7 = 11"
+        ],
+        "error_class": "carrying",
+        "why": "Suma les unitats: 4 + 7 = 11, que passa de 9 (transport)."
+      },
+      {
+        "n": 3,
+        "expect": "30 + 11",
+        "value": "41",
+        "accept": [
+          "30 + 11 = 41"
+        ],
+        "error_class": "carrying",
+        "why": "Ajunta les desenes amb les unitats."
+      }
+    ],
+    "answer": "41",
+    "why": "14 + 27: desenes 10 + 20 = 30, unitats 4 + 7 = 11; 30 + 11 = 41.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  }
+]

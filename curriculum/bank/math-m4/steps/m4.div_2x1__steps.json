@@ -1,0 +1,542 @@
+[
+  {
+    "id": "m4.div_2x1.001",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "43 ÷ 5",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "5 × 8",
+        "value": "40",
+        "accept": [
+          "5 * 8",
+          "5 × 8 = 40"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 5 més gran que no sobrepassi 43: 5 × 8 = 40."
+      },
+      {
+        "n": 2,
+        "expect": "43 - 40",
+        "value": "3",
+        "accept": [
+          "43 - 40 = 3"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 43: el que en sobra (3) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "8 3/5",
+        "value": "8 3/5",
+        "accept": [
+          "43/5"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 8 i residu 3: 43 ÷ 5 = 8 3/5."
+      }
+    ],
+    "answer": "8 3/5",
+    "why": "5 × 8 = 40 és el múltiple de 5 que més s'acosta a 43 sense sobrepassar-lo; 43 - 40 = 3 és el residu: 43 ÷ 5 = 8 3/5.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.002",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "29 ÷ 3",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × 9",
+        "value": "27",
+        "accept": [
+          "3 * 9",
+          "3 × 9 = 27"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 3 més gran que no sobrepassi 29: 3 × 9 = 27."
+      },
+      {
+        "n": 2,
+        "expect": "29 - 27",
+        "value": "2",
+        "accept": [
+          "29 - 27 = 2"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 29: el que en sobra (2) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "9 2/3",
+        "value": "9 2/3",
+        "accept": [
+          "29/3"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 9 i residu 2: 29 ÷ 3 = 9 2/3."
+      }
+    ],
+    "answer": "9 2/3",
+    "why": "3 × 9 = 27 és el múltiple de 3 que més s'acosta a 29 sense sobrepassar-lo; 29 - 27 = 2 és el residu: 29 ÷ 3 = 9 2/3.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.003",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "98 ÷ 3",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × 32",
+        "value": "96",
+        "accept": [
+          "3 * 32",
+          "3 × 32 = 96"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 3 més gran que no sobrepassi 98: 3 × 32 = 96."
+      },
+      {
+        "n": 2,
+        "expect": "98 - 96",
+        "value": "2",
+        "accept": [
+          "98 - 96 = 2"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 98: el que en sobra (2) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "32 2/3",
+        "value": "32 2/3",
+        "accept": [
+          "98/3"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 32 i residu 2: 98 ÷ 3 = 32 2/3."
+      }
+    ],
+    "answer": "32 2/3",
+    "why": "3 × 32 = 96 és el múltiple de 3 que més s'acosta a 98 sense sobrepassar-lo; 98 - 96 = 2 és el residu: 98 ÷ 3 = 32 2/3.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.004",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "87 ÷ 8",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × 10",
+        "value": "80",
+        "accept": [
+          "8 * 10",
+          "8 × 10 = 80"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 8 més gran que no sobrepassi 87: 8 × 10 = 80."
+      },
+      {
+        "n": 2,
+        "expect": "87 - 80",
+        "value": "7",
+        "accept": [
+          "87 - 80 = 7"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 87: el que en sobra (7) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "10 7/8",
+        "value": "10 7/8",
+        "accept": [
+          "87/8"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 10 i residu 7: 87 ÷ 8 = 10 7/8."
+      }
+    ],
+    "answer": "10 7/8",
+    "why": "8 × 10 = 80 és el múltiple de 8 que més s'acosta a 87 sense sobrepassar-lo; 87 - 80 = 7 és el residu: 87 ÷ 8 = 10 7/8.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.005",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "23 ÷ 5",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "5 × 4",
+        "value": "20",
+        "accept": [
+          "5 * 4",
+          "5 × 4 = 20"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 5 més gran que no sobrepassi 23: 5 × 4 = 20."
+      },
+      {
+        "n": 2,
+        "expect": "23 - 20",
+        "value": "3",
+        "accept": [
+          "23 - 20 = 3"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 23: el que en sobra (3) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "4 3/5",
+        "value": "4 3/5",
+        "accept": [
+          "23/5"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 4 i residu 3: 23 ÷ 5 = 4 3/5."
+      }
+    ],
+    "answer": "4 3/5",
+    "why": "5 × 4 = 20 és el múltiple de 5 que més s'acosta a 23 sense sobrepassar-lo; 23 - 20 = 3 és el residu: 23 ÷ 5 = 4 3/5.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.006",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "41 ÷ 2",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "2 × 20",
+        "value": "40",
+        "accept": [
+          "2 * 20",
+          "2 × 20 = 40"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 2 més gran que no sobrepassi 41: 2 × 20 = 40."
+      },
+      {
+        "n": 2,
+        "expect": "41 - 40",
+        "value": "1",
+        "accept": [
+          "41 - 40 = 1"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 41: el que en sobra (1) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "20 1/2",
+        "value": "20 1/2",
+        "accept": [
+          "41/2"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 20 i residu 1: 41 ÷ 2 = 20 1/2."
+      }
+    ],
+    "answer": "20 1/2",
+    "why": "2 × 20 = 40 és el múltiple de 2 que més s'acosta a 41 sense sobrepassar-lo; 41 - 40 = 1 és el residu: 41 ÷ 2 = 20 1/2.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.007",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "83 ÷ 5",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "5 × 16",
+        "value": "80",
+        "accept": [
+          "5 * 16",
+          "5 × 16 = 80"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 5 més gran que no sobrepassi 83: 5 × 16 = 80."
+      },
+      {
+        "n": 2,
+        "expect": "83 - 80",
+        "value": "3",
+        "accept": [
+          "83 - 80 = 3"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 83: el que en sobra (3) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "16 3/5",
+        "value": "16 3/5",
+        "accept": [
+          "83/5"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 16 i residu 3: 83 ÷ 5 = 16 3/5."
+      }
+    ],
+    "answer": "16 3/5",
+    "why": "5 × 16 = 80 és el múltiple de 5 que més s'acosta a 83 sense sobrepassar-lo; 83 - 80 = 3 és el residu: 83 ÷ 5 = 16 3/5.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.008",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "95 ÷ 8",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × 11",
+        "value": "88",
+        "accept": [
+          "8 * 11",
+          "8 × 11 = 88"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 8 més gran que no sobrepassi 95: 8 × 11 = 88."
+      },
+      {
+        "n": 2,
+        "expect": "95 - 88",
+        "value": "7",
+        "accept": [
+          "95 - 88 = 7"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 95: el que en sobra (7) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "11 7/8",
+        "value": "11 7/8",
+        "accept": [
+          "95/8"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 11 i residu 7: 95 ÷ 8 = 11 7/8."
+      }
+    ],
+    "answer": "11 7/8",
+    "why": "8 × 11 = 88 és el múltiple de 8 que més s'acosta a 95 sense sobrepassar-lo; 95 - 88 = 7 és el residu: 95 ÷ 8 = 11 7/8.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.009",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "40 ÷ 9",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "9 × 4",
+        "value": "36",
+        "accept": [
+          "9 * 4",
+          "9 × 4 = 36"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 9 més gran que no sobrepassi 40: 9 × 4 = 36."
+      },
+      {
+        "n": 2,
+        "expect": "40 - 36",
+        "value": "4",
+        "accept": [
+          "40 - 36 = 4"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 40: el que en sobra (4) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "4 4/9",
+        "value": "4 4/9",
+        "accept": [
+          "40/9"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 4 i residu 4: 40 ÷ 9 = 4 4/9."
+      }
+    ],
+    "answer": "4 4/9",
+    "why": "9 × 4 = 36 és el múltiple de 9 que més s'acosta a 40 sense sobrepassar-lo; 40 - 36 = 4 és el residu: 40 ÷ 9 = 4 4/9.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.010",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "66 ÷ 7",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × 9",
+        "value": "63",
+        "accept": [
+          "7 * 9",
+          "7 × 9 = 63"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 7 més gran que no sobrepassi 66: 7 × 9 = 63."
+      },
+      {
+        "n": 2,
+        "expect": "66 - 63",
+        "value": "3",
+        "accept": [
+          "66 - 63 = 3"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 66: el que en sobra (3) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "9 3/7",
+        "value": "9 3/7",
+        "accept": [
+          "66/7"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 9 i residu 3: 66 ÷ 7 = 9 3/7."
+      }
+    ],
+    "answer": "9 3/7",
+    "why": "7 × 9 = 63 és el múltiple de 7 que més s'acosta a 66 sense sobrepassar-lo; 66 - 63 = 3 és el residu: 66 ÷ 7 = 9 3/7.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.011",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "47 ÷ 4",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "4 × 11",
+        "value": "44",
+        "accept": [
+          "4 * 11",
+          "4 × 11 = 44"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 4 més gran que no sobrepassi 47: 4 × 11 = 44."
+      },
+      {
+        "n": 2,
+        "expect": "47 - 44",
+        "value": "3",
+        "accept": [
+          "47 - 44 = 3"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 47: el que en sobra (3) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "11 3/4",
+        "value": "11 3/4",
+        "accept": [
+          "47/4"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 11 i residu 3: 47 ÷ 4 = 11 3/4."
+      }
+    ],
+    "answer": "11 3/4",
+    "why": "4 × 11 = 44 és el múltiple de 4 que més s'acosta a 47 sense sobrepassar-lo; 47 - 44 = 3 és el residu: 47 ÷ 4 = 11 3/4.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.div_2x1.012",
+    "competence": "m4.div_2x1",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "39 ÷ 7",
+    "method": "long_division",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × 5",
+        "value": "35",
+        "accept": [
+          "7 * 5",
+          "7 × 5 = 35"
+        ],
+        "error_class": "facts",
+        "why": "El múltiple de 7 més gran que no sobrepassi 39: 7 × 5 = 35."
+      },
+      {
+        "n": 2,
+        "expect": "39 - 35",
+        "value": "4",
+        "accept": [
+          "39 - 35 = 4"
+        ],
+        "error_class": "calculation",
+        "why": "Resta'l a 39: el que en sobra (4) és el residu."
+      },
+      {
+        "n": 3,
+        "expect": "5 4/7",
+        "value": "5 4/7",
+        "accept": [
+          "39/7"
+        ],
+        "error_class": "procedure",
+        "why": "Quocient 5 i residu 4: 39 ÷ 7 = 5 4/7."
+      }
+    ],
+    "answer": "5 4/7",
+    "why": "7 × 5 = 35 és el múltiple de 7 que més s'acosta a 39 sense sobrepassar-lo; 39 - 35 = 4 és el residu: 39 ÷ 7 = 5 4/7.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  }
+]

@@ -1,0 +1,554 @@
+[
+  {
+    "id": "m4.mult_2digit.001",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "93 × 25",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "93 × 20",
+        "value": "1860",
+        "accept": [
+          "93 * 20",
+          "93 × 20 = 1860"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 25 en 20 + 5 i multiplica 93 × 20."
+      },
+      {
+        "n": 2,
+        "expect": "93 × 5",
+        "value": "465",
+        "accept": [
+          "93 * 5",
+          "93 × 5 = 465"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 93 × 5."
+      },
+      {
+        "n": 3,
+        "expect": "1860 + 465",
+        "value": "2325",
+        "accept": [
+          "1860 + 465 = 2325"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "2325",
+    "why": "25 = 20 + 5: 93 × 20 = 1860 i 93 × 5 = 465; 1860 + 465 = 2325.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.002",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "15 × 46",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "15 × 40",
+        "value": "600",
+        "accept": [
+          "15 * 40",
+          "15 × 40 = 600"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 46 en 40 + 6 i multiplica 15 × 40."
+      },
+      {
+        "n": 2,
+        "expect": "15 × 6",
+        "value": "90",
+        "accept": [
+          "15 * 6",
+          "15 × 6 = 90"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 15 × 6."
+      },
+      {
+        "n": 3,
+        "expect": "600 + 90",
+        "value": "690",
+        "accept": [
+          "600 + 90 = 690"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "690",
+    "why": "46 = 40 + 6: 15 × 40 = 600 i 15 × 6 = 90; 600 + 90 = 690.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.003",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "43 × 39",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "43 × 30",
+        "value": "1290",
+        "accept": [
+          "43 * 30",
+          "43 × 30 = 1290"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 39 en 30 + 9 i multiplica 43 × 30."
+      },
+      {
+        "n": 2,
+        "expect": "43 × 9",
+        "value": "387",
+        "accept": [
+          "43 * 9",
+          "43 × 9 = 387"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 43 × 9."
+      },
+      {
+        "n": 3,
+        "expect": "1290 + 387",
+        "value": "1677",
+        "accept": [
+          "1290 + 387 = 1677"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "1677",
+    "why": "39 = 30 + 9: 43 × 30 = 1290 i 43 × 9 = 387; 1290 + 387 = 1677.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.004",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "29 × 24",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "29 × 20",
+        "value": "580",
+        "accept": [
+          "29 * 20",
+          "29 × 20 = 580"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 24 en 20 + 4 i multiplica 29 × 20."
+      },
+      {
+        "n": 2,
+        "expect": "29 × 4",
+        "value": "116",
+        "accept": [
+          "29 * 4",
+          "29 × 4 = 116"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 29 × 4."
+      },
+      {
+        "n": 3,
+        "expect": "580 + 116",
+        "value": "696",
+        "accept": [
+          "580 + 116 = 696"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "696",
+    "why": "24 = 20 + 4: 29 × 20 = 580 i 29 × 4 = 116; 580 + 116 = 696.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.005",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "23 × 86",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "23 × 80",
+        "value": "1840",
+        "accept": [
+          "23 * 80",
+          "23 × 80 = 1840"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 86 en 80 + 6 i multiplica 23 × 80."
+      },
+      {
+        "n": 2,
+        "expect": "23 × 6",
+        "value": "138",
+        "accept": [
+          "23 * 6",
+          "23 × 6 = 138"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 23 × 6."
+      },
+      {
+        "n": 3,
+        "expect": "1840 + 138",
+        "value": "1978",
+        "accept": [
+          "1840 + 138 = 1978"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "1978",
+    "why": "86 = 80 + 6: 23 × 80 = 1840 i 23 × 6 = 138; 1840 + 138 = 1978.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.006",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "66 × 15",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "66 × 10",
+        "value": "660",
+        "accept": [
+          "66 * 10",
+          "66 × 10 = 660"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 15 en 10 + 5 i multiplica 66 × 10."
+      },
+      {
+        "n": 2,
+        "expect": "66 × 5",
+        "value": "330",
+        "accept": [
+          "66 * 5",
+          "66 × 5 = 330"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 66 × 5."
+      },
+      {
+        "n": 3,
+        "expect": "660 + 330",
+        "value": "990",
+        "accept": [
+          "660 + 330 = 990"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "990",
+    "why": "15 = 10 + 5: 66 × 10 = 660 i 66 × 5 = 330; 660 + 330 = 990.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.007",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "15 × 22",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "15 × 20",
+        "value": "300",
+        "accept": [
+          "15 * 20",
+          "15 × 20 = 300"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 22 en 20 + 2 i multiplica 15 × 20."
+      },
+      {
+        "n": 2,
+        "expect": "15 × 2",
+        "value": "30",
+        "accept": [
+          "15 * 2",
+          "15 × 2 = 30"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 15 × 2."
+      },
+      {
+        "n": 3,
+        "expect": "300 + 30",
+        "value": "330",
+        "accept": [
+          "300 + 30 = 330"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "330",
+    "why": "22 = 20 + 2: 15 × 20 = 300 i 15 × 2 = 30; 300 + 30 = 330.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.008",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "76 × 88",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "76 × 80",
+        "value": "6080",
+        "accept": [
+          "76 * 80",
+          "76 × 80 = 6080"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 88 en 80 + 8 i multiplica 76 × 80."
+      },
+      {
+        "n": 2,
+        "expect": "76 × 8",
+        "value": "608",
+        "accept": [
+          "76 * 8",
+          "76 × 8 = 608"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 76 × 8."
+      },
+      {
+        "n": 3,
+        "expect": "6080 + 608",
+        "value": "6688",
+        "accept": [
+          "6080 + 608 = 6688"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "6688",
+    "why": "88 = 80 + 8: 76 × 80 = 6080 i 76 × 8 = 608; 6080 + 608 = 6688.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.009",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "15 × 82",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "15 × 80",
+        "value": "1200",
+        "accept": [
+          "15 * 80",
+          "15 × 80 = 1200"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 82 en 80 + 2 i multiplica 15 × 80."
+      },
+      {
+        "n": 2,
+        "expect": "15 × 2",
+        "value": "30",
+        "accept": [
+          "15 * 2",
+          "15 × 2 = 30"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 15 × 2."
+      },
+      {
+        "n": 3,
+        "expect": "1200 + 30",
+        "value": "1230",
+        "accept": [
+          "1200 + 30 = 1230"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "1230",
+    "why": "82 = 80 + 2: 15 × 80 = 1200 i 15 × 2 = 30; 1200 + 30 = 1230.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.010",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "37 × 94",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "37 × 90",
+        "value": "3330",
+        "accept": [
+          "37 * 90",
+          "37 × 90 = 3330"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 94 en 90 + 4 i multiplica 37 × 90."
+      },
+      {
+        "n": 2,
+        "expect": "37 × 4",
+        "value": "148",
+        "accept": [
+          "37 * 4",
+          "37 × 4 = 148"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 37 × 4."
+      },
+      {
+        "n": 3,
+        "expect": "3330 + 148",
+        "value": "3478",
+        "accept": [
+          "3330 + 148 = 3478"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "3478",
+    "why": "94 = 90 + 4: 37 × 90 = 3330 i 37 × 4 = 148; 3330 + 148 = 3478.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.011",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "81 × 64",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "81 × 60",
+        "value": "4860",
+        "accept": [
+          "81 * 60",
+          "81 × 60 = 4860"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 64 en 60 + 4 i multiplica 81 × 60."
+      },
+      {
+        "n": 2,
+        "expect": "81 × 4",
+        "value": "324",
+        "accept": [
+          "81 * 4",
+          "81 × 4 = 324"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 81 × 4."
+      },
+      {
+        "n": 3,
+        "expect": "4860 + 324",
+        "value": "5184",
+        "accept": [
+          "4860 + 324 = 5184"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "5184",
+    "why": "64 = 60 + 4: 81 × 60 = 4860 i 81 × 4 = 324; 4860 + 324 = 5184.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  },
+  {
+    "id": "m4.mult_2digit.012",
+    "competence": "m4.mult_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "40 × 68",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "40 × 60",
+        "value": "2400",
+        "accept": [
+          "40 * 60",
+          "40 × 60 = 2400"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 68 en 60 + 8 i multiplica 40 × 60."
+      },
+      {
+        "n": 2,
+        "expect": "40 × 8",
+        "value": "320",
+        "accept": [
+          "40 * 8",
+          "40 × 8 = 320"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 40 × 8."
+      },
+      {
+        "n": 3,
+        "expect": "2400 + 320",
+        "value": "2720",
+        "accept": [
+          "2400 + 320 = 2720"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials."
+      }
+    ],
+    "answer": "2720",
+    "why": "68 = 60 + 8: 40 × 60 = 2400 i 40 × 8 = 320; 2400 + 320 = 2720.",
+    "status": "generated",
+    "source": "mathbank · 2026-10-05 · seed 42"
+  }
+]
