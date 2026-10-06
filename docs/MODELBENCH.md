@@ -353,3 +353,91 @@ del text — la xarxa del servidor ho cobreix), i a 📝 no delega mai a
   guards i el registre derivat com a xarxa. La compliant d'eines (registre,
   delegació) no ve amb prompt — necessita un model més gran o tooling més
   directe.
+
+*(WP3.5 fet — vegeu la secció següent: l'alumne fix queda arreglat, la porta
+se supera, i la postura final és **obrir** amb les xarxes.)*
+
+### WP3.5 — arreglar l'instrument de mesura i tornar a mesurar (2026-10-06)
+
+Canvis **només al banc** (`scripts/flowed-mathbench.py` + `bench/learner-math.md`
++ tests): zero producte. L'alumne fix era el que fallava, no el model.
+
+1. **La resposta canned surt de l'operació real de la tasca.** L'escenari de
+   📝 («quants en falten per 25 si tens 14», «14 són nens i 11 són nenes») es
+   parseja amb les mateixes pistes que l'enunciat de 📖; la frase «la
+   multiplicació és més ràpida que sumar» només es conserva per a tasques que
+   realment contrasten × amb la suma repetida.
+2. **Pistes d'`infer_op`:** resta («queden / em queden / li queden / falten
+   per»), repartiment («repartir-les entre», «entre N <plural qualsevol>»,
+   «quants vehicles calen») i preu unitari («cada X costa… quantes X?» → ÷;
+   «quant pagarà?» → ×). Fora la pista falsa `quants…en total` com a ×
+   (sumar dues parts no és multiplicar).
+3. **Ordre de nombres:** restes i divisions llegeixen la quantitat gran
+   primer («si tens 14 i necessites 25» → 25 − 14, no 14 − 25).
+4. **Percentatges:** «el 60% de 30 alumnes» → × per la fracció
+   (30 × 0,6 = 18), no 30 + 60 (artifact de wp35b).
+5. **Classe `generic`:** història de diversos passos (3+ números), sense
+   números o sense pista d'operació fiable → resposta plausible **sense error
+   controlat**; la porta `band_ok` salta la fila (la nota es veu igualment a
+   la transcripció). El model no pot ser penalitzat per una resposta que el
+   banc no va saber ajustar a la tasca.
+
+**Nova mesura** (alumne fix arreglat, servidor i remot intactes, 2 passades
+per execució; wp35a/wp35b porten l'arreglament parcial de les pistes de
+resta/repartiment, wp35c/wp35d l'extensió final amb percentatges i `generic`):
+
+| | baseline | calib2a | calib2b | wp35a | wp35b | wp35c | wp35d |
+|---|---|---|---|---|---|---|---|
+| contract | 10/12 | 12/12 | 12/12 | 12/12 | 12/12 | 12/12 | 12/12 |
+| taxonomy | 12/12 | 12/12 | 12/12 | 12/12 | **11/12** | 12/12 | 12/12 |
+| **band_ok** | **6/12** | 10/12 | 9/12 | 11/11¹ | **10/12** | **12/12** | **12/12** |
+| continues | 9/12 | 11/12 | 12/12 | 12/12 | 12/12 | 12/12 | 12/12 |
+| grade_clean | 22/22 | 19/20 | 17/17 | 18/18 | 19/19 | 18/18 | 18/18 |
+| bare (mediana) | 1/4 (7.0) | 4/4 (3.5) | 3/4 (3.5) | 4/4 (3.5) | 4/4 (3.5) | 4/4 (3.0) | 4/4 (3.5) |
+| correct (mediana) | 2/4 (6.0) | 1/4 (4.0) | 1/4 (4.5) | 1/3 (5.0) | 1/4 (4.5) | 3/4 (9.0) | 2/4 (8.5) |
+| veredicte | no | no | no | **sí** | no | **sí** | **sí** |
+
+¹ wp35a: una fila sembrada `generic` (història de 4 números) sense verdict de
+banda — 11 files amb verdict, totes dins.
+
+**Veredicte: SUFICIENT.** wp35c i wp35d passen **totes** les portes
+(`band_ok` 12/12, `contract` 12/12, `taxonomy` 12/12, `continues` 12/12,
+`grade_clean` 18/18, `task_ok` 4/4 amb **0 reescritures de guard**). La
+predicció del calibratge (11-12/12 amb l'alumne arreglat) es confirma.
+
+**Residu honest:**
+
+- Les 2 bandes fallides de wp35b eren **encara artifacts de l'alumne** (una
+  història de percentatge i una de preu unitari on `infer_op` defaulteja `+`
+  i el model respon bé: 30 × 0,6 i 15 ÷ 3) — per això l'extensió final
+  (punts 4 i 5). Amb l'alumne final, cap banda fallida en 24 files.
+- L'únic error **real** de model en les execucions WP3.5: `taxonomy` 11/12 a
+  wp35b — una etiqueta inventada «operation» que el servidor normalitza en
+  silenci a `calculation`. 1 de 48 files; la prohibició d'etiquetes
+  inventades del calibratge funciona ~98 %.
+- Tendència informativa (no falla): `calc-slip` cau a la banda estricta
+  (mediana 1.5-2, «fluixa» — defensable, el resultat és fals), i `correct`
+  rep un parell de 5 tous quan la justificació canned és formulaica
+  («descompondre no canvia el resultat» no lliga amb la tasca) — el model
+  retalla **justament** les justificacions fluixes; la mediana puja a 8.5-9
+  quan la feina completa lliga amb l'escenari.
+
+**Trobada permanent (invariable en les 8 execucions del banc):** el 14B **mai**
+crida `math_record_answer` a les obertes (`consistent` sempre buit — tots els
+registres surten derivats del text) i 📝 **mai** delega a `math_deep_evaluate`
+(la cobertura només mostra `word-problem`). La conformitat d'eines no ve amb
+prompt. **El registre derivat de `persist-session`/`accumulate-session` és la
+peça que sosté les pràctiques obertes: no treure'l mai.**
+
+**Recomanació final de postura de producte (per a Fase 4/5):**
+
+- **Obrir la pràctica oberta per a alumnes reals** (ship open): amb el 14B
+  remot + àncores de prompt + banc correcte, la porta de banda es compleix a
+  totes les execucions; els guards de tasca (0 reescritures — el model demana
+  la feina ell sol) i el registre derivat (12/12 saved) ja són la xarxa.
+- El banc és el termòmetre: qualsevol canvi de prompt o model es revalida amb
+  `flowed-mathbench.py run --repeat 2` (dues execucions, totes les portes)
+  abans de tocar producció.
+- Deute tècnic no bloquejant: la crida a `math_record_answer` i la delegació
+  📝→`math_deep_evaluate`. Si es volen notes consistents via eina a 📝, cal
+  un model més gran o tooling més directe (Fase 5), no més prompt.
