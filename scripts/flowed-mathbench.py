@@ -20,7 +20,8 @@ scores the TUTOR's behaviour:
     taxonomy    every correction category is one of the 12 math classes
                 (never a language one)
     band        the score lands in the rubric band the seeded error class
-                deserves (bare → 0-4, calc-slip/thin → 5-7, correct → 8-10)
+                deserves (bare/wrong-op → 0-4, calc-slip/thin → 5-7,
+                correct → 8-10; generic → no verdict, see below)
     skill       the record's skill matches the task: reasoning (📝) / problems (📖)
     task_ok     the task on screen has the guard shape: no bare list and a
                 justification cue (📝); a real story and the work demanded (📖)
@@ -38,10 +39,14 @@ scores the TUTOR's behaviour:
     coverage    which of the four open tasks the model actually sent (the
                 `task` argument of math_deep_evaluate)
 
-  The learner's answers are generated from the task on screen (the expression
-  or statement the tutor just set), so the seeded error always fits the real
-  question — but a model that sets an unparseable task gets a generic answer,
-  and a harsh grade on it is reported, not excused: the transcript shows why.
+  The learner's answers are generated from the task on screen (the expression,
+  statement or scenario prose the tutor just set — WP3.5 derives the operation
+  from the prose too), so the seeded error always fits the real question. When
+  the task cannot be parsed into a controlled answer (multi-step story, no
+  numbers, no confident operation cue) the bench seeds `generic`: the grade is
+  still shown in the transcript, but the band gate skips the row — the model
+  is not blamed for an answer the bench itself could not fit to the task
+  (WP3.5: 4 of the 5 calibration residuals were exactly this artifact).
 
     # the server must be up on a TEST profile, talking to the model under test
     scripts/flowed-web.sh --app --port 4200 test-math
@@ -223,12 +228,38 @@ OP_WHY = {"÷": "repartir entre iguals", "×": "tantes vegades el mateix grup",
 # quants se'n repartiran EN TOTAL" is × (run 2 artifact). The strong division
 # cues are the sharing-equal-shares shapes; the multiplication cues are the
 # equal-groups-of shape.
+# WP3.5 cue fixes (docs/MODELBENCH.md, calibration residuals):
+#  · "repartir-LES entre 6 jugadors" and "entre N <qualsevol plural>" are
+#    sharing — the old closed word-list missed "jugadors" and defaulted +
+#    (calib1b: "48 fitxes entre 6 jugadors" → learner wrote 48 + 6).
+#  · "quants vehicles/caixes… calen" asks for the NUMBER OF GROUPS → ÷
+#    (baseline: "48 paquets en vehicles de 6" → learner wrote 48 + 6).
+#  · "quants … en total" is NOT a × cue: "18 pomes i 12 peres, quants fruits
+#    en total" joins two parts (calib1b: the cue fired × on an add/subtract
+#    story). The real × cues (cada X rep, N grups de M, per cada, doble) stay.
 STRONG_DIV = (r"entre iguals|parts iguals|quants en toquen|a cada|en cada|"
-              r"repartir-?los entre|entre \d+ (?:amics|amigues|nens|nenes|persones|cistelles|caixes|grups)")
+              r"repartir-?(?:los|les|'ls|ls|'les) entre|entre \d+ [a-zà-ú]{3,}|"
+              r"quants (?:caixes?|vehicles?|bussos?|cotxes?|bolses?|sacs?|paquets?|"
+              r"grups?|prestatgeries?)[^.\n]{0,40}?(?:cal|calen|necessiten|fan falta|faran falta)|"
+              # unit price: "cada poma costa 3 €, ha pagat 15 €, quantes pomes?" → ÷
+              # (wp35b artifact: defaulted + and the model rightly answered 15 ÷ 3).
+              # The money/total question words keep the × shape ("quant pagarà?" → ×).
+              r"cada [a-zà-ú]+ costa.{0,120}?quants?es? "
+              r"(?!euros?|diners?|pagar|pagarà|costar|costarà|gastar|gastarà|serà|seran)")
 MULT = (r"cada [a-zà-ú]+ (?:rep|té|te|conté|rebre|donen|donar|hi ha|neu)|"
         r"\b(?:files?|grups?|caixes?|paquets?|cistelles?) de \d+|"
-        r"quants[^.\n]*en total|"
-        r"per cada \d+|el doble|el triple|el qu[àa]druple")
+        r"per cada \d+|el doble|el triple|el qu[àa]druple|"
+        r"cada [a-zà-ú]+ costa.{0,120}?quant (?:pagar|pagarà|costar|costarà|gastar|gastarà)")
+
+# WP3.5: subtraction stories were invisible to the cues — "quants euros em
+# queden", "quants fruits queden", "quants en falten per 20" all defaulted to
+# +, so the seeded answer mismatched the task and the model rightly penalized
+# it (calib1a: "25 + 14" on a "quants en falten per 25" story).
+SUB_CUES = (r"quants en falten|quants[^.\n]{0,25}falten|falten per|diferència|més gran|"
+            r"més petit|sobren|que li queda|restar|quants li (?:falten|sobren)|"
+            r"queden|quants[^.\n]{0,25}queden|em queden|ens queden|li queden|se'n queden")
+ADD_CUES = (r"en total|tots dos|totes dues|junts|sumar|quants?[^.\n]{0,25}hi ha|"
+            r"quants en té|quants en tindran|quants en tindrà")
 
 
 def infer_op(text: str) -> tuple[str, bool]:
@@ -238,8 +269,7 @@ def infer_op(text: str) -> tuple[str, bool]:
         return "×", True
     if re.search(STRONG_DIV, text, re.I):
         return "÷", True
-    cues = [("−", r"quants en falten|diferència|més gran|més petit|sobren|que li queda|restar|quants li (?:falten|sobren)"),
-            ("+", r"en total|tots dos|totes dues|junts|sumar|quants hi ha|quants en té|quants en tindran")]
+    cues = [("−", SUB_CUES), ("+", ADD_CUES)]
     for op, rx in cues:
         if re.search(rx, text, re.I):
             return op, True
@@ -278,16 +308,33 @@ def parse_chain(text: str) -> list[tuple[float, str, float, float, float]]:
     return out
 
 
+def _generic(cls: str) -> tuple[str, str]:
+    """WP3.5: when no canned answer can fit the task (multi-step story, no
+    numbers, no confident operation cue) the bench seeds `generic` — a
+    plausible M4 procedure with no controlled error. judge_band gives no band
+    verdict for it: the model must not be graded on an answer the bench itself
+    could not fit to the task (4 of the 5 calibration residuals were this)."""
+    if cls == "bare":
+        return "El resultat és 12.", "generic"
+    if cls == "slip":
+        return ("Primer llegeixo què demana l'enunciat i trió l'operació. "
+                "Després calculo a poc a poc. El resultat és 19."), "generic"
+    return ("Primer llegeixo què demana l'enunciat i trió l'operació: si reparteix entre "
+            "iguals, divisió. Després calculo i comprovo que el resultat té sentit."), "generic"
+
+
 def make_answer(task: str, cls: str, practice: str) -> tuple[str, str]:
     """The fixed learner's answer (bench/learner-math.md) to the task on
     screen, seeding the requested error class. Returns (answer, seed) where
     seed is the class the answer ACTUALLY seeded (a slip on a word problem
-    with a confident operation becomes wrong-op, which is the stronger test)."""
+    with a confident operation becomes wrong-op, which is the stronger test;
+    an unparseable task seeds generic — no band verdict, see _generic)."""
     kind = classify_kind(task)
     if practice == "math-reading":
         en = re.search(r"\*\*Enunciat:?\*\*\s*([^\n]+)", task, re.I)
         pool = en.group(1) if en else task
-        nums = [int(n) for n in re.findall(r"\d+", pool) if int(n) > 1][:2]
+        allnums = [int(n) for n in re.findall(r"\d+", pool) if int(n) > 1]
+        nums = allnums[:2]
         op, confident = infer_op(task)
         # "el doble/triple" needs only one number in the statement
         dbl = re.search(r"el (doble|triple|qu[àa]druple)", pool, re.I)
@@ -308,6 +355,23 @@ def make_answer(task: str, cls: str, practice: str) -> tuple[str, str]:
                         "Després calculo a poc a poc. El resultat és 19."), "calc-slip"
             return ("Primer llegeixo què demana l'enunciat i trió l'operació: si reparteix entre "
                     "iguals, divisió. Després calculo i comprovo que el resultat té sentit."), "correct"
+        # percent stories ("el 60% de 30 alumnes són nois") are × with the
+        # percent as a fraction — a plain a×b would be wrong (wp35b artifact:
+        # the learner wrote 30 + 60 and the model rightly answered 30 × 0,6)
+        pct = re.search(r"(\d{1,3})\s*(?:%|per cent)", pool, re.I)
+        if pct and nums:
+            pv = _num(pct.group(1))
+            others = [n for n in nums if n != pv]
+            a = others[0] if others else nums[0]
+            final = a * pv / 100.0
+            if cls == "bare":
+                return f"El resultat és {fmt_num(final)}.", "bare"
+            if cls == "slip":
+                return (f"Operació: {a} × {fmt_num(pv / 100.0)} = {fmt_num(final + 7)}. "
+                        f"Resposta: {fmt_num(final + 7)}."), "calc-slip"
+            return (f"Operació: {a} × {fmt_num(pv / 100.0)} = {fmt_num(final)}. Resposta: "
+                    f"{fmt_num(final)}. L'enunciat demana una part del total, per això "
+                    "multipliquem pel percentatge."), "correct"
         # rate statements ("8 litres per cada 100 km, en fa 300") need two
         # steps: units first, then the total — a single a×b would be wrong
         rate = re.search(r"per cada (\d+(?:[.,]\d+)?)", pool)
@@ -328,7 +392,21 @@ def make_answer(task: str, cls: str, practice: str) -> tuple[str, str]:
                         f"{fmt_num(v)} × {fmt_num(units)} = {fmt_num(final)}. Resposta: "
                         f"{fmt_num(final)}. L'enunciat dona un ritme per cada unitat, per això "
                         "primer compto les unitats i després el total."), "correct"
-        a, b = nums
+        # WP3.5: a multi-step story (3+ numbers, e.g. "18 pomes i 12 peres,
+        # en ven 7 i 5, quants en queden en total") cannot be answered by a
+        # one-line canned answer — the answer was wrong by construction and
+        # the model rightly penalized it (calib1b). Seed generic instead.
+        if len(allnums) > 2:
+            return _generic(cls)
+        # WP3.5: with no confident operation cue the canned "correct"/"slip"
+        # answer is a guess — and the model rightly penalizes a guess that
+        # misses the task (wp35b: unit-price and percent stories defaulted +).
+        # Seed generic: no controlled error seeded, no band verdict.
+        if not confident and cls in ("slip", "correct"):
+            return _generic(cls)
+        # subtraction/division read the bigger quantity first: "si tens 14 i
+        # necessites 25, quants en falten" is 25 − 14, not 14 − 25
+        a, b = (max(nums), min(nums)) if op in ("−", "/", "÷") else nums
         if cls == "bare":
             return f"El resultat és {fmt_num(_apply(a, op, b))}.", "bare"
         if cls == "slip":
@@ -415,12 +493,42 @@ def make_answer(task: str, cls: str, practice: str) -> tuple[str, str]:
                     "5/8 perquè restant a dalt i a baix les parts queden juntes."), "generic"
         return ("Primer converteixo a un denominador comú i després resto: per això el "
                 "resultat és una fracció més petita que la que tenia al principi."), "generic"
+    # WP3.5: the scenario prose carries the operation ("quants en falten per
+    # 25 si tens 14", "14 són nens i 11 són nenes") — derive it with the same
+    # cues as the word-problem learner so the canned answer FITS the real
+    # task. The old multiplication-vs-addition sentence landed on subtraction
+    # and addition scenarios and the model rightly graded it 2-4: 4 of the 5
+    # calibration residuals were this artifact (docs/MODELBENCH.md).
+    sc = re.search(r"\*\*(?:Scenario|Situació|Repte|Enunciat):?\*\*\s*([^\n]+)", task, re.I)
+    pool = sc.group(1) if sc else re.split(r"\*\*(?:Task|Requirements)", task)[0]
+    nums = [int(n) for n in re.findall(r"\d+", pool) if int(n) > 1]
+    if len(nums) == 2:
+        op, confident = infer_op(pool)
+        a, b = (max(nums), min(nums)) if op in ("−", "/", "÷") else nums
+        val = _apply(a, op, b)
+        if cls == "bare":
+            return f"El resultat és {fmt_num(val)}.", "bare"
+        if not confident:
+            return _generic(cls)
+        if cls == "slip":
+            return (f"Operació: {a} {op} {b} = {fmt_num(val + 7)}. "
+                    f"Per què funciona: perquè {OP_WHY[op]}."), "calc-slip"
+        return (f"Operació: {a} {op} {b} = {fmt_num(val)}. "
+                f"L'enunciat demana {OP_WHY[op]}, per això aquesta operació."), "correct"
+    if len(nums) > 2:
+        return _generic(cls)
+    # no numbers at all: a pure claim or strategy question. The multiplication
+    # canned answer only fits a task that really contrasts × with repeated +.
+    if kind == "compare-strategies" and re.search(r"multiplicac|multiplicar|sumar tantes|×", task, re.I):
+        if cls == "slip":
+            return "Faccio la multiplicació perquè és més ràpida que sumar.", "thin"
+        if cls == "correct":
+            return ("Les dues maneres arriben al mateix resultat; la multiplicació és més "
+                    "ràpida perquè sumar tantes vegades el mateix nombre és exactament "
+                    "multiplicar."), "correct"
     if cls == "bare":
         return ("Està bé." if kind != "compare-strategies" else "La primera."), "bare"
-    if cls == "slip":
-        return "Faccio la multiplicació perquè és més ràpida que sumar.", "thin"
-    return ("Les dues maneres arriben al mateix resultat; la multiplicació és més ràpida "
-            "perquè sumar tantes vegades el mateix nombre és exactament multiplicar."), "correct"
+    return _generic(cls)
 
 
 def judge_band(seed: str, score: int | None) -> str | None:

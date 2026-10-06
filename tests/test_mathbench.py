@@ -189,6 +189,171 @@ class TestAnswerGenerator(unittest.TestCase):
         self.assertIn("repartir", ans)
 
 
+class TestInferOpCues(unittest.TestCase):
+    """WP3.5: the cue misses that produced the calibration residuals
+    (docs/MODELBENCH.md) — the learner defaulted + on subtraction and
+    sharing stories, and the model rightly penalized the mismatch."""
+
+    def test_repartir_les_entre_jugadors_is_division(self):
+        # calib1b artifact: "48 fitxes entre 6 jugadors" → learner wrote 48 + 6
+        op, conf = mb.infer_op("tens 48 fitxes i vols repartir-les entre 6 jugadors. "
+                               "Quantes fitxes rep cada jugador?")
+        self.assertEqual((op, conf), ("÷", True))
+
+    def test_quants_vehicles_calen_is_division(self):
+        # baseline artifact: "48 paquets en vehicles de 6" → learner wrote 48 + 6
+        op, conf = mb.infer_op("Cal carregar 48 paquets en vehicles que porten 6 paquets. "
+                               "Quants vehicles calen?")
+        self.assertEqual((op, conf), ("÷", True))
+
+    def test_queden_is_subtraction(self):
+        # calib1a artifact: "quants euros em queden" defaulted to +
+        op, conf = mb.infer_op("La Marta tenia 25 euros i se'n va gastar 14. "
+                               "Quants euros li queden?")
+        self.assertEqual((op, conf), ("−", True))
+
+    def test_falten_per_is_subtraction(self):
+        op, conf = mb.infer_op("Vols saber quants en falten per 25 si tens 14.")
+        self.assertEqual((op, conf), ("−", True))
+
+    def test_joining_two_groups_is_addition(self):
+        # calib2a artifact: "14 són nens i 11 són nenes" got the × canned answer
+        op, conf = mb.infer_op("Vols saber quants nens hi ha a la classe si 14 són "
+                               "nens i 11 són nenes.")
+        self.assertEqual((op, conf), ("+", True))
+
+    def test_en_total_alone_is_not_multiplication(self):
+        # calib1b artifact: the old MULT cue "quants…en total" fired × on a
+        # joining story; the real × cues (cada X rep, grups de N) still fire
+        op, _ = mb.infer_op("hi ha 18 pomes i 12 peres. Quants fruits hi ha en total?")
+        self.assertNotEqual(op, "×")
+        op, conf = mb.infer_op("Hi ha 5 cistelles de 6 pomes. Quantes pomes en total?")
+        self.assertEqual((op, conf), ("×", True))
+
+
+class TestScenarioDerivedAnswers(unittest.TestCase):
+    """WP3.5: the compare-strategies canned answer must come from the task's
+    actual operation — the multiplication-vs-addition sentence on a
+    subtraction scenario was 4 of the 5 calibration band fails."""
+
+    TASK = ("## 📝 Repte de Raonament\n\n**Scenario:** Vols saber quants en falten "
+            "per 25 si tens 14.\n\n**Task:** Explica com ho has resolt i per què "
+            "funciona.\n\n**Requirements:**\n- Length: 3-5 frases\n- Level: m4\n")
+
+    def test_correct_answer_fits_a_subtraction_scenario(self):
+        ans, seed = mb.make_answer(self.TASK, "correct", "math-writing")
+        self.assertEqual(seed, "correct")
+        self.assertIn("25 − 14 = 11", ans)
+        self.assertNotIn("multiplicació", ans)
+
+    def test_slip_answer_is_a_calc_slip_on_the_right_operation(self):
+        ans, seed = mb.make_answer(self.TASK, "slip", "math-writing")
+        self.assertEqual(seed, "calc-slip")
+        self.assertIn("25 − 14 = 18", ans)  # 11 + 7 — the seeded slip
+
+    def test_bare_answer_is_a_bare_number(self):
+        ans, seed = mb.make_answer(self.TASK, "bare", "math-writing")
+        self.assertEqual(seed, "bare")
+        self.assertIn("11", ans)
+        self.assertNotIn("Operació", ans)
+
+    def test_requirements_numbers_do_not_poison_the_scenario(self):
+        # "3-5 frases" / "m4" are metadata, not the task's numbers
+        ans, _ = mb.make_answer(self.TASK, "correct", "math-writing")
+        self.assertNotIn("3 + 5", ans)
+        self.assertNotIn("5 − 4", ans)
+
+    def test_addition_scenario_gets_an_addition_answer(self):
+        task = ("## 📝 Repte de Raonament\n\n**Scenario:** Vols saber quants nens hi ha "
+                "a la classe si 14 són nens i 11 són nenes.\n\n**Task:** Explica com ho "
+                "has resolt i per què funciona.")
+        ans, seed = mb.make_answer(task, "correct", "math-writing")
+        self.assertEqual(seed, "correct")
+        self.assertIn("14 + 11 = 25", ans)
+
+    def test_scenario_without_operation_cue_seeds_generic(self):
+        task = ("## 📝 Repte de Raonament\n\n**Scenario:** Mira aquests dos nombres: "
+                "14 i 25.\n\n**Task:** Explica què observes.")
+        _ans, seed = mb.make_answer(task, "correct", "math-writing")
+        self.assertEqual(seed, "generic")
+        self.assertIsNone(mb.judge_band("generic", 3))
+
+    def test_multiplication_compare_task_keeps_the_canned_answer(self):
+        task = ("## 📝 Raonament\n\n**Task:** Compara les dues maneres de calcular "
+                "7+7+7+7: sumar o multiplicar. Quina estratègia és més fàcil?")
+        ans, seed = mb.make_answer(task, "correct", "math-writing")
+        self.assertEqual(seed, "correct")
+        self.assertIn("multiplicació", ans)
+        _ans2, seed2 = mb.make_answer(task, "slip", "math-writing")
+        self.assertEqual(seed2, "thin")
+
+
+class TestMultiStepStories(unittest.TestCase):
+    """A story with 3+ numbers cannot be answered by the one-line canned
+    learner — seeding it anyway made the answer wrong by construction
+    (calib1b: "18 pomes i 12 peres, en ven 7 i 5")."""
+
+    TASK = ("**Enunciat:** En una botiga de fruits, hi ha 18 pomes i 12 peres. "
+            "Si es venen 7 pomes i 5 peres, quants fruits queden en total?\n"
+            "**Escriu les operacions (una per línia) i el resultat:**")
+
+    def test_multi_step_story_seeds_generic(self):
+        for cls in ("bare", "slip", "correct"):
+            _ans, seed = mb.make_answer(self.TASK, cls, "math-reading")
+            self.assertEqual(seed, "generic", cls)
+            self.assertIsNone(mb.judge_band("generic", 5))
+
+    def test_two_step_rate_story_is_still_controlled(self):
+        # the rate branch handles its own two steps — not generic
+        task = ("**Enunciat:** Un cotxe consumeix 8 litres per cada 100 km. "
+                "Si fa un viatge de 300 km, quants litres necessitarà?")
+        ans, seed = mb.make_answer(task, "correct", "math-reading")
+        self.assertEqual(seed, "correct")
+        self.assertIn("8 × 3 = 24", ans)
+
+
+class TestPercentAndUnitPrice(unittest.TestCase):
+    """wp35b residuals: a percent story and a unit-price division story got
+    defaulted `+` canned answers — wrong by construction, and the model
+    rightly penalized them."""
+
+    def test_percent_story_multiplies_by_the_fraction(self):
+        task = ("**Enunciat:** En una classe de 30 alumnes, el 60% són nois. "
+                "Quants alumnes són nois?")
+        ans, seed = mb.make_answer(task, "correct", "math-reading")
+        self.assertEqual(seed, "correct")
+        self.assertIn("30 × 0.6 = 18", ans)
+        self.assertNotIn("30 + 60", ans)
+        _ans, seed2 = mb.make_answer(task, "slip", "math-reading")
+        self.assertEqual(seed2, "calc-slip")
+        _ans, seed3 = mb.make_answer(task, "bare", "math-reading")
+        self.assertEqual(seed3, "bare")
+
+    def test_unit_price_count_question_is_division(self):
+        task = ("**Enunciat:** A la botiga de fruits, cada poma costa 3 €. "
+                "Si en Joan ha pagat 15 €, quantes pomes ha comprat?")
+        ans, seed = mb.make_answer(task, "correct", "math-reading")
+        self.assertEqual(seed, "correct")
+        self.assertIn("15 ÷ 3 = 5", ans)
+
+    def test_unit_price_total_question_is_multiplication(self):
+        task = ("**Enunciat:** Cada poma costa 3 € i en Joan compra 5 pomes. "
+                "Quant pagarà?")
+        ans, seed = mb.make_answer(task, "correct", "math-reading")
+        self.assertEqual(seed, "correct")
+        self.assertIn("3 × 5 = 15", ans)
+
+    def test_no_operation_cue_seeds_generic_not_a_guess(self):
+        task = ("**Enunciat:** En un camp hi ha 3 arbres i 5 pedres. "
+                "Escriu les operacions i el resultat.")
+        _ans, seed = mb.make_answer(task, "correct", "math-reading")
+        self.assertEqual(seed, "generic")
+        _ans, seed2 = mb.make_answer(task, "slip", "math-reading")
+        self.assertEqual(seed2, "generic")
+        _ans, seed3 = mb.make_answer(task, "bare", "math-reading")
+        self.assertEqual(seed3, "bare")  # a bare number is band-controlled anyway
+
+
 class TestTaskShape(unittest.TestCase):
     def test_reasoning_task_with_justification_passes(self):
         ok, _ = mb.task_shape("## 📝 Raonament\n**Task:** explica com ho has resolt i per què funciona.",

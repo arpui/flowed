@@ -31,12 +31,27 @@ l'error sembrat mereix.
 | `calc-slip` | procediment correcte mostrat, una sola lliscada de càlcul a sobre, amb justificació | «12 + 7 = 29. Per què funciona: perquè descompondre no canvia el resultat.» | **5-7** (0-4 també és defensable: el resultat és fals) |
 | `wrong-op` | munta l'operació equivocada amb els números bons | «Operació: 42 + 7 = 49.» (el problema demanava repartir) | **0-4** (procediment equivocat) |
 | `thin` | idea correcta però sense justificació ni comparació real | «Faccio la multiplicació perquè és més ràpida.» | **5-7** (justification fluixa) |
-| `correct` | feina completa: operacions per línia, resultat correcte i el perquè | «42 ÷ 7 = 6. L'enunciat demana repartir entre iguals, per això divisió.» | **8-10** |
+| `correct` | feina completa: operacions per línia, resultat correcte i el perquè | «42 ÷ 7 = 6. L'enunciat demana la diferència entre les dues quantitats, per això resta.» | **8-10** |
+| `generic` | *(WP3.5)* resposta plausible sense error controlat — es sembra quan la tasca no es pot parsejar: història de diversos passos (3+ números), sense números, o sense pista d'operació fiable | «Primer llegeixo què demana l'enunciat i trió l'operació…» | **cap verdict de banda** (el bench no pot retreure al model una resposta que ell mateix no ha sabut ajustar a la tasca) |
 
 Per a `error-analysis` les classes es tradueixen a la tasca de trobar
 l'error aliè: `bare` = «Està malament.» sense assenyalar on; `calc-slip` =
 el troba però calcula malament la correcció; `correct` = el troba, diu per
 què i corregeix bé.
+
+## L'operació surt de la tasca, mai d'una resposta fixa (WP3.5)
+
+Les respostes sembrades es generen de l'operació **real** de la tasca a
+pantalla — expressió, enunciat o prosa d'scenari («quants en falten per 25
+si tens 14» → resta; «quants nens hi ha si 14 són nens i 11 són nenes» →
+suma; «repartir-les entre 6 jugadors» / «quants vehicles calen» → divisió).
+Les restes i divisions es llegeixen amb la quantitat gran primer
+(«si tens 14 i necessites 25» → 25 − 14). Abans de WP3.5, la resposta
+canned de `compare-strategies` («la multiplicació és més ràpida que
+sumar») queia a scenaris de resta i suma i el model la penalitzava **bé**
+— el bench ho comptava com a error del tutor (4 de les 5 bandes fallides
+residuals del calibratge; vegeu `docs/MODELBENCH.md`). Quan cap resposta
+canned quepa, es sembra `generic` i la porta `band_ok` salta la fila.
 
 ## Què mesura el bench, no l'alumne
 
