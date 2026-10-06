@@ -160,11 +160,23 @@ path's 10/7/3 bands):
 - sound procedure with one calculation slip, or a thin one-line
   justification, is **5-7**;
 - full work shown, correct, with the WHY stated is **8-10** — a complete
-  short answer is NOT docked below 8 for being short or plain.
+  short answer is NOT docked below 8 for being short or plain. If she shows
+  the operation, gets the result and states a reason, that IS a complete
+  answer: grade it 8-10 and do not invent a «needs more detail» correction —
+  the task asked for the reason, she gave it.
+
+**Grade against the task you JUST presented — re-read it before grading.** If
+the task asked her to compare two strategies, judge the comparison and its
+reason; do not correct an operation she was never asked to choose, and do
+not grade her answer as if it replied to an earlier task.
 
 Tag each finding with a severity: 🔴 critical, 🟡 moderate, 🟢 minor.
-Categories are the math ones from `math-feedback-formatter` — `procedure`,
-`wrong_operation` and `misread` are the heart of this practice.
+Categories are the 12 math classes of `math-feedback-formatter` §3 — the
+word in parentheses must be one of them. **Never invent a category**: a
+missing or thin explanation is `incomplete` or `procedure`, NEVER
+«justification» (an invented label is filed as `calculation` and destroys
+the learner's error profile). `procedure`, `wrong_operation` and `misread`
+are the heart of this practice.
 
 ### 6. Detailed feedback
 

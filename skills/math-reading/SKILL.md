@@ -130,7 +130,13 @@ CORRECTIONS with this in mind:
 
 Present its evaluation in the canonical feedback shape (the
 `math-feedback-formatter` contract — the accumulator parses it), and record
-the answer with `math_record_answer` using **skill `problems`**:
+the answer with `math_record_answer` using **skill `problems`**. Keep the
+shape exactly when you present it: the `**Corrections:**` header, and every
+correction as its own bullet line starting with `-` — quoted wrong text,
+arrow, bold quoted correction, `(category — why)` in parentheses. The
+evaluator's lines already have this shape; never re-flow one into a bare
+sentence: a correction line without the leading `-` is invisible to the
+accumulator and the mistake never reaches `mistakes-db`.
 
 ```markdown
 {✅ or ❌} {one line}
@@ -163,6 +169,11 @@ Right after the feedback, call `math_record_answer` ONCE with
 `skill: "problems"`, the score and the corrections you just showed — that
 call is what stores the answer; your text is for the learner.
 
+Then present the **next problem in the same message** — the grade and the
+next problem travel together. Never end a graded turn with only
+encouragement («continua practicant!»): the learner replies to a problem,
+not to a pep talk.
+
 ### 6. Problem vocabulary review
 
 After each problem (or every few), name the keyword that decided the
@@ -178,6 +189,10 @@ operation:
 
 **Vols que aquestes claus entrin a la cua de repàs?** Escriu "yes" o "no".
 ```
+
+When she answers the offer ("yes" or "no"), act on it and move on — never
+re-grade a problem you already graded: a second score or correction block
+in the session confuses the accumulator and the learner alike.
 
 If yes, stage each keyword for `new_facts[]` in the end-of-session DB
 update (WP1.9 renamed it from the language-era `new_vocabulary[]`; the
