@@ -112,7 +112,9 @@ d'm4.
 
 ## Què queda per tancar la Fase 1
 
-1. Aplicar els dos canvis de dalt (tools.ts + bank.ts) quan el calibratge acabi — sense el d'tools.ts, cap aprenent m7 es pot crear des del xat.
-2. **e2e en viu d'm7** (instància web, perfil de prova) — deliberadament no fet: prohibit tocar el port 4200 ni `~/.flowmath/test-math` mentre l'altre agent treballa.
-3. Decidir si el draft `docs/AlgebraNumericaBasica.md` creua cap a més competències m7 (aritmètica bàsica amb suport del banc) — el pilot actual cobreix només els blocs A/B/C de `competencies1eso.md`.
-4. Quan el pilot s'obri a alumnes de veritat: revisar els `why` dels ítems steps (són plantilles; el to podria calibrar-se amb l'agent de prompts).
+*(Tancat el 2026-10-06 per la fase WP1.1-live — vegeu `docs/DISSENY-MATEMATIQUES.md`, «Tancament de Fase 1».)*
+
+1. Aplicar els dos canvis de dalt (tools.ts + bank.ts) — **fet** (`b88c3f2`).
+2. **e2e en viu d'm7** — **fet**: perfil `test-m7:4201` + escenari `algebra` a `scripts/flowed-e2e.py` (RC=0; forma equivalent 10/10, categoria `sign` en viu, còpia literal `procedure`, steps v2 d'm7, prova de nivell Compute:/Steps: 12/12 «pass»). L'e2e va destapar un bug de producte (avís d'encallament de nota en torns servits només pel banc) — arreglat a `agent.ts` i fixat a `server/test/lesson-note.test.ts`.
+3. Decidir si el draft `docs/AlgebraNumericaBasica.md` creua cap a més competències m7 (aritmètica bàsica amb suport del banc) — el pilot actual cobreix només els blocs A/B/C de `competencies1eso.md`. **OBERT — decisió de producte de l'Albert.**
+4. Quan el pilot s'obri a alumnes de veritat: revisar els `why` dels ítems steps (són plantilles; el to podria calibrar-se amb l'agent de prompts). **OBERT — decisió de producte.**
