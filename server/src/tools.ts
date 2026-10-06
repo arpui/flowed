@@ -677,8 +677,9 @@ export function buildTools(opts: {
   // are denied by the allow-list — so a profile created by new-user.sh stayed a
   // template for ever while the web kept auto-starting the interview. This tool
   // is that missing write, with the fields typed and validated.
-  // Math level scale (DISSENY-MATEMATIQUES D3): m1..m6, the primary cycle.
-  const M_LEVELS = ["m1", "m2", "m3", "m4", "m5", "m6"];
+  // Math level scale (DISSENY-MATEMATIQUES D3): m1..m6 the primary cycle,
+  // m7 = 1r ESO (WP1.1); m8/m9 reserved for 2n/3r ESO.
+  const M_LEVELS = ["m1", "m2", "m3", "m4", "m5", "m6", "m7"];
 
   const setupTool: ToolDefinition = {
     name: "math_setup_profile",

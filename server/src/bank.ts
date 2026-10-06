@@ -67,7 +67,8 @@ export interface BankGrade {
   got?: string;
   /** steps items only: one entry per expected step, in order. */
   steps?: BankStepGrade[];
-  /** steps items only: the first failure's category and step number. */
+  /** steps items: the first failure's category and step number; algebraic
+   *  compute items: mathgrade.grade_algebraic's category (sign/incomplete/…). */
   error_class?: string;
   failed_step?: number;
   /** steps items only (WP2.5): which interaction produced the trace — v1
@@ -264,7 +265,7 @@ function mathFeedback(g: BankGrade): string {
     : g.verdict === "near"
       ? `${marker} Almost — ${g.note}.`
       : `${marker} Not quite — the correct answer is "${g.correct_version}".`;
-  const category = g.verdict === "near" ? "calculation" : String(g.item.error_class || "calculation");
+  const category = g.verdict === "near" ? "calculation" : String(g.error_class || g.item.error_class || "calculation");
   const why = g.verdict === "near" ? g.note : g.item.why || g.note || "revisa el càlcul";
   const got = String(g.got ?? "");
   const correctionLine = known
