@@ -1,0 +1,182 @@
+[
+  {
+    "id": "m7.distributive_letters.001",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "2 · (z - 2)",
+    "answer": "2z - 4",
+    "also_accept": [
+      "-4 + 2z"
+    ],
+    "options": [],
+    "why": "El 2 de fora multiplica absolutament tot: 2 × z = 2z i 2 × (-2) = -4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.002",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "3 · (x - 3)",
+    "answer": "3x - 9",
+    "also_accept": [
+      "-9 + 3x"
+    ],
+    "options": [],
+    "why": "El 3 de fora multiplica absolutament tot: 3 × x = 3x i 3 × (-3) = -9.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.003",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "-3 · (z + 6)",
+    "answer": "-3z - 18",
+    "also_accept": [
+      "-18 - 3z"
+    ],
+    "options": [],
+    "why": "El -3 de fora multiplica els dos termes: -3 × z = -3z i -3 × (z + 6) = -18. Amb un nombre negatiu de fora, els signes de dins canvien en desplegar.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.004",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "2 · (y + 2)",
+    "answer": "2y + 4",
+    "also_accept": [
+      "4 + 2y"
+    ],
+    "options": [],
+    "why": "El 2 de fora multiplica absolutament tot: 2 × y = 2y i 2 × (2) = 4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.005",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "-2 · (x + 6)",
+    "answer": "-2x - 12",
+    "also_accept": [
+      "-12 - 2x"
+    ],
+    "options": [],
+    "why": "El -2 de fora multiplica els dos termes: -2 × x = -2x i -2 × (x + 6) = -12. Amb un nombre negatiu de fora, els signes de dins canvien en desplegar.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.006",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "-3 · (x + 6)",
+    "answer": "-3x - 18",
+    "also_accept": [
+      "-18 - 3x"
+    ],
+    "options": [],
+    "why": "El -3 de fora multiplica els dos termes: -3 × x = -3x i -3 × (x + 6) = -18. Amb un nombre negatiu de fora, els signes de dins canvien en desplegar.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.007",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "-2 · (y - 4)",
+    "answer": "-2y + 8",
+    "also_accept": [
+      "8 - 2y"
+    ],
+    "options": [],
+    "why": "El -2 de fora multiplica els dos termes: -2 × y = -2y i -2 × (y - 4) = 8. Amb un nombre negatiu de fora, els signes de dins canvien en desplegar.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.008",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "3 · (x + 5)",
+    "answer": "3x + 15",
+    "also_accept": [
+      "15 + 3x"
+    ],
+    "options": [],
+    "why": "El 3 de fora multiplica absolutament tot: 3 × x = 3x i 3 × (5) = 15.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.009",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "3 · (x + 4)",
+    "answer": "3x + 12",
+    "also_accept": [
+      "12 + 3x"
+    ],
+    "options": [],
+    "why": "El 3 de fora multiplica absolutament tot: 3 × x = 3x i 3 × (4) = 12.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.010",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "2 · (y - 4)",
+    "answer": "2y - 8",
+    "also_accept": [
+      "-8 + 2y"
+    ],
+    "options": [],
+    "why": "El 2 de fora multiplica absolutament tot: 2 × y = 2y i 2 × (-4) = -8.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.011",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "4 · (z - 2)",
+    "answer": "4z - 8",
+    "also_accept": [
+      "-8 + 4z"
+    ],
+    "options": [],
+    "why": "El 4 de fora multiplica absolutament tot: 4 × z = 4z i 4 × (-2) = -8.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.distributive_letters.012",
+    "competence": "m7.distributive_letters",
+    "type": "compute",
+    "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+    "problem": "2 · (z + 5)",
+    "answer": "2z + 10",
+    "also_accept": [
+      "10 + 2z"
+    ],
+    "options": [],
+    "why": "El 2 de fora multiplica absolutament tot: 2 × z = 2z i 2 × (5) = 10.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  }
+]

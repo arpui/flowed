@@ -1,0 +1,506 @@
+[
+  {
+    "id": "m7.props_factor.001",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × 3 + 8 × 2",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × (3 + 2)",
+        "value": "40",
+        "accept": [
+          "8 × (3 + 2) = 40"
+        ],
+        "error_class": "procedure",
+        "why": "El 8 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "8 × 5",
+        "value": "40",
+        "accept": [
+          "8 × 5 = 40"
+        ],
+        "error_class": "calculation",
+        "why": "3 + 2 = 5."
+      },
+      {
+        "n": 3,
+        "expect": "40",
+        "value": "40",
+        "accept": [],
+        "error_class": "facts",
+        "why": "8 × 5 = 40."
+      }
+    ],
+    "answer": "40",
+    "why": "El factor comú 8 queda fora: 8 × (3 + 2) = 8 × 5 = 40 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.002",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 × 5 + 4 × 4",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "4 × (5 + 4)",
+        "value": "36",
+        "accept": [
+          "4 × (5 + 4) = 36"
+        ],
+        "error_class": "procedure",
+        "why": "El 4 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "4 × 9",
+        "value": "36",
+        "accept": [
+          "4 × 9 = 36"
+        ],
+        "error_class": "calculation",
+        "why": "5 + 4 = 9."
+      },
+      {
+        "n": 3,
+        "expect": "36",
+        "value": "36",
+        "accept": [],
+        "error_class": "facts",
+        "why": "4 × 9 = 36."
+      }
+    ],
+    "answer": "36",
+    "why": "El factor comú 4 queda fora: 4 × (5 + 4) = 4 × 9 = 36 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.003",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × 10 + 8 × 3",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × (10 + 3)",
+        "value": "104",
+        "accept": [
+          "8 × (10 + 3) = 104"
+        ],
+        "error_class": "procedure",
+        "why": "El 8 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "8 × 13",
+        "value": "104",
+        "accept": [
+          "8 × 13 = 104"
+        ],
+        "error_class": "calculation",
+        "why": "10 + 3 = 13."
+      },
+      {
+        "n": 3,
+        "expect": "104",
+        "value": "104",
+        "accept": [],
+        "error_class": "facts",
+        "why": "8 × 13 = 104."
+      }
+    ],
+    "answer": "104",
+    "why": "El factor comú 8 queda fora: 8 × (10 + 3) = 8 × 13 = 104 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.004",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3 × 3 - 3 × 2",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × (3 - 2)",
+        "value": "3",
+        "accept": [
+          "3 × (3 - 2) = 3"
+        ],
+        "error_class": "procedure",
+        "why": "El 3 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "3 × 1",
+        "value": "3",
+        "accept": [
+          "3 × 1 = 3"
+        ],
+        "error_class": "calculation",
+        "why": "3 - 2 = 1."
+      },
+      {
+        "n": 3,
+        "expect": "3",
+        "value": "3",
+        "accept": [],
+        "error_class": "facts",
+        "why": "3 × 1 = 3."
+      }
+    ],
+    "answer": "3",
+    "why": "El factor comú 3 queda fora: 3 × (3 - 2) = 3 × 1 = 3 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.005",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "7 × 11 + 7 × 2",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × (11 + 2)",
+        "value": "91",
+        "accept": [
+          "7 × (11 + 2) = 91"
+        ],
+        "error_class": "procedure",
+        "why": "El 7 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "7 × 13",
+        "value": "91",
+        "accept": [
+          "7 × 13 = 91"
+        ],
+        "error_class": "calculation",
+        "why": "11 + 2 = 13."
+      },
+      {
+        "n": 3,
+        "expect": "91",
+        "value": "91",
+        "accept": [],
+        "error_class": "facts",
+        "why": "7 × 13 = 91."
+      }
+    ],
+    "answer": "91",
+    "why": "El factor comú 7 queda fora: 7 × (11 + 2) = 7 × 13 = 91 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.006",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × 12 + 8 × 10",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × (12 + 10)",
+        "value": "176",
+        "accept": [
+          "8 × (12 + 10) = 176"
+        ],
+        "error_class": "procedure",
+        "why": "El 8 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "8 × 22",
+        "value": "176",
+        "accept": [
+          "8 × 22 = 176"
+        ],
+        "error_class": "calculation",
+        "why": "12 + 10 = 22."
+      },
+      {
+        "n": 3,
+        "expect": "176",
+        "value": "176",
+        "accept": [],
+        "error_class": "facts",
+        "why": "8 × 22 = 176."
+      }
+    ],
+    "answer": "176",
+    "why": "El factor comú 8 queda fora: 8 × (12 + 10) = 8 × 22 = 176 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.007",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "6 × 11 + 6 × 6",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "6 × (11 + 6)",
+        "value": "102",
+        "accept": [
+          "6 × (11 + 6) = 102"
+        ],
+        "error_class": "procedure",
+        "why": "El 6 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "6 × 17",
+        "value": "102",
+        "accept": [
+          "6 × 17 = 102"
+        ],
+        "error_class": "calculation",
+        "why": "11 + 6 = 17."
+      },
+      {
+        "n": 3,
+        "expect": "102",
+        "value": "102",
+        "accept": [],
+        "error_class": "facts",
+        "why": "6 × 17 = 102."
+      }
+    ],
+    "answer": "102",
+    "why": "El factor comú 6 queda fora: 6 × (11 + 6) = 6 × 17 = 102 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.008",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3 × 8 - 3 × 4",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × (8 - 4)",
+        "value": "12",
+        "accept": [
+          "3 × (8 - 4) = 12"
+        ],
+        "error_class": "procedure",
+        "why": "El 3 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "3 × 4",
+        "value": "12",
+        "accept": [
+          "3 × 4 = 12"
+        ],
+        "error_class": "calculation",
+        "why": "8 - 4 = 4."
+      },
+      {
+        "n": 3,
+        "expect": "12",
+        "value": "12",
+        "accept": [],
+        "error_class": "facts",
+        "why": "3 × 4 = 12."
+      }
+    ],
+    "answer": "12",
+    "why": "El factor comú 3 queda fora: 3 × (8 - 4) = 3 × 4 = 12 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.009",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 × 7 - 4 × 5",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "4 × (7 - 5)",
+        "value": "8",
+        "accept": [
+          "4 × (7 - 5) = 8"
+        ],
+        "error_class": "procedure",
+        "why": "El 4 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "4 × 2",
+        "value": "8",
+        "accept": [
+          "4 × 2 = 8"
+        ],
+        "error_class": "calculation",
+        "why": "7 - 5 = 2."
+      },
+      {
+        "n": 3,
+        "expect": "8",
+        "value": "8",
+        "accept": [],
+        "error_class": "facts",
+        "why": "4 × 2 = 8."
+      }
+    ],
+    "answer": "8",
+    "why": "El factor comú 4 queda fora: 4 × (7 - 5) = 4 × 2 = 8 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.010",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "6 × 3 + 6 × 7",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "6 × (3 + 7)",
+        "value": "60",
+        "accept": [
+          "6 × (3 + 7) = 60"
+        ],
+        "error_class": "procedure",
+        "why": "El 6 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "6 × 10",
+        "value": "60",
+        "accept": [
+          "6 × 10 = 60"
+        ],
+        "error_class": "calculation",
+        "why": "3 + 7 = 10."
+      },
+      {
+        "n": 3,
+        "expect": "60",
+        "value": "60",
+        "accept": [],
+        "error_class": "facts",
+        "why": "6 × 10 = 60."
+      }
+    ],
+    "answer": "60",
+    "why": "El factor comú 6 queda fora: 6 × (3 + 7) = 6 × 10 = 60 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.011",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "7 × 6 + 7 × 2",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × (6 + 2)",
+        "value": "56",
+        "accept": [
+          "7 × (6 + 2) = 56"
+        ],
+        "error_class": "procedure",
+        "why": "El 7 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "7 × 8",
+        "value": "56",
+        "accept": [
+          "7 × 8 = 56"
+        ],
+        "error_class": "calculation",
+        "why": "6 + 2 = 8."
+      },
+      {
+        "n": 3,
+        "expect": "56",
+        "value": "56",
+        "accept": [],
+        "error_class": "facts",
+        "why": "7 × 8 = 56."
+      }
+    ],
+    "answer": "56",
+    "why": "El factor comú 7 queda fora: 7 × (6 + 2) = 7 × 8 = 56 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_factor.012",
+    "competence": "m7.props_factor",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "7 × 8 - 7 × 3",
+    "method": "common_factor",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × (8 - 3)",
+        "value": "35",
+        "accept": [
+          "7 × (8 - 3) = 35"
+        ],
+        "error_class": "procedure",
+        "why": "El 7 es repeteix als dos productes: treu-lo fora."
+      },
+      {
+        "n": 2,
+        "expect": "7 × 5",
+        "value": "35",
+        "accept": [
+          "7 × 5 = 35"
+        ],
+        "error_class": "calculation",
+        "why": "8 - 3 = 5."
+      },
+      {
+        "n": 3,
+        "expect": "35",
+        "value": "35",
+        "accept": [],
+        "error_class": "facts",
+        "why": "7 × 5 = 35."
+      }
+    ],
+    "answer": "35",
+    "why": "El factor comú 7 queda fora: 7 × (8 - 3) = 7 × 5 = 35 — estalvies dues multiplicacions.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  }
+]

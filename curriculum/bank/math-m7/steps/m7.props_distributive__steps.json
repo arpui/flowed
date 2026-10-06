@@ -1,0 +1,506 @@
+[
+  {
+    "id": "m7.props_distributive.001",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × (10 + 2)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × 10 + 8 × 2",
+        "value": "96",
+        "accept": [
+          "8 × 10 + 8 × 2 = 96"
+        ],
+        "error_class": "procedure",
+        "why": "El 8 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "80 + 16",
+        "value": "96",
+        "accept": [
+          "80 + 16 = 96"
+        ],
+        "error_class": "facts",
+        "why": "8 × 10 = 80 i 8 × 2 = 16."
+      },
+      {
+        "n": 3,
+        "expect": "96",
+        "value": "96",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "80 + 16 = 96."
+      }
+    ],
+    "answer": "96",
+    "why": "10 + 2 es trenca en dues multiplicacions fàcils: 8 × 10 = 80 i 8 × 2 = 16; 80 + 16 = 96.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.002",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 × (20 + 4)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "4 × 20 + 4 × 4",
+        "value": "96",
+        "accept": [
+          "4 × 20 + 4 × 4 = 96"
+        ],
+        "error_class": "procedure",
+        "why": "El 4 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "80 + 16",
+        "value": "96",
+        "accept": [
+          "80 + 16 = 96"
+        ],
+        "error_class": "facts",
+        "why": "4 × 20 = 80 i 4 × 4 = 16."
+      },
+      {
+        "n": 3,
+        "expect": "96",
+        "value": "96",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "80 + 16 = 96."
+      }
+    ],
+    "answer": "96",
+    "why": "20 + 4 es trenca en dues multiplicacions fàcils: 4 × 20 = 80 i 4 × 4 = 16; 80 + 16 = 96.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.003",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × (50 + 3)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × 50 + 8 × 3",
+        "value": "424",
+        "accept": [
+          "8 × 50 + 8 × 3 = 424"
+        ],
+        "error_class": "procedure",
+        "why": "El 8 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "400 + 24",
+        "value": "424",
+        "accept": [
+          "400 + 24 = 424"
+        ],
+        "error_class": "facts",
+        "why": "8 × 50 = 400 i 8 × 3 = 24."
+      },
+      {
+        "n": 3,
+        "expect": "424",
+        "value": "424",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "400 + 24 = 424."
+      }
+    ],
+    "answer": "424",
+    "why": "50 + 3 es trenca en dues multiplicacions fàcils: 8 × 50 = 400 i 8 × 3 = 24; 400 + 24 = 424.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.004",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3 × (10 - 3)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × 10 - 3 × 3",
+        "value": "21",
+        "accept": [
+          "3 × 10 - 3 × 3 = 21"
+        ],
+        "error_class": "procedure",
+        "why": "El 3 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "30 - 9",
+        "value": "21",
+        "accept": [
+          "30 - 9 = 21"
+        ],
+        "error_class": "facts",
+        "why": "3 × 10 = 30 i 3 × 3 = 9."
+      },
+      {
+        "n": 3,
+        "expect": "21",
+        "value": "21",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "30 - 9 = 21."
+      }
+    ],
+    "answer": "21",
+    "why": "10 - 3 es trenca en dues multiplicacions fàcils: 3 × 10 = 30 i 3 × 3 = 9; 30 - 9 = 21.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.005",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "7 × (50 + 2)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × 50 + 7 × 2",
+        "value": "364",
+        "accept": [
+          "7 × 50 + 7 × 2 = 364"
+        ],
+        "error_class": "procedure",
+        "why": "El 7 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "350 + 14",
+        "value": "364",
+        "accept": [
+          "350 + 14 = 364"
+        ],
+        "error_class": "facts",
+        "why": "7 × 50 = 350 i 7 × 2 = 14."
+      },
+      {
+        "n": 3,
+        "expect": "364",
+        "value": "364",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "350 + 14 = 364."
+      }
+    ],
+    "answer": "364",
+    "why": "50 + 2 es trenca en dues multiplicacions fàcils: 7 × 50 = 350 i 7 × 2 = 14; 350 + 14 = 364.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.006",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × (50 - 8)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × 50 - 8 × 8",
+        "value": "336",
+        "accept": [
+          "8 × 50 - 8 × 8 = 336"
+        ],
+        "error_class": "procedure",
+        "why": "El 8 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "400 - 64",
+        "value": "336",
+        "accept": [
+          "400 - 64 = 336"
+        ],
+        "error_class": "facts",
+        "why": "8 × 50 = 400 i 8 × 8 = 64."
+      },
+      {
+        "n": 3,
+        "expect": "336",
+        "value": "336",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "400 - 64 = 336."
+      }
+    ],
+    "answer": "336",
+    "why": "50 - 8 es trenca en dues multiplicacions fàcils: 8 × 50 = 400 i 8 × 8 = 64; 400 - 64 = 336.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.007",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "7 × (30 + 2)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × 30 + 7 × 2",
+        "value": "224",
+        "accept": [
+          "7 × 30 + 7 × 2 = 224"
+        ],
+        "error_class": "procedure",
+        "why": "El 7 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "210 + 14",
+        "value": "224",
+        "accept": [
+          "210 + 14 = 224"
+        ],
+        "error_class": "facts",
+        "why": "7 × 30 = 210 i 7 × 2 = 14."
+      },
+      {
+        "n": 3,
+        "expect": "224",
+        "value": "224",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "210 + 14 = 224."
+      }
+    ],
+    "answer": "224",
+    "why": "30 + 2 es trenca en dues multiplicacions fàcils: 7 × 30 = 210 i 7 × 2 = 14; 210 + 14 = 224.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.008",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 × (40 - 7)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "4 × 40 - 4 × 7",
+        "value": "132",
+        "accept": [
+          "4 × 40 - 4 × 7 = 132"
+        ],
+        "error_class": "procedure",
+        "why": "El 4 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "160 - 28",
+        "value": "132",
+        "accept": [
+          "160 - 28 = 132"
+        ],
+        "error_class": "facts",
+        "why": "4 × 40 = 160 i 4 × 7 = 28."
+      },
+      {
+        "n": 3,
+        "expect": "132",
+        "value": "132",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "160 - 28 = 132."
+      }
+    ],
+    "answer": "132",
+    "why": "40 - 7 es trenca en dues multiplicacions fàcils: 4 × 40 = 160 i 4 × 7 = 28; 160 - 28 = 132.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.009",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 × (30 - 3)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "4 × 30 - 4 × 3",
+        "value": "108",
+        "accept": [
+          "4 × 30 - 4 × 3 = 108"
+        ],
+        "error_class": "procedure",
+        "why": "El 4 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "120 - 12",
+        "value": "108",
+        "accept": [
+          "120 - 12 = 108"
+        ],
+        "error_class": "facts",
+        "why": "4 × 30 = 120 i 4 × 3 = 12."
+      },
+      {
+        "n": 3,
+        "expect": "108",
+        "value": "108",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "120 - 12 = 108."
+      }
+    ],
+    "answer": "108",
+    "why": "30 - 3 es trenca en dues multiplicacions fàcils: 4 × 30 = 120 i 4 × 3 = 12; 120 - 12 = 108.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.010",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3 × (30 + 7)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × 30 + 3 × 7",
+        "value": "111",
+        "accept": [
+          "3 × 30 + 3 × 7 = 111"
+        ],
+        "error_class": "procedure",
+        "why": "El 3 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "90 + 21",
+        "value": "111",
+        "accept": [
+          "90 + 21 = 111"
+        ],
+        "error_class": "facts",
+        "why": "3 × 30 = 90 i 3 × 7 = 21."
+      },
+      {
+        "n": 3,
+        "expect": "111",
+        "value": "111",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "90 + 21 = 111."
+      }
+    ],
+    "answer": "111",
+    "why": "30 + 7 es trenca en dues multiplicacions fàcils: 3 × 30 = 90 i 3 × 7 = 21; 90 + 21 = 111.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.011",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "9 × (10 + 9)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "9 × 10 + 9 × 9",
+        "value": "171",
+        "accept": [
+          "9 × 10 + 9 × 9 = 171"
+        ],
+        "error_class": "procedure",
+        "why": "El 9 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "90 + 81",
+        "value": "171",
+        "accept": [
+          "90 + 81 = 171"
+        ],
+        "error_class": "facts",
+        "why": "9 × 10 = 90 i 9 × 9 = 81."
+      },
+      {
+        "n": 3,
+        "expect": "171",
+        "value": "171",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "90 + 81 = 171."
+      }
+    ],
+    "answer": "171",
+    "why": "10 + 9 es trenca en dues multiplicacions fàcils: 9 × 10 = 90 i 9 × 9 = 81; 90 + 81 = 171.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.012",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "6 × (10 + 6)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "6 × 10 + 6 × 6",
+        "value": "96",
+        "accept": [
+          "6 × 10 + 6 × 6 = 96"
+        ],
+        "error_class": "procedure",
+        "why": "El 6 de fora multiplica els dos termes del parèntesi."
+      },
+      {
+        "n": 2,
+        "expect": "60 + 36",
+        "value": "96",
+        "accept": [
+          "60 + 36 = 96"
+        ],
+        "error_class": "facts",
+        "why": "6 × 10 = 60 i 6 × 6 = 36."
+      },
+      {
+        "n": 3,
+        "expect": "96",
+        "value": "96",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "60 + 36 = 96."
+      }
+    ],
+    "answer": "96",
+    "why": "10 + 6 es trenca en dues multiplicacions fàcils: 6 × 10 = 60 i 6 × 6 = 36; 60 + 36 = 96.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  }
+]

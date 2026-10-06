@@ -1,0 +1,182 @@
+[
+  {
+    "id": "m7.syntax_letters.001",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "4x + 3y - 2x + 3y",
+    "answer": "2x + 6y",
+    "also_accept": [
+      "6y + 2x"
+    ],
+    "options": [],
+    "why": "4x − 2x = 2x i 3y + 3y = 6y; només es poden agrupar les lletres iguals.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.002",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "2z + 4 + 6z",
+    "answer": "8z + 4",
+    "also_accept": [
+      "4 + 8z"
+    ],
+    "options": [],
+    "why": "Agrupa les z: 2z + 6z = 8z; el número 4 va sol a la seva banda.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.003",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "4x + 2y - 2x + 3y",
+    "answer": "2x + 5y",
+    "also_accept": [
+      "5y + 2x"
+    ],
+    "options": [],
+    "why": "4x − 2x = 2x i 2y + 3y = 5y; només es poden agrupar les lletres iguals.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.004",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "6z + 11 + 2z",
+    "answer": "8z + 11",
+    "also_accept": [
+      "11 + 8z"
+    ],
+    "options": [],
+    "why": "Agrupa les z: 6z + 2z = 8z; el número 11 va sol a la seva banda.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.005",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "6z + 6 + 5z",
+    "answer": "11z + 6",
+    "also_accept": [
+      "6 + 11z"
+    ],
+    "options": [],
+    "why": "Agrupa les z: 6z + 5z = 11z; el número 6 va sol a la seva banda.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.006",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "3y + 7x + 2y + 3x",
+    "answer": "10x + 5y",
+    "also_accept": [
+      "5y + 10x"
+    ],
+    "options": [],
+    "why": "Les y amb les y (3y + 2y = 5y) i les x amb les x (7x + 3x = 10x).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.007",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "2x + 2y + 2x + 1y",
+    "answer": "4x + 3y",
+    "also_accept": [
+      "3y + 4x"
+    ],
+    "options": [],
+    "why": "Les x amb les x (2x + 2x = 4x) i les y amb les y (2y + 1y = 3y).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.008",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "2z + 7y + 2z + 1y",
+    "answer": "8y + 4z",
+    "also_accept": [
+      "4z + 8y"
+    ],
+    "options": [],
+    "why": "Les z amb les z (2z + 2z = 4z) i les y amb les y (7y + 1y = 8y).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.009",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "6z + 8y + 2z + 2y",
+    "answer": "10y + 8z",
+    "also_accept": [
+      "8z + 10y"
+    ],
+    "options": [],
+    "why": "Les z amb les z (6z + 2z = 8z) i les y amb les y (8y + 2y = 10y).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.010",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "4x + 4y - 2x + 2y",
+    "answer": "2x + 6y",
+    "also_accept": [
+      "6y + 2x"
+    ],
+    "options": [],
+    "why": "4x − 2x = 2x i 4y + 2y = 6y; només es poden agrupar les lletres iguals.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.011",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "5x + 10 + 4x",
+    "answer": "9x + 10",
+    "also_accept": [
+      "10 + 9x"
+    ],
+    "options": [],
+    "why": "Agrupa les x: 5x + 4x = 9x; el número 10 va sol a la seva banda.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.syntax_letters.012",
+    "competence": "m7.syntax_letters",
+    "type": "compute",
+    "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+    "problem": "5x + 4y - 3x + 3y",
+    "answer": "2x + 7y",
+    "also_accept": [
+      "7y + 2x"
+    ],
+    "options": [],
+    "why": "5x − 3x = 2x i 4y + 3y = 7y; només es poden agrupar les lletres iguals.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  }
+]

@@ -1,0 +1,506 @@
+[
+  {
+    "id": "m7.props_grouping.001",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2 × 20 × 5",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(2 × 5) × 20",
+        "value": "200",
+        "accept": [
+          "(2 × 5) × 20 = 200"
+        ],
+        "error_class": "procedure",
+        "why": "2 × 5 fa 10: agrupa-los primer."
+      },
+      {
+        "n": 2,
+        "expect": "10 × 20",
+        "value": "200",
+        "accept": [
+          "10 × 20 = 200"
+        ],
+        "error_class": "facts",
+        "why": "2 × 5 = 10."
+      },
+      {
+        "n": 3,
+        "expect": "200",
+        "value": "200",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "10 × 20 = 200."
+      }
+    ],
+    "answer": "200",
+    "why": "2 × 5 = 10 (producte rodó), i 10 × 20 = 200: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.002",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "5 + 37 + 15",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(5 + 15) + 37",
+        "value": "57",
+        "accept": [
+          "(5 + 15) + 37 = 57"
+        ],
+        "error_class": "procedure",
+        "why": "5 i 15 sumen 20: agrupa'ls primer."
+      },
+      {
+        "n": 2,
+        "expect": "20 + 37",
+        "value": "57",
+        "accept": [
+          "20 + 37 = 57"
+        ],
+        "error_class": "calculation",
+        "why": "5 + 15 = 20."
+      },
+      {
+        "n": 3,
+        "expect": "57",
+        "value": "57",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "20 + 37 = 57."
+      }
+    ],
+    "answer": "57",
+    "why": "5 + 15 = 20 (parella rodona), i 20 + 37 = 57: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.003",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 + 4 + 36",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(4 + 36) + 4",
+        "value": "44",
+        "accept": [
+          "(4 + 36) + 4 = 44"
+        ],
+        "error_class": "procedure",
+        "why": "4 i 36 sumen 40: agrupa'ls primer."
+      },
+      {
+        "n": 2,
+        "expect": "40 + 4",
+        "value": "44",
+        "accept": [
+          "40 + 4 = 44"
+        ],
+        "error_class": "calculation",
+        "why": "4 + 36 = 40."
+      },
+      {
+        "n": 3,
+        "expect": "44",
+        "value": "44",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "40 + 4 = 44."
+      }
+    ],
+    "answer": "44",
+    "why": "4 + 36 = 40 (parella rodona), i 40 + 4 = 44: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.004",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "18 + 4 + 2",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(18 + 2) + 4",
+        "value": "24",
+        "accept": [
+          "(18 + 2) + 4 = 24"
+        ],
+        "error_class": "procedure",
+        "why": "18 i 2 sumen 20: agrupa'ls primer."
+      },
+      {
+        "n": 2,
+        "expect": "20 + 4",
+        "value": "24",
+        "accept": [
+          "20 + 4 = 24"
+        ],
+        "error_class": "calculation",
+        "why": "18 + 2 = 20."
+      },
+      {
+        "n": 3,
+        "expect": "24",
+        "value": "24",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "20 + 4 = 24."
+      }
+    ],
+    "answer": "24",
+    "why": "18 + 2 = 20 (parella rodona), i 20 + 4 = 24: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.005",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2 × 37 × 50",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(2 × 50) × 37",
+        "value": "3700",
+        "accept": [
+          "(2 × 50) × 37 = 3700"
+        ],
+        "error_class": "procedure",
+        "why": "2 × 50 fa 100: agrupa-los primer."
+      },
+      {
+        "n": 2,
+        "expect": "100 × 37",
+        "value": "3700",
+        "accept": [
+          "100 × 37 = 3700"
+        ],
+        "error_class": "facts",
+        "why": "2 × 50 = 100."
+      },
+      {
+        "n": 3,
+        "expect": "3700",
+        "value": "3700",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "100 × 37 = 3700."
+      }
+    ],
+    "answer": "3700",
+    "why": "2 × 50 = 100 (producte rodó), i 100 × 37 = 3700: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.006",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "19 + 3 + 21",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(19 + 21) + 3",
+        "value": "43",
+        "accept": [
+          "(19 + 21) + 3 = 43"
+        ],
+        "error_class": "procedure",
+        "why": "19 i 21 sumen 40: agrupa'ls primer."
+      },
+      {
+        "n": 2,
+        "expect": "40 + 3",
+        "value": "43",
+        "accept": [
+          "40 + 3 = 43"
+        ],
+        "error_class": "calculation",
+        "why": "19 + 21 = 40."
+      },
+      {
+        "n": 3,
+        "expect": "43",
+        "value": "43",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "40 + 3 = 43."
+      }
+    ],
+    "answer": "43",
+    "why": "19 + 21 = 40 (parella rodona), i 40 + 3 = 43: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.007",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 × 30 × 25",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(4 × 25) × 30",
+        "value": "3000",
+        "accept": [
+          "(4 × 25) × 30 = 3000"
+        ],
+        "error_class": "procedure",
+        "why": "4 × 25 fa 100: agrupa-los primer."
+      },
+      {
+        "n": 2,
+        "expect": "100 × 30",
+        "value": "3000",
+        "accept": [
+          "100 × 30 = 3000"
+        ],
+        "error_class": "facts",
+        "why": "4 × 25 = 100."
+      },
+      {
+        "n": 3,
+        "expect": "3000",
+        "value": "3000",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "100 × 30 = 3000."
+      }
+    ],
+    "answer": "3000",
+    "why": "4 × 25 = 100 (producte rodó), i 100 × 30 = 3000: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.008",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 + 24 + 12",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(8 + 12) + 24",
+        "value": "44",
+        "accept": [
+          "(8 + 12) + 24 = 44"
+        ],
+        "error_class": "procedure",
+        "why": "8 i 12 sumen 20: agrupa'ls primer."
+      },
+      {
+        "n": 2,
+        "expect": "20 + 24",
+        "value": "44",
+        "accept": [
+          "20 + 24 = 44"
+        ],
+        "error_class": "calculation",
+        "why": "8 + 12 = 20."
+      },
+      {
+        "n": 3,
+        "expect": "44",
+        "value": "44",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "20 + 24 = 44."
+      }
+    ],
+    "answer": "44",
+    "why": "8 + 12 = 20 (parella rodona), i 20 + 24 = 44: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.009",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 + 25 + 32",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(8 + 32) + 25",
+        "value": "65",
+        "accept": [
+          "(8 + 32) + 25 = 65"
+        ],
+        "error_class": "procedure",
+        "why": "8 i 32 sumen 40: agrupa'ls primer."
+      },
+      {
+        "n": 2,
+        "expect": "40 + 25",
+        "value": "65",
+        "accept": [
+          "40 + 25 = 65"
+        ],
+        "error_class": "calculation",
+        "why": "8 + 32 = 40."
+      },
+      {
+        "n": 3,
+        "expect": "65",
+        "value": "65",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "40 + 25 = 65."
+      }
+    ],
+    "answer": "65",
+    "why": "8 + 32 = 40 (parella rodona), i 40 + 25 = 65: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.010",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × 19 × 25",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(8 × 25) × 19",
+        "value": "3800",
+        "accept": [
+          "(8 × 25) × 19 = 3800"
+        ],
+        "error_class": "procedure",
+        "why": "8 × 25 fa 200: agrupa-los primer."
+      },
+      {
+        "n": 2,
+        "expect": "200 × 19",
+        "value": "3800",
+        "accept": [
+          "200 × 19 = 3800"
+        ],
+        "error_class": "facts",
+        "why": "8 × 25 = 200."
+      },
+      {
+        "n": 3,
+        "expect": "3800",
+        "value": "3800",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "200 × 19 = 3800."
+      }
+    ],
+    "answer": "3800",
+    "why": "8 × 25 = 200 (producte rodó), i 200 × 19 = 3800: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.011",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2 × 32 × 50",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(2 × 50) × 32",
+        "value": "3200",
+        "accept": [
+          "(2 × 50) × 32 = 3200"
+        ],
+        "error_class": "procedure",
+        "why": "2 × 50 fa 100: agrupa-los primer."
+      },
+      {
+        "n": 2,
+        "expect": "100 × 32",
+        "value": "3200",
+        "accept": [
+          "100 × 32 = 3200"
+        ],
+        "error_class": "facts",
+        "why": "2 × 50 = 100."
+      },
+      {
+        "n": 3,
+        "expect": "3200",
+        "value": "3200",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "100 × 32 = 3200."
+      }
+    ],
+    "answer": "3200",
+    "why": "2 × 50 = 100 (producte rodó), i 100 × 32 = 3200: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.012",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 × 8 × 5",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(4 × 5) × 8",
+        "value": "160",
+        "accept": [
+          "(4 × 5) × 8 = 160"
+        ],
+        "error_class": "procedure",
+        "why": "4 × 5 fa 20: agrupa-los primer."
+      },
+      {
+        "n": 2,
+        "expect": "20 × 8",
+        "value": "160",
+        "accept": [
+          "20 × 8 = 160"
+        ],
+        "error_class": "facts",
+        "why": "4 × 5 = 20."
+      },
+      {
+        "n": 3,
+        "expect": "160",
+        "value": "160",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "20 × 8 = 160."
+      }
+    ],
+    "answer": "160",
+    "why": "4 × 5 = 20 (producte rodó), i 20 × 8 = 160: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-06 · seed 42"
+  }
+]

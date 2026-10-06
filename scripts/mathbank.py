@@ -441,12 +441,211 @@ def word_problems(rng: random.Random) -> dict:
     raise GenError(f"word_problems: no usable story in 500 draws (choose={want_choose})")
 
 
+# ------------------------------------------- m7 algebra (WP1.1) ---
+# docs/competencies1eso.md + docs/AlgebraNumericaBasica.md ("El Joc de les
+# Propietats"): the learner transforms EXPRESSIONS, so the answer of these
+# compute families is an expression, not a value. `value` is None (there is
+# no numeric value to two-path against) and validation instead checks
+# POLYNOMIAL EQUIVALENCE problem ≡ answer with mathgrade.parse_poly — the
+# same normalizer that will grade the learner (5x+5 == 5+5x == 5(x+1)).
+# Notation kept to what the drafts use: 3x, 4 · x, x^2 / x², x(x+5).
+
+_ALG_LETTERS = re.compile(r"[a-zA-Z]")
+
+
+def _alg_answer(poly: dict) -> tuple[str, list[str]]:
+    """Canonical rendering of the answer, plus one reordered also_accept
+    variant (equivalence accepts both anyway — the variant exercises the
+    also_accept path end to end)."""
+    main = mathgrade.poly_form(poly)
+    parts = re.split(r" ([-+]) ", main)          # ["5x", "+", "5"] / ["-2x", "-", "8"]
+    terms = [parts[0]] + [f"{op}{t}" for op, t in zip(parts[1::2], parts[2::2])]
+    alts: list[str] = []
+    if len(terms) >= 2:
+        rev = terms[::-1]
+        rebuilt = rev[0].lstrip("+")
+        for t in rev[1:]:
+            rebuilt = f"{rebuilt} - {t[1:]}" if t.startswith("-") else f"{rebuilt} + {t.lstrip('+')}"
+        if rebuilt != main:
+            alts.append(rebuilt)
+    return main, alts
+
+
+def syntax_grouping_letters(rng: random.Random) -> dict:
+    """BLOC 2.4 — commutative/associative with letters: group the like terms.
+    '3x + 5 + 2x' -> '5x + 5'; '4y + 7z + 2y + z' -> '6y + 8z'."""
+    kind = rng.choice(["letters+number", "two-letters", "mixed-sign"])
+    v = rng.choice(["x", "y", "z"])
+    if kind == "letters+number":
+        k1 = rng.randint(2, 6)
+        k2 = rng.randint(2, 6)
+        n = rng.randint(3, 12)
+        problem = f"{k1}{v} + {n} + {k2}{v}"
+        poly = {((v, 1),): Fraction(k1 + k2), (): Fraction(n)}
+        why = (f"Agrupa les {v}: {k1}{v} + {k2}{v} = {k1 + k2}{v}; el número "
+               f"{n} va sol a la seva banda.")
+    elif kind == "two-letters":
+        v1, v2 = rng.sample(["x", "y", "z"], 2)
+        a = rng.randint(2, 6)
+        b = rng.randint(2, 8)
+        c = rng.randint(1, 3)
+        d = rng.randint(1, 4)
+        problem = f"{a}{v1} + {b}{v2} + {c}{v1} + {d}{v2}"
+        poly = {((v1, 1),): Fraction(a + c), ((v2, 1),): Fraction(b + d)}
+        why = (f"Les {v1} amb les {v1} ({a}{v1} + {c}{v1} = {a + c}{v1}) i les "
+               f"{v2} amb les {v2} ({b}{v2} + {d}{v2} = {b + d}{v2}).")
+    else:
+        a = rng.randint(4, 9)
+        b = rng.randint(2, a - 2)
+        c = rng.randint(2, 6)
+        d = rng.randint(2, 6)
+        problem = f"{a}x + {c}y - {b}x + {d}y"
+        poly = {(("x", 1),): Fraction(a - b), (("y", 1),): Fraction(c + d)}
+        why = (f"{a}x − {b}x = {a - b}x i {c}y + {d}y = {c + d}y; només es poden "
+               "agrupar les lletres iguals.")
+    ans, alts = _alg_answer(poly)
+    return {
+        "type": "compute",
+        "instruction": "Simplifica l'expressió agrupant les lletres iguals.",
+        "problem": problem,
+        "answer": ans,
+        "also_accept": alts,
+        "options": [],
+        "value": None,
+        "why": why,
+    }
+
+
+def value_numeric(rng: random.Random) -> dict:
+    """A. Valor numèric — substitution: '2a − 3b, amb a = 5 i b = 2'. The
+    deliverable IS a number, so this family keeps the numeric two-path: the
+    substituted arithmetic lives in `expression` (the story is prose), exactly
+    like the WP3.2 word problems."""
+    v1, v2 = rng.sample(["a", "b", "x", "y"], 2)
+    k1 = rng.randint(2, 5)
+    k2 = rng.randint(2, 4)
+    a = rng.randint(2, 9)
+    b = rng.randint(2, 9)
+    minus = rng.random() < 0.5
+    if minus and k1 * a <= k2 * b:
+        k1, k2 = k2, k1
+        a, b = b, a
+    op = "-" if minus else "+"
+    value = k1 * a + (-(k2 * b) if minus else k2 * b)
+    letters = f"{k1}{v1} {op} {k2}{v2}"
+    story = (f"Si {v1} = {a} i {v2} = {b}, calcula el valor de {letters}.")
+    expr = f"{k1} × {a} {op} {k2} × {b}"
+    p1, p2 = k1 * a, k2 * b
+    why = (f"Substitueix: {k1} × {a} = {p1} i {k2} × {b} = {p2}; "
+           f"{p1} {op} {p2} = {value}. La lletra és una casella on entra el número.")
+    return {
+        "type": "compute",
+        "instruction": "Substitueix els valors i calcula.",
+        "problem": story,
+        "expression": expr,
+        "answer": str(value),
+        "also_accept": [],
+        "options": [],
+        "value": Fraction(value),
+        "why": why,
+    }
+
+
+def distributive_letters(rng: random.Random) -> dict:
+    """B. Distributiva amb lletres: '3 · (x + 4)' -> '3x + 12', and the
+    sign-management case from the complete draft: '-2 · (x + 4)' -> '-2x - 8'.
+    The outside number multiplies ABSOLUTELY everything inside."""
+    v = rng.choice(["x", "y", "z"])
+    k = rng.choice([2, 3, 4, 5, -2, -3])
+    c = rng.randint(2, 6)
+    inner = "+" if rng.random() < 0.6 else "-"
+    prob_inner = f"{v} + {c}" if inner == "+" else f"{v} - {c}"
+    problem = f"{k} · ({prob_inner})"
+    kc = k * c * (-1 if inner == "-" else 1)
+    poly = {((v, 1),): Fraction(k), (): Fraction(kc)}
+    ans, alts = _alg_answer(poly)
+    if k < 0:
+        why = (f"El {k} de fora multiplica els dos termes: {k} × {v} = {k}{v} i "
+               f"{k} × ({prob_inner}) = {kc}. Amb un nombre negatiu de fora, els "
+               "signes de dins canvien en desplegar.")
+    else:
+        why = (f"El {k} de fora multiplica absolutament tot: {k} × {v} = {k}{v} i "
+               f"{k} × ({c if inner == '+' else '-' + str(c)}) = {kc}.")
+    return {
+        "type": "compute",
+        "instruction": "Desplega el parèntesi (multiplica tot el que hi ha a dins).",
+        "problem": problem,
+        "answer": ans,
+        "also_accept": alts,
+        "options": [],
+        "value": None,
+        "why": why,
+    }
+
+
+def factor_letters(rng: random.Random) -> dict:
+    """C. Factor comú amb lletres — the four levels of the draft:
+    L1 only-letter (7x + 7y -> 7(x + y)), L2 letter+number (4x + xy ->
+    x(4 + y)), L3 hidden number (8x + 12 -> 4(2x + 3)), L4 powers
+    (x^2 + 9x -> x(x + 9))."""
+    level = rng.choice(["letter", "letter+number", "hidden-number", "power"])
+    v = rng.choice(["x", "y", "z"])
+    if level == "letter":
+        k = rng.randint(2, 9)
+        v2 = rng.choice([c for c in "xyz" if c != v])
+        problem = f"{k}{v} + {k}{v2}"
+        answer = f"{k}({v} + {v2})"
+        why = f"El {k} es repeteix a tots dos termes: {k}{v} + {k}{v2} = {k}({v} + {v2})."
+    elif level == "letter+number":
+        k = rng.randint(2, 9)
+        v2 = rng.choice([c for c in "xyz" if c != v])
+        problem = f"{k}{v} + {v}{v2}"
+        answer = f"{v}({k} + {v2})"
+        why = (f"El que es repeteix és la {v}: {k}{v} + {v}{v2} = "
+               f"{v}({k} + {v2}).")
+    elif level == "hidden-number":
+        for _ in range(200):
+            g = rng.randint(2, 6)
+            p = rng.randint(2, 6)
+            q = rng.randint(2, 6)
+            if math.gcd(p, q) == 1 and p != q:
+                break
+        else:
+            raise GenError("factor_letters/hidden-number: no coprime pair in 200 draws")
+        problem = f"{g * p}{v} + {g * q}"
+        answer = f"{g}({p}{v} + {q})"
+        why = (f"La taula del {g} és compartida: {g * p}{v} + {g * q} = "
+               f"{g} · {p}{v} + {g} · {q} = {g}({p}{v} + {q}).")
+    else:
+        k = rng.randint(2, 9)
+        problem = f"{v}^2 + {k}{v}"
+        answer = f"{v}({v} + {k})"
+        why = (f"{v}^2 vol dir {v} · {v}: {v} · {v} + {k} · {v} = {v}({v} + {k}). "
+               f"La {v} es repeteix a tot arreu.")
+    if mathgrade.parse_poly(problem) != mathgrade.parse_poly(answer):
+        raise GenError(f"factor_letters template bug: {problem!r} != {answer!r}")
+    return {
+        "type": "compute",
+        "instruction": "Treu el factor comú (transforma l'expressió, no la resolquis).",
+        "problem": problem,
+        "answer": answer,
+        "also_accept": [],
+        "options": [],
+        "value": None,
+        "why": why,
+    }
+
+
 FAMILIES = {
     "mult_2digit": mult_2digit,
     "frac_add_unlike": frac_add_unlike,
     "dec_add": dec_add,
     "compare_fracs": compare_fracs,
     "word_problems": word_problems,
+    "syntax_grouping_letters": syntax_grouping_letters,
+    "value_numeric": value_numeric,
+    "distributive_letters": distributive_letters,
+    "factor_letters": factor_letters,
 }
 
 # Fallback when the curriculum .md has no `Bank:` line (the pilot ids).
@@ -646,11 +845,163 @@ def long_division(rng: random.Random) -> dict:
     }
 
 
+# --------------------------------------- m7 smart calculation (WP1.1) ---
+# BLOC 1 of docs/AlgebraNumericaBasica.md ("El Joc dels Nombres"): the trace
+# IS the method — regroup / deploy / extract, then the easy arithmetic. The
+# first step's `expect` demands the transformed FORM (the regrouped pair, the
+# deployed packet, the factored one); the later steps are the arithmetic that
+# the transformation made trivial.
+
+def props_grouping_numeric(rng: random.Random) -> dict:
+    """Commutative + associative: find the pair that makes 10/20/…/100 and
+    group it first. '13 + 25 + 7 -> (13 + 7) + 25 -> 20 + 25 -> 45' and the
+    multiplication version '4 · 17 · 25 -> (4 · 25) · 17 -> 100 · 17 -> 1700'."""
+    if rng.random() < 0.5:
+        s = rng.choice([10, 20, 30, 40, 50])
+        p = rng.randint(2, s - 2)
+        q = s - p
+        if p == q:
+            p, q = p - 1, q + 1
+        r = rng.randint(3, 40)
+        total = s + r
+        return {
+            "type": "steps",
+            "method": "grouping",
+            "instruction": STEPS_INSTRUCTION,
+            "problem": f"{p} + {r} + {q}",
+            "answer": str(total),
+            "value": Fraction(total),
+            "steps": [
+                {"n": 1, "expect": f"({p} + {q}) + {r}", "value": str(total),
+                 "accept": [f"({p} + {q}) + {r} = {total}"],
+                 "error_class": "procedure",
+                 "why": f"{p} i {q} sumen {s}: agrupa'ls primer."},
+                {"n": 2, "expect": f"{s} + {r}", "value": str(total),
+                 "accept": [f"{s} + {r} = {total}"],
+                 "error_class": "calculation",
+                 "why": f"{p} + {q} = {s}."},
+                {"n": 3, "expect": str(total), "value": str(total),
+                 "accept": [],
+                 "error_class": "calculation",
+                 "why": f"{s} + {r} = {total}."},
+            ],
+            "why": (f"{p} + {q} = {s} (parella rodona), i {s} + {r} = {total}: "
+                    "moure els sumands no canvia el resultat."),
+        }
+    pairs = [(2, 5, 10), (4, 25, 100), (2, 25, 50), (4, 5, 20), (8, 25, 200), (2, 50, 100)]
+    p, q, prod = rng.choice(pairs)
+    r = rng.randint(3, 40)
+    total = prod * r
+    return {
+        "type": "steps",
+        "method": "grouping",
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{p} × {r} × {q}",
+        "answer": str(total),
+        "value": Fraction(total),
+        "steps": [
+            {"n": 1, "expect": f"({p} × {q}) × {r}", "value": str(total),
+             "accept": [f"({p} × {q}) × {r} = {total}"],
+             "error_class": "procedure",
+             "why": f"{p} × {q} fa {prod}: agrupa-los primer."},
+            {"n": 2, "expect": f"{prod} × {r}", "value": str(total),
+             "accept": [f"{prod} × {r} = {total}"],
+             "error_class": "facts",
+             "why": f"{p} × {q} = {prod}."},
+            {"n": 3, "expect": str(total), "value": str(total),
+             "accept": [],
+             "error_class": "calculation",
+             "why": f"{prod} × {r} = {total}."},
+        ],
+        "why": (f"{p} × {q} = {prod} (producte rodó), i {prod} × {r} = {total}: "
+                "reagrupar els factors no canvia el resultat."),
+    }
+
+
+def props_distributive_numeric(rng: random.Random) -> dict:
+    """Distributive with numbers: break the hard factor into an easy pair.
+    '5 · (10 + 3) -> 5 · 10 + 5 · 3 -> 50 + 15 -> 65'."""
+    k = rng.randint(3, 9)
+    a = rng.choice([10, 20, 30, 40, 50])
+    b = rng.randint(2, 9)
+    minus = rng.random() < 0.4
+    total = k * (a - b) if minus else k * (a + b)
+    op = "-" if minus else "+"
+    return {
+        "type": "steps",
+        "method": "distributive",
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{k} × ({a} {op} {b})",
+        "answer": str(total),
+        "value": Fraction(total),
+        "steps": [
+            {"n": 1, "expect": f"{k} × {a} {op} {k} × {b}", "value": str(total),
+             "accept": [f"{k} × {a} {op} {k} × {b} = {total}"],
+             "error_class": "procedure",
+             "why": f"El {k} de fora multiplica els dos termes del parèntesi."},
+            {"n": 2, "expect": f"{k * a} {op} {k * b}", "value": str(total),
+             "accept": [f"{k * a} {op} {k * b} = {total}"],
+             "error_class": "facts",
+             "why": f"{k} × {a} = {k * a} i {k} × {b} = {k * b}."},
+            {"n": 3, "expect": str(total), "value": str(total),
+             "accept": [],
+             "error_class": "calculation",
+             "why": f"{k * a} {op} {k * b} = {total}."},
+        ],
+        "why": (f"{a} {op} {b} es trenca en dues multiplicacions fàcils: "
+                f"{k} × {a} = {k * a} i {k} × {b} = {k * b}; {k * a} {op} {k * b} = {total}."),
+    }
+
+
+def props_factor_numeric(rng: random.Random) -> dict:
+    """Common factor with numbers: the same multiplier in both products comes
+    out. '7 · 8 + 7 · 2 -> 7 · (8 + 2) -> 7 · 10 -> 70'."""
+    k = rng.randint(3, 9)
+    a = rng.randint(2, 12)
+    b = rng.randint(2, 12)
+    if a == b:
+        b = a + 1
+    minus = rng.random() < 0.4
+    c = a - b if minus else a + b
+    if c <= 0:
+        a, b = b, a
+        c = a - b
+    total = k * c
+    op = "-" if minus else "+"
+    return {
+        "type": "steps",
+        "method": "common_factor",
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{k} × {a} {op} {k} × {b}",
+        "answer": str(total),
+        "value": Fraction(total),
+        "steps": [
+            {"n": 1, "expect": f"{k} × ({a} {op} {b})", "value": str(total),
+             "accept": [f"{k} × ({a} {op} {b}) = {total}"],
+             "error_class": "procedure",
+             "why": f"El {k} es repeteix als dos productes: treu-lo fora."},
+            {"n": 2, "expect": f"{k} × {c}", "value": str(total),
+             "accept": [f"{k} × {c} = {total}"],
+             "error_class": "calculation",
+             "why": f"{a} {op} {b} = {c}."},
+            {"n": 3, "expect": str(total), "value": str(total),
+             "accept": [],
+             "error_class": "facts",
+             "why": f"{k} × {c} = {total}."},
+        ],
+        "why": (f"El factor comú {k} queda fora: {k} × ({a} {op} {b}) = {k} × {c} = {total} "
+                "— estalvies dues multiplicacions."),
+    }
+
+
 STEPS_FAMILIES = {
     "partial_products": partial_products,
     "partial_sums": partial_sums,
     "common_denominator": common_denominator,
     "long_division": long_division,
+    "props_grouping_numeric": props_grouping_numeric,
+    "props_distributive_numeric": props_distributive_numeric,
+    "props_factor_numeric": props_factor_numeric,
 }
 
 
@@ -812,8 +1163,11 @@ def validate_item(item: dict) -> list[str]:
     for a in item["also_accept"]:
         try:
             mathgrade.parse_expr(a)
-        except mathgrade.ParseError as e:
-            errs.append(f"also_accept {a!r} does not parse: {e}")
+        except mathgrade.ParseError:
+            try:  # WP1.1: an algebra item's variants are expressions, not values
+                mathgrade.parse_poly(a)
+            except mathgrade.ParseError as e:
+                errs.append(f"also_accept {a!r} does not parse: {e}")
 
     if item["type"] == "compare":
         sides = item["problem"].split("?")
@@ -834,6 +1188,34 @@ def validate_item(item: dict) -> list[str]:
             errs.append(f"answer {item['answer']!r} not in options {item['options']!r}")
         if set(item["options"]) != {">", "<", "="}:
             errs.append(f"compare options must be exactly >,<,=; got {item['options']!r}")
+        return errs
+
+    # WP1.1 algebra items: the answer is an EXPRESSION (it carries letters).
+    # The two-path check is not "same value" but POLYNOMIAL EQUIVALENCE —
+    # problem and answer must share the canonical form of the very normalizer
+    # that will grade the learner (hooks/mathgrade.py parse_poly).
+    if _ALG_LETTERS.search(str(item["answer"])):
+        prob_src = item.get("expression") or item["problem"]
+        try:
+            ppoly = mathgrade.parse_poly(prob_src)
+        except mathgrade.ParseError as e:
+            errs.append(f"problem {prob_src!r} does not parse as an expression: {e}")
+            ppoly = None
+        try:
+            apoly = mathgrade.parse_poly(item["answer"])
+        except mathgrade.ParseError as e:
+            errs.append(f"answer {item['answer']!r} does not parse as an expression: {e}")
+            apoly = None
+        if ppoly is not None and apoly is not None and ppoly != apoly:
+            errs.append(f"answer {mathgrade.poly_form(apoly)!r} is not equivalent to "
+                        f"the problem {mathgrade.poly_form(ppoly)!r}")
+        if apoly is not None:
+            for a in item["also_accept"]:
+                try:
+                    if mathgrade.parse_poly(a) != apoly:
+                        errs.append(f"also_accept {a!r} is not equivalent to the answer")
+                except mathgrade.ParseError:
+                    pass  # already reported by the parse loop above
         return errs
 
     # compute / choose: the problem must parse, and its value must equal the
