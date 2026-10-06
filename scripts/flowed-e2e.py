@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end lesson against the REAL model, with a verdict.
+"""End-to-end math session against the REAL app, with a verdict.
 
 Why this exists, in the words of the person who needed it: *"abans també va
 passar test i per les nenes va ser un autèntic desastre... lo obvi ho veig de
@@ -11,20 +11,24 @@ without correcting a single answer, because the thing that broke was what the
 model was told, and no unit test has ever read a model's reply.
 
 This does. It opens a session over the HTTP API exactly as the browser does,
-presses 🎓 Lesson, answers the exercises, and reads what comes back — checking
-the handful of things that, when they fail, make a child think the app is
-broken:
+presses the math buttons — 🎲 Go, 🔁 Review, 📚 Facts, 🏁 End — answers the
+exercises, and reads what comes back, checking the handful of things that,
+when they fail, make a child think the app is broken:
 
   * every answer gets a marker, a correct version and a score
   * no curly braces (the tutor printing its own template)
   * no exercise asked twice
   * the lesson is not closed before its exercises are done
   * the counter moves, and the answers reach .records/
+  * (WP1.9, math path) the bank serves compute/compare/steps cards and grades
+    them without the model; a steps answer comes back as an annotated trace;
+    the level wording is m1..m6, never CEFR; and 🏁 End really persists —
+    results file, session log, and the SM-2 schedule advanced.
 
 It needs the server running:  scripts/flowed-web.sh --app --port N <profile>
 
-  python3 scripts/flowed-e2e.py --port 4103 test-en
-  python3 scripts/flowed-e2e.py --port 4103 test-en --answers 8 --transcript /tmp/t.md
+  python3 scripts/flowed-e2e.py --port 4200 test-math
+  python3 scripts/flowed-e2e.py --port 4200 test-math --answers 8 --transcript /tmp/t.md
 """
 from __future__ import annotations
 
@@ -46,26 +50,40 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
 from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 REPO = Path(__file__).resolve().parent.parent
+
+
+def _home_from_env_file() -> None:
+    """A bare `python3 scripts/flowed-e2e.py` has no .env: the bash wrappers
+    (flowed-bench.sh, flowed-web.sh) load it, a direct run does not — and
+    profiles_root() would then fall back to ~/.flowed, which on a machine that
+    runs both forks is the LANGUAGE product's home, not this one's. Take
+    FLOWED_HOME from the repo's .env when nothing else set it."""
+    if os.environ.get("FLOWED_HOME"):
+        return
+    try:
+        for line in (REPO / ".env").read_text(encoding="utf-8").splitlines():
+            line = line.split("#", 1)[0].strip()
+            if line.startswith("FLOWED_HOME="):
+                os.environ["FLOWED_HOME"] = line.split("=", 1)[1].strip().strip("\"'")
+                return
+    except OSError:
+        pass
+
+
+_home_from_env_file()
 MARKER = re.compile(r"[🟢🟡🔴✅❌]")
 SCORE = re.compile(r"\b\d{1,2}\s*/\s*10\b")
-CLOSING = re.compile(r"session complete|sessió completa|review session complete", re.I)
+# The bank Review closes with the server's fixed "Lesson complete!" (agent.ts);
+# the model-driven practices say "Session Complete" (the skills' summaries).
+CLOSING = re.compile(r"session complete|lesson complete|sessió completa|lliçó completa", re.I)
 MENU_RE = re.compile(r"what would you like to practice|surprise me|spaced review \(today's due", re.I)
 GREETING_RE = re.compile(r"^#{0,3}\s*(hello|hi|hola|welcome back)\b", re.I | re.M)
 BRACE = re.compile(r"\{[^}\n]{0,60}\}")
+# A CEFR token in a math session is the language era leaking through (WP1.9:
+# the level wording is m1..m6). Word-bounded so "Form" or "A1.b" inside an id
+# does not fire; the pilot ids are `m4.*`.
+CEFR_LEAK = re.compile(r"\b(?:A[12]|B[12]|C[12])\b")
 
-# How this script answers, and why it matters more than it looks.
-#
-# The first version answered wrongly every single time — "xxx", "banana",
-# "zzz", six in a row — and then reported the tutor for repetition. But a tutor
-# that re-asks a question the learner just got wrong is doing its job, and no
-# child answers wrongly six times running. The test was manufacturing the loop
-# it was complaining about.
-#
-# So it plays a learner: wrong on the first sight of a question, and then, once
-# the tutor has shown the correct version, right. That is the sequence that
-# actually asks the question worth asking — when she gets it right, does the
-# lesson move on?
-WRONG = ["xxx", "no ho sé", "banana", "zzz", "aaa", "qqq", "wibble", "1234"]
 # The whole line after the label, quotes stripped afterwards. The first version
 # stopped at any apostrophe, so "I don't know" came back as "I don" — the script
 # then answered wrongly three times running and reported the tutor for retrying.
@@ -74,31 +92,173 @@ WRONG = ["xxx", "no ho sé", "banana", "zzz", "aaa", "qqq", "wibble", "1234"]
 CORRECT_VERSION = re.compile(r"\*\*Correct version:?\*\*\s*\n+([^\n]{1,120})", re.I)
 
 
-def _unquote(line: str) -> str:
-    return line.strip().strip("*").strip().strip("\"\u201c\u201d\u2018\u2019'").strip().rstrip(".").strip()
 
 
-def learner_answer(last_reply: str, n: int, always_wrong: bool, retry: bool) -> str:
-    """Wrong on a new question; right when the tutor re-asks the same one.
+# ---- the math bank (WP1.9): what the server serves, and what a correct answer is ----
+#
+# The bank path (🎲 Go / 🔁 Review / 📚 Facts on a competence with a bank) never
+# asks the model: the server picks an item, paints the card (server/src/bank.ts)
+# and grades with hooks/bank.py. The card names its competence in the comp-tag
+# and its problem on a labelled line, so the script can look the item up in the
+# bank JSON and answer it exactly — the same lookup the grader does.
 
-    A graded reply carries the correction for the question just answered AND the
-    next, different question. Taking the correct version out of it and sending
-    it back answers the PREVIOUS question — which is wrong, every time, and the
-    databases fill up with the learner being marked down for answers the tutor
-    had just supplied. The right answer is only knowable on a retry, when the
-    question has not changed. Everywhere else, a script cannot know it, and
-    pretending otherwise is how a test lies.
-    """
-    if always_wrong or not retry:
-        return WRONG[n % len(WRONG)]
-    m = CORRECT_VERSION.search(last_reply or "")
-    if m:
-        answer = _unquote(m.group(1))
-        # Some tutors put an explanation where the answer goes ("X is a Catalan
-        # dish that translates to..."). A sentence is not an answer; fall back.
-        if answer and len(answer.split()) <= 6:
-            return answer
-    return WRONG[n % len(WRONG)]
+_BANK_ITEMS: dict[str, dict] | None = None
+
+
+def bank_items() -> dict[str, dict]:
+    """Every bank item of the repo's curricula, by id (main files + steps/)."""
+    global _BANK_ITEMS
+    if _BANK_ITEMS is None:
+        out: dict[str, dict] = {}
+        for f in sorted((REPO / "curriculum" / "bank").glob("*/*.json")) + \
+                   sorted((REPO / "curriculum" / "bank").glob("*/steps/*.json")):
+            try:
+                doc = json.loads(f.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            for it in (doc.get("items") if isinstance(doc, dict) else doc) or []:
+                if isinstance(it, dict) and it.get("id"):
+                    out[it["id"]] = it
+        _BANK_ITEMS = out
+    return _BANK_ITEMS
+
+
+CARD_RE = re.compile(
+    r"## Exercise \d+: (?P<kind>Calculation|Steps|Vocabulary|Grammar)[^\n]*?"
+    r"<span class=\"comp-tag\"[^>]*>(?P<comp>[\w.]+)</span>\s*\n+\n?"
+    r"\*\*Problem:\*\*\s*(?P<problem>[^\n]+)", re.I)
+
+
+def bank_card(reply: str) -> dict | None:
+    """The bank item behind the card on screen: (last card heading + problem) →
+    the item from the bank JSON. None when the exercise is not a bank card.
+
+    The card's KIND decides the item's type: a steps file may carry the SAME
+    problem text as the compute items of its competence (the m4 pilot:
+    frac_add_unlike.031 is "1/2 + 2/6", exactly .001's problem). Matching on
+    problem alone answered a Steps card with a single number and the grader —
+    correctly — marked it wrong. So: Steps heading → a steps item; anything
+    else → a non-steps one."""
+    m = None
+    for m in CARD_RE.finditer(reply or ""):
+        pass
+    if not m:
+        return None
+    problem = m.group("problem").strip()
+    comp = m.group("comp").strip()
+    want_steps = m.group("kind").strip().lower() == "steps"
+    same = [it for it in bank_items().values()
+            if str(it.get("problem", "")).strip() == problem
+            and str(it.get("competence", "")) == comp
+            and (it.get("type") == "steps") == want_steps]
+    if len(same) == 1:
+        return same[0]
+    if same:
+        return same[0]          # same problem twice in one competence: first wins
+    hits = [it for it in bank_items().values()
+            if str(it.get("problem", "")).strip() == problem
+            and (it.get("type") == "steps") == want_steps]
+    return hits[0] if len(hits) == 1 else None
+
+
+def steps_trace(item: dict) -> str:
+    """The whole worked solution, one operation per line — the v1 answer shape
+    (DISSENY-MATEMATIQUES §4.2): each expected line evaluates to its step value."""
+    return "\n".join(str(s.get("expect", "")) for s in item.get("steps", []))
+
+
+def math_answer(item: dict, kind: str) -> str:
+    """A learner's answer to a bank card. right: the exact answer / the full
+    trace. wrong: a plausible slip (a digit transposed, or the first step of a
+    trace broken) — the way a child is wrong, not a typed-in "banana"."""
+    if item.get("type") == "steps":
+        if kind == "right":
+            return steps_trace(item)
+        lines = steps_trace(item).splitlines()
+        if lines:
+            lines[0] = lines[0] + " + 1"   # breaks step 1; the rest drag the error
+        return "\n".join(lines)
+    ans = str(item.get("answer", ""))
+    if kind == "right":
+        return ans
+    digits = re.findall(r"\d", ans)
+    if len(digits) >= 2:                      # transpose two digits
+        a = list(ans)
+        i, j = [k for k, c in enumerate(ans) if c.isdigit()][:2]
+        a[i], a[j] = a[j], a[i]
+        return "".join(a)
+    return "0"
+
+
+def seed_math_review(prof_dir: Path, ids: list[str]) -> None:
+    """Put bank items in the review queue, due today, so 🔁 Review has material
+    to serve (review_pick takes due items whose id is a bank id).
+
+    Everything that could undo the seed goes away with it, measured live on
+    test-math (WP1.9): update-db.py's T0 snapshots (`.update-state/`) are a
+    time machine — a session left unfinished by an earlier run re-applies and
+    rolls spaced-repetition.json back to before the seed; the frozen lesson
+    plan sizes the lesson to the old queue; and bank-progress.json's
+    answered-today ledger silently drops items from the picks. Same discipline
+    as restore() and reset_profile() above: wait for the hooks to settle FIRST,
+    then archive, then write."""
+    wait_quiet(prof_dir)
+    archive(prof_dir / ".daily")
+    archive(prof_dir / ".update-state")
+    archive(prof_dir / ".records")
+    park_learner_path(prof_dir)
+    for name in ("bank-progress.json", "session-draft.json"):
+        f = prof_dir / name
+        if f.exists():
+            out = prof_dir / "_archive"
+            out.mkdir(exist_ok=True)
+            f.rename(out / f"{time.strftime('%Y%m%d-%H%M%S')}-{name}")
+    sr_path = prof_dir / "spaced-repetition.json"
+    today = date.today().isoformat()
+
+    def write_seed() -> None:
+        doc = json.loads(sr_path.read_text(encoding="utf-8")) if sr_path.exists() else {"items": {}}
+        items = doc.setdefault("items", {})
+        # pop first: re-assigning an existing key keeps its OLD position, and the
+        # due queue is served in file order among equal due dates.
+        for iid in ids:
+            items.pop(iid, None)
+        for iid in ids:
+            items[iid] = {
+                "item_id": iid, "item_type": "bank_item", "easiness_factor": 2.5,
+                "interval_days": 1, "repetitions": 0, "due_date": today,
+                "last_reviewed": None, "review_history": [], "priority": "medium",
+            }
+        sr_path.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    def settled() -> bool:
+        try:
+            items = json.loads(sr_path.read_text(encoding="utf-8")).get("items", {})
+        except (OSError, ValueError):
+            return False
+        if not all(items.get(iid, {}).get("due_date") == today and not items.get(iid, {}).get("retired")
+                   for iid in ids):
+            return False
+        # Order too: the due queue is served in FILE order among equal due
+        # dates, so a clobber that restores an older file (right dates, wrong
+        # order) would still pass a dates-only check and then serve the wrong
+        # first card. The seed ids must sit in the file in seed order.
+        present = [k for k in items if k in set(ids)]
+        return present == list(ids)
+
+    # The write can be clobbered by a hook that fires just after it (the 30-min
+    # sweeper finalising a stale session re-applies update-db, which restores a
+    # T0 snapshot). Write, let the hooks settle, verify, and rewrite if the seed
+    # did not stick — so the lesson is guaranteed to start from the seeded queue.
+    for attempt in range(4):
+        write_seed()
+        wait_quiet(prof_dir)
+        if settled():
+            return
+        print(f"  ⚠ la cua sembrada no s'ha mantingut (intent {attempt + 1}); re-semo")
+    raise SystemExit("❌ no s'ha pogut sembrar la cua de repàs de forma estable")
+
+
 
 
 class Client:
@@ -468,692 +628,345 @@ def run(args, quiet: bool = False) -> Report | int:
 
     if args.scenario == "days":
         return run_days(args, cli, prof_dir, rep, quiet)
-    if args.scenario == "topics":
-        return run_topics(args, cli, prof_dir, rep, quiet)
     if args.scenario == "curriculum":
         return run_curriculum(args, cli, prof_dir, rep, quiet)
     if args.scenario == "ladder":
         return run_ladder(args, cli, prof_dir, rep, quiet)
+    if args.scenario in ("lesson", "go", "steps", "facts", "review"):
+        return run_math_journey(args, cli, prof_dir, rep, quiet)
 
-    # The day's plan BEFORE this run touches anything. Read after the greeting
-    # and the Lesson-opening turn — as it used to be — it also counts whatever
-    # those two turns credited, so a tutor that put a score in its opening reply
-    # made the run abort with "the lesson was already under way (1 of 6)" and
-    # threw away the four executions still to come. What has to be untouched is
-    # the day this run inherited, not the day two turns into it.
-    plan_path = prof_dir / ".daily" / f"lesson-{date.today().isoformat()}.json"
-    started_before = 0
-    if plan_path.exists():
-        try:
-            started_before = json.loads(plan_path.read_text()).get("done", 0) or 0
-        except ValueError:
-            started_before = 0
+    print(f"❌ escenari desconegut: {args.scenario}", file=sys.stderr)
+    return 2
 
-    records_before = len(list((prof_dir / ".records").glob("*.jsonl"))) if (prof_dir / ".records").is_dir() else 0
+
+# ---- WP1.9: the math journey -------------------------------------------------
+#
+# The flows a math learner walks, against the real server, with the closed bank
+# grading the exercises (no model for a bank card at all):
+#
+#   🔁 Review   the lesson: bank cards out of the seeded queue — compute,
+#               compare and steps. The FIRST steps card is answered wrong on
+#               purpose: its feedback must be the annotated trace (the failed
+#               step named, the later ones marked as dragging its error), and
+#               the record must carry that per-step trace.
+#   🎲 Go       a free bank card from the competence the curriculum assigns.
+#   📚 Facts    the facts drill — model-driven in the pilot (no facts bank yet).
+#   🏁 End      the summary, and the persistence everything else exists for:
+#               results file, session log, .records, and the SM-2 schedule
+#               advanced for every queue item answered.
+#
+# The variants run the same journey with a different weight: lesson (default)
+# does Review + Go + Facts + End; review the lesson only; steps a lesson made
+# only of steps cards; go Go cards only; facts the drill only.
+#
+# What the queue is seeded with matters: review_pick serves due items whose id
+# is in the curriculum's bank index, and that index is built from the
+# competences the curriculum DECLARES. m4.add_carry and m4.div_2x1 have steps
+# files in the pilot bank but no competency in curriculum/math-m4.md, so their
+# items cannot enter the queue (review_pick would retire them) — the seed uses
+# the steps families of declared competences.
+
+MATH_JOURNEY_IDS = ["m4.mult_2digit.001", "m4.compare_fracs.001", "m4.dec_add.001",
+                    "m4.mult_2digit.031", "m4.frac_add_unlike.031"]
+MATH_STEPS_IDS = ["m4.mult_2digit.031", "m4.frac_add_unlike.031",
+                  "m4.mult_2digit.032", "m4.frac_add_unlike.032"]
+
+
+def run_math_journey(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> Report | int:
+    from db_schema import ERROR_CATEGORIES
+    variant = args.scenario
     transcript: list[str] = []
-    print(f"perfil {prof_dir.name} · port {args.port} · {args.answers} respostes")
+    started = time.time()
+    today = date.today().isoformat()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
 
+    # Open the session FIRST: the first HTTP request wakes the server, and the
+    # 30-min sweeper then finalises any stale session left by an earlier run —
+    # which re-applies update-db and can roll spaced-repetition.json back over a
+    # seed written before it. So wake the server, let the sweeper fire, and only
+    # THEN seed the queue: the seed becomes the last write before the first card.
+    ids = (MATH_STEPS_IDS if variant == "steps"
+           else MATH_JOURNEY_IDS if variant in ("lesson", "review") else [])
     sid = cli.new_session()
+    print(f"perfil {prof_dir.name} · port {args.port} · {variant} · cua {len(ids)}")
+
+    # --- prepare the day: a queue of known bank items, no leftovers ---------
+    if ids:
+        seed_math_review(prof_dir, ids)
+    else:
+        wait_quiet(prof_dir)
+        archive(prof_dir / ".daily")
+        archive(prof_dir / ".update-state")
     print(f"sessió {sid}")
 
-    t0 = time.time()
-    greeting = tutor_text(cli.command(sid, "math-learn"))
-    transcript.append(f"## /math-learn\n\n{greeting}")
-    rep.check(bool(greeting), "el tutor obre la sessió", f"{len(greeting)} car.")
-    # An empty greeting that came back instantly is not a tutor that failed to
-    # greet: it is a model that is not running. Saying so here saves reading ten
-    # red checks and a sweep summary that looks like a catastrophe.
-    if not greeting.strip() and time.time() - t0 < 3:
-        print("\n❌ el tutor no ha dit res i ha trigat 0s: el model no respon.\n"
-              "   Comprova-ho amb scripts/flowed-web.sh --status --port "
-              f"{args.port} (hauria de dir «model: deep … RUNNING»)\n"
-              "   i arrenca'l amb scripts/flowed-start.sh --models-only.", file=sys.stderr)
-        return 2
+    replies: list[str] = []
+    graded: list[dict] = []          # reply, card (None = model-driven), kind
+    right_ids: set[str] = set()      # bank items answered correctly
+    wrong_ids: set[str] = set()
+    first_kind: dict[str, str] = {}  # item id -> how it was answered the FIRST time
+    steps_wrong: dict | None = None
+    log_path = prof_dir / f"math-web-{args.port}.log"
 
-    first = tutor_text(cli.command(sid, "math-review"))
-    transcript.append(f"## 🎓 Lesson\n\n{first}")
-    print(f"  Lesson oberta ({time.time() - t0:.0f}s)")
+    def press(cmd: str, label: str) -> str:
+        t = time.time()
+        body = tutor_text(cli.command(sid, cmd))
+        replies.append(body)
+        transcript.append(f"## {label}\n\n{body}")
+        print(f"  [{label}] → {time.time() - t:.0f}s")
+        if not body.strip() and time.time() - t < 3:
+            print("\n❌ el tutor no ha dit res i ha trigat 0s: el model no respon.\n"
+                  "   Comprova-ho amb scripts/flowed-web.sh --status --port "
+                  f"{args.port}; els escenaris de banc no en necessiten cap.", file=sys.stderr)
+        return body
 
-    # The lesson's own size, from the server — not a number this script invents.
-    plan_file = prof_dir / ".daily" / f"lesson-{date.today().isoformat()}.json"
-    plan = json.loads(plan_file.read_text()) if plan_file.exists() else {}
-    total = plan.get("total") or 0
-    rep.check(total > 0, "el servidor ha fet el pla de la lliçó", f"{total} exercicis")
-    # Not "unfinished" — UNTOUCHED. A lesson already under way is the previous
-    # run's lesson, and continuing it measures something else: the second run of
-    # the first --repeat 3 finished run 1's lesson and reported it as its own.
-    # Only the third refused, and only because by then it was full.
-    started = started_before
-    if total and started > 0:
-        done_note = "ja estava acabada" if started >= total else "ja estava començada"
-        # (mesurat abans del primer torn: el que compta és el dia que hereta)
-        print(f"\n❌ la lliçó d'avui {done_note} abans d'aquesta execució "
-              f"({started} de {total}).\n"
-              f"   Continuar-la no mesura una lliçó: mesura el que en quedava. Buida el dia:\n"
-              f"   python3 scripts/flowed-e2e.py {prof_dir.name} --port {args.port} --reset …\n"
-              f"   o, si vols passat, flowed-seed.py (que també buida el dia).", file=sys.stderr)
-        return 2
-
-    replies = [first]
-    asked: list[list[str]] = [fingerprints(first)]
-    practice_of: list[str] = ["-"]   # which practice each reply came from
-    current_practice = "-"
-    closed_early_at = None
-    detour_at: int | None = None   # index in `replies` where the learner left
-    resumed_at: int | None = None  # ...and where 🎓 Lesson was pressed again
-    phase: dict[str, list[int]] = {}
-    after_close: int | None = None  # first reply after the lesson closed
-    journey_from: int | None = None  # journey: first reply of free practice
-    writing_press: int | None = None  # journey: the reply that presented the Writing exercise
-    writing_replies: list[int] = []
-    answer_idx: list[int] = []      # which replies came from an answer, not a button
-    judged: list[dict] = []         # student scenario: what was answered, and about which item
-    outstanding: list[str] = []     # the exercise on screen when she walked away
-    daily_at_detour: dict = {}
-    daily_after_vocab: dict = {}
-
-    free_replies: list[int] = []   # journey: replies to answers given in free practice
-
-    def answer_once(n: int, free: str | None = None, kind_free: str | None = None) -> str:
-        """One learner turn. Returns the tutor's reply."""
-        nonlocal closed_early_at
-        retry = len(asked) >= 2 and bool(asked[-1]) and asked[-1] == asked[-2]
-        item = None
-        if free == "vocab":
-            item = bank_item(replies[-1])
-            answer = free_vocab_answer(kind_free or "right", item)
-            judged.append({"reply": len(replies), "kind": kind_free, "item": item,
-                           "answer": answer, "follows": item is not None})
-        elif free == "writing":
-            answer = FREE_WRITING[n % len(FREE_WRITING)]
-        elif args.scenario in ("student", "journey", "noisy"):
-            item = onscreen_item(prof_dir / ".metrics" / "notes.jsonl",
-                                 prof_dir / "spaced-repetition.json", sid)
-            if args.scenario == "noisy":
-                variant = NOISY_PLAN[n % len(NOISY_PLAN)]
-                answer, kind = noisy_answer(variant, item)
-            else:
-                kind = variant = STUDENT_PLAN[n % len(STUDENT_PLAN)]
-                answer = student_answer(kind, item)
-            judged.append({"reply": len(replies), "kind": kind, "variant": variant,
-                           "item": item, "answer": answer,
-                           "follows": follows_item(item, replies[-1])})
-        else:
-            answer = learner_answer(replies[-1], n, args.always_wrong, retry)
+    def say(answer: str) -> str:
         t = time.time()
         body = tutor_text(cli.say(sid, answer))
         replies.append(body)
-        asked.append(fingerprints(body))
-        practice_of.append(current_practice)
-        answer_idx.append(len(replies) - 1)
-        if free:
-            free_replies.append(len(replies) - 1)
-        if free == "writing":
-            writing_replies.append(len(replies) - 1)
-        transcript.append(f"## resposta {len(replies) - 1}: «{answer}»\n\n{body}")
+        transcript.append(f"## resposta {len(replies)}: «{answer[:120]}»\n\n{body}")
         flags = []
         if not MARKER.search(body): flags.append("sense marcador")
         if "Correct version:" not in body: flags.append("sense versió correcta")
         if not SCORE.search(body): flags.append("sense nota")
-        if BRACE.search(on_screen(body)): flags.append("CLAUS")
-        if CLOSING.search(body) and closed_early_at is None:
-            closed_early_at = len(replies) - 1
-        print(f"  {len(replies) - 1} «{answer}» → {time.time() - t:.0f}s"
+        print(f"  {len(replies)} «{answer[:40]}» → {time.time() - t:.0f}s"
               + (f"  ⚠ {', '.join(flags)}" if flags else "  ok"))
         return body
 
-    def press(cmd: str, label: str) -> str:
-        nonlocal current_practice
-        t = time.time()
-        current_practice = {"math-review": "lesson", "math-vocab": "vocab"}.get(cmd, cmd)
-        body = tutor_text(cli.command(sid, cmd))
-        replies.append(body)
-        asked.append(fingerprints(body))
-        practice_of.append(current_practice)
-        transcript.append(f"## {label}\n\n{body}")
-        print(f"  [{label}] → {time.time() - t:.0f}s")
-        return body
-
-    def read_daily() -> dict:
-        f = prof_dir / ".daily" / f"{date.today().isoformat()}.json"
-        try:
-            return json.loads(f.read_text())
-        except Exception:
-            return {}
-
-    def plan_done() -> int:
-        try:
-            return json.loads(plan_file.read_text()).get("done", 0)
-        except Exception:
-            return 0
-
-    if args.scenario == "wander":
-        # What a child actually does: start the lesson, get bored two questions
-        # in, go and do some vocabulary, come back to the lesson, and later go
-        # back to vocabulary again. Three things have to hold: the lesson is
-        # waiting where she left it, the vocabulary work is not lost, and
-        # vocabulary does not start over from the same words.
-        phase["lesson_a"] = [len(replies)]
-        for n in range(2):
-            answer_once(n)
-        phase["lesson_a"].append(len(replies))
-        daily_at_detour = read_daily()
-
-        detour_at = len(replies)
-        press("math-vocab", "📚 Vocabulary")
-        phase["vocab_a"] = [len(replies)]
-        for n in range(2, 4):
-            answer_once(n)
-        phase["vocab_a"].append(len(replies))
-        daily_after_vocab = read_daily()
-
-        # The exercise she was looking at when she left. Presenting it again on
-        # her return is not a repetition — it is the only correct thing to do,
-        # because she never answered it.
-        outstanding = list(asked[phase["lesson_a"][1] - 1]) if phase.get("lesson_a") else []
-        resumed_at = len(replies)
-        press("math-review", "🎓 Lesson (torna)")
-        phase["lesson_b"] = [len(replies)]
-        for n in range(4, 6):
-            if closed_early_at:
-                break
-            answer_once(n)
-        phase["lesson_b"].append(len(replies))
-
-        press("math-vocab", "📚 Vocabulary (torna)")
-        phase["vocab_b"] = [len(replies)]
-        for n in range(6, 8):
-            answer_once(n)
-        phase["vocab_b"].append(len(replies))
-
-    elif args.scenario == "marathon":
-        # Long enough that the context grows past the point where history
-        # pruning starts dropping turns — which has never happened in a test,
-        # and is where the 41808-token overflow lived. Three detours, one of
-        # them into Writing, whose answers are long.
-        phase["lesson_a"] = [len(replies)]
-        for n in range(3):
-            answer_once(n)
-        phase["lesson_a"].append(len(replies))
-        daily_at_detour = read_daily()
-
-        detour_at = len(replies)
-        press("math-vocab", "📚 Vocabulary")
-        phase["vocab_a"] = [len(replies)]
-        for n in range(3, 6):
-            answer_once(n)
-        phase["vocab_a"].append(len(replies))
-        daily_after_vocab = read_daily()
-
-        press("math-writing", "📝 Writing")
-        for n in range(6, 9):
-            answer_once(n)
-
-        outstanding = list(asked[phase["lesson_a"][1] - 1]) if phase.get("lesson_a") else []
-        resumed_at = len(replies)
-        press("math-review", "🎓 Lesson (torna)")
-        phase["lesson_b"] = [len(replies)]
-        for n in range(9, 13):
-            if closed_early_at:
-                break
-            answer_once(n)
-        phase["lesson_b"].append(len(replies))
-
-        press("math-vocab", "📚 Vocabulary (torna)")
-        phase["vocab_b"] = [len(replies)]
-        for n in range(13, 16):
-            answer_once(n)
-        phase["vocab_b"].append(len(replies))
-
-    elif args.scenario == "journey":
-        # 1) the lesson, to its end, and one answer past it (a closed lesson stays closed)
-        phase["lesson_a"] = [len(replies)]
-        for n in range(total):
-            answer_once(n)
-            if closed_early_at:
-                after_close = len(replies)
-                answer_once(total)
-                break
-        phase["lesson_a"].append(len(replies))
-        daily_at_detour = read_daily()
-
-        # 2) free practice: vocabulary, right and wrong
-        journey_from = len(replies)
-        press("math-vocab", "📚 Vocabulary")
-        phase["vocab_a"] = [len(replies)]
-        for k, kf in enumerate(FREE_VOCAB_PLAN):
-            answer_once(100 + k, free="vocab", kind_free=kf)
-        phase["vocab_a"].append(len(replies))
-        daily_after_vocab = read_daily()
-
-        # 3) writing: the answers are wrong on purpose, the tutor has to correct them
-        writing_press = len(replies)
-        press("math-writing", "📝 Writing")
-        for k in range(len(FREE_WRITING)):
-            answer_once(200 + k, free="writing")
-
-        # 4) back to vocabulary: what was answered must not come back
-        press("math-vocab", "📚 Vocabulary (torna)")
-        phase["vocab_b"] = [len(replies)]
-        for k, kf in enumerate(FREE_VOCAB_BACK):
-            answer_once(300 + k, free="vocab", kind_free=kf)
-        phase["vocab_b"].append(len(replies))
-
-    else:
-        limit = (args.answers if args.scenario == "lesson"
-                 else total if args.scenario in ("student", "noisy")
-                 else max(args.answers, total + 3))
-        for n in range(limit):
-            answer_once(n)
-            if closed_early_at:
-                # Two more turns past the end: a closed lesson has to stay
-                # closed, not quietly start a seventh exercise.
-                after_close = len(replies)
-                for extra in range(2):
-                    answer_once(limit + extra)
-                break
-
-    # Pressing a button is not answering a question. Counting the three command
-    # replies of a wander as "answers" made every ratio wrong: 8 records for
-    # "11 answers" when only 8 answers were ever given.
-    graded = [replies[i] for i in answer_idx]
-    floor = max(1, len(graded) * 2 // 3)
-
-    # --- the format ---------------------------------------------------------
-    rep.check(sum(1 for r in graded if MARKER.search(r)) >= floor,
-              "cada resposta rep un marcador",
-              f"{sum(1 for r in graded if MARKER.search(r))}/{len(graded)}")
-    rep.check(sum(1 for r in graded if "Correct version:" in r) >= floor,
-              "ensenya la versió correcta",
-              f"{sum(1 for r in graded if 'Correct version:' in r)}/{len(graded)}")
-    rep.check(sum(1 for r in graded if SCORE.search(r)) >= floor,
-              "posa nota",
-              f"{sum(1 for r in graded if SCORE.search(r))}/{len(graded)}")
-
-    braced = [i for i, r in enumerate(replies) if BRACE.search(on_screen(r))]
-    rep.check(not braced, "cap clau de plantilla a la pantalla",
-              (BRACE.search(on_screen(replies[braced[0]])).group(0) if braced else ""))
-
-    # --- did the lesson actually MOVE? -------------------------------------
-    #
-    # The check this replaces compared each turn's fingerprints with the
-    # previous turn's, and a turn that presents no exercise at all has no
-    # fingerprints — so six identical gradings of one single question passed
-    # it, while the badge went to 6 of 6. What matters is not whether two
-    # consecutive turns differ. It is whether a new question was ever asked.
-    seen: list[str] = []
-    for fp in asked:
-        seen.extend(f for f in fp if f not in seen)
-    def _score_at(i: int) -> int | None:
-        m = SCORE.search(replies[i]) if i < len(replies) else None
+    def score_of(reply: str) -> int | None:
+        m = SCORE.search(reply)
         return int(re.split(r"\s*/\s*", m.group(0))[0]) if m else None
 
-    rc = classify_repeats(asked, practice_of, set(answer_idx),
-                          {i for i in answer_idx if (_score_at(i) or 0) >= 8})
-    new_each_turn = rc["fresh"]
-    repeats_of_old = rc["same"]
-    rep.notes.append((len(rc["cross"]), len(rc["unanswered"]),
-                      [f"{f} (torn {i})" for i, f in rc["cross"]][:6]))
+    def answer_bank(txt: str, force: str | None = None) -> tuple[str, dict | None]:
+        """Answer the bank card on screen. force: 'right'/'wrong' overrides the
+        plan (the first steps card is answered wrong; everything else right)."""
+        nonlocal steps_wrong
+        card = bank_card(txt)
+        if card is None:
+            return txt, None
+        kind = force or ("wrong" if card.get("type") == "steps" and steps_wrong is None else "right")
+        body = say(math_answer(card, kind))
+        graded.append({"reply": body, "card": card, "kind": kind})
+        first_kind.setdefault(card["id"], kind)
+        (right_ids if kind == "right" else wrong_ids).add(card["id"])
+        if card.get("type") == "steps" and kind == "wrong":
+            steps_wrong = {"card": card, "reply": body}
+        return body, card
 
-    distinct = len(seen)
-    # One retry is teaching, two is a loop. A tutor that corrects a wrong answer
-    # and gives the same question one more go is doing its job; the third
-    # identical question is where a child decides the app is broken.
-    # Only answers count. A button press that brings back the exercise she was
-    # already looking at is not the tutor insisting.
-    # From the reply that closes the lesson until free practice starts nothing new
-    # is asked, by design: the closing summary and the answers past the end are
-    # not "the same question again" (a false alarm, 6/6, until this was excluded).
-    resume_at = journey_from if journey_from is not None else len(asked)
-    run_len, worst = 0, 0
-    for i in range(1, len(asked)):
-        if i not in answer_idx:
-            continue
-        if closed_early_at is not None and closed_early_at <= i < resume_at:
-            continue
-        if i in writing_replies:
-            # A Writing exercise has no fingerprint (a scenario and a task, not a
-            # word): "no new question" would be read into every Writing answer.
-            run_len = 0
-            continue
-        # "Insisting" is the SAME exercise again straight after she answered it (or
-        # no exercise at all). An exercise she had answered wrong in an earlier
-        # visit that comes back later is not that: it is SM-2 doing its job.
-        stuck = (not asked[i]) or bool(set(asked[i]) & set(asked[i - 1]))
-        run_len = run_len + 1 if stuck else 0
-        worst = max(worst, run_len)
-    rep.check(worst <= 1, "no insisteix més d'un reintent en la mateixa pregunta",
-              f"{worst} torns seguits sense canviar de pregunta" if worst > 1 else "")
-    rep.check(not repeats_of_old, "cap exercici ja contestat es repeteix dins la mateixa pràctica",
-              f'«{repeats_of_old[0][1]}» al torn {repeats_of_old[0][0]}' if repeats_of_old else "")
-    # With one retry allowed, N answers should still produce at least half as
-    # many distinct questions. One question for six answers is not a retry.
-    rep.check(distinct >= max(1, (len(graded) + 1) // 2),
-              "exercicis diferents, no el mateix repetit",
-              f"{distinct} exercicis per a {len(graded)} respostes")
+    # --- 🔁 Review: the lesson ----------------------------------------------
+    total = 0
+    served: list[str] = []
+    if variant in ("lesson", "review", "steps"):
+        txt = press("math-review", "🔁 Review")
+        rep.check(bank_card(txt) is not None, "la lliçó s'obre amb una targeta del banc",
+                  txt.strip().splitlines()[0][:70] if txt.strip() else "(buit)")
+        plan_file = prof_dir / ".daily" / f"lesson-{today}.json"
+        try:
+            total = int(json.loads(plan_file.read_text()).get("total") or 0)
+        except (OSError, ValueError):
+            total = 0
+        rep.check(total > 0, "el servidor ha fet un pla amb la cua sembrada", f"{total} exercicis")
+        closed = False
+        for _ in range(total + 2):
+            txt, card = answer_bank(txt)
+            if card is None:
+                break
+            served.append(card["id"])
+            if CLOSING.search(txt):
+                closed = True
+                break
+        rep.check(closed, "la lliçó es tanca quan el pla s'ha completat",
+                  f"{len(served)} targetes servides, pla {total}")
+        rep.check(bool(re.search(r"🎲|botons?\b|button", txt, re.I)),
+                  "i l'orienta cap als botons", txt[-160:].replace("\n", " "))
+        # A card answered RIGHT must not come back; one answered wrong may (the
+        # bank re-serves what she missed — that is the schedule working). So the
+        # test is "answered right the FIRST time it appeared", not "in right_ids":
+        # the steps card we answer wrong comes back and is answered right then.
+        back = [iid for i, iid in enumerate(served)
+                if first_kind.get(iid) == "right" and iid in served[:i]]
+        rep.check(not back, "cap exercici contestat bé no torna dins la lliçó",
+                  back[0] if back else "")
+        if variant == "steps":
+            kinds = {g["card"].get("type") for g in graded if g["card"]}
+            rep.check(kinds == {"steps"}, "l'escenari steps només ha vist targetes de passos",
+                      ", ".join(sorted(map(str, kinds))))
 
-    rep.check(closed_early_at is None or closed_early_at >= total,
-              "no tanca la lliçó abans d'hora",
-              f"ha tancat a {closed_early_at} de {total}" if closed_early_at else "")
+    # --- 🎲 Go: free bank cards ---------------------------------------------
+    if variant in ("lesson", "go"):
+        txt = press("math-learn", "🎲 Go")
+        for _ in range(2):
+            txt, card = answer_bank(txt, force="right")
+            if card is None:
+                break
 
-    # --- the counter must count exercises, not keystrokes -------------------
-    plan = json.loads(plan_file.read_text()) if plan_file.exists() else {}
-    done = plan.get("done", 0)
-    rep.check(done <= distinct, "el comptador no compta més del que s'ha preguntat",
-              f"{done} de {plan.get('total')} amb només {distinct} exercici(s) diferent(s)")
-    # Only answers given INSIDE the lesson can move the lesson's counter. In a
-    # wander, half of them are Vocabulary — counting those made a correct 3 of 6
-    # look like a failure.
-    in_lesson = len(graded)
-    if args.scenario in ("wander", "marathon", "journey"):
-        in_lesson = sum(1 for i in answer_idx
-                        if any(a <= i < b for a, b in (phase.get("lesson_a", [0, 0]),
-                                                       phase.get("lesson_b", [0, 0]))))
-    if args.scenario in ("student", "noisy"):
-        in_lesson = min(in_lesson, total)   # the extras after the close do not count
-    rep.check(done >= max(1, in_lesson - 1), "el comptador segueix les respostes de la lliçó",
-              f"{done} de {plan.get('total')} amb {in_lesson} respostes dins la lliçó")
+    # --- 📚 Facts: the drill (model-driven in the pilot) ---------------------
+    if variant in ("lesson", "facts"):
+        txt = press("math-vocab", "📚 Facts")
+        m = re.search(r"\*\*Exercise:\*\*\s*(\d+)\s*[×x*]\s*(\d+)", txt)
+        if m:
+            body = say(str(int(m.group(1)) * int(m.group(2))))
+        else:
+            body = say("no ho sé")
+        graded.append({"reply": body, "card": None, "kind": "right" if m else "wrong"})
+        rep.check(bool(re.search(r"##\s*Fact\b", txt, re.I)) or bank_card(txt) is not None,
+                  "Facts obre un exercici", txt.strip().splitlines()[0][:70] if txt.strip() else "(buit)")
 
-    # --- the marker has to agree with the score -----------------------------
+    # --- 🏁 End: the summary, and the persistence ----------------------------
+    txt = press("math-end", "🏁 End")
+    rep.check(bool(txt.strip()), "el tutor fa el resum de tancament", f"{len(txt)} car.")
+    waited = wait_quiet(prof_dir)
+
+    # --- the contract, on every graded reply ---------------------------------
+    no_marker = [g for g in graded if not MARKER.search(g["reply"])]
+    rep.check(not no_marker, "cada resposta rep un marcador",
+              f"{len(no_marker)} de {len(graded)}")
+    no_fix = [g for g in graded if "Correct version:" not in g["reply"]]
+    rep.check(not no_fix, "cada resposta ensenya la versió correcta",
+              f"{len(no_fix)} de {len(graded)}")
+    no_score = [g for g in graded if score_of(g["reply"]) is None]
+    rep.check(not no_score, "cada resposta porta nota", f"{len(no_score)} de {len(graded)}")
+    braced = [BRACE.search(on_screen(r)) for r in replies]
+    rep.check(not any(braced), "cap clau de plantilla a la pantalla",
+              next((m.group(0) for m in braced if m), ""))
+
+    # right answers: high score, green marker; wrong: low score, red marker.
+    # The bank is deterministic — every graded reply must obey, not "most".
+    low = [f"«{g['card']['id']}» → {score_of(g['reply'])}/10" for g in graded
+           if g["kind"] == "right" and (score_of(g["reply"]) or 0) < 8]
+    rep.check(not low, "una resposta correcta del banc rep nota alta (8 o més)", low[0] if low else "")
+    soft = [f"«{g['card']['id']}» → {score_of(g['reply'])}/10" for g in graded
+            if g["kind"] == "wrong" and (score_of(g["reply"]) or 0) >= 6]
+    rep.check(not soft, "una resposta equivocada no passa de 5 (l'SM-2 la donaria per sabuda)",
+              soft[0] if soft else "")
     disagree = []
-    for r in graded:
-        sc = SCORE.search(r)
-        if not sc:
+    for g in graded:
+        sc = score_of(g["reply"])
+        if sc is None:
             continue
-        n = int(re.split(r"\s*/\s*", sc.group(0))[0])
-        # Every traffic light in the reply, not just the first: the failure seen
-        # live was "❌ Close!" at the top and "Score: 2/10 🟢" at the bottom — a
-        # red answer wearing a green badge, in the same message.
-        marks = set(MARKER.findall(r)) - {"✅", "❌"}
-        # ✅/❌ only where they are a verdict. Inside a correction bullet
-        # ("❌ becouse → ✅ because") they are about one word, and an 8/10 with
-        # one small correction legitimately carries both.
-        lines = [l for l in r.split("\n") if l.strip()]
-        verdict = [l for i, l in enumerate(lines) if i == 0 or SCORE.search(l)]
-        marks |= {m for l in verdict for m in MARKER.findall(l)}
-        if n <= 4 and marks & {"🟢", "✅"}:
-            disagree.append(f"🟢/✅ amb {sc.group(0)}")
-        elif n >= 8 and marks & {"🔴", "❌"}:
-            disagree.append(f"🔴/❌ amb {sc.group(0)}")
-    rep.check(not disagree, "el marcador concorda amb la nota",
-              disagree[0] if disagree else "")
+        marks = set(MARKER.findall(g["reply"])) - {"✅", "❌"}
+        if sc <= 4 and marks & {"🟢"}:
+            disagree.append(f"🟢 amb {sc}/10")
+        elif sc >= 8 and marks & {"🔴"}:
+            disagree.append(f"🔴 amb {sc}/10")
+    rep.check(not disagree, "el marcador concorda amb la nota", disagree[0] if disagree else "")
 
-    # --- is it grading her own language? ------------------------------------
-    #
-    # Asking for the Catalan meaning of an English word is a fine exercise: it
-    # tests whether she knows what the word means. What is not fine is marking
-    # her Catalan. A missing accent is not an English mistake, and once it is
-    # filed as an error pattern it comes back days later as an "exercise"
-    # drilling her own language at her.
-    def fold(w: str) -> str:
-        return "".join(ch for ch in unicodedata.normalize("NFD", w.lower())
-                       if unicodedata.category(ch) != "Mn" and ch.isalnum())
+    # --- the steps card: the annotated trace ---------------------------------
+    if steps_wrong:
+        body = steps_wrong["reply"]
+        rep.check("**Passos:**" in body, "la targeta de passos fallida mostra els passos anotats",
+                  body[:80].replace("\n", " "))
+        rep.check("esperat" in body, "cada pas errat diu què s'esperava", "")
+        rep.check("arrossega l'error" in body, "els passos de després marquen que arrosseguen l'error", "")
+        cats = re.findall(r"→ \*\*\"[^\"]+\"\*\* \((\w+)", body)
+        rep.check(bool(cats) and all(c in ERROR_CATEGORIES for c in cats),
+                  "la correcció usa una categoria de la taxonomia matemàtica",
+                  ",".join(cats) if cats else "(cap)")
+        rep.check((score_of(body) or 99) <= 5, "i la nota reflecteix el procediment trencat",
+                  f"{score_of(body)}/10")
 
-    filed = []
-    if (prof_dir / ".records").is_dir():
-        for f in (prof_dir / ".records").glob("*.jsonl"):
-            for line in f.read_text().splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    corrections = json.loads(line).get("corrections") or []
-                except ValueError:
-                    continue
-                for c in corrections:
-                    w, r = str(c.get("wrong", "")), str(c.get("right", ""))
-                    # The harm is not "the right answer is a Catalan word" — a
-                    # recognition exercise asks for exactly that, and marking a
-                    # wrong answer to one is the tutor doing its job. The harm
-                    # is marking her down for an accent or a typo in a word she
-                    # plainly knew: "mati" → "matí". Same word, different skin.
-                    # Not when they differ only in capitals: that is an English
-                    # rule (the student scenario writes "i speak english" on
-                    # purpose), not a diacritic or a letter of her own language.
-                    if w and r and w != r and w.lower() != r.lower() and fold(w) == fold(r):
-                        filed.append(f"{w} → {r}")
-    rep.check(not filed, "no la penalitza per un accent o una lletra de la seva llengua",
-              filed[0] if filed else "")
+    # --- the level wording: m1..m6, never CEFR -------------------------------
+    all_text = "\n".join(replies)
+    leaks = [m.group(0) for m in CEFR_LEAK.finditer(on_screen(all_text))]
+    rep.check(not leaks, "cap menció de nivell CEFR en una sessió de matemàtiques",
+              leaks[0] if leaks else "")
+    # The m1..m6 wording rides on the bank card's competence tag (m4.mult_2digit).
+    # A facts-only run is the model drill with no bank card, so there is no tag
+    # to carry it — assert the level wording only when a bank card was on screen.
+    saw_bank_card = any(g["card"] for g in graded)
+    rep.check((not saw_bank_card) or bool(re.search(r"\bm[1-6]\b", all_text, re.I)),
+              "el nivell es diu m1..m6 (l'etiqueta de competència el porta)",
+              "" if saw_bank_card else "(estri de fets: sense targeta del banc)")
 
-    recs = sorted((prof_dir / ".records").glob("*.jsonl")) if (prof_dir / ".records").is_dir() else []
-    lines = sum(1 for f in recs for l in f.read_text().splitlines() if l.strip())
-    scored = sum(1 for r in graded if SCORE.search(r))
-    rep.check(lines >= max(1, scored - 1), "les respostes arriben a .records/",
-              f"{lines} línies per a {scored} respostes qualificades")
+    # --- the counter, the records, the schedule ------------------------------
+    if total:
+        try:
+            done = int(json.loads((prof_dir / ".daily" / f"lesson-{today}.json").read_text()).get("done") or 0)
+        except (OSError, ValueError):
+            done = -1
+        rep.check(done >= total, "el comptador de la lliçó arriba al final", f"{done} de {total}")
 
-    # --- what happens when she wanders off and comes back ------------------
-    if args.scenario in ("wander", "marathon"):
-        def span(name: str) -> list[str]:
-            a, b = phase.get(name, [0, 0])
-            return [f for fp in asked[a:b] for f in fp]
-
-        back = replies[resumed_at] if resumed_at is not None and resumed_at < len(replies) else ""
-        rep.check(not MENU_RE.search(back) and not GREETING_RE.search(back),
-                  "en tornar a Lesson no torna a saludar ni a mostrar el menú",
-                  back.strip().splitlines()[0][:60] if back.strip() else "(buit)")
-
-        before, after = set(span("lesson_a")), span("lesson_b")
-        rep.check(not (before & set(after)), "la lliçó no repeteix el que ja havia preguntat",
-                  next(iter(before & set(after)), ""))
-
-        done_now = plan_done()
-        rep.check(done_now >= 2, "la lliçó reprèn on era, no de zero",
-                  f"{done_now} de {total} després de tornar")
-
-        # Vocabulary is practice, not the lesson: it counts for the day and must
-        # NOT count against the lesson badge, or the badge fills up with work
-        # the lesson never asked for.
-        d0, d1 = daily_at_detour, daily_after_vocab
-        rep.check(d1.get("graded", 0) > d0.get("graded", 0),
-                  "el que fa a Vocabulary queda desat",
-                  f"graded {d0.get('graded')} → {d1.get('graded')}")
-        rep.check(d1.get("lesson", 0) == d0.get("lesson", 0),
-                  "i no compta com a exercici de la lliçó",
-                  f"lesson {d0.get('lesson')} → {d1.get('lesson')}")
-
-        va, vb = set(span("vocab_a")), span("vocab_b")
-        rep.check(not (va & set(vb)), "en tornar a Vocabulary no repeteix les mateixes paraules",
-                  next(iter(va & set(vb)), ""))
-        rep.check(bool(vb), "i sí que en proposa de noves", f"{len(set(vb))} exercicis")
-
-    # --- the student: right answers must be treated as right ----------------
-    if args.scenario in ("student", "journey", "noisy"):
-        graded_turns = [j for j in judged if j["item"] and j["item"].get("answer")]
-        on_item = [j for j in graded_turns if j["follows"]]
-        # Lesson turns only: they have an item the server assigned (an id). The
-        # free-practice turns of the journey are judged by the bank word instead.
-        lesson_turns = [j for j in graded_turns if j["item"].get("id")]
-        on_lesson = [j for j in lesson_turns if j["follows"]]
-        rep.check(len(on_lesson) >= max(1, (len(lesson_turns) * 2 + 2) // 3),
-                  "l'exercici és sobre l'ítem que el servidor ha assignat",
-                  f"{len(on_lesson)} de {len(lesson_turns)}"
-                  + (f" · no: «{next(j['item']['content'] for j in lesson_turns if not j['follows'])}»"
-                     if len(on_lesson) < len(lesson_turns) else ""))
-
-        def score_of(reply_idx: int) -> int | None:
-            m = SCORE.search(replies[reply_idx]) if reply_idx < len(replies) else None
-            return int(re.split(r"\s*/\s*", m.group(0))[0]) if m else None
-
-        # Only turns whose exercise was about the item: a tutor that ignored the
-        # assignment makes the "right" answer a wrong one, and that is the check
-        # above, not this one.
-        low = [f"«{j['answer']}» → {score_of(j['reply'])}/10" for j in on_item
-               if j["kind"] == "right" and (score_of(j["reply"]) or 0) < 8]
-        rep.check(not low, "una resposta correcta rep nota alta (8 o més)",
-                  low[0] if low else "")
-        # 9 or more, not 8: a slip that is only a capital letter ("i speak english
-        # on mondays") is a small mistake and 8/10 is a fair mark for it.
-        high = [f"«{j['answer']}» → {score_of(j['reply'])}/10" for j in on_item
-                if j["kind"] == "wrong" and (score_of(j["reply"]) or 0) >= 9]
-        rep.check(not high, "una resposta equivocada no rep nota alta (9 o més)",
-                  high[0] if high else "")
-        if args.scenario == "noisy":
-            small = [f"«{j['answer'][:40]}» ({j['variant']}) → {score_of(j['reply'])}/10"
-                     for j in on_item if j["kind"] == "typo" and (score_of(j["reply"]) or 0) < 6]
-            rep.check(not small, "una errada d'una lletra és una errada petita (6 o més)",
-                      small[0] if small else "")
-            lax = [f"«{j['answer'][:40]}» ({j['variant']}) → {score_of(j['reply'])}/10"
-                   for j in on_item if j["variant"] in NOISY_STRICT
-                   and (score_of(j["reply"]) or 0) >= 8]
-            rep.check(not lax, "incompleta, en una altra llengua o buida no arriba a 8",
-                      lax[0] if lax else "")
-            longs = [j for j in on_item if j["variant"] == "long"]
-            lost = [f"«{j['answer'][:30]}…»" for j in longs
-                    if not asked[j["reply"]] and not CLOSING.search(replies[j["reply"]])]
-            rep.check(not lost, "una resposta molt llarga no fa perdre el fil",
-                      lost[0] if lost else "")
-        # A different real word is not "almost there". The schedule counts a 6 as
-        # remembered (quality = score // 2 >= 3), so a 6 for "friend" on llibre
-        # sends the word away for days. Measured 2026-09-20: table→6, rain→6, friend→6.
-        other = [f"«{j['answer']}» → {score_of(j['reply'])}/10" for j in on_item
-                 if j["kind"] == "wrong" and (j["answer"] in DECOYS or not j["item"].get("id"))
-                 and (score_of(j["reply"]) or 0) >= 6]
-        rep.check(not other, "una paraula equivocada no passa de 5 (l'SM-2 la donaria per sabuda)",
-                  other[0] if other else "")
-        green = [j for j in on_item if j["kind"] == "right"
-                 and score_of(j["reply"]) is not None and score_of(j["reply"]) >= 8
-                 and not (set(MARKER.findall(replies[j["reply"]])) & {"🟢", "✅"})]
-        rep.check(not green, "i una de correcta porta marcador verd",
-                  f"«{green[0]['answer']}»" if green else "")
-
-        rec_items: dict[str, list[int]] = {}
-        rf = prof_dir / ".records" / f"{sid}.jsonl"
-        if rf.exists():
-            for line in rf.read_text().splitlines():
-                try:
-                    r = json.loads(line)
-                except ValueError:
-                    continue
-                if r.get("item_id"):
-                    rec_items.setdefault(r["item_id"], []).append(int(r.get("score", 0) or 0))
-        keyed = [j for j in on_lesson if j["item"]["id"] in rec_items]
-        rep.check(len(keyed) >= max(0, len(on_lesson) - 1),
-                  "cada resposta queda registrada amb l'item_id de l'ítem assignat",
-                  f"{len(keyed)} de {len(on_lesson)}")
-        wrongly_scored = [f"{j['item']['id']}: {j['kind']} però registrat {rec_items[j['item']['id']]}"
-                          for j in keyed
-                          if (j["kind"] == "right" and max(rec_items[j["item"]["id"]]) < 8)
-                          or (j["kind"] == "wrong" and min(rec_items[j["item"]["id"]]) >= 9)]
-        rep.check(not wrongly_scored, "i el registre porta una nota que hi concorda",
-                  wrongly_scored[0] if wrongly_scored else "")
-
-    # --- the journey: free practice after the lesson ------------------------
-    if args.scenario == "journey":
-        def free_score(i: int) -> int | None:
-            m = SCORE.search(replies[i])
-            return int(re.split(r"\s*/\s*", m.group(0))[0]) if m else None
-
-        no_grade = [i for i in free_replies if free_score(i) is None]
-        rep.check(not no_grade, "tota resposta en pràctica lliure rep correcció amb nota",
-                  f"{len(no_grade)} de {len(free_replies)} sense nota (torn {no_grade[0]})" if no_grade else "")
-        soft = [i for i in writing_replies if (free_score(i) or 0) >= 9]
-        rep.check(not soft, "una frase amb errors a Writing no rep nota alta (9 o més)",
-                  f"torn {soft[0]}: {free_score(soft[0])}/10" if soft else "")
-        # Writing's feedback has its own heading ("📝 Corrected Version").
-        no_fix = [i for i in writing_replies
-                  if not re.search(r"correct(?:ed)? (?:version|text)|correct answer", replies[i], re.I)]
-        rep.check(len(no_fix) <= len(writing_replies) // 2, "i n'ensenya la versió correcta",
-                  f"{len(writing_replies) - len(no_fix)} de {len(writing_replies)}")
-        # What the Writing exercise asks for must be what the level can write
-        # (skills/math-writing/SKILL.md): A2 does not write an email.
-        if writing_press is not None and writing_press < len(replies):
+    rec_lines: list[dict] = []
+    rf = prof_dir / ".records" / f"{sid}.jsonl"
+    if rf.exists():
+        for line in rf.read_text().splitlines():
             try:
-                level = str(json.loads((prof_dir / "learner-profile.json").read_text())
-                            .get("learner", {}).get("current_level", "")).strip().upper()
-            except (OSError, ValueError):
-                level = ""
-            limits = {"A1": (25, 3), "A2": (45, 6), "B1": (70, 12), "B2": (120, 20)}
-            ex = exercise_tail(replies[writing_press]) or replies[writing_press]
-            if level in limits:
-                max_words, max_sent = limits[level]
-                asked_words = [int(x) for m in re.finditer(r"(\d+)\s*(?:-|–|—|to)\s*(\d+)\s*words", ex, re.I)
-                               for x in m.groups()] + \
-                              [int(m.group(1)) for m in re.finditer(r"(\d+)\+?\s*words", ex, re.I)]
-                asked_sent = [int(x) for m in re.finditer(r"(\d+)\s*(?:-|–|—|to)\s*(\d+)\s*sentences", ex, re.I)
-                              for x in m.groups()] + \
-                             [int(m.group(1)) for m in re.finditer(r"(\d+)\s*sentences", ex, re.I)]
-                bad = []
-                if asked_words and max(asked_words) > max_words:
-                    bad.append(f"{max(asked_words)} paraules (màx. {max_words})")
-                if asked_sent and max(asked_sent) > max_sent:
-                    bad.append(f"{max(asked_sent)} frases (màx. {max_sent})")
-                if level in ("A1", "A2") and re.search(r"\b(?:e-?mail|letter)\b", ex, re.I):
-                    bad.append("un email/carta, tasca de B1")
-                rep.check(not bad, f"Writing demana un text adequat al nivell ({level})",
-                          "; ".join(bad))
-        d0, d1 = daily_at_detour, daily_after_vocab
-        rep.check(d1.get("graded", 0) > d0.get("graded", 0), "el que fa a Vocabulary queda desat",
-                  f"graded {d0.get('graded')} → {d1.get('graded')}")
-        rep.check(d1.get("lesson", 0) == d0.get("lesson", 0), "i no compta com a exercici de la lliçó",
-                  f"lesson {d0.get('lesson')} → {d1.get('lesson')}")
-        # Words she ANSWERED in the first visit. One shown and left unanswered may
-        # come back (that is not a repeat), so it is not on this list.
-        va = {f for i in answer_idx if phase["vocab_a"][0] <= i < phase["vocab_a"][1]
-              and (free_score(i) or 0) >= 8
-              for f in asked[i - 1]}
-        vb = {f for fp in asked[phase["vocab_b"][0] - 1:phase["vocab_b"][1]] for f in fp}
-        rep.check(not (va & vb), "en tornar a Vocabulary no repeteix les mateixes paraules",
-                  next(iter(va & vb), ""))
-        rep.check(bool(vb), "i sí que en proposa de noves", f"{len(vb)} exercicis")
+                rec_lines.append(json.loads(line))
+            except ValueError:
+                pass
+    bank_graded = [g for g in graded if g["card"]]
+    rep.check(len(rec_lines) >= len(bank_graded),
+              "cada resposta del banc arriba a .records/",
+              f"{len(rec_lines)} registres per a {len(bank_graded)} respostes")
+    rec_ids = {r.get("item_id") for r in rec_lines}
+    # Only the REVIEW lesson cards come from the SR queue, so only those carry
+    # an item_id in their record. Go cards are fresh bank picks with no queue
+    # entry — they must NOT have one. Every lesson card answered right must be
+    # keyed, or its SM-2 schedule never advances.
+    lesson_right = [i for i in dict.fromkeys(served) if first_kind.get(i) == "right"]
+    unkeyed = [i for i in lesson_right if i not in rec_ids]
+    rep.check(not unkeyed,
+              "les targetes de la lliçó es registren amb l'item_id de la cua",
+              f"{len(unkeyed)} sense clau: {unkeyed[:3]}" if unkeyed
+              else f"{len(lesson_right)} ítems sembrats, tots clau")
+    if steps_wrong:
+        trace = next((r.get("steps") for r in rec_lines
+                      if r.get("item_id") == steps_wrong["card"]["id"]), None)
+        ok_false = [s for s in trace or [] if not s.get("ok")]
+        prop = [s for s in trace or [] if s.get("propagated")]
+        rep.check(bool(ok_false) and bool(prop),
+                  "el registre de passos porta la traça: pas fallit i error propagat",
+                  json.dumps(trace)[:120] if trace else "(sense steps)")
 
-        # A card must ask in the language it is not written in: "Català: finestra —
-        # Què vol dir en català?" asks the Catalan word's meaning in Catalan. The
-        # tutor mixes the two card templates of skills/math-vocab/SKILL.md.
-        span_vocab = [i for a, b in (phase["vocab_a"], phase["vocab_b"]) for i in range(a - 1, b)]
-        cards = [exercise_tail(replies[i]) for i in span_vocab if 0 <= i < len(replies)]
-        mixed = [c for c in cards
-                 if re.search(r"\*\*(?:Catal[àa]|Catalan):\*\*", c)
-                 and re.search(r"en catal[àa]|in catalan", c, re.I)]
-        rep.check(not mixed, "les targetes de Vocabulary no demanen en la llengua de la paraula",
-                  f"{len(mixed)} de {len(cards)} targetes" if mixed else "")
+    sr = {}
+    try:
+        sr = json.loads((prof_dir / "spaced-repetition.json").read_text()).get("items") or {}
+    except (OSError, ValueError):
+        pass
+    # Only the items whose FIRST (queue) pick was right advance SM-2. The steps
+    # card we answer wrong first comes back via "weak" and is answered right
+    # then — but a weak pick carries no item_id, so its schedule does not move
+    # (it stays due tomorrow with reps 0, which the next check asserts).
+    queue_right = [i for i in served if first_kind.get(i) == "right"]
+    not_moved = [i for i in queue_right if i in sr and sr[i].get("due_date") == today]
+    rep.check(not not_moved, "el que s'encerta deixa d'estar pendell (SM-2 avançat)",
+              not_moved[0] if not_moved else "")
+    grew = [i for i in queue_right if i in sr and (sr[i].get("repetitions") or 0) < 1]
+    rep.check(not grew, "i suma una repetició", grew[0] if grew else "")
+    if steps_wrong:
+        iid = steps_wrong["card"]["id"]
+        it = sr.get(iid) or {}
+        rep.check(it.get("due_date") in (today, tomorrow) and (it.get("repetitions") or 0) == 0,
+                  "el pas fallit torna demà, no marxa",
+                  f"{iid}: due {it.get('due_date')} reps {it.get('repetitions')}")
 
-    # --- a closed lesson has to stay closed --------------------------------
-    if args.scenario in ("full", "student", "journey", "noisy"):
-        rep.check(closed_early_at is not None, "la lliçó arriba al seu final",
-                  f"{plan_done()} de {total} després de {len(graded)} respostes")
-        if after_close is not None:
-            end_closed = journey_from if journey_from is not None else len(asked)
-            extra_new = [f for i in range(after_close, end_closed) for f in new_each_turn[i]]
-            rep.check(not extra_new, "i s'hi queda: cap exercici nou després de tancar",
-                      extra_new[0] if extra_new else "")
-            rep.check(all(not CLOSING.search(r) or True for r in replies[after_close:end_closed]),
-                      "segueix responent sense trencar-se", "")
-            pointed = sum(1 for r in replies[after_close:end_closed]
-                          if re.search(r"bot(ó|ons)|button|🎲|🔁|📚", r, re.I))
-            rep.check(pointed >= 1, "i l'orienta cap als botons",
-                      f"{pointed} de {end_closed - after_close} torns")
+    results = sorted((prof_dir / "results").glob("*.md"), key=lambda f: f.stat().st_mtime) \
+        if (prof_dir / "results").is_dir() else []
+    rep.check(bool(results) and results[-1].stat().st_mtime >= started,
+              "el fitxer de resultats es escriu al tancament",
+              results[-1].name if results else "(cap)")
+    # The session-log is checked by THIS run's number, not by the raw count:
+    # repeated e2e runs and the stale-session sweeper leave extra entries
+    # around, so "the count grew" is flaky. The draft holds the number Capa A
+    # assigned to this live session; the log must contain exactly that one.
+    this_number = None
+    try:
+        draft = json.loads((prof_dir / "session-draft.json").read_text())
+        if draft.get("live_session") == sid:
+            this_number = draft.get("session_id")
+    except (OSError, ValueError):
+        pass
+    try:
+        logged = [s.get("session_id") for s in
+                  (json.loads((prof_dir / "session-log.json").read_text()).get("sessions") or [])]
+    except (OSError, ValueError):
+        logged = []
+    rep.check(bool(this_number) and this_number in logged,
+              "la sessió queda al session-log",
+              f"{this_number} ∈ {logged[-3:]}" if this_number else "(el draft no porta número)")
 
-    # --- and what about yesterday? -----------------------------------------
-    #
-    # The one thing the whole system is built on: what she answered correctly
-    # does not come back tomorrow, and what she missed does. Previous days live
-    # in the archived records that flowed-advance-day.py sets aside.
-    knew, missed = set(), set()
-    rec_dir = prof_dir / ".records"
-    if rec_dir.is_dir():
-        for f in rec_dir.glob(".*.jsonl.day-*"):
-            for line in f.read_text().splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    r = json.loads(line)
-                except ValueError:
-                    continue
-                ex = str(r.get("exercise", "")).strip().lower()
-                if not ex:
-                    continue
-                (knew if int(r.get("score", 0) or 0) >= 8 else missed).add(ex)
-    if knew or missed:
-        today_asked = {f for fp in asked for f in fp}
-        again = sorted(knew & today_asked)
-        rep.check(not again, "no li torna a preguntar el que ja sabia",
-                  f"«{again[0]}»" if again else f"{len(knew)} encertats ahir, cap repetit")
-        if missed:
-            rep.check(bool(missed & today_asked), "i sí que li torna el que va fallar",
-                      f"{len(missed & today_asked)} de {len(missed)}")
-
+    # --- server guards and warnings -----------------------------------------
     guards = prof_dir / ".metrics" / "guards.jsonl"
     fired = []
-    all_events: list[dict] = []
     if guards.exists():
         for line in guards.read_text().splitlines():
             try:
@@ -1162,11 +975,7 @@ def run(args, quiet: bool = False) -> Report | int:
                 continue
             if g.get("session") != sid:
                 continue
-            all_events.append(g)
-            note = g.get("note", "")
-            # "rewritten" is the OUTCOME of the line above it, not a second
-            # intervention. Counting both doubled every guard figure we have
-            # compared runs on: 11 events were five triggers and their rewrites.
+            note = str(g.get("note", ""))
             if note.strip().startswith("rewritten"):
                 continue
             fired.append(note[:70])
@@ -1175,42 +984,16 @@ def run(args, quiet: bool = False) -> Report | int:
         print(f"\nel guard del servidor ha actuat {len(fired)} cop(s):")
         for f in fired:
             print(f"  ↻ {f}")
-    if all_events:
-        # The full lines, rewrites included, in the order they happened: the
-        # console shows 70 characters of each and drops the outcome, and it is
-        # the outcome ("rewrite rejected", "rewritten") that says what the
-        # student would have seen.
-        transcript.append("## guard del servidor (text complet, en ordre)\n\n" + "\n".join(
-            "- " + json.dumps({k: v for k, v in g.items() if k != "session"}, ensure_ascii=False)
-            for g in all_events))
 
-    notes_file = prof_dir / ".metrics" / "notes.jsonl"
-    turn_notes: list[str] = []
-    if notes_file.exists():
-        for line in notes_file.read_text().splitlines():
-            try:
-                nt = json.loads(line)
-            except ValueError:
-                continue
-            if nt.get("session") != sid:
-                continue
-            turn_notes.append("- " + json.dumps({k: v for k, v in nt.items() if k != "session"},
-                                                ensure_ascii=False))
-    if turn_notes:
-        # What the server told the tutor, per turn, beside the learner's answer:
-        # the way to see a note and a guard asking for opposite things.
-        transcript.append("## notes del servidor al tutor (per torn)\n\n" + "\n".join(turn_notes))
-
-    log = Path(f"/tmp/math-web-{args.port}.log")
-    warns = [l for l in log.read_text(errors="ignore").splitlines()
-             if "⚠" in l and sid in l] if log.exists() else []
+    warns = [l for l in log_path.read_text(errors="ignore").splitlines()
+             if "⚠" in l and sid in l] if log_path.exists() else []
     rep.check(not warns, "cap avís del servidor per aquesta sessió",
               warns[0][:90] if warns else "")
 
     if args.transcript:
         Path(args.transcript).expanduser().write_text(
-            f"# Lliçó e2e — {prof_dir.name} — {sid}\n\n" + "\n\n---\n\n".join(transcript),
-            encoding="utf-8")
+            f"# Sessió matemàtica e2e — {prof_dir.name} — {sid}\n\n"
+            + "\n\n---\n\n".join(transcript), encoding="utf-8")
         print(f"\ntranscripció: {args.transcript}")
 
     if quiet:
@@ -1223,15 +1006,15 @@ def run(args, quiet: bool = False) -> Report | int:
     return rep
 
 
-# ---- the "student" scenario: a learner who knows some of the answers ---------
+# ---- the days scenario's learner: one who knows some of the answers ---------
 #
-# The other scenarios answer junk, and on a retry the tutor's own correction.
-# That proves the tutor can grade a wrong answer and nothing about a right one:
-# whether a correct answer earns a high score, a green marker and the right
-# item_id was never tested. The server knows what it asked (notes.jsonl carries
-# the assigned item) and the seed knows that item's answer, so this learner can
-# answer right on purpose, and wrong the way a real learner is wrong.
-STUDENT_PLAN = ["right", "wrong", "right", "right", "wrong", "right"]
+# Answering junk only proves the tutor can grade a wrong answer, never whether
+# a right one earns a high score, a green marker and the right item_id. The
+# server knows what it asked (notes.jsonl carries the assigned item) and the
+# seed knows that item's answer, so this learner can answer right on purpose,
+# and wrong the way a real learner is wrong. (WP1.9: the model-driven scenarios
+# that used these — wander/marathon/journey/noisy/topics — are gone with the
+# language path; 🎓 days still drives them.)
 DECOY = "table"
 DECOYS = (DECOY, "dog")
 
@@ -1244,72 +1027,6 @@ def decoy_for(item: dict | None) -> str:
            str((item or {}).get("content", "")).strip().lower()}
     return next((d for d in DECOYS if d not in own), DECOYS[-1])
 
-# ---- the "noisy" scenario: a learner who is not tidy --------------------------
-#
-# The student answers exactly the item's answer, or a fixed decoy. Nobody
-# answers like that. Real answers come with a full stop, in a sentence, with a
-# Catalan lead-in, in capitals, with a letter missing, half finished, in the
-# wrong language, or as a paragraph. The tutor has to tell those apart:
-#   right    — the answer is correct however it is dressed         → 8 or more
-#   typo     — one letter off: a small mistake, not a wrong answer → 6 or more
-#   strict   — incomplete, in the wrong language, or nothing       → below 8
-#   wrong    — her own recorded slip                               → below 9
-NOISY_PLAN = ["dot", "sentence", "typo", "partial", "upper", "catalan", "long",
-              "noaccents", "wrong", "question"]
-NOISY_STRICT = {"partial", "catalan", "question"}
-
-
-def noisy_answer(variant: str, item: dict | None) -> tuple[str, str]:
-    """(what she types, the class it belongs to) — see NOISY_PLAN.
-
-    Pure, so the rules of what counts as right are tested without a model."""
-    if not item or not item.get("answer"):
-        return "no ho sé", "wrong"
-    ans = str(item["answer"]).strip()
-    iid = str(item.get("id", ""))
-    words = ans.split()
-    vocab = iid.startswith("vocabulary_")
-    spelling = iid.startswith("spelling_")
-    if variant == "dot":
-        return ans + ".", "right"
-    if variant == "sentence":
-        return f"crec que és: {ans}", "right"
-    if variant == "noaccents":
-        return f"ho tinc, es {_fold_text(ans) if not spelling else ans}", "right"
-    if variant == "upper":
-        return (ans.upper(), "right") if vocab else (ans[:1].upper() + ans[1:], "right")
-    if variant == "long":
-        return ("Uf, no n'estic segura del tot, però ho vaig veure ahir a classe i em sembla "
-                f"que era així: {ans}. Però també podria ser una altra cosa, no ho sé, "
-                "perquè a vegades em confonc amb el que ens va dir la profe la setmana passada "
-                "sobre aquestes coses i després em quedo en blanc. Bé, provo aquesta.", "right")
-    if variant == "typo":
-        if spelling:               # the typo IS the exercise there
-            return ans + ".", "right"
-        if len(words) == 1 and len(ans) >= 5:
-            return ans[:2] + ans[3:], "typo"          # a letter dropped
-        if len(words) > 1:
-            w = max(range(len(words)), key=lambda i: len(words[i]))
-            x = words[w]
-            if len(x) >= 5:
-                words[w] = x[:1] + x[2] + x[1] + x[3:]  # two letters swapped
-                return " ".join(words), "typo"
-        return ans, "right"
-    if variant == "partial":
-        if len(words) >= 3:
-            return " ".join(words[:2]), "partial"
-        return "no ho sé", "partial"
-    if variant == "catalan":
-        # Only a vocabulary card's content is a Catalan word; for a grammar item it is
-        # the English sentence itself (the first version sent the right answer and
-        # blamed the tutor for marking it 10/10).
-        content = str(item.get("content", "")).strip() if str(item.get("id", "")).startswith("vocabulary_") else ""
-        return (content or "no sé com es diu això en anglès, ho deixo així"), "catalan"
-    if variant == "question":
-        return "?", "question"
-    if variant == "wrong":
-        return item.get("learner_wrote") or decoy_for(item), "wrong"
-    return ans, "right"
 
 
 def onscreen_item(notes_path: Path, sr_path: Path, sid: str) -> dict | None:
@@ -1370,16 +1087,6 @@ def follows_item(item: dict | None, reply: str) -> bool:
     return len(want & _words(exercise_tail(reply))) / len(want) >= 0.5
 
 
-# ---- the "journey" scenario: the lesson, and then free practice ----------------
-#
-# The lesson is the mandatory minimum; everything after it is free practice,
-# graded like always. This walks past the end of the lesson into Vocabulary and
-# Writing and back, answering right and wrong on purpose, to see that free
-# practice grades every answer and never asks an answered question again.
-FREE_VOCAB_PLAN = ["right", "wrong", "right", "wrong"]
-FREE_VOCAB_BACK = ["right", "wrong"]
-FREE_WRITING = ["I have two childs and she go to school yesterday.",
-                "Yesterday I am going to the market and buyed three apple."]
 # The tutor picks its own words in free Vocabulary (beure, dia, plat, cotxe,
 # telefon…), and every one outside the bank was an unjudged "no ho sé".
 EXTRA_WORDS = [
@@ -2484,104 +2191,14 @@ def datetime_day(rec: dict) -> str:
     return datetime.fromtimestamp((rec.get("ts") or 0) / 1000).date().isoformat()
 
 
-# ---- the "topics" scenario: the teacher's list steers the tutor, not the queue ----
-#
-# `topics.txt` in the profile is read by the server every turn (no restart) and
-# reaches the tutor as a note. Two things have to hold: free practice (Writing)
-# is built around a topic, and the Lesson's due items still come first. The file
-# is written for the run and put back afterwards.
-TOPIC_LINES = ["present perfect (have / has + past participle)", "food and restaurants"]
-TOPIC_WORDS = re.compile(
-    r"present perfect|\bhave (?:you )?(?:ever|never|already|just|been|eaten|visited|seen)\b|\bhas (?:she|he)?\s*\w*ed\b|"
-    r"\b(?:ever|never|already|yet|since)\b|restaurant|menu|waiter|order|dinner|lunch|breakfast|food|meal|"
-    r"eat|dish|table for", re.I)
-LEAK = re.compile(r"teacher wants these topics|topics\.txt|this note", re.I)
-
-
-def mentions_topic(text: str) -> bool:
-    return bool(TOPIC_WORDS.search(text or ""))
-
-
-def run_topics(args, cli, prof_dir: Path, rep: "Report", quiet: bool):
-    tf = prof_dir / "topics.txt"
-    before = tf.read_text(encoding="utf-8") if tf.exists() else None
-    tf.write_text("# e2e topics\n" + "\n".join(TOPIC_LINES) + "\n", encoding="utf-8")
-    transcript: list[str] = []
-    replies: list[str] = []
-    try:
-        sid = cli.new_session()
-        print(f"perfil {prof_dir.name} · port {args.port} · temes: {TOPIC_LINES}")
-        greeting = tutor_text(cli.command(sid, "math-learn"))
-        transcript.append(f"## /math-learn\n\n{greeting}")
-        if not greeting.strip():
-            print("\n❌ el tutor no ha dit res: el model no respon.", file=sys.stderr)
-            return 2
-
-        # 1. free practice: Writing, twice (the rotation moves with the answers)
-        w1 = tutor_text(cli.command(sid, "math-writing"))
-        transcript.append(f"## ✍️ Writing\n\n{w1}")
-        replies.append(w1)
-        rep.check(mentions_topic(exercise_tail(w1) or w1), "Writing es construeix al voltant d'un tema de la llista",
-                  (exercise_tail(w1) or w1)[:110].replace("\n", " "))
-        a1 = tutor_text(cli.say(sid, "Yesterday I went to a restaurant and I have eaten pizza with my friends."))
-        transcript.append(f"## resposta (Writing)\n\n{a1}")
-        replies.append(a1)
-        rep.check(bool(SCORE.search(a1)), "i la resposta a Writing es corregeix amb nota", "")
-
-        # 2. Vocabulary: a card is still a card
-        v1 = tutor_text(cli.command(sid, "math-vocab"))
-        transcript.append(f"## 📚 Vocabulary\n\n{v1}")
-        replies.append(v1)
-        rep.check(bool(re.search(r"Word \d+/\d+|\*\*(?:Catal|English)", v1)), "Vocabulary segueix donant targetes", v1[:80].replace("\n", " "))
-
-        # 3. the Lesson: the queue wins
-        due = due_now(prof_dir)
-        first = tutor_text(cli.command(sid, "math-review"))
-        transcript.append(f"## 🎓 Lesson\n\n{first}")
-        replies.append(first)
-        notes_path = prof_dir / ".metrics" / "notes.jsonl"
-        sr_path = prof_dir / "spaced-repetition.json"
-        if due:
-            ok = 0
-            shown = 0
-            prev = first
-            for n in range(min(3, len(due))):
-                item = onscreen_item(notes_path, sr_path, sid)
-                if item and item.get("answer"):
-                    shown += 1
-                    ok += 1 if follows_item(item, prev) else 0
-                body = tutor_text(cli.say(sid, student_answer("right", item)))
-                transcript.append(f"## resposta Lesson {n + 1}\n\n{body}")
-                replies.append(body)
-                prev = body
-            rep.check(shown > 0 and ok >= max(1, (shown * 2 + 2) // 3),
-                      "a la Lliçó mana la cua, no la llista de temes", f"{ok} de {shown}")
-
-        leaked = [r[:60] for r in replies if LEAK.search(r)]
-        rep.check(not leaked, "el tutor no anuncia ni cita la nota dels temes", leaked[0] if leaked else "")
-    finally:
-        # Put the profile back as it was: a topics file left behind steers every
-        # later run and nobody would know why.
-        if before is None:
-            tf.unlink(missing_ok=True)
-        else:
-            tf.write_text(before, encoding="utf-8")
-    if args.transcript:
-        Path(args.transcript).expanduser().write_text(
-            f"# Temes — {prof_dir.name}\n\n" + "\n\n---\n\n".join(transcript), encoding="utf-8")
-    if quiet:
-        bad = [lbl for ok, lbl, _ in rep.rows if not ok]
-        print(f"  → {len(rep.rows) - len(bad)}/{len(rep.rows)} bé" + (f" · falla: {', '.join(bad)}" if bad else ""))
-        return rep
-    rep.render()
-    return rep
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("profile", nargs="?", default="test-en", help="profile id under ~/.flowed/")
+    ap.add_argument("profile", nargs="?", default="test-math",
+                    help="profile id under the data home (~/.flowmath/)")
     ap.add_argument("--dir", help="explicit profile directory")
-    ap.add_argument("--port", type=int, default=4103)
+    ap.add_argument("--port", type=int, default=4200)
     ap.add_argument("--course", choices=("A1", "A2"), default="A2",
                     help="curriculum: quin curs prova (A2 amb l'A1 certificat per col·locació; A1 des de zero)")
     ap.add_argument("--test-mode", choices=("pass", "fail"), default="pass", dest="test_mode",
@@ -2595,17 +2212,12 @@ def main() -> int:
     ap.add_argument("--transcript", help="write everything the tutor said to this file")
     ap.add_argument("--user", default="opencode", help="basic-auth user (default: opencode)")
     ap.add_argument("--password", help="basic-auth password (default: the profile's .web-password)")
-    ap.add_argument("--scenario", choices=("lesson", "wander", "full", "marathon", "student", "journey", "days", "noisy", "topics", "curriculum", "ladder"), default="lesson",
-                    help="lesson: una lliçó seguida · wander: Lesson→Vocabulary→Lesson→Vocabulary "
-                         "(reprèn on tocava? es desa? repeteix?) · full: fins al tancament i dos torns més · "
-                         "marathon: 16 respostes i tres desviacions, fins que la poda d'historial entri · "
-                         "student: contesta bé i malament a propòsit els ítems que el servidor assigna · "
-                         "journey: student + després Vocabulary, Writing i Vocabulary un altre cop, "
-                         "amb respostes bones i dolentes i sense repetir res · "
-                         "noisy: com student però amb respostes brutes (punt final, frase, majúscules, "
-                         "una lletra de menys, a mitges, en català, molt llargues) · "
-                         "topics: escriu un topics.txt temporal i comprova que Writing hi va i que la cua "
-                         "de la Lliçó segueix manant · "
+    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "facts", "review", "days", "curriculum", "ladder"), default="lesson",
+                    help="lesson (WP1.9, per defecte): 🔁 Review amb la cua sembrada (compute/compare/"
+                         "steps, la primera de passos fallida a propòsit) + 🎲 Go + 📚 Facts + 🏁 End i la "
+                         "persistència · review: només la lliçó · steps: una lliçó només de targetes de "
+                         "passos · go: només targetes del banc a pràctica lliure · facts: només el drill "
+                         "de fets · "
                          "days: N dies seguits (el rellotge avança); l'SM-2 ha de fer tornar el "
                          "que es falla i allunyar el que s'encerta · "
                          "curriculum: N dies d'un alumne simulat A1→A2 en pràctica lliure (Mix + Vocabulary): "
@@ -2622,8 +2234,6 @@ def main() -> int:
                     default=os.environ.get("FLOWED_STUDENT_URL", "http://127.0.0.1:12322/v1"),
                     help="escenari curriculum: model OpenAI-compatible que respon la gramàtica com a "
                          "alumne (per defecte el llama del 12322; pot ser el mateix que el tutor)")
-    ap.add_argument("--always-wrong", action="store_true", dest="always_wrong",
-                    help="never give a right answer (stress test: how long does it retry?)")
     ap.add_argument("--repeat", type=int, default=1,
                     help="repetir l'escenari N vegades i donar una TAXA, no una foto. "
                          "Imprescindible per comparar paràmetres de mostreig")

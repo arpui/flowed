@@ -33,6 +33,17 @@ tb_model_port() {
 }
 
 tb_model_up() {
+  # A remote or externally-managed model (FLOWED_DEEP_MANAGED=0, or a
+  # FLOWED_DEEP_BASE_URL that is not the local llama): probe the endpoint the
+  # app itself will use, and never start anything — the machine that hosts it
+  # is not this one. (WP1.9: this fork's tutor runs against a remote llama;
+  # the bench must never wake the local one.)
+  local base="${FLOWED_DEEP_BASE_URL:-}"
+  if [[ "${FLOWED_DEEP_MANAGED:-1}" == "0" || ( -n "$base" && "$base" != http://127.0.0.1:* && "$base" != http://localhost:* ) ]]; then
+    [[ -n "$base" ]] || return 1
+    curl -fsS -m 5 "${base%/}/models" >/dev/null 2>&1
+    return $?
+  fi
   curl -fsS -m 3 "http://127.0.0.1:$(tb_model_port)/health" >/dev/null 2>&1
 }
 
@@ -41,8 +52,13 @@ tb_ensure_model() {
   [[ "${1:-}" == "--no-start" ]] && no_start=1
   port="$(tb_model_port)"
   if tb_model_up; then
-    echo "model deep :$port: ja corre, no el toco"
+    echo "model deep: ja corre, no el toco"
     return 0
+  fi
+  if [[ "${FLOWED_DEEP_MANAGED:-1}" == "0" ]]; then
+    echo "❌ el model deep no respon (${FLOWED_DEEP_BASE_URL:-sense FLOWED_DEEP_BASE_URL}) —" \
+         "és extern (FLOWED_DEEP_MANAGED=0) i no l'aixeco: no és d'aquesta màquina" >&2
+    return 3
   fi
   if [[ $no_start -eq 1 ]]; then
     echo "❌ el model deep no respon a :$port i has demanat --no-start" >&2

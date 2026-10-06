@@ -5,20 +5,17 @@
 #
 #   scripts/flowed-bench.sh                      # bateria de temperatura
 #   scripts/flowed-bench.sh --quick              # només la base, per mirar si tot rutlla
-#   scripts/flowed-bench.sh --student --quick   # l'alumne que sap algunes respostes (encerta i falla)
-#   scripts/flowed-bench.sh --journey --quick   # lliçó + Vocabulary + Writing + Vocabulary, sense repetir res
+#   scripts/flowed-bench.sh --steps --quick     # una lliçó només de targetes de passos (traça anotada)
+#   scripts/flowed-bench.sh --go --quick        # només targetes del banc a pràctica lliure
+#   scripts/flowed-bench.sh --facts --quick     # només el drill de fets (model)
+#   scripts/flowed-bench.sh --review --quick    # només la lliçó (cua sembrada)
 #   scripts/flowed-bench.sh --days --quick --repeat 1   # 5 dies seguits: l'SM-2 fa tornar el fallat i allunya l'encertat
-#   scripts/flowed-bench.sh --noisy --quick             # respostes brutes: punt, frase, majúscules, errada, a mitges, en català, llarga
-#   scripts/flowed-bench.sh --topics --quick            # topics.txt: Writing hi va, la cua de la Lliçó segueix manant
 #   scripts/flowed-bench.sh --curriculum --quick --repeat 1   # 5 dies d'un alumne simulat A1→A2 en pràctica lliure: competència assignada, exercici, registre, camí
 #   scripts/flowed-bench.sh --curriculum --quick --repeat 1 --span 12   # el mateix, 12 dies (per veure consolidar i el cicle d'oblit)
 #   scripts/flowed-bench.sh --ladder --quick --repeat 1 --span 3   # A0→A1→prova de nivell→tall→A2 amb el tutor real (3 dies d'A1, 2 d'A2)
 #   scripts/flowed-bench.sh --ladder-fail --quick --repeat 1 --span 3   # el mateix, però la prova es contesta tot malament: el curs NO es tanca
 #   scripts/flowed-bench.sh --ladder-stop --quick --repeat 1 --span 3   # para just abans de la prova (~70-80%): la fas tu mateix a la web
-#   scripts/flowed-bench.sh --student --due 2  --quick   # lliçó petita (2 pendents)
-#   scripts/flowed-bench.sh --student --due 15 --quick   # lliçó gran (15 pendents)
-#   scripts/flowed-bench.sh --journey --level A1 --quick # perfil A1 (test-en-a1); també B1
-#   scripts/flowed-bench.sh --port 4104 --repeat 5
+#   scripts/flowed-bench.sh --port 4201 --repeat 5
 #   scripts/flowed-bench.sh --keep-model         # no aturis el model encara que l'hagi aixecat el bench
 #   scripts/flowed-bench.sh --no-start           # no aixequis res: si el model no hi és, avorta
 #
@@ -32,13 +29,13 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PROFILE=test-en
-PORT=4103
+PROFILE=test-math
+PORT=4200
 REPEAT=3
 QUICK=0
 KEEP_MODEL=0
 NO_START=0
-SCENARIOS=(--scenario wander)
+SCENARIOS=(--scenario lesson)
 LEVEL=""
 DUE=""
 SPAN=""
@@ -56,16 +53,16 @@ while [[ $# -gt 0 ]]; do
     --span)    SPAN="$2";    shift 2 ;;
     --keep-model) KEEP_MODEL=1; shift ;;
     --no-start)   NO_START=1;   shift ;;
-    --student) SCENARIOS=(--scenario student); shift ;;
-    --journey) SCENARIOS=(--scenario journey); shift ;;
+    --lesson)  SCENARIOS=(--scenario lesson);  shift ;;
+    --go)      SCENARIOS=(--scenario go);      shift ;;
+    --steps)   SCENARIOS=(--scenario steps);   shift ;;
+    --facts)   SCENARIOS=(--scenario facts);   shift ;;
+    --review)  SCENARIOS=(--scenario review);  shift ;;
     --days)    SCENARIOS=(--scenario days);    shift ;;
-    --noisy)   SCENARIOS=(--scenario noisy);   shift ;;
-    --topics)  SCENARIOS=(--scenario topics);  shift ;;
     --curriculum) SCENARIOS=(--scenario curriculum); shift ;;
     --ladder)  SCENARIOS=(--scenario ladder);  shift ;;
     --ladder-fail) SCENARIOS=(--scenario ladder); TEST_MODE=fail; shift ;;
     --ladder-stop) SCENARIOS=(--scenario ladder); STOP_BEFORE_TEST=1; shift ;;
-    --full)    SCENARIOS=(--scenario wander --scenario full --scenario marathon); shift ;;
     -h|--help) sed -n '2,28p' "$0"; exit 0 ;;
     *) echo "opció desconeguda: $1" >&2; exit 2 ;;
   esac

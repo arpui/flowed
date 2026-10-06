@@ -336,5 +336,137 @@ class StructuredRecordsTest(CapaABTest):
                          "the narrated answer was dropped")
 
 
+class SessionRotationTest(unittest.TestCase):
+    """WP1.9: each live session gets its OWN session number.
+
+    The draft used to rotate on the number parsed from the transcript, but that
+    number lives in the read-db state block — pinned to the system prompt, never
+    a part — so the parse always returned "session-001". Every session of a day
+    folded into one draft, and update-db kept restoring one T0 snapshot while
+    re-applying a payload that mixed two sessions' answers. Rotate on the SQLite
+    session id instead. Seen live in the WP1.9 e2e: a seeded review queue had its
+    due dates moved by the PREVIOUS session's records before the learner answered
+    a single card.
+    """
+
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp(prefix="math-rot-"))
+        for name in ("learner-profile", "mastery-db", "mistakes-db", "progress-db",
+                     "session-log", "spaced-repetition"):
+            shutil.copy(TEMPLATES / f"{name}-template.json", self.dir / f"{name}.json")
+        dbp = self.dir / "sessions" / "sessions.db"
+        dbp.parent.mkdir(parents=True)
+        db = sqlite3.connect(dbp)
+        db.executescript("""
+            CREATE TABLE session (id text PRIMARY KEY, project_id text, slug text,
+              directory text, title text, version text, agent text, model text,
+              time_created integer, time_updated integer, last_activity integer, metadata text);
+            CREATE TABLE message (id text PRIMARY KEY, session_id text,
+              time_created integer, time_updated integer, data text);
+            CREATE TABLE part (id text PRIMARY KEY, message_id text, session_id text,
+              time_created integer, time_updated integer, data text);
+        """)
+        now = int(time.time() * 1000)
+        for sid in ("ses_A", "ses_B"):
+            db.execute("INSERT INTO session VALUES (?,'global','math','','t','0','learner','deep',?,?,?,NULL)",
+                       (sid, now, now, now))
+            db.execute("INSERT INTO message VALUES (?||'m1',?,?,?,?)",
+                       (sid, sid, now, now, json.dumps({"role": "user"})))
+            db.execute("INSERT INTO part VALUES (?||'m1p',?||'m1',?,?,?,?)",
+                       (sid, sid, sid, now, now,
+                        json.dumps({"type": "text", "text": '{"learner": {"name": "Test"}}'})))
+            db.execute("INSERT INTO message VALUES (?||'m2',?,?,?,?)",
+                       (sid, sid, now, now, json.dumps({"role": "user"})))
+            db.execute("INSERT INTO part VALUES (?||'m2p',?||'m2',?,?,?,?)",
+                       (sid, sid, sid, now, now,
+                        json.dumps({"type": "text", "text": "24 + 7 = 21"})))
+            db.execute("INSERT INTO message VALUES (?||'m3',?,?,?,?)",
+                       (sid, sid, now, now, json.dumps({"role": "assistant"})))
+            db.execute("INSERT INTO part VALUES (?||'m3p',?||'m3',?,?,?,?)",
+                       (sid, sid, sid, now, now, json.dumps({"type": "text", "text": FEEDBACK})))
+        db.commit()
+        db.close()
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def _run(self, script, *args):
+        env = {**os.environ, "FLOWED_DATA_DIR": str(self.dir)}
+        proc = subprocess.run([sys.executable, str(HOOKS / script), *args],
+                              capture_output=True, text=True, env=env, cwd=REPO_ROOT)
+        self.assertEqual(proc.returncode, 0, f"{script} failed: {proc.stderr}")
+        return proc
+
+    def _draft_sid(self):
+        return json.loads((self.dir / "session-draft.json").read_text())["session_id"]
+
+    def test_two_live_sessions_get_distinct_numbers(self):
+        self._run("accumulate-session.py", "--session-id", "ses_A", "--dir", str(self.dir))
+        first = self._draft_sid()
+        self._run("accumulate-session.py", "--session-id", "ses_B", "--dir", str(self.dir))
+        second = self._draft_sid()
+        self.assertEqual(first, "session-001", "the first session of the day is 001")
+        self.assertEqual(second, "session-002",
+                         "the second live session must not fold into the first's draft")
+
+    def test_persist_uses_the_draft_number(self):
+        self._run("accumulate-session.py", "--session-id", "ses_B", "--dir", str(self.dir))
+        self._run("persist-session.py", "ses_B", "--dir", str(self.dir))
+        logged = [s.get("session_id") for s in
+                  json.loads((self.dir / "session-log.json").read_text())["sessions"]]
+        self.assertIn("session-001", logged,
+                      "Capa B must land on the number Capa A assigned, not the transcript fallback")
+
+
+class EmptySessionSweeperTest(unittest.TestCase):
+    """WP1.9: a session with nothing to persist is DONE, not a failure.
+
+    persist-session.py exited 1 when a session had no graded exercise. The 30-min
+    sweeper read that as "failed, retry" and re-ran Capa B for that session every
+    minute forever; each retry re-entered update-db's T0 machinery and could roll
+    a freshly-seeded spaced-repetition queue back over. Exit 0 so the caller
+    finalises it and stops. Seen live in the WP1.9 e2e (stale probe sessions kept
+    clobbering the seeded queue).
+    """
+
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp(prefix="math-empty-"))
+        for name in ("learner-profile", "mastery-db", "mistakes-db", "progress-db",
+                     "session-log", "spaced-repetition"):
+            shutil.copy(TEMPLATES / f"{name}-template.json", self.dir / f"{name}.json")
+        dbp = self.dir / "sessions" / "sessions.db"
+        dbp.parent.mkdir(parents=True)
+        db = sqlite3.connect(dbp)
+        db.executescript("""
+            CREATE TABLE session (id text PRIMARY KEY, project_id text, slug text,
+              directory text, title text, version text, agent text, model text,
+              time_created integer, time_updated integer, last_activity integer, metadata text);
+            CREATE TABLE message (id text PRIMARY KEY, session_id text,
+              time_created integer, time_updated integer, data text);
+            CREATE TABLE part (id text PRIMARY KEY, message_id text, session_id text,
+              time_created integer, time_updated integer, data text);
+        """)
+        now = int(time.time() * 1000)
+        db.execute("INSERT INTO session VALUES ('ses_E','global','math','','t','0','learner','deep',?,?,?,NULL)",
+                   (now, now, now))
+        db.execute("INSERT INTO message VALUES ('m1','ses_E',?,?,?)",
+                   (now, now, json.dumps({"role": "user"})))
+        db.execute("INSERT INTO part VALUES ('m1p','m1','ses_E',?,?,?)",
+                   (now, now, json.dumps({"type": "text", "text": '{"learner": {"name": "Test"}}'})))
+        db.commit()
+        db.close()
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def test_nothing_to_persist_exits_zero(self):
+        env = {**os.environ, "FLOWED_DATA_DIR": str(self.dir)}
+        proc = subprocess.run([sys.executable, str(HOOKS / "persist-session.py"),
+                               "ses_E", "--dir", str(self.dir)],
+                              capture_output=True, text=True, env=env, cwd=REPO_ROOT)
+        self.assertEqual(proc.returncode, 0,
+                         "an empty session must exit 0 so the sweeper finalises it and stops retrying")
+
+
 if __name__ == "__main__":
     unittest.main()

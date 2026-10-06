@@ -173,54 +173,6 @@ if __name__ == "__main__":
     unittest.main()
 
 
-class JourneyScenarioTest(unittest.TestCase):
-    """La lliçó i, després, pràctica lliure: cal saber de quina paraula parla l'exercici."""
-
-    def test_the_bank_word_is_found_in_the_exercise_on_screen(self):
-        reply = ('## Exercise 1: Vocabulary (Easy)\n\n**Word (Catalan):** "matí"\n\n'
-                 '**Question:** What is the English word for "matí"?\n\n**Type your answer:**')
-        item = e2e.bank_item(reply)
-        self.assertEqual((item["content"], item["answer"]), ("matí", "morning"))
-        self.assertIsNone(item["id"])
-
-    def test_feedback_above_the_exercise_does_not_confuse_it(self):
-        reply = ('Correct! "matí" is morning.\n\n**Score: 10/10** ✅\n\n'
-                 '## Exercise 2\n\n**Question:** What is the English word for "finestra"?')
-        self.assertEqual(e2e.bank_item(reply)["answer"], "window")
-
-    def test_a_word_outside_the_bank_is_left_out(self):
-        self.assertIsNone(e2e.bank_item('## Exercise\n**Question:** What is "xocolata" in English?'))
-
-    def test_right_is_the_answer_and_wrong_is_another_real_word(self):
-        item = {"id": None, "content": "matí", "answer": "morning", "learner_wrote": ""}
-        self.assertEqual(e2e.free_vocab_answer("right", item), "morning")
-        wrong = e2e.free_vocab_answer("wrong", item)
-        self.assertNotEqual(wrong, "morning")
-        self.assertIn(wrong, [en for en, _ in e2e.vocab_bank()])
-        self.assertEqual(e2e.free_vocab_answer("right", None), "no ho sé")
-
-    def test_the_scenario_exists_in_the_cli_and_the_bench(self):
-        src = (REPO / "scripts" / "flowed-e2e.py").read_text()
-        bench = "\n".join(l for l in (REPO / "scripts" / "flowed-bench.sh").read_text().splitlines()
-                          if not l.lstrip().startswith("#"))
-        self.assertIn('"journey"', src)
-        self.assertIn("--journey", bench)
-
-    def test_the_closing_replies_are_not_counted_as_insisting(self):
-        src = (REPO / "scripts" / "flowed-e2e.py").read_text()
-        self.assertIn("closed_early_at <= i < resume_at", src)
-
-    def test_the_bank_knows_the_words_the_tutor_picks_on_its_own(self):
-        for ca in ("beure", "dia", "plat", "cotxe", "telefon"):
-            item = e2e.bank_item(f'## Word 1/10\n**Català:** {ca}\n**Què vol dir en català?**')
-            self.assertIsNotNone(item, ca)
-
-    def test_writing_and_unanswered_words_are_not_read_as_insisting_or_repeating(self):
-        src = (REPO / "scripts" / "flowed-e2e.py").read_text()
-        self.assertIn("if i in writing_replies:", src)
-        self.assertIn("for i in answer_idx if phase[\"vocab_a\"][0] <= i < phase[\"vocab_a\"][1]", src)
-
-
 class KnownOnlyRepeatsTest(unittest.TestCase):
     """El servidor només refusa el que s'ha contestat bé: la resta pot tornar."""
 
@@ -362,90 +314,93 @@ class DaysScenarioTest(unittest.TestCase):
     def test_the_scenario_is_wired_in(self):
         src = (REPO / "scripts" / "flowed-e2e.py").read_text(encoding="utf-8")
         self.assertIn('if args.scenario == "days":', src)
-        self.assertIn('"days", "noisy"', src)
+        self.assertIn('"days", "curriculum", "ladder"', src)
         self.assertIn("--days", (REPO / "scripts" / "flowed-bench.sh").read_text(encoding="utf-8"))
 
 
-class NoisyAnswersTest(unittest.TestCase):
-    """The untidy learner: what she types, and which class it belongs to."""
-    VOC = {"id": "vocabulary_house", "answer": "house", "content": "casa"}
-    SENT = {"id": "agreement_she_goes_to_school", "answer": "She goes to school",
-            "content": "She go to school", "learner_wrote": "She go to school"}
-    SPELL = {"id": "spelling_because", "answer": "because", "content": "becouse"}
+class MathJourneyTest(unittest.TestCase):
+    """WP1.9: the math journey's own machinery — card lookup, answers, seed."""
 
-    def test_every_variant_of_the_plan_is_known(self):
-        for v in e2e.NOISY_PLAN:
-            text, cls = e2e.noisy_answer(v, self.SENT)
-            self.assertTrue(text.strip(), v)
-            self.assertIn(cls, {"right", "typo", "wrong", "partial", "catalan", "question"})
+    STEPS_CARD = ('## Exercise 2: Steps (Hard) Suma de fraccions amb denominadors '
+                  'diferents <span class="comp-tag" data-credit="yes">m4.frac_add_unlike</span>\n\n'
+                  '**Problem:** 1/2 + 2/6\n\n**Una operació per línia:**\n\n**Type your answer:**')
+    CALC_CARD = ('## Exercise 1: Calculation (Hard) Suma de fraccions amb denominadors '
+                 'diferents <span class="comp-tag">m4.frac_add_unlike</span>\n\n'
+                 '**Problem:** 1/2 + 2/6\n\n**Type your answer:**')
 
-    def test_the_plan_has_all_classes(self):
-        classes = {e2e.noisy_answer(v, self.VOC)[1] for v in e2e.NOISY_PLAN}
-        self.assertEqual(classes, {"right", "typo", "wrong", "partial", "catalan", "question"})
+    def test_a_steps_heading_finds_the_steps_item_even_when_the_problem_collides(self):
+        # The m4 pilot: frac_add_unlike.031 (steps) has the SAME problem text as
+        # .001 (compute). Matching on the problem alone answered a Steps card
+        # with a single number and the grader marked it wrong.
+        card = e2e.bank_card(self.STEPS_CARD)
+        self.assertIsNotNone(card)
+        self.assertEqual(card["type"], "steps")
+        self.assertEqual(card["id"], "m4.frac_add_unlike.031")
 
-    def test_dressed_up_right_answers_still_contain_the_answer(self):
-        for v in ("dot", "sentence", "long", "upper", "noaccents"):
-            text, cls = e2e.noisy_answer(v, self.SENT)
-            self.assertEqual(cls, "right", v)
-            self.assertIn("she goes to school", e2e._fold_text(text), v)
+    def test_a_calculation_heading_finds_the_compute_item(self):
+        card = e2e.bank_card(self.CALC_CARD)
+        self.assertIsNotNone(card)
+        self.assertEqual(card["id"], "m4.frac_add_unlike.001")
 
-    def test_a_vocabulary_word_in_capitals(self):
-        self.assertEqual(e2e.noisy_answer("upper", self.VOC), ("HOUSE", "right"))
+    def test_math_answer_right_is_the_answer_and_wrong_is_a_plausible_slip(self):
+        items = e2e.bank_items()
+        comp = items["m4.mult_2digit.001"]
+        self.assertEqual(e2e.math_answer(comp, "right"), comp["answer"])
+        wrong = e2e.math_answer(comp, "wrong")
+        self.assertNotEqual(wrong, comp["answer"])
+        self.assertEqual(sorted(wrong), sorted(comp["answer"]))   # transposition, not junk
 
-    def test_a_typo_is_one_letter_off_not_the_answer(self):
-        text, cls = e2e.noisy_answer("typo", self.VOC)
-        self.assertEqual(cls, "typo")
-        self.assertNotEqual(text, "house")
-        self.assertEqual(len(text), len("house") - 1)
+    def test_math_answer_for_steps_is_the_whole_trace(self):
+        item = e2e.bank_items()["m4.mult_2digit.031"]
+        right = e2e.math_answer(item, "right")
+        self.assertEqual(right.splitlines(), [s["expect"] for s in item["steps"]])
+        wrong = e2e.math_answer(item, "wrong")
+        self.assertNotEqual(wrong.splitlines()[0], right.splitlines()[0])
+        self.assertEqual(wrong.splitlines()[1:], right.splitlines()[1:])
 
-    def test_a_typo_in_a_sentence_swaps_two_letters(self):
-        text, cls = e2e.noisy_answer("typo", self.SENT)
-        self.assertEqual(cls, "typo")
-        self.assertNotEqual(text, "She goes to school")
-        self.assertEqual(sorted(text), sorted("She goes to school"))
+    def test_the_seed_puts_the_items_due_today_and_clears_the_time_machines(self):
+        import json, tempfile, shutil
+        from datetime import date
+        from pathlib import Path
+        d = Path(tempfile.mkdtemp(prefix="e2e-seed-"))
+        self.addCleanup(shutil.rmtree, d, True)
+        (d / "spaced-repetition.json").write_text(json.dumps(
+            {"items": {"old": {"due_date": "2020-01-01"}}}))
+        (d / ".update-state").mkdir()
+        (d / ".update-state" / "session-001@today.json").write_text("{}")
+        e2e.seed_math_review(d, ["m4.mult_2digit.001"])
+        sr = json.loads((d / "spaced-repetition.json").read_text())
+        it = sr["items"]["m4.mult_2digit.001"]
+        self.assertEqual(it["due_date"], date.today().isoformat())
+        self.assertEqual(it["item_type"], "bank_item")
+        # the T0 snapshot is gone: a leftover one would roll the seed back on
+        # the next re-application (measured live on test-math, WP1.9)
+        self.assertEqual(list((d / ".update-state").glob("*.json")), [])
 
-    def test_a_spelling_item_never_gets_a_typo_that_would_be_the_exercise(self):
-        text, cls = e2e.noisy_answer("typo", self.SPELL)
-        self.assertEqual(cls, "right")
-        self.assertIn("because", text)
+    def test_the_seed_keeps_the_ids_in_seed_order(self):
+        """The due queue is served in FILE order among equal due dates, so the
+        seed must leave the ids in the order it was given — and its verify loop
+        re-writes if a hook clobbers that order (WP1.9, seen live)."""
+        import json, tempfile, shutil
+        from pathlib import Path
+        d = Path(tempfile.mkdtemp(prefix="e2e-seed-order-"))
+        self.addCleanup(shutil.rmtree, d, True)
+        (d / "spaced-repetition.json").write_text(json.dumps({"items": {}}))
+        ids = ["m4.mult_2digit.001", "m4.compare_fracs.001", "m4.dec_add.001"]
+        e2e.seed_math_review(d, ids)
+        order = [k for k in json.loads((d / "spaced-repetition.json").read_text())["items"]
+                 if k.startswith("m4.")]
+        self.assertEqual(order, ids)
 
-    def test_partial_is_half_a_sentence_or_nothing(self):
-        self.assertEqual(e2e.noisy_answer("partial", self.SENT), ("She goes", "partial"))
-        self.assertEqual(e2e.noisy_answer("partial", self.VOC), ("no ho sé", "partial"))
-
-    def test_catalan_answer_is_the_catalan_word(self):
-        self.assertEqual(e2e.noisy_answer("catalan", self.VOC), ("casa", "catalan"))
-
-    def test_a_catalan_answer_to_a_grammar_item_is_not_the_english_sentence(self):
-        text, cls = e2e.noisy_answer("catalan", self.SENT)
-        self.assertEqual(cls, "catalan")
-        self.assertNotIn("goes to school", text.lower())
-        self.assertNotIn("go to school", text.lower())
-
-    def test_the_long_one_is_long(self):
-        self.assertGreater(len(e2e.noisy_answer("long", self.VOC)[0]), 250)
-
-    def test_without_an_item_it_is_a_plain_dont_know(self):
-        self.assertEqual(e2e.noisy_answer("dot", None), ("no ho sé", "wrong"))
-
-    def test_the_scenario_is_wired_in(self):
+    def test_the_language_scenarios_are_gone_and_the_math_ones_are_wired(self):
         src = (REPO / "scripts" / "flowed-e2e.py").read_text(encoding="utf-8")
-        self.assertIn('"noisy")', src)
-        self.assertIn("una errada d'una lletra és una errada petita", src)
-        self.assertIn("--noisy", (REPO / "scripts" / "flowed-bench.sh").read_text(encoding="utf-8"))
-
-
-class TopicsScenarioTest(unittest.TestCase):
-    def test_a_topical_exercise_is_recognised(self):
-        self.assertTrue(e2e.mentions_topic("Write 4 sentences about what you have already eaten."))
-        self.assertTrue(e2e.mentions_topic("You are at a restaurant. Order a meal."))
-        self.assertFalse(e2e.mentions_topic("Describe your bedroom in 4 sentences."))
-
-    def test_the_leak_of_the_note_is_recognised(self):
-        self.assertTrue(e2e.LEAK.search("The learner's teacher wants these topics practised: x"))
-        self.assertFalse(e2e.LEAK.search("Great job! Here is your next exercise."))
-
-    def test_wired_in(self):
-        self.assertIn("--topics", (REPO / "scripts" / "flowed-bench.sh").read_text(encoding="utf-8"))
-        self.assertIn('run_topics(args, cli, prof_dir, rep, quiet)',
-                      (REPO / "scripts" / "flowed-e2e.py").read_text(encoding="utf-8"))
+        bench = (REPO / "scripts" / "flowed-bench.sh").read_text(encoding="utf-8")
+        for gone in ('"journey"', '"noisy"', '"topics"', '"wander"', '"marathon"',
+                     "run_topics", "noisy_answer", "learner_answer"):
+            self.assertNotIn(gone, src, gone)
+        for flag in ("--journey", "--noisy", "--topics"):
+            self.assertNotIn(flag, bench, flag)
+        self.assertIn('"lesson", "go", "steps", "facts", "review"', src)
+        self.assertIn("run_math_journey(args, cli, prof_dir, rep, quiet)", src)
+        for flag in ("--steps", "--facts", "--go", "--review"):
+            self.assertIn(flag, bench, flag)

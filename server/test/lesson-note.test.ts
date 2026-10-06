@@ -26,7 +26,6 @@ import {
   followsCompetence,
   followsAssigned,
   feedbackFollowsGrading,
-  writingLengthNote,
   parseTopics,
   exerciseOnlyOf,
   isExerciseGuard,
@@ -534,10 +533,14 @@ check("and only once", ag2.split("await this.enforceTurn(").length === 2);
 const seed = fs.readFileSync(path.join(ROOT, "scripts", "flowed-seed.py"), "utf8");
 check("seeding a past empties today", seed.includes("avui") && seed.includes('".daily"'));
 const e2e = fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8");
-check("and the test refuses to judge a lesson that was already finished",
-  e2e.includes("abans d'aquesta execució"));
-check("a right answer in the learner's own language is not a mistake",
-  e2e.includes("fold(w) == fold(r)"));
+// WP1.9: the math journey cannot meet a half-finished lesson — it seeds its own
+// day (queue, plan, T0 snapshots and the answered-today ledger all cleared)
+// before the first turn. The old refusal of an inherited lesson went with the
+// language scenarios it guarded.
+check("and the test clears the day before judging",
+  e2e.includes('archive(prof_dir / ".daily")') && e2e.includes("seed_math_review"));
+check("no CEFR wording leaks into a math session",
+  e2e.includes("CEFR_LEAK"));
 
 // --- the lesson header says what the server knows --------------------------
 // Seen live: "## Review 7/6 — high", exercise seven of six, in a lesson the
@@ -556,9 +559,11 @@ check("the server applies it inside the lesson only",
 check("a review item that is not a fact is not a card",
   fs.readFileSync(path.join(ROOT, "skills", "math-vocab", "SKILL.md"), "utf8")
     .includes("A facts card needs one right answer"));
+// WP1.9: on the bank path this is server behaviour, not rig bookkeeping —
+// pressing Review again with a card on screen re-shows THAT card instead of
+// skipping it (the `still && !answering` branch in tryBankReviewTurn).
 check("and coming back to an unanswered exercise is not a repetition",
-  fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8")
-    .includes("outstanding"));
+  ag2.includes("still && !answering && still.item"));
 
 // --- a vocabulary card is an exercise too ----------------------------------
 // Verbatim from a Vocabulary practice in which not one card was fingerprinted,
@@ -589,14 +594,20 @@ check("guard events land in the profile, not only in /tmp",
 
 // --- the four uses that were only ever listed ------------------------------
 const e2eSrc = fs.readFileSync(path.join(ROOT, "scripts", "flowed-e2e.py"), "utf8");
+// WP1.9: on the bank path "stays finished" is enforced by the server itself —
+// pressing Review on a finished day returns the fixed closing, never a new
+// exercise (the `lesson.total > 0 && lesson.pending <= 0` branch). The rig's
+// own guard is that a card answered right never comes back inside the lesson.
 check("a finished lesson has to stay finished",
-  e2eSrc.includes("cap exercici nou després de tancar"));
+  ag2.includes("lesson.total > 0 && lesson.pending <= 0"));
+check("and inside the rig, nothing answered right comes back",
+  e2eSrc.includes("cap exercici contestat bé no torna dins la lliçó"));
 check("and point at the buttons", e2eSrc.includes("l'orienta cap als botons"));
 check("yesterday is checkable without waiting a day",
   fs.existsSync(path.join(ROOT, "scripts", "flowed-advance-day.py")));
 check("what she knew does not come back",
-  e2eSrc.includes("no li torna a preguntar el que ja sabia"));
-check("what she missed does", e2eSrc.includes("i sí que li torna el que va fallar"));
+  e2eSrc.includes("el que va encertar ahir (i ja sabia) no torna avui"));
+check("what she missed does", e2eSrc.includes("el que va fallar ahir torna avui"));
 const adv = fs.readFileSync(path.join(ROOT, "scripts", "flowed-advance-day.py"), "utf8");
 check("and a real learner's dates are never rewritten",
   adv.includes("només en perfils de proves"));
@@ -638,6 +649,13 @@ check("an id is still checked against the queue before it is written",
   ag4.includes("private itemExists") && ag4.includes("item && known ? { item_id"));
 check("and the queue is not handed out twice in a session",
   ag4.includes("this.usedItems.set(sessionId"));
+// WP1.9: pacingNote pre-assigns a due item (model path) into usedItems before
+// tryBankReviewTurn runs. On the bank path that item is never served, so leaving
+// it in the used list made review-pick skip the FIRST due item of every lesson
+// and fill it with weak picks. The bank review must drop the model-path pick.
+check("the bank review drops the model-path pick from the used list",
+  ag4.includes("const modelPick = this.assignedItem.get(sessionId)?.id") &&
+  ag4.includes(".filter((id) => id !== modelPick)"));
 
 // --- a repeat has to be a repeat -------------------------------------------
 // The first --repeat 3 gave one usable run, one on a lesson that run 1 had
@@ -652,9 +670,11 @@ check("an aborted run does not throw away the good ones",
   e2eB.includes("resumeixo les") && e2eB.includes("break"));
 // Not "unfinished" — UNTOUCHED. Run 2 of the first --repeat 3 finished run 1's
 // lesson and reported it as its own; only run 3 refused, and only because by
-// then the lesson was full.
-check("a lesson already under way is refused, not just a finished one",
-  e2eB.includes("ja estava començada") && e2eB.includes("started > 0"));
+// then the lesson was full. WP1.9: the math journey cannot inherit a lesson —
+// seed_math_review clears the plan, the T0 snapshots and the answered-today
+// ledger before the first turn, which is the same protection from the source.
+check("a lesson already under way cannot be inherited",
+  e2eB.includes("def seed_math_review") && e2eB.includes('archive(prof_dir / ".update-state")'));
 check("and --reset cannot quietly eat the starting point",
   e2eB.includes("--reset i --repeat no es combinen"));
 check("each run of a repeat reports its own result",
@@ -790,21 +810,14 @@ check("and an empty fingerprint never reaches the list",
     ag4.includes("...justKnown"));
 }
 
-// Writing asks for what the level can write (skills/math-writing/SKILL.md).
+// WP1.9: `writingLengthNote` (the A1..C2 email/postcard table) is deleted — it
+// returned null for every m-level, and the length of a math reasoning task is
+// the math-writing skill's own table. What must NOT come back:
 {
-  const a2 = writingLengthNote("a2") ?? "";
-  // 2026-09-23: A1/A2 Writing became guided production of her own sentences
-  // (see server/test/writing.test.ts), shorter than before and never a gap.
-  check("A2: 3-5 sentences of her own, not an email",
-    a2.includes("3-5 sentences of her own") && a2.includes("not an email or a letter"), a2);
-  const a1 = writingLengthNote("A1") ?? "";
-  check("A1: 1-2 sentences of her own, words to use named",
-    a1.includes("1-2 sentences of her own") && a1.includes("Use:"), a1);
-  const b1 = writingLengthNote("B1") ?? "";
-  check("B1 may write the email", b1.includes("email") && !b1.includes("not an email"), b1);
-  check("an unknown level says nothing", writingLengthNote(undefined) === null && writingLengthNote("??") === null);
+  const pc = fs.readFileSync(path.join(ROOT, "server", "src", "pacing.ts"), "utf8");
   const ag5 = fs.readFileSync(path.join(ROOT, "server", "src", "agent.ts"), "utf8");
-  check("the note goes to Writing only", ag5.includes('=== "math-writing"') && ag5.includes("writingLengthNote(this.learnerLevel())"));
+  check("no CEFR writing table in the server",
+    !pc.includes("export function writingLengthNote") && !ag5.includes("writingLengthNote("));
   check("the stall warning is the Lesson's", ag5.includes('turns === 4 && this.currentCommand.get(sessionId) === "math-review"'));
 }
 

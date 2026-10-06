@@ -20,12 +20,12 @@ every "temp06" ran at 0.2. Whatever the layers do, the sweep now asks the
 running app (/api/global/health) what it will send, and refuses to run a
 setting the app is not actually using.
 
-    python3 scripts/flowed-sweep.py --port 4103 \\
+    python3 scripts/flowed-sweep.py --port 4200 \\
         --setting "base:" \\
         --setting "warm:temperature=0.6,presence_penalty=0.4" \\
         --setting "warm+rep:temperature=0.6,presence_penalty=0.4,repeat_last_n=512"
 
-    python3 scripts/flowed-sweep.py --port 4103 --repeat 3 --scenario wander --scenario full
+    python3 scripts/flowed-sweep.py --port 4200 --repeat 3 --scenario lesson --scenario steps
 
 Touches no repo configuration: only a test profile, the app instance on --port
 (stopped on exit) and the files under results/. The model is not started here
@@ -273,12 +273,12 @@ def read_result(text: str) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("profile", nargs="?", default="test-en")
-    ap.add_argument("--port", type=int, default=4103)
+    ap.add_argument("profile", nargs="?", default="test-math")
+    ap.add_argument("--port", type=int, default=4200)
     ap.add_argument("--setting", action="append", default=[],
                     help='"nom:clau=valor,clau=valor". Repetible. Sense --setting, només la base')
     ap.add_argument("--scenario", action="append", default=[],
-                    help="escenari a córrer; repetible (per defecte: wander)")
+                    help="escenari a córrer; repetible (per defecte: lesson)")
     ap.add_argument("--repeat", type=int, default=3)
     ap.add_argument("--days", type=int, default=21)
     ap.add_argument("--test-mode", choices=("pass", "fail"), default="pass", dest="test_mode",
@@ -303,7 +303,7 @@ def main() -> int:
         return 2
     settings = [parse_setting(t) for t in (args.setting or ["base:"])]
     prof_dir = profiles_root() / args.profile
-    scenarios = args.scenario or ["wander"]
+    scenarios = args.scenario or ["lesson"]
 
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     out_root = Path(args.out).expanduser() if args.out else REPO / "results" / f"sweep-{stamp}"
@@ -376,9 +376,18 @@ def main() -> int:
             for scen in scenarios:
                 print(f"  escenari {scen} ×{args.repeat}…")
                 seed_log = d / f"02-seed-{scen}.log"
-                rc_seed = sh([sys.executable, str(REPO / "scripts" / "flowed-seed.py"),
-                              args.profile, "--days", str(args.days), "--due", str(args.due)],
-                             seed_log)
+                # WP1.9: the math scenarios seed their own queue (the journey
+                # puts known bank items due today and clears the day's
+                # leftovers); flowed-seed.py is the language seed and would
+                # fill a math profile with vocabulary items it cannot serve.
+                math_scen = scen in ("lesson", "go", "steps", "facts", "review")
+                if math_scen:
+                    rc_seed = 0
+                    open(seed_log, "w").write("(els escenaris matemàtics es seemen sols)\n")
+                else:
+                    rc_seed = sh([sys.executable, str(REPO / "scripts" / "flowed-seed.py"),
+                                  args.profile, "--days", str(args.days), "--due", str(args.due)],
+                                 seed_log)
                 before = profile_state(prof_dir)
                 # A seed that died is not a detail: the executions that follow
                 # run on whatever the last sweep left behind and report their
