@@ -206,3 +206,77 @@ TabbyAPI: posa tota la resposta a `reasoning_content` i `content` queda buit
 de registre fora de les pràctiques obertes; el servidor ja deriva el registre
 del text), menys reescriptures (guards amb falsos positius) i un prompt més
 petit a Speaking/Writing/Reading.
+
+## Math bench (2026-10-06, WP3.4): les tasques obertes de mates
+
+El camí tancat (banc: Review/Go/Fets) no fa servir model. Les pràctiques
+obertes sí: 📝 Raonament (`math-writing`: explain / error-analysis /
+compare-strategies) i 📖 Problemes (`math-reading`: sempre `word-problem`).
+`scripts/flowed-mathbench.py` les recorre pel servidor real (HTTP, com el
+navegador) amb l'alumne fix de `bench/learner-math.md` — les mateixes classes
+d'error sembrades per a tots els models — i puntua el **tutor**:
+
+**Suficiència** (taxa; veredicte = ≥ 90 % a cada porta): `ok` · `saved`
+(l'intercanvi arriba a `.records`) · `graded` · `shown` · `consistent` (nota
+de l'eina = nota a pantalla) · `contract` (marcador + fletxa de correcció +
+`**Correct version:**` + `**Score: N/10**`) · `taxonomy` (les correccions usen
+les 12 categories de mates, mai de llengua) · `band_ok` (la nota cau a la
+banda de la rúbrica que mereix la classe sembrada) · `skill_ok` (el registre
+surti amb `reasoning`/`problems`) · `task_ok` (la tasca té la forma dels
+guards: sense llista nua, amb justificació; a Problemes, enunciat en prosa i
+feina demanada) · `clean` · `continues` (després de corregir, presenta la
+tasca següent) · `grade_clean` (una nota o fletxa només apareix amb una
+correcció completa — els torns intermedis nets, regla WP2.5).
+
+**Qualitat** (informativa): bandes per classe sembrada (`bare` 0-4,
+`calc-slip`/`thin` 5-7, `wrong-op` 0-4, `correct` 8-10; `fluixa` = una banda
+de diferència defensable) · `guards` (reescriptures que el servidor va haver
+de forçar — 0 vol dir que el model demanava la feina ell sol) · `coverage`
+(quines de les quatre tasques va enviar realment al `math_deep_evaluate`) ·
+`long_corr` (correccions al sostre de 400 caràcters del `CORRECTION_RE`).
+
+```bash
+scripts/flowed-web.sh --app --port 4200 test-math
+python3 scripts/flowed-mathbench.py run --port 4200 --name qwen3-14b test-math --repeat 2
+python3 scripts/flowed-mathbench.py compare
+python3 scripts/flowed-mathbench.py rescore results/mathbench/<nom>-<data>.json
+```
+
+Sortida a `results/mathbench/<nom>-<data>.json` (+ `.md` transcripció).
+L'alumne és determinista (les respostes es generen de la tasca a pantalla:
+l'expressió o l'enunciat que el tutor acaba de plantejar), així que dues
+execucions del mateix model són comparables. `rescore` torna a jutjar una
+execució guardada quan canvia una porta, sense tornar a córrer el model.
+
+### Primer resultat (2026-10-06, Qwen3-14B-Q4 remot 12321, perfil `test-math`, 2 passades)
+
+| | qwen3-14b |
+|---|---|
+| ok · saved · graded · shown | 22/22 · 12/12 · 12/12 · 12/12 |
+| contract · taxonomy · grade_clean · clean | 10/12 · 12/12 · 22/22 · 22/22 |
+| task_ok · skill_ok | 4/4 · 12/12 — **0 reescritures de guard**: el model demana la feina ell sol |
+| band_ok | **6/12** — `bare` 1/4 (mediana **7**, hauria de ser 0-4) · `correct` 2/4 · `thin` 0/2 · `calc-slip` 1/1 · `wrong-op` 1/1 |
+| continues | **9/12** — a 📝 sovint s'atura en «escriu rewrite o next» en lloc de la tasca següent |
+| consistent | — (mai crida `math_record_answer`: tots els registres són derivats del text) |
+| cobertura `math_deep_evaluate` | `word-problem` 6 — 📝 Raonament **no delega mai** a l'avaluador profund |
+| s/torn (mediana) | botó 22.4 · resposta 20.2 |
+
+**Veredicte: NO SUFICIENT per a la pràctica oberta**, per dues raons que el
+bench mesura i l'e2e no veia:
+
+1. **To a la dimensió justification.** Una resposta pelada («El resultat és
+   40», zero operacions) rep 7-10/10 tot i que la rúbrica la posa a 0-4 i la
+   tasca demanava les operacions per línia. El model encerta el contingut
+   (les correccions `wrong_operation`/`calculation` són ben posades) però no
+   retalla la nota com la banda mana.
+2. **Format del contracte.** 2 de 12 correccions van venir sense el guió
+   inicial (`❌ "…" → **"…"**`), i el `CORRECTION_RE` del servidor exigeix
+   `[-*]`: el registre derivat queda amb `corrections: []` i l'error no arriba
+   al mistakes-db. El model deriva cap a aquest format ~1 vegada cada 6.
+
+Tres coses més que el bench destapa (informatives): el 14B no fa servir
+l'eina de registre a les obertes (la xarxa de seguretat del servidor ho
+cobreix), a 📝 aplica la rúbrica ell mateix sense passar pel
+`math_deep_evaluate` (el skill no mana la crida; a 📖 sí que la fa), i el
+`wordProblemTaskGuard` tenia un forat — la classe d'expressió pura no
+incloïa `÷` — arreglat amb el WP3.4 (`53af5a8`).
