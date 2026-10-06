@@ -97,9 +97,29 @@ The `**Enunciat:**` line carries the problem; keep it on one line so the
 exercise tracker can fingerprint it. Never reuse a problem presented in the
 last 24h — check the session history and the ALREADY ASKED list first.
 
-### 5. Grade the two halves
+The card MUST ask for the operations, not only the result: the server's
+Problemes guard sends back a task that just says "escriu el resultat", and
+the rubric scores a bare number 0-4 anyway. The statement must be a story —
+"**Enunciat:** 24 ÷ 6" is a Go card, not a problem.
 
-When the answer arrives, check in this order:
+### 5. Grade the two halves — delegate to the deep evaluator (WP3.2)
+
+When the answer arrives, call `math_deep_evaluate` with:
+
+- `task='word-problem'` — ALWAYS this task for this practice (the rubric
+  judges the deliverable of a word problem: setup + operations + answer)
+- `answer=` the learner's full text, verbatim (operations lines included)
+- `context=` the problem statement, the operation(s) it calls for and the
+  exact result (so the evaluator checks the setup against the right one),
+  plus the learner's level and language
+
+Call it at most ONCE per answer, only with her real submitted text — never
+placeholder or invented content. If it returns `DEEP UNAVAILABLE`, grade the
+four rubric dimensions yourself (answer, procedure, justification,
+communication) in the same format.
+
+The rubric already separates the two halves inside "procedure" — read its
+CORRECTIONS with this in mind:
 
 1. **Setup** — does the operation match the situation? Wrong operation or a
    misread statement is the headline finding (`wrong_operation`, `misread`).
@@ -108,7 +128,9 @@ When the answer arrives, check in this order:
 3. **Answer form** — unit present, sentence answered, fraction reduced
    (`unit`, `simplification`, `incomplete`).
 
-Feedback per question (the `math-feedback-formatter` shape):
+Present its evaluation in the canonical feedback shape (the
+`math-feedback-formatter` contract — the accumulator parses it), and record
+the answer with `math_record_answer` using **skill `problems`**:
 
 ```markdown
 {✅ or ❌} {one line}
@@ -125,9 +147,13 @@ Feedback per question (the `math-feedback-formatter` shape):
 ---
 ```
 
-A right setup with a wrong calculation scores 5-7 (the hard part was the
-idea). A wrong setup scores 0-4 even if the arithmetic that followed was
-flawless — the schedule must bring the *choice* back tomorrow.
+The rubric's bands are the closed path's 10/7/3 scale, so the numbers read
+the same everywhere: a right setup with a wrong calculation lands 5-7 (the
+hard part was the idea). A wrong setup scores 0-4 even if the arithmetic that
+followed was flawless — the schedule must bring the *choice* back tomorrow.
+A bare numeric answer with no operations at all is 0-4 too (procedure and
+justification empty) — when that happens, say so in the feedback: next time
+write the operations, one per line, because the answer alone does not score.
 
 ### 6. Problem vocabulary review
 

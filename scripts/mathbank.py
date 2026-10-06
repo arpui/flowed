@@ -13,6 +13,11 @@ Item schema (identical to what WP1.3 `hooks/bank.py` serves):
     "instruction": "...", "problem": "1/4 + 3/8", "answer": "5/8", "also_accept": [],
     "options": [], "why": "...", "status": "validated", "source": "mathbank · <date> · seed N" }
 
+WP3.2 word problems add one optional field: `"expression": "24 ÷ 6"`. Their
+`problem` is a STORY (prose), so the two-path validation parses `expression`
+instead, and every number >= 2 in it must appear in the story or the why.
+Grading is the plain compute/choose path — no new grader anywhere.
+
 `status: "validated"` means generator-verified; a human review flips it to
 "reviewed" later. bank.py serves validated/reviewed, so generated items are
 live — intended for the pilot.
@@ -287,11 +292,161 @@ def compare_fracs(rng: random.Random) -> dict:
     }
 
 
+# ------------------------------------------------- word problems (WP3.2) ---
+# §4.1/§5-3.2: the closed variant of the 📖 Problemes practice. A word-problem
+# item is a COMPUTE item wearing a story: `problem` holds the statement (prose,
+# in the learner's language) and the arithmetic lives in a new optional field,
+# `expression` — the two-path validation parses THAT instead of the story and
+# checks that every number it uses appears in the story, so the statement and
+# the answer can never drift apart. Grading is untouched: hooks/bank.py grades
+# it through the existing compute path (the learner writes the result; the
+# story is what they had to read to know which operation to run).
+#
+# ~1 in 7 draws is a `choose` variant of the same story (p=0.15; the 12-item
+# pilot with seed 42 lands on exactly 2): the learner writes the
+# OPERATION that solves it, not the result — setup without arithmetic. The
+# pilot had no choose items at all (the logged WP1.1 hole); these are the
+# first, and they grade through bank.py's math-choose path (exact text, then
+# value equivalence; a different option is wrong even one digit off).
+
+_WP_PEOPLE = [("La", "Marta"), ("En", "Pere"), ("La", "Laia"), ("El", "Bruno"),
+              ("La", "Núria"), ("En", "Marc")]
+# (plural noun, gender) — the quantifier agrees, and a template that gets it
+# wrong reads as a typo to a nine-year-old.
+_WP_OBJECTS = [("galetes", "f"), ("caramels", "m"), ("cromos", "m"), ("postals", "f"),
+               ("pomes", "f"), ("llapis", "m"), ("pastissos", "m"), ("taronges", "f")]
+
+
+def _wp_person(rng: random.Random) -> tuple[str, str]:
+    """(sentence-initial, mid-sentence) renderings of the same person: Catalan
+    proper-name articles capitalize at the start of the statement and go
+    lowercase after "i" — "La Marta reparteix…" but "…i la Marta ja n'ha…"."""
+    art, name = rng.choice(_WP_PEOPLE)
+    return f"{art} {name}", f"{art.lower()} {name}"
+
+
+def _wp_quant(gender: str) -> str:
+    return "quantes" if gender == "f" else "quants"
+
+
+def _wp_story(rng: random.Random) -> dict:
+    """One story: {story, expr, value, why, two (bool)}. The arithmetic is
+    computed with plain Fraction here and re-derived from `expr` by the
+    evaluator in build_item — the same two-path rule as every family."""
+    kind = rng.choice(["share", "shop", "boxes", "missing", "double", "pizza"])
+    art_name, art_name_mid = _wp_person(rng)
+    obj, gender = rng.choice(_WP_OBJECTS)
+    quant = _wp_quant(gender)
+    if kind == "share":
+        p = rng.randint(3, 9)
+        q = rng.randint(3, 9)
+        n = p * q
+        story = f"{art_name} reparteix {n} {obj} igualment entre {p} amics. Quants en toquen a cada amic?"
+        return {"story": story, "expr": f"{n} ÷ {p}", "value": Fraction(q), "two": True,
+                "why": f"«repartir igualment entre» demana divisió: {n} ÷ {p} = {q}."}
+    if kind == "shop":
+        n = rng.randint(2, 6)
+        p = rng.randint(2, 9)
+        cost = n * p
+        bills = [b for b in (10, 20, 50, 100) if b > cost and b - cost <= 30]
+        if not bills:
+            raise GenError(f"word_problems/shop: no bill above {cost}")
+        b = rng.choice(bills)
+        story = (f"{art_name} compra {n} {obj} a {p} € cada un i paga amb un bitllet "
+                 f"de {b} €. Quants euros li tornen?")
+        return {"story": story, "expr": f"{b} - {n} × {p}", "value": Fraction(b - cost), "two": False,
+                "why": (f"Primer el cost total: {n} × {p} = {cost} €. Després el canvi: "
+                        f"{b} − {cost} = {b - cost} €.")}
+    if kind == "boxes":
+        n = rng.randint(3, 9)
+        p = rng.randint(3, 12)
+        story = f"{art_name} té {n} caixes amb {p} {obj} a cada caixa. {quant.capitalize()} {obj} té en total?"
+        return {"story": story, "expr": f"{n} × {p}", "value": Fraction(n * p), "two": True,
+                "why": f"{n} grups de {p}: {n} × {p} = {n * p}."}
+    if kind == "missing":
+        n = rng.randint(20, 80)
+        p = rng.randint(1, n - 1)
+        story = f"Un àlbum té {n} espais i {art_name_mid} ja n'ha omplert {p}. Quants espais li falten?"
+        return {"story": story, "expr": f"{n} - {p}", "value": Fraction(n - p), "two": True,
+                "why": f"«quants en falten» és la diferència: {n} − {p} = {n - p}."}
+    if kind == "double":
+        n = rng.randint(4, 24)
+        story = f"{art_name} té {n} {obj} i el seu germà en té el doble. {quant.capitalize()} {obj} tenen entre els dos?"
+        return {"story": story, "expr": f"{n} + {n} × 2", "value": Fraction(3 * n), "two": False,
+                "why": (f"«el doble» és 2 vegades {n}: {2 * n}; entre els dos, "
+                        f"{n} + {2 * n} = {3 * n}.")}
+    # pizza: the fraction remainder — the one numeric-or-fraction answer shape
+    # the m4 curriculum reaches for (answer reduced by _fmt_frac).
+    d = rng.randint(4, 12)
+    n = rng.randint(1, d - 1)
+    story = f"Una pizza està tallada en {d} parts iguals i {art_name_mid} se'n menja {n}. Quina part de la pizza queda?"
+    return {"story": story, "expr": f"1 - {n}/{d}", "value": Fraction(d - n, d), "two": False,
+            "why": f"De {d} parts, en queden {d - n}: {d - n}/{d} de la pizza."}
+
+
+def _wp_choose(rng: random.Random, story: str, n: int, p: int, correct: str,
+               value: Fraction, why: str) -> dict:
+    """The setup-only variant: same story, but the deliverable is the
+    OPERATION. Distractors are the other three operations on the same two
+    numbers — wrong by construction, and the caller's draw loop has already
+    ensured all four values differ (a distractor equal to the answer would be
+    rejected by validate_item anyway)."""
+    ops = {"+": f"{n} + {p}", "-": f"{n} - {p}", "×": f"{n} × {p}", "÷": f"{n} ÷ {p}"}
+    opts = [correct] + [o for k, o in ops.items() if o != correct]
+    rng.shuffle(opts)
+    return {
+        "type": "choose",
+        "instruction": "Quina operació resol el problema? Escriu-la.",
+        "problem": story,
+        "expression": correct,
+        "answer": correct,
+        "also_accept": [],
+        "options": opts,
+        "value": value,
+        "why": why,
+    }
+
+
+def word_problems(rng: random.Random) -> dict:
+    """Story-based word problem: one numeric or fraction answer (compute), or
+    — about one draw in five — the operation that solves it (choose)."""
+    want_choose = rng.random() < 0.15
+    for _ in range(500):
+        s = _wp_story(rng)
+        if want_choose and not s["two"]:
+            continue
+        if want_choose:
+            # the four operations on (n, p) must give four different values,
+            # or a distractor would be secretly correct.
+            m = re.match(r"^(\d+) (?:÷|×|\+|-) (\d+)$", s["expr"])
+            if not m:
+                continue
+            n, p = int(m.group(1)), int(m.group(2))
+            vals = {n + p, n - p, n * p, Fraction(n, p)}
+            if len(vals) != 4:
+                continue
+            return _wp_choose(rng, s["story"], n, p, s["expr"], s["value"],
+                              s["why"] + " Les altres operacions no hi encaixen.")
+        return {
+            "type": "compute",
+            "instruction": "Llegeix el problema i escriu el resultat.",
+            "problem": s["story"],
+            "expression": s["expr"],
+            "answer": _fmt_frac(s["value"]),
+            "also_accept": [],
+            "options": [],
+            "value": s["value"],
+            "why": s["why"],
+        }
+    raise GenError(f"word_problems: no usable story in 500 draws (choose={want_choose})")
+
+
 FAMILIES = {
     "mult_2digit": mult_2digit,
     "frac_add_unlike": frac_add_unlike,
     "dec_add": dec_add,
     "compare_fracs": compare_fracs,
+    "word_problems": word_problems,
 }
 
 # Fallback when the curriculum .md has no `Bank:` line (the pilot ids).
@@ -300,6 +455,7 @@ DEFAULT_FAMILY_BY_ID = {
     "m4.frac_add_unlike": "frac_add_unlike",
     "m4.dec_add": "dec_add",
     "m4.compare_fracs": "compare_fracs",
+    "m4.word_problems": "word_problems",
 }
 
 
@@ -682,8 +838,25 @@ def validate_item(item: dict) -> list[str]:
 
     # compute / choose: the problem must parse, and its value must equal the
     # answer's value — the same evaluator that will grade the learner.
+    # WP3.2 exception: a WORD PROBLEM's `problem` is a story, not an
+    # expression; its arithmetic lives in `expression`, and that is what must
+    # equal the answer. The story then has to contain every number the
+    # expression uses (>= 2: the "1" of "1 - 2/5" is the whole pizza, which the
+    # story names in words) — otherwise statement and answer are two different
+    # problems and the item is a template bug.
+    prob_src = item.get("expression") or item["problem"]
+    if item.get("expression"):
+        try:
+            mathgrade.parse_expr(item["expression"])
+        except mathgrade.ParseError as e:
+            errs.append(f"expression {item['expression']!r} does not parse: {e}")
+        text = f"{item['problem']} {item.get('why', '')}"
+        for num in re.findall(r"\d+", str(item["expression"])):
+            if int(num) >= 2 and not re.search(rf"(?<!\d){num}(?!\d)", text):
+                errs.append(f"expression uses {num} but neither the story nor the why says it: "
+                            f"{item['problem']!r}")
     try:
-        pval = mathgrade.parse_expr(item["problem"]).value
+        pval = mathgrade.parse_expr(prob_src).value
     except mathgrade.ParseError as e:
         errs.append(f"problem does not parse: {e}")
         pval = None
@@ -755,15 +928,17 @@ def build_item(family: str, rng: random.Random, competence_id: str, seq: int,
                        f"steps: {', '.join(sorted(STEPS_FAMILIES))})")
     cand = FAMILIES[family](rng)
     # The two independent computations must agree before anything is rendered.
+    # A word problem's arithmetic is `expression`, not the story (§4.1/WP3.2).
+    src = cand.get("expression") or cand["problem"]
     if cand["value"] is not None:
         try:
-            pval = mathgrade.parse_expr(cand["problem"]).value
+            pval = mathgrade.parse_expr(src).value
         except mathgrade.ParseError as e:
-            raise GenError(f"{family}: generated problem {cand['problem']!r} "
+            raise GenError(f"{family}: generated problem {src!r} "
                            f"does not parse: {e}") from e
         if pval != cand["value"]:
             raise GenError(f"{family}: template value {cand['value']} != evaluator "
-                           f"value {pval} for {cand['problem']!r}")
+                           f"value {pval} for {src!r}")
         aval = mathgrade.parse_expr(cand["answer"]).value
         if aval != cand["value"]:
             raise GenError(f"{family}: answer {cand['answer']!r} -> {aval} != "
@@ -781,6 +956,8 @@ def build_item(family: str, rng: random.Random, competence_id: str, seq: int,
         "status": "validated",
         "source": source,
     }
+    if cand.get("expression"):
+        item["expression"] = cand["expression"]
     errs = validate_item(item)
     if errs:
         raise GenError(f"{family}: generated an invalid item: " + "; ".join(errs))

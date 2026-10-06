@@ -50,6 +50,7 @@ import {
   pictureGuard,
   writingBlankGuard,
   reasoningTaskGuard,
+  wordProblemTaskGuard,
   hasExerciseHeader,
   alignExerciseNumber,
   bounceReason,
@@ -1905,6 +1906,7 @@ export class Agent {
       const note = pictureGuard(text)
         ?? writingBlankGuard(text, this.currentCommand.get(sessionId))
         ?? reasoningTaskGuard(text, this.currentCommand.get(sessionId))
+        ?? wordProblemTaskGuard(text, this.currentCommand.get(sessionId))
         ?? turnGuard({
         inLesson,
         pending: lesson.pending,

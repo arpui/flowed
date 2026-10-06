@@ -7,7 +7,7 @@
 // once a day. In FlowMath that practice is REASONING: the learner explains,
 // justifies or invents (WP1.9 fixtures; the guard is the same one).
 
-import { writingBlankGuard, reasoningTaskGuard, parseFeedback } from "../src/pacing.ts";
+import { writingBlankGuard, reasoningTaskGuard, wordProblemTaskGuard, parseFeedback } from "../src/pacing.ts";
 
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown) {
@@ -105,6 +105,62 @@ check("a feedback-only turn passes through", reasoningTaskGuard(FEEDBACK_ONLY, "
 check("the same closed task in Go is Go's business",
   reasoningTaskGuard(RESULT_ONLY, "math-learn") === null);
 check("and in Math talk too", reasoningTaskGuard(RESULT_ONLY, "math-speaking") === null);
+
+// ---- WP3.2: the 📖 Problemes guard -------------------------------------------
+// A word problem must be a STORY (not a bare expression card) and must ask
+// for the WORK (the rubric scores a bare numeric answer 0-4). Same task-half
+// cut as the Raonament guards.
+
+const WORD_OK = `## Problema 2
+
+**Enunciat:** La Marta reparteix 24 galetes igualment entre 6 amics. Quantes galetes toquen a cada amic?
+
+**Escriu les operacions (una per línia) i el resultat:**`;
+check("a story problem asking for the operations passes", wordProblemTaskGuard(WORD_OK, "math-reading") === null);
+
+const WORD_BARE = `## Problema 3
+
+**Enunciat:** 24 ÷ 6
+
+**Escriu el resultat:**`;
+check("a bare expression as the statement is sent back (it is a Go card)",
+  wordProblemTaskGuard(WORD_BARE, "math-reading") !== null);
+check("its rewrite asks for a real story",
+  /story|situation/i.test(wordProblemTaskGuard(WORD_BARE, "math-reading") ?? ""));
+
+const WORD_RESULT_ONLY = `## Problema 4
+
+**Enunciat:** En Pere compra 3 llibretes a 2,50 € cada una i paga amb un bitllet de 10 €. Quants euros li tornen?
+
+**Escriu el resultat:**`;
+check("a story that only asks for the result is sent back",
+  wordProblemTaskGuard(WORD_RESULT_ONLY, "math-reading") !== null);
+check("its rewrite says the bare answer will not score",
+  /will not score/i.test(wordProblemTaskGuard(WORD_RESULT_ONLY, "math-reading") ?? ""));
+
+const WORD_FEEDBACK_THEN_NEXT = `✅ Molt bé!
+
+**Corrections:**
+- 🟡 "3 × 2,50 = 7,5; 10 − 7,5 = 3,5" → **"10 − 7,50 = 2,50"** (calculation — la resta final)
+
+**Correct version:**
+"3 × 2,50 = 7,50 €; 10 − 7,50 = 2,50 €"
+
+**Score: 7/10**
+
+${WORD_OK}`;
+check("feedback above the next problem does not trip it",
+  wordProblemTaskGuard(WORD_FEEDBACK_THEN_NEXT, "math-reading") === null);
+
+const WORD_NO_TASK = `## 📖 Problemes
+
+Bon dia! Avui resolem problemes. Quin vols fer primer?`;
+check("an opening with no problem presented passes through",
+  wordProblemTaskGuard(WORD_NO_TASK, "math-reading") === null);
+
+check("the bare card in Go is Go's business", wordProblemTaskGuard(WORD_BARE, "math-learn") === null);
+check("and the result-only task in Raonament is the other guard's",
+  wordProblemTaskGuard(WORD_RESULT_ONLY, "math-writing") === null);
 
 // WP3.3: a reasoning correction quotes a WHOLE explanation — the parser must
 // not drop it at a 120-char cap (seen live: corrections: [] in .records while

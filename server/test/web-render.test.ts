@@ -125,6 +125,18 @@ check("no marker, no mode, no hint",
 check("the math hint lands on the Skill line, in Catalan",
   injectModeHint("**Skill:** Fraccions", "math").includes("🧮 ESCRIU EL RESULTAT"));
 
+// --- WP3.2: word problems, closed card vs open card --------------------------
+// The CLOSED word-problem bank card is a compute item: story in **Problem:**,
+// bare **Type your answer:** → numeric keypad (the deliverable is one number).
+// The OPEN 📖 Problemes card is model prose asking for the operations — it
+// must NOT match the math marker, so the composer stays a text keyboard.
+check("a closed word-problem card is a result card (numeric)",
+  blankExerciseMode("**Problem:** La Marta reparteix 24 galetes igualment entre 6 amics. " +
+    "Quantes galetes toquen a cada amic?\n\n**Type your answer:**") === "math");
+check("an open word-problem card keeps the text keyboard",
+  blankExerciseMode("**Enunciat:** La Marta reparteix 24 galetes igualment entre 6 amics.\n\n" +
+    "**Escriu les operacions (una per línia) i el resultat:**") === null);
+
 // --- no slash commands reach the screen ------------------------------------
 
 check("a bare command becomes its button",

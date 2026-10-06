@@ -33,6 +33,7 @@ import importlib.util
 import io
 import json
 import contextlib
+import re
 import shutil
 import sys
 import tempfile
@@ -263,6 +264,122 @@ class PilotOnDiskTest(unittest.TestCase):
         self.assertEqual(rc, 0, buf.getvalue())
         for cid in COMPETENCES:
             self.assertIn(f"{cid}.json", buf.getvalue())
+
+
+# ------------------------------------------------- word problems (WP3.2) ---
+# The closed variant of 📖 Problemes: a COMPUTE/CHOOSE item whose `problem` is
+# a story and whose arithmetic is `expression`. These tests pin the generator
+# half; tests/test_bank_math.py pins that the items grade through the existing
+# compute path.
+
+WORD_PILOT = PILOT / "m4.word_problems.json"
+
+
+def _gen_word(tmp: Path, n: int, seed: int) -> Path:
+    rc = mb.main(["gen", "--curriculum", str(CUR), "--competence", "m4.word_problems",
+                  "--family", "word_problems", "--n", str(n), "--seed", str(seed),
+                  "--out", str(tmp), "--date", FIXED_DATE])
+    assert rc == 0, "gen failed for m4.word_problems"
+    return tmp / "m4.word_problems.json"
+
+
+class WordProblemsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.items = _read(_gen_word(Path(cls.tmp.name), 12, 42))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_same_seed_identical_json(self):
+        with tempfile.TemporaryDirectory() as d1, tempfile.TemporaryDirectory() as d2:
+            a = _gen_word(Path(d1), 12, 42).read_text(encoding="utf-8")
+            b = _gen_word(Path(d2), 12, 42).read_text(encoding="utf-8")
+            self.assertEqual(a, b)
+
+    def test_schema_and_expression_field(self):
+        self.assertEqual(len(self.items), 12)
+        for it in self.items:
+            for f in mb.REQUIRED_FIELDS:
+                self.assertIn(f, it, f"{it.get('id')}: missing {f}")
+            self.assertIn(it["type"], ("compute", "choose"), it["id"])
+            self.assertTrue(it.get("expression"), f"{it['id']}: word item without expression")
+            self.assertEqual(it["status"], "validated", it["id"])
+            # the story is prose: it must NOT be a bare expression
+            with self.assertRaises(mathgrade.ParseError):
+                mathgrade.parse_expr(it["problem"])
+
+    def test_expression_value_equals_answer(self):
+        for it in self.items:
+            ev = mathgrade.parse_expr(it["expression"]).value
+            av = mathgrade.parse_expr(it["answer"]).value
+            self.assertEqual(ev, av, f"{it['id']}: {it['expression']} != {it['answer']}")
+
+    def test_story_names_every_number_the_expression_uses(self):
+        """The one tie between story and arithmetic: a template that computes
+        73 - 47 but tells a story about different numbers is a broken item."""
+        for it in self.items:
+            text = f"{it['problem']} {it['why']}"
+            for num in re.findall(r"\d+", it["expression"]):
+                if int(num) >= 2:
+                    self.assertTrue(re.search(rf"(?<!\d){num}(?!\d)", text),
+                                    f"{it['id']}: {num} in {it['expression']!r} "
+                                    f"but not in the story: {it['problem']!r}")
+
+    def test_choose_items_are_operation_choices(self):
+        """The pilot had NO choose items at all (the logged WP1.1 hole); the
+        word family is the first to emit them — 1-2 per 12-item pilot."""
+        chooses = [it for it in self.items if it["type"] == "choose"]
+        self.assertTrue(1 <= len(chooses) <= 2, [it["id"] for it in chooses])
+        for it in chooses:
+            self.assertEqual(it["answer"], it["expression"], it["id"])
+            self.assertIn(it["answer"], it["options"], it["id"])
+            self.assertEqual(len(it["options"]), 4, it["id"])
+            av = mathgrade.parse_expr(it["answer"]).value
+            for o in it["options"]:
+                if o == it["answer"]:
+                    continue
+                self.assertNotEqual(mathgrade.parse_expr(o).value, av,
+                                    f"{it['id']}: distractor {o!r} is also correct")
+
+    def test_pilot_on_disk(self):
+        self.assertTrue(WORD_PILOT.exists())
+        items = _read(WORD_PILOT)
+        self.assertEqual(len(items), 12)
+        self.assertEqual(mb.validate_file(WORD_PILOT), [])
+        self.assertEqual([it["id"] for it in items],
+                         [f"m4.word_problems.{i:03d}" for i in range(1, 13)])
+        self.assertEqual({it["status"] for it in items}, {"validated"})
+
+    def test_ids_unique_across_the_whole_bank(self):
+        """Ids address progress, the review queue and the records — one id, one
+        item, across EVERY file of the bank (compute, the new word pilot, and
+        the steps files renumbered .031–.042 in WP2.1 to dodge exactly this)."""
+        seen: dict[str, str] = {}
+        dupes = []
+        for f in sorted((REPO / "curriculum" / "bank").glob("*/*.json")) + \
+                 sorted((REPO / "curriculum" / "bank").glob("*/steps/*.json")):
+            for it in _read(f):
+                if it["id"] in seen:
+                    dupes.append((it["id"], seen[it["id"]], f.name))
+                seen[it["id"]] = f.name
+        self.assertEqual([], dupes[:5], f"{len(dupes)} duplicate ids in the bank")
+
+    def test_validation_refuses_story_expression_drift(self):
+        bad = {"id": "m4.x.001", "competence": "m4.x", "type": "compute",
+               "instruction": "Llegeix i resol.", "problem": "En Pere té 5 pomes.",
+               "expression": "12 - 7", "answer": "5", "also_accept": [], "options": [],
+               "why": "5 pomes.", "status": "validated", "source": "test"}
+        self.assertTrue(mb.validate_item(bad))     # 12 and 7 appear nowhere
+
+    def test_validation_refuses_expression_answer_mismatch(self):
+        bad = {"id": "m4.x.001", "competence": "m4.x", "type": "compute",
+               "instruction": "Llegeix i resol.", "problem": "En Pere té 12 pomes i en regala 7.",
+               "expression": "12 - 7", "answer": "6", "also_accept": [], "options": [],
+               "why": "12 − 7 = 5.", "status": "validated", "source": "test"}
+        self.assertTrue(mb.validate_item(bad))
 
 
 # ------------------------------------------------------------- steps (WP2.1) ---

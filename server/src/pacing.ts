@@ -1332,6 +1332,61 @@ export function reasoningTaskGuard(text: string, command?: string | null): strin
   return null;
 }
 
+/**
+ * WP3.2 math guard for 📖 Problemes (word problems). The practice dies the
+ * same way Raonament did: the "problem" degenerates into a bare arithmetic
+ * card — "Calcula 24 ÷ 6" — which is Go under another name and grades the
+ * calculation only, never the setup the practice exists to teach. And the
+ * task must ask for the WORK: the WP3.1 rubric (tools.ts DEEP_RUBRIC,
+ * task='word-problem') scores a bare numeric answer in the 0-4 band
+ * (procedure/justification), so a prompt that asks only for the result sets
+ * the learner up to lose points she never had a chance to earn.
+ *
+ * Same shape as reasoningTaskGuard: only the task half is judged (a reply
+ * that gives feedback and then presents the next problem is cut at the
+ * problem heading), and only inside math-reading.
+ */
+const PROBLEM_TASK_CUT =
+  /#{1,3}\s*(?:📖)?\s*(?:Problema\b|Word problem\b)|\*\*Enunciat:?\*\*/i;
+
+export function wordProblemTaskGuard(text: string, command?: string | null): string | null {
+  if (command !== "math-reading") return null;
+  const t = String(text || "");
+  const cut = t.search(PROBLEM_TASK_CUT);
+  if (cut < 0) return null; // no problem being presented this turn
+  const task = t.slice(cut);
+
+  // (a) the statement must be a story, not an expression.
+  const en = /\*\*Enunciat:?\*\*\s*([^\n]+)/i.exec(task);
+  if (en?.[1] && /^[\d\s.,+\-−×x*/·()=]+$/.test(en[1].trim())) {
+    return (
+      `This is 📖 Problemes: she reads a situation and decides which operation ` +
+      `it calls for. "**Enunciat:** 24 ÷ 6" is a bare calculation — a Go card in a ` +
+      `Problemes costume. Write the turn again with a real story (1-4 sentences in ` +
+      `her language: shopping and change, sharing equally, "quants en falten per…", ` +
+      `double/half), and let the operation be the thing she has to find.`
+    );
+  }
+
+  // (b) the task must ask for the work, not only the result.
+  if (
+    !/\b(?:operació|operacions|una per línia|pas a pas|com ho (?:has|heu|vas|vau|faries)|explica|raona|justifica)\b/i.test(
+      task
+    )
+  ) {
+    return (
+      `This is 📖 Problemes: the task must ask her to SHOW THE WORK — the ` +
+      `operation(s), one per line, and the result. A prompt that asks only for the ` +
+      `result invites a bare number, and the rubric scores a bare answer 0-4 ` +
+      `(procedure/justification) — she would lose points she never had a chance to ` +
+      `earn. Write the turn again: state the situation, then ask for the operations ` +
+      `("escriu les operacions, una per línia, i el resultat") and say the answer ` +
+      `alone, without the operations, will not score.`
+    );
+  }
+  return null;
+}
+
 export function turnGuard(st: TurnGuardState): string | null {
   // A button opens the practice; nobody has answered anything. A reply that
   // opens with "❌ Close! matí means morning, not table" is grading an answer the

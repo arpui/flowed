@@ -316,9 +316,15 @@ def _normalize_compare(text: str) -> str | None:
 
 
 def _math_correct_version(item: dict) -> str:
-    """"Correct version:" for a math item: the problem with the answer filled in."""
+    """"Correct version:" for a math item: the problem with the answer filled in.
+
+    WP3.2 word problems: `problem` is a story and the arithmetic is in
+    `expression` — the canonical version shows both, "story → 24 ÷ 6 = 4", so
+    the learner sees the setup the story called for, not just the number."""
     prob = str(item.get("problem", ""))
     ans = str(item["answer"])
+    if item.get("type") == "compute" and item.get("expression"):
+        return f"{prob} → {item['expression']} = {ans}"
     if item.get("type") == "compare":
         for ph in ("○", "◯", "⃝", "…"):
             if ph in prob:

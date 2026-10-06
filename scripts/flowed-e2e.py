@@ -638,6 +638,8 @@ def run(args, quiet: bool = False) -> Report | int:
         return run_steps_v2(args, cli, prof_dir, rep, quiet)
     if args.scenario == "reasoning":
         return run_reasoning(args, cli, prof_dir, rep, quiet)
+    if args.scenario == "problems":
+        return run_problems(args, cli, prof_dir, rep, quiet)
 
     print(f"❌ escenari desconegut: {args.scenario}", file=sys.stderr)
     return 2
@@ -1193,6 +1195,219 @@ def run_reasoning(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> Repo
     if args.transcript:
         Path(args.transcript).expanduser().write_text(
             f"# Raonament obert e2e — {prof_dir.name} — {sid}\n\n"
+            + "\n\n---\n\n".join(transcript), encoding="utf-8")
+        print(f"\ntranscripció: {args.transcript}")
+
+    if quiet:
+        bad = [lbl for ok, lbl, _ in rep.rows if not ok]
+        print(f"  → {len(rep.rows) - len(bad)}/{len(rep.rows)} bé"
+              + (f" · falla: {', '.join(bad)}" if bad else "")
+              + f" · guard {rep.guards}×")
+        return rep
+    rep.render()
+    return rep
+
+
+# ---- WP3.2: word problems (📖 Problemes), closed AND open, end to end --------
+#
+# The two faces of the same practice:
+#   CLOSED  a word-problem bank card (a compute/choose item whose `problem` is
+#           a story) served by 🔁 Review from the seeded queue and graded by
+#           the deterministic compute path — no model at all.
+#   OPEN    📖 Problemes with the real tutor: it sets a story problem, the
+#           learner answers with operations + a deliberate slip, and the
+#           answer is graded through the WP3.1 rubric (math_deep_evaluate,
+#           task='word-problem'). The record must land under skill "problems"
+#           (the C7 key this practice credits).
+
+MATH_WORD_IDS = ["m4.word_problems.001", "m4.word_problems.002"]
+
+
+def word_problem_answer(text: str) -> str:
+    """A learner's answer to an open word problem: the two first numbers of
+    the statement, an addition as the setup, and a deliberate arithmetic slip
+    (+7) on top. If the problem really needs +, the slip is a `calculation`
+    error (5-7 band); if it needs another operation, the setup itself is the
+    finding (`wrong_operation`, 0-4 band). Either way the feedback must come
+    back with a math-taxonomy correction — which is what the scenario checks."""
+    en = re.search(r"\*\*Enunciat:?\*\*\s*([^\n]+)", text, re.I)
+    pool = en.group(1) if en else text
+    nums = [int(n) for n in re.findall(r"\d+", pool) if int(n) > 1][:2]
+    if len(nums) < 2:
+        return ("Primer llegeixo què demana l'enunciat i trió l'operació. "
+                "Després calculo a poc a poc. El resultat és 12.")
+    a, b = nums
+    return (f"Operació: {a} + {b} = {a + b + 7}. "
+            f"Resposta: {a + b + 7}.")
+
+
+def run_problems(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> Report | int:
+    from db_schema import ERROR_CATEGORIES
+    transcript: list[str] = []
+    started = time.time()
+    today = date.today().isoformat()
+
+    sid = cli.new_session()
+    print(f"perfil {prof_dir.name} · port {args.port} · problems (📖 tancat + obert) · cua {len(MATH_WORD_IDS)}")
+    seed_math_review(prof_dir, MATH_WORD_IDS)
+    print(f"sessió {sid}")
+
+    replies: list[str] = []
+    graded: list[dict] = []
+    log_path = prof_dir / f"math-web-{args.port}.log"
+
+    def press(cmd: str, label: str) -> str:
+        t = time.time()
+        body = tutor_text(cli.command(sid, cmd))
+        replies.append(body)
+        transcript.append(f"## {label}\n\n{body}")
+        print(f"  [{label}] → {time.time() - t:.0f}s")
+        return body
+
+    def say(answer: str) -> str:
+        t = time.time()
+        body = tutor_text(cli.say(sid, answer))
+        replies.append(body)
+        transcript.append(f"## resposta {len(replies)}: «{answer[:120]}»\n\n{body}")
+        flags = []
+        if not MARKER.search(body): flags.append("sense marcador")
+        if "Correct version:" not in body: flags.append("sense versió correcta")
+        if not SCORE.search(body): flags.append("sense nota")
+        print(f"  {len(replies)} «{answer[:40]}» → {time.time() - t:.0f}s"
+              + (f"  ⚠ {', '.join(flags)}" if flags else "  ok"))
+        return body
+
+    def score_of(reply: str) -> int | None:
+        m = SCORE.search(reply)
+        return int(re.split(r"\s*/\s*", m.group(0))[0]) if m else None
+
+    # --- 🔁 Review: the CLOSED word-problem cards (bank, no model) -----------
+    txt = press("math-review", "🔁 Review")
+    rep.check(bank_card(txt) is not None, "la lliçó s'obre amb una targeta del banc",
+              txt.strip().splitlines()[0][:70] if txt.strip() else "(buit)")
+    word_cards: list[dict] = []
+    # The plan may be bigger than the seeded queue (a drill slot from the
+    # mistakes-db): answer ONLY the word-problem cards and stop at the first
+    # card of another competence — this scenario is about word problems.
+    for _ in range(len(MATH_WORD_IDS)):
+        card = bank_card(txt)
+        if card is None or not str(card.get("competence", "")).startswith("m4.word_problems"):
+            break
+        body = say(math_answer(card, "right"))
+        graded.append({"reply": body, "card": card})
+        word_cards.append(card)
+        txt = body
+        if CLOSING.search(txt):
+            break
+    rep.check(len(word_cards) >= 1, "la lliçó serveix targetes de problema verbal",
+              ", ".join(c["id"] for c in word_cards) or "(cap)")
+    rep.check(all(str(c.get("competence", "")).startswith("m4.word_problems") for c in word_cards),
+              "les targetes servides són de la competència de problemes",
+              ", ".join(c["id"] for c in word_cards))
+    # the story is on the card, not a bare expression
+    rep.check(any(re.search(r"\*\*Problem:\*\*\s*[^\n]*[a-zà-ú]{4,}", r, re.I) for r in replies),
+              "la targeta porta un enunciat en prosa", "")
+    low = [f"«{g['card']['id']}» → {score_of(g['reply'])}/10" for g in graded
+           if (score_of(g["reply"]) or 0) < 8]
+    rep.check(not low, "una resposta correcta del banc de problemes rep nota alta",
+              low[0] if low else "")
+
+    # --- 📖 Problemes: the OPEN path (model + WP3.1 rubric) -------------------
+    txt = press("math-reading", "📖 Problemes")
+    rep.check(bank_card(txt) is None, "el Problemes obre un exercici obert (no una targeta del banc)",
+              txt.strip().splitlines()[0][:70] if txt.strip() else "(buit)")
+    rep.check(bool(re.search(r"enunciat|problema", txt, re.I)),
+              "l'obert planteja un problema amb enunciat",
+              txt.strip().splitlines()[0][:70] if txt.strip() else "(buit)")
+    answer = word_problem_answer(txt)
+    body = say(answer)
+    rep.check(bool(MARKER.search(body)), "la resposta oberta rep un marcador", "")
+    rep.check("Correct version:" in body, "el feedback obert mostra la versió correcta", "")
+    sc = score_of(body)
+    rep.check(sc is not None, "el feedback obert porta nota", f"{sc}/10" if sc is not None else "")
+    cats = re.findall(r"→ \*\*\"[^\"]+\"\*\* \((\w+)", body)
+    rep.check(bool(cats), "el feedback obert corregeix amb línies de correcció",
+              ",".join(cats) if cats else body[:100].replace("\n", " "))
+    rep.check(bool(cats) and all(c in ERROR_CATEGORIES for c in cats),
+              "les correccions obertes usen la taxonomia matemàtica (mai gramàtica)",
+              ",".join(cats) if cats else "(cap)")
+    if sc is not None:
+        rep.check(sc <= 8, "un lliscament deliberat no treu un 9-10", f"{sc}/10")
+
+    # --- 🏁 End: records and counters ----------------------------------------
+    txt = press("math-end", "🏁 End")
+    rep.check(bool(txt.strip()), "el tutor fa el resum de tancament", f"{len(txt)} car.")
+    wait_quiet(prof_dir)
+
+    rec_lines: list[dict] = []
+    rf = prof_dir / ".records" / f"{sid}.jsonl"
+    if rf.exists():
+        for line in rf.read_text().splitlines():
+            try:
+                rec_lines.append(json.loads(line))
+            except ValueError:
+                pass
+    closed_ids = {c["id"] for c in word_cards}
+    closed_recs = [r for r in rec_lines if r.get("item_id") in closed_ids]
+    rep.check(len(closed_recs) >= len(word_cards),
+              "les targetes tancades es registren amb l'item_id del banc",
+              f"{len(closed_recs)} per a {len(word_cards)} targetes")
+    problems_recs = [r for r in rec_lines if r.get("skill") == "problems"]
+    rep.check(bool(problems_recs), "la resposta oberta es guarda amb skill «problems»",
+              json.dumps([r.get("skill") for r in rec_lines])[:140])
+    if problems_recs:
+        rep.check(bool(problems_recs[0].get("corrections")),
+                  "el registre obert porta les correccions categoritzades",
+                  json.dumps(problems_recs[0].get("corrections"))[:140])
+
+    try:
+        daily = json.loads((prof_dir / ".daily" / f"{today}.json").read_text())
+    except (OSError, ValueError):
+        daily = {}
+    rep.check(int(daily.get("problems") or 0) >= 1, "el comptador de Problemes del dia avança",
+              json.dumps({k: daily.get(k) for k in ("graded", "problems")}))
+
+    braced = [BRACE.search(on_screen(r)) for r in replies]
+    rep.check(not any(braced), "cap clau de plantilla a la pantalla",
+              next((m.group(0) for m in braced if m), ""))
+    leaks = [m.group(0) for m in CEFR_LEAK.finditer(on_screen("\n".join(replies)))]
+    rep.check(not leaks, "cap menció de nivell CEFR en una sessió de matemàtiques",
+              leaks[0] if leaks else "")
+
+    results = sorted((prof_dir / "results").glob("*.md"), key=lambda f: f.stat().st_mtime) \
+        if (prof_dir / "results").is_dir() else []
+    rep.check(bool(results) and results[-1].stat().st_mtime >= started,
+              "el fitxer de resultats es escriu al tancament",
+              results[-1].name if results else "(cap)")
+
+    guards = prof_dir / ".metrics" / "guards.jsonl"
+    fired = []
+    if guards.exists():
+        for line in guards.read_text().splitlines():
+            try:
+                g = json.loads(line)
+            except ValueError:
+                continue
+            if g.get("session") != sid:
+                continue
+            note = str(g.get("note", ""))
+            if note.strip().startswith("rewritten"):
+                continue
+            fired.append(note[:70])
+    rep.guards = len(fired)
+    if fired:
+        print(f"\nel guard del servidor ha actuat {len(fired)} cop(s):")
+        for f in fired:
+            print(f"  ↻ {f}")
+
+    warns = [l for l in log_path.read_text(errors="ignore").splitlines()
+             if "⚠" in l and sid in l] if log_path.exists() else []
+    rep.check(not warns, "cap avís del servidor per aquesta sessió",
+              warns[0][:90] if warns else "")
+
+    if args.transcript:
+        Path(args.transcript).expanduser().write_text(
+            f"# Problemes e2e — {prof_dir.name} — {sid}\n\n"
             + "\n\n---\n\n".join(transcript), encoding="utf-8")
         print(f"\ntranscripció: {args.transcript}")
 
@@ -2625,7 +2840,7 @@ def main() -> int:
     ap.add_argument("--transcript", help="write everything the tutor said to this file")
     ap.add_argument("--user", default="opencode", help="basic-auth user (default: opencode)")
     ap.add_argument("--password", help="basic-auth password (default: the profile's .web-password)")
-    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "reasoning", "days", "curriculum", "ladder"), default="lesson",
+    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "reasoning", "problems", "days", "curriculum", "ladder"), default="lesson",
                     help="lesson (WP1.9, per defecte): 🔁 Review amb la cua sembrada (compute/compare/"
                          "steps, la primera de passos fallida a propòsit) + 🎲 Go + 📚 Facts + 🏁 End i la "
                          "persistència · review: només la lliçó · steps: una lliçó només de targetes de "
@@ -2633,6 +2848,9 @@ def main() -> int:
                          "de fets · reasoning (WP3.3): 📝 Raonament obert — el tutor planteja una tasca "
                          "d'explicar, l'alumne respon amb un lliscament deliberat i el feedback ha de "
                          "venir amb correccions de la taxonomia matemàtica (rúbrica WP3.1) · "
+                         "problems (WP3.2): 📖 Problemes — targeta tancada del banc (enunciat en prosa, "
+                         "correcció compute) + problema obert amb el model (task='word-problem', "
+                         "registre amb skill «problems») · "
                          "days: N dies seguits (el rellotge avança); l'SM-2 ha de fer tornar el "
                          "que es falla i allunyar el que s'encerta · "
                          "curriculum: N dies d'un alumne simulat A1→A2 en pràctica lliure (Mix + Vocabulary): "

@@ -152,6 +152,78 @@ class MathBankGrading(unittest.TestCase):
         self.assertEqual("I need an umbrella.", bank_mod.grade(lang, "an")["correct_version"])
 
 
+class WordProblemGrading(unittest.TestCase):
+    """WP3.2: a word-problem item is a compute/choose item wearing a story —
+    `problem` is prose, the arithmetic is `expression`. Grading reuses the
+    existing compute path verbatim (no new grader): the learner reads the
+    story, runs the operation, writes the result."""
+
+    def setUp(self):
+        self.d = Path(tempfile.mkdtemp(prefix="test-bank-word-"))
+        self.addCleanup(shutil.rmtree, self.d, True)
+        self.root = self.d / "repo"
+        self.data = self.d / "data"
+        bank = self.root / "curriculum" / "bank" / STEM
+        bank.mkdir(parents=True)
+        self.story = "Un àlbum té 73 espais i la Marta ja n'ha omplert 47. Quants espais li falten?"
+        self.items = [
+            item(id="m4.word.001", competence="m4.word", type="compute",
+                 instruction="Llegeix el problema i escriu el resultat.",
+                 problem=self.story, expression="73 - 47", answer="26",
+                 why="«quants en falten» és la diferència: 73 − 47 = 26."),
+            item(id="m4.word.002", competence="m4.word", type="compute",
+                 problem="Una pizza està tallada en 7 parts iguals i en Marc se'n menja 4. "
+                         "Quina part de la pizza queda?",
+                 expression="1 - 4/7", answer="3/7",
+                 why="De 7 parts, en queden 3: 3/7."),
+            item(id="m4.word.003", competence="m4.word", type="choose",
+                 instruction="Quina operació resol el problema? Escriu-la.",
+                 problem="En Marc reparteix 42 caramels igualment entre 7 amics. "
+                         "Quants en toquen a cada amic?",
+                 expression="42 ÷ 7", answer="42 ÷ 7",
+                 options=["42 + 7", "42 - 7", "42 × 7", "42 ÷ 7"],
+                 why="«repartir igualment entre» demana divisió: 42 ÷ 7 = 6."),
+        ]
+        (bank / "m4.word.json").write_text(json.dumps(self.items), encoding="utf-8")
+
+    def answer(self, item_id, text):
+        return bank_mod.answer_and_record(self.root, STEM, item_id, "m4.word", text,
+                                          self.data, TODAY)
+
+    def test_story_answer_grades_through_the_compute_path(self):
+        for text in ("26", "26 espais", "73 - 47 = 26"):   # result, with unit, or full equation
+            r = self.answer("m4.word.001", text)
+            self.assertEqual((10, "correct"), (r["score"], r["verdict"]), text)
+
+    def test_correct_version_shows_the_setup(self):
+        r = self.answer("m4.word.001", "26")
+        self.assertEqual(f"{self.story} → 73 - 47 = 26", r["correct_version"])
+
+    def test_transposition_is_near_wrong_is_wrong(self):
+        r = self.answer("m4.word.001", "62")               # 26 with digits swapped
+        self.assertEqual((7, "near"), (r["score"], r["verdict"]))
+        r = self.answer("m4.word.001", "117")              # added instead of subtracted
+        self.assertEqual((3, "wrong"), (r["score"], r["verdict"]))
+        self.assertIn("diferència", r["note"])             # the item's why explains
+
+    def test_fraction_answer_by_value(self):
+        for text in ("3/7", "6/14"):
+            self.assertEqual(10, self.answer("m4.word.002", text)["score"], text)
+        r = self.answer("m4.word.002", "4/7")
+        self.assertEqual((3, "wrong"), (r["score"], r["verdict"]))
+
+    def test_choose_word_item_grades_the_operation(self):
+        self.assertEqual(10, self.answer("m4.word.003", "42 ÷ 7")["score"])
+        self.assertEqual(10, self.answer("m4.word.003", "42/7")["score"])   # value equivalence
+        r = self.answer("m4.word.003", "42 - 7")
+        self.assertEqual((3, "wrong"), (r["score"], r["verdict"]))
+        self.assertIn("→ 42 ÷ 7", r["correct_version"])
+
+    def test_word_items_are_math_items(self):
+        for it in self.items:
+            self.assertTrue(bank_mod._is_math_item(it), it["id"])
+
+
 class MathFeedbackIsParseable(unittest.TestCase):
     """The exact feedback text server/src/bank.ts `mathFeedback` renders (the
     same strings are asserted in server/test/bank.test.ts, where it is the real
