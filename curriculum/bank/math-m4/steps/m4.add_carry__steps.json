@@ -40,7 +40,7 @@
     ],
     "answer": "43",
     "why": "27 + 16: desenes 20 + 10 = 30, unitats 7 + 6 = 13; 30 + 13 = 43.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -84,7 +84,7 @@
     ],
     "answer": "92",
     "why": "48 + 44: desenes 40 + 40 = 80, unitats 8 + 4 = 12; 80 + 12 = 92.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -128,7 +128,7 @@
     ],
     "answer": "84",
     "why": "67 + 17: desenes 60 + 10 = 70, unitats 7 + 7 = 14; 70 + 14 = 84.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -172,7 +172,7 @@
     ],
     "answer": "40",
     "why": "16 + 24: desenes 10 + 20 = 30, unitats 6 + 4 = 10; 30 + 10 = 40.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -216,7 +216,7 @@
     ],
     "answer": "93",
     "why": "77 + 16: desenes 70 + 10 = 80, unitats 7 + 6 = 13; 80 + 13 = 93.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -260,7 +260,7 @@
     ],
     "answer": "80",
     "why": "48 + 32: desenes 40 + 30 = 70, unitats 8 + 2 = 10; 70 + 10 = 80.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -304,7 +304,7 @@
     ],
     "answer": "50",
     "why": "26 + 24: desenes 20 + 20 = 40, unitats 6 + 4 = 10; 40 + 10 = 50.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -348,7 +348,7 @@
     ],
     "answer": "64",
     "why": "46 + 18: desenes 40 + 10 = 50, unitats 6 + 8 = 14; 50 + 14 = 64.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -392,7 +392,7 @@
     ],
     "answer": "92",
     "why": "59 + 33: desenes 50 + 30 = 80, unitats 9 + 3 = 12; 80 + 12 = 92.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -436,7 +436,7 @@
     ],
     "answer": "86",
     "why": "39 + 47: desenes 30 + 40 = 70, unitats 9 + 7 = 16; 70 + 16 = 86.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -480,7 +480,7 @@
     ],
     "answer": "46",
     "why": "19 + 27: desenes 10 + 20 = 30, unitats 9 + 7 = 16; 30 + 16 = 46.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -524,7 +524,7 @@
     ],
     "answer": "41",
     "why": "14 + 27: desenes 10 + 20 = 30, unitats 4 + 7 = 11; 30 + 11 = 41.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   }
 ]

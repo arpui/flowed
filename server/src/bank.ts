@@ -17,7 +17,7 @@
 export interface BankItem {
   id: string;
   competence: string;
-  type: "complete" | "choose" | "meaning" | "translate" | "correct" | "compute" | "compare";
+  type: "complete" | "choose" | "meaning" | "translate" | "correct" | "compute" | "compare" | "steps";
   instruction: string;
   /** Language items blank a "___" inside a sentence; math items carry a
    *  `problem` instead (DISSENY-MATEMATIQUES §4.1). */
@@ -31,6 +31,29 @@ export interface BankItem {
   also_accept: string[];
   options: string[];
   why: string;
+  /** steps items only (WP2.2/§4.2): the expected worked solution. */
+  method?: string;
+  steps?: BankStep[];
+}
+
+/** One expected step of a `steps` item (hooks/bank.py serves these). */
+export interface BankStep {
+  n: number;
+  expect: string;
+  value?: string;
+  accept?: string[];
+  error_class?: string;
+  why?: string;
+}
+
+/** One graded step (WP2.3): `got` is the learner's line for that step or
+ *  null; `propagated` marks every step AFTER the first failure — it was not
+ *  graded on its own, the error of the first failure simply carries over. */
+export interface BankStepGrade {
+  n: number;
+  ok: boolean;
+  got: string | null;
+  propagated?: boolean;
 }
 
 export interface BankGrade {
@@ -40,6 +63,11 @@ export interface BankGrade {
   correct_version: string;
   /** What the learner typed, as mathgrade parsed it (math items). */
   got?: string;
+  /** steps items only: one entry per expected step, in order. */
+  steps?: BankStepGrade[];
+  /** steps items only: the first failure's category and step number. */
+  error_class?: string;
+  failed_step?: number;
   item: BankItem;
 }
 
@@ -50,6 +78,7 @@ export function isMathItem(item: BankItem): boolean {
   return (
     item.type === "compute" ||
     item.type === "compare" ||
+    item.type === "steps" ||
     (item.type === "choose" && Boolean(item.problem) && !item.sentence)
   );
 }
@@ -73,8 +102,18 @@ export function bankExerciseCard(
   const tag = `<span class="comp-tag"${credited ? ` data-credit="${credited}"` : ""}>${item.competence}</span>`;
   // Not "Writing": that is its own practice now (📝, open production). A bank
   // card is grammar or vocabulary, and the header said Writing on every one.
-  const kind = isMathItem(item) ? "Calculation" : /(^|\.)vocab_/.test(item.competence) ? "Vocabulary" : "Grammar";
+  const kind = item.type === "steps" ? "Steps"
+    : isMathItem(item) ? "Calculation"
+    : /(^|\.)vocab_/.test(item.competence) ? "Vocabulary" : "Grammar";
   const head = `## Exercise ${exerciseNumber}: ${kind} (${difficulty}) ${competenceName} ${tag}`;
+  if (item.type === "steps") {
+    // WP2.2/2.4: the learner writes the WHOLE worked solution, one operation
+    // per line. The card keeps the math shape ("**Problem:**" fingerprints it,
+    // "**Type your answer:**" is the answer marker) and adds the fixed
+    // "**Una operació per línia:**" line — web/app.js detects THAT to switch
+    // the composer to the multi-line placeholder (no numeric keypad).
+    return `${head}\n\n**Problem:** ${item.problem}\n\n**Una operació per línia:**\n\n**Type your answer:**`;
+  }
   if (isMathItem(item)) {
     // Math card: the problem, the options when the answer is a pick, and the
     // math marker line (web/app.js recognizes "**Type your answer:**" as mode
@@ -95,6 +134,7 @@ export function bankExerciseCard(
 }
 
 export function bankFeedback(g: BankGrade): string {
+  if (g.item.type === "steps") return stepsFeedback(g);
   if (isMathItem(g.item)) return mathFeedback(g);
   const known = g.score >= 8; // KNOWN_SCORE, pacing.ts
   const marker = known ? "✅" : g.verdict === "typo" ? "🟡" : "❌";
@@ -116,6 +156,65 @@ export function bankFeedback(g: BankGrade): string {
           : "Keep practising — you'll get it.";
   return (
     `${lead}\n\n**Corrections:**\n${correctionLine}\n\n**Correct version:**\n"${g.correct_version}"\n\n` +
+    `**Score: ${g.score}/10** ${closing}`
+  );
+}
+
+/** The annotated trace of a `steps` item (WP2.4, §4.5): one line per expected
+ *  step — ✅, or ❌ with the expected expression, what the learner wrote, and
+ *  the step's `why` for the FIRST failure; steps after it say they carry the
+ *  first failure's error (they were not graded on their own). The parseable
+ *  contract is unchanged: a `- ❌ "got" → **"right"** (category — why)` line
+ *  with the failed step's error_class, "Correct version:" = the full correct
+ *  trace (one step per line), and the "**Score: N/10**" line. */
+function stepsFeedback(g: BankGrade): string {
+  const known = g.score >= 8; // KNOWN_SCORE, pacing.ts
+  const marker = known ? "✅" : g.verdict === "near" ? "🟡" : "🔴";
+  const recs = g.steps ?? [];
+  const recByN = new Map(recs.map((s) => [s.n, s]));
+  const firstFail = recs.find((s) => !s.ok && !s.propagated) ?? null;
+  const itemSteps = g.item.steps ?? [];
+  // The learner's line goes inside quotes and backticks — a stray " or ` in
+  // it would break the parseable correction line and the markdown alike.
+  const safe = (t: string) => String(t ?? "").replace(/["`]/g, "'");
+  const wantLine = (s: BankStep) => (s.value && s.value !== s.expect ? `${s.expect} = ${s.value}` : s.expect);
+  const trace = itemSteps.map((s) => {
+    const rec = recByN.get(s.n);
+    const want = wantLine(s);
+    if (rec?.ok) return `- ✅ ${s.n} · \`${want}\``;
+    if (rec?.propagated) return `- ❌ ${s.n} · \`${want}\` · arrossega l'error del pas ${firstFail?.n ?? "?"}`;
+    const got = rec?.got ? `has escrit \`${safe(rec.got)}\`` : "no has escrit res per a aquest pas";
+    const why = s.why ? ` — ${s.why}` : "";
+    return `- ❌ ${s.n} · esperat \`${want}\` · ${got}${why}`;
+  });
+  const failStep = firstFail ? itemSteps.find((s) => s.n === firstFail.n) ?? null : null;
+  const lead = known
+    ? `${marker} Perfect! Tot el procediment és correcte.`
+    : g.verdict === "near"
+      ? `${marker} Gairebé — ${g.note}.`
+      : firstFail
+        ? `${marker} El pas ${firstFail.n} falla; els de després arrosseguen l'error.`
+        : `${marker} Not quite.`;
+  const category = g.verdict === "near" ? "calculation" : String(g.error_class || g.item.error_class || "calculation");
+  const why = failStep?.why || g.note || "revisa el procediment";
+  const want = failStep ? wantLine(failStep) : "";
+  const got = safe(String(g.got ?? ""));
+  const correctionLine = known
+    ? `- ✅ "${g.item.problem}" — tot el procediment correcte.`
+    : got
+      ? `- ❌ "${got}" → **"${want}"** (${category} — ${why})`
+      : `- ❌ → **"${want}"** (${category} — ${why})`; // missing step: nothing was written there
+  const closing =
+    g.score >= 10
+      ? "🎉 Perfect! You got it right on the first try. Keep up the good work!"
+      : known
+        ? "👍 Correct!"
+        : g.verdict === "near"
+          ? "Very close — read the note and try the next one!"
+          : "Keep practising — you'll get it.";
+  return (
+    `${lead}\n\n**Passos:**\n${trace.join("\n")}\n\n**Corrections:**\n${correctionLine}\n\n` +
+    `**Correct version:**\n"${g.correct_version}"\n\n` +
     `**Score: ${g.score}/10** ${closing}`
   );
 }

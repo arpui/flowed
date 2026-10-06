@@ -108,20 +108,43 @@ def profile_bank_dir(data_dir: str | os.PathLike) -> Path:
     return Path(data_dir) / "bank"
 
 
-def bank_dirs(root: Path, curriculum_stem: str, data_dir: str | os.PathLike | None = None) -> list[Path]:
-    """Where a competence's items can live: the level's bank, then the learner's."""
+def _bank_base_dirs(root: Path, curriculum_stem: str,
+                    data_dir: str | os.PathLike | None = None) -> list[Path]:
+    """The bank dirs themselves (not their `steps/` subdirs): the level's bank,
+    then the learner's."""
     dirs = [bank_dir(root, curriculum_stem)]
     if data_dir:
         dirs.append(profile_bank_dir(data_dir))
     return [d for d in dirs if d.is_dir()]
 
 
+def bank_dirs(root: Path, curriculum_stem: str, data_dir: str | os.PathLike | None = None) -> list[Path]:
+    """Where a competence's items can live: the level's bank, then the learner's.
+    WP2.2: each bank dir's `steps/` subdir (worked solutions, `<cid>__steps.json`)
+    is part of the walk, so the file-enumerating consumers (bank_left,
+    curriculum.py's _bank_index) see them too. They stay OUT of
+    `curriculum/bank/*/*.json` — the one-level glob tests/test_bank_review.py's
+    TheWholeBank uses — on purpose."""
+    out: list[Path] = []
+    for d in _bank_base_dirs(root, curriculum_stem, data_dir):
+        out.append(d)
+        if (d / "steps").is_dir():
+            out.append(d / "steps")
+    return out
+
+
 def load_bank(root: Path, curriculum_stem: str, competence_id: str,
               data_dir: str | os.PathLike | None = None) -> list[dict]:
-    for d in bank_dirs(root, curriculum_stem, data_dir):
-        f = d / f"{competence_id}.json"
-        if f.exists():
-            items = json.loads(f.read_text(encoding="utf-8"))
+    """A competence's servable items: its `<cid>.json` plus, since WP2.2, the
+    worked solutions in `steps/<cid>__steps.json`. The status filter is the
+    gate: `generated` items (a steps family before WP2.3 validated it) are
+    never served."""
+    for d in _bank_base_dirs(root, curriculum_stem, data_dir):
+        items: list[dict] = []
+        for f in (d / f"{competence_id}.json", d / "steps" / f"{competence_id}__steps.json"):
+            if f.exists():
+                items += json.loads(f.read_text(encoding="utf-8"))
+        if items:
             return [it for it in items if it.get("status") in ("validated", "reviewed")]
     return []
 
@@ -162,12 +185,16 @@ def bank_left(root: Path, curriculum_stem: str, data_dir: str | os.PathLike) -> 
     out: dict[str, dict] = {}
     files = [f for d in bank_dirs(root, curriculum_stem, data_dir) for f in sorted(d.glob("*.json"))]
     for f in files:
-        if f.stem in out:
+        # WP2.2: a steps file is named `<cid>__steps.json` — it counts towards
+        # its competence, not a phantom "<cid>__steps" one. load_bank already
+        # merges the main file and the steps file, so the first sighting wins.
+        cid = f.stem[: -len("__steps")] if f.stem.endswith("__steps") else f.stem
+        if cid in out:
             continue
-        items = load_bank(root, curriculum_stem, f.stem, data_dir)
+        items = load_bank(root, curriculum_stem, cid, data_dir)
         if items:
-            seen = prog.get(f.stem, {})
-            out[f.stem] = {"unseen": sum(1 for it in items if it["id"] not in seen), "total": len(items)}
+            seen = prog.get(cid, {})
+            out[cid] = {"unseen": sum(1 for it in items if it["id"] not in seen), "total": len(items)}
     return out
 
 
@@ -273,7 +300,7 @@ _COMPARE_WORDS = {
 
 def _is_math_item(item: dict) -> bool:
     t = item.get("type")
-    if t in ("compute", "compare"):
+    if t in ("compute", "compare", "steps"):
         return True
     return t == "choose" and "problem" in item and "sentence" not in item
 
@@ -307,9 +334,145 @@ def _math_correct_version(item: dict) -> str:
         return f"{prob} → {ans}"
 
 
+# ---- steps items (DISSENY-MATEMATIQUES §4.2, WP2.3) --------------------------
+# v1 "all-at-once": the learner types the WHOLE worked solution, one operation
+# per line. Lines align to item.steps IN ORDER — line i (blank lines skipped)
+# is step i; extra lines are ignored; a step with no line is missing. Each
+# line must match the step's expected FORM (when the step expects one, i.e.
+# `expect` is not a bare value) AND its VALUE; `accept` lists alternate ways of
+# writing the same step. The FIRST step that is not fully correct decides the
+# reported error (its error_class); every later step is marked `propagated`
+# and NOT graded independently — one slip is never counted several times
+# (§4.2, and the §7 risk row "error propagat com a diversos errors").
+
+def _split_assertion(text: str) -> tuple[str, str | None]:
+    """('expression side', 'value side or None') of a step line or candidate,
+    split on the LAST '='. More than one '=' is a ParseError (mathgrade's
+    rule for step lines)."""
+    s = str(text or "").strip()
+    if s.count("=") > 1:
+        raise mathgrade.ParseError("a step line may contain at most one '='")
+    if "=" in s:
+        left, right = s.rsplit("=", 1)
+        return left.strip(), right.strip()
+    return s, None
+
+
+def _is_pure_value(text: str) -> bool:
+    """True when `text` is a bare value ("5/8", "43", "8 3/5"), not a form —
+    the same test mathgrade.grade_step uses to choose value-vs-form matching."""
+    try:
+        s = mathgrade._normalize(text)
+    except mathgrade.ParseError:
+        return False
+    return bool(mathgrade._PURE_VALUE.match(re.sub(r"\s+", "", s)))
+
+
+def _grade_step_line(step: dict, line: str) -> dict:
+    """One learner line against one expected step. Verdicts parallel
+    mathgrade's: correct / near (the step's operation is right but its
+    written value is a one-edit digit slip of the expected value — the
+    transposition rule of §4.3) / wrong. Returns {"verdict", "got", "note"}."""
+    exp_form = str(step.get("expect", ""))
+    exp_val_txt = str(step.get("value", "")) or exp_form
+    try:
+        exp_val = mathgrade.parse_expr(exp_val_txt).value
+    except mathgrade.ParseError:
+        exp_val = None
+    try:
+        _, l_val_txt = _split_assertion(line)
+        l_val = mathgrade.parse_expr(l_val_txt if l_val_txt is not None else line).value
+    except mathgrade.ParseError:
+        return {"verdict": "wrong", "got": str(line).strip(), "note": "no s'ha entès l'operació"}
+    form_ok_value_off = False
+    for cand in [exp_form, *[str(a) for a in step.get("accept", [])]]:
+        try:
+            c_form_txt, c_val_txt = _split_assertion(cand)
+            c_val = mathgrade.parse_expr(c_val_txt if c_val_txt is not None else cand).value
+        except mathgrade.ParseError:
+            continue
+        try:
+            r = mathgrade.grade_step(c_form_txt, line)
+        except mathgrade.ParseError:
+            continue
+        if r["verdict"] != "correct":
+            continue
+        if l_val == c_val:
+            return {"verdict": "correct", "got": str(line).strip(), "note": ""}
+        # the operation matched but the asserted result did not: a slip here
+        # is "near", a different number is wrong.
+        form_ok_value_off = True
+    if exp_val is not None and (form_ok_value_off or _is_pure_value(exp_form)):
+        slip_txt = l_val_txt if l_val_txt is not None else str(line).strip()
+        if mathgrade._near_slip(slip_txt, exp_val_txt):
+            return {"verdict": "near", "got": str(line).strip(),
+                    "note": f"gairebé: aquest pas dona «{exp_val_txt}»"}
+    return {"verdict": "wrong", "got": str(line).strip(), "note": ""}
+
+
+def _steps_correct_version(item: dict) -> str:
+    """The full correct trace: one "expect = value" line per step (a step
+    whose value IS its expect — the final bare result — is just that)."""
+    lines = []
+    for s in item.get("steps", []):
+        exp, val = str(s.get("expect", "")), str(s.get("value", ""))
+        lines.append(f"{exp} = {val}" if val and val != exp else exp)
+    return "\n".join(lines)
+
+
+def _grade_steps(item: dict, raw_answer: str) -> dict:
+    """Grade a whole worked solution (WP2.3). The result carries `steps`:
+    one entry per EXPECTED step — {n, ok, got} plus `propagated: true` on
+    every step after the first failure — and `error_class`/`failed_step`
+    naming the first failure, so the server can file one pattern and paint
+    the annotated trace."""
+    full = _steps_correct_version(item)
+    steps = item.get("steps", [])
+    lines = [ln.strip() for ln in str(raw_answer or "").splitlines() if ln.strip()]
+    if not lines or (len(lines) == 1 and _math_is_empty(lines[0])):
+        return {"score": 0, "verdict": "empty", "note": str(item.get("why", "")),
+                "correct_version": full, "got": "",
+                "steps": [{"n": s.get("n"), "ok": False, "got": None} for s in steps]}
+    trace: list[dict] = []
+    first_fail: int | None = None
+    first_verdict = ""      # "near" | "wrong"
+    first_cat = ""          # the pattern category
+    first_note = ""
+    for i, s in enumerate(steps):
+        n = s.get("n")
+        line = lines[i] if i < len(lines) else None
+        if first_fail is not None:
+            # failed by propagation: NOT graded on its own merits.
+            trace.append({"n": n, "ok": False, "got": line, "propagated": True})
+            continue
+        if line is None:
+            first_fail, first_verdict = n, "wrong"
+            first_cat, first_note = "incomplete", "has deixat aquest pas sense fer"
+            trace.append({"n": n, "ok": False, "got": None})
+            continue
+        r = _grade_step_line(s, line)
+        if r["verdict"] == "correct":
+            trace.append({"n": n, "ok": True, "got": line})
+            continue
+        first_fail, first_verdict = n, r["verdict"]
+        # a digit slip is a calculation error whatever the step's class is;
+        # a real wrong step is filed under the step's own error_class (§4.2).
+        first_cat = "calculation" if r["verdict"] == "near" else str(s.get("error_class") or "calculation")
+        first_note = r["note"] or str(s.get("why", ""))
+        trace.append({"n": n, "ok": False, "got": line})
+    if first_fail is None:
+        return {"score": 10, "verdict": "correct", "note": "", "correct_version": full, "steps": trace}
+    got_line = next((t["got"] for t in trace if t["n"] == first_fail), None)
+    return {"score": 7 if first_verdict == "near" else 3, "verdict": first_verdict,
+            "note": first_note, "correct_version": full, "got": got_line or "",
+            "error_class": first_cat, "failed_step": first_fail, "steps": trace}
+
+
 def _grade_math(item: dict, raw_answer: str) -> dict:
     full = _math_correct_version(item)
     t = item.get("type")
+    if t == "steps":
+        return _grade_steps(item, raw_answer)
     if t == "compare":
         if _math_is_empty(raw_answer):
             return {"score": 0, "verdict": "empty", "note": item.get("why", ""), "correct_version": full}

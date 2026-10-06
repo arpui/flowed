@@ -691,27 +691,53 @@ export class Agent {
     // or a choose built on a `problem`) are graded by mathgrade and filed under
     // the math taxonomy; language items keep the vocab/spelling/grammar split.
     const isMath =
-      itemType === "compute" || itemType === "compare" ||
+      itemType === "compute" || itemType === "compare" || itemType === "steps" ||
       (itemType === "choose" && item.problem && !item.sentence);
     const verdict = String(graded.verdict ?? "");
+    // A steps item names its own category: the FIRST failed step's error_class
+    // (hooks/bank.py `_grade_steps`); near is always "calculation" (a digit
+    // slip), same rule as the other math verdicts.
     const category = isMath
-      ? verdict === "near" ? "calculation" : String(item.error_class || "calculation")
+      ? verdict === "near" ? "calculation" : String(graded.error_class || item.error_class || "calculation")
       : vocab ? "vocabulary" : verdict === "typo" ? "spelling" : "grammar";
+    // WP2.3: a steps record carries the per-step trace — one entry per
+    // expected step, `got` the learner's line or null, `propagated` on every
+    // step after the first failure (additive: nothing else reads it yet).
+    const stepTrace = Array.isArray(graded["steps"])
+      ? (graded["steps"] as Record<string, unknown>[]).map((s) => ({
+          n: s.n ?? null, ok: Boolean(s.ok), got: s.got ?? null,
+          ...(s.propagated ? { propagated: true } : {}),
+        }))
+      : null;
+    // For a steps item the correction names the FAILED STEP's expected line
+    // (what bank.ts prints in "Corrections:"), not the whole trace — the
+    // pattern id is built from wrong/right, and the prose fallback parser
+    // reads the same line, so both paths must agree.
+    const itemSteps = Array.isArray(item["steps"]) ? (item["steps"] as Record<string, unknown>[]) : [];
+    const failStep = itemType === "steps" && graded.failed_step != null
+      ? itemSteps.find((s) => s.n === graded.failed_step) ?? null
+      : null;
+    const right = failStep
+      ? (failStep.value && failStep.value !== failStep.expect
+          ? `${failStep.expect} = ${failStep.value}`
+          : String(failStep.expect ?? ""))
+      : correctVersion;
     const record = {
       record_id: `${sessionId}:bank:${Date.now()}`,
       session_id: sessionId,
       ts: Date.now(),
-      skill: isMath ? "computation" : vocab ? "vocabulary" : "grammar",
+      skill: itemType === "steps" ? "steps" : isMath ? "computation" : vocab ? "vocabulary" : "grammar",
       exercise: String(item.problem ?? item.sentence ?? ""),
       learner_answer: this.lastAnswer.get(sessionId) ?? "",
       score,
       corrections: score >= 8 ? [] : [{
         wrong: isMath ? String(graded.got ?? "") : "",
-        right: correctVersion,
+        right,
         category,
         severity: isMath && verdict !== "near" && verdict !== "empty" ? "critical" : "moderate",
       }],
       competency: competenceId,
+      ...(stepTrace ? { steps: stepTrace } : {}),
       // A Review exercise answers a queue item (a failed bank item, or an old
       // error pattern placed in this competence): the record names it, and
       // update-db advances its SM-2 schedule like any reviewed item.

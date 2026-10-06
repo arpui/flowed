@@ -97,6 +97,11 @@ function paintFeedback(el) {
     const t = (li.textContent || "").trim();
     if (t.startsWith("❌")) li.classList.add("fb-wrong");
     else if (t.startsWith("✅")) li.classList.add("fb-right");
+    // Steps trace (WP2.4): bank.ts prints one list item per expected step,
+    // "✅ 3 · `1860 + 465 = 2325`" — monospace so the operations line up and
+    // read like the worked solution they mirror. The marker classes above
+    // already carry the ok/failed colors.
+    if (/^[✅❌]\s*\d+\s*·/.test(t)) li.classList.add("fb-step-line");
   }
 }
 
@@ -321,13 +326,18 @@ const MODE_LINE_WORD_RE = /^type your answer \(just the missing word\):?$/i;
 // Math bank cards (WP1.3) end with a bare "**Type your answer:**" — no
 // parenthetical, because there is no gap: the learner writes the result.
 const MODE_LINE_MATH_RE = /^type your answer:?$/i;
+// The steps card's fixed instruction line (bank.ts, WP2.4) — same treatment
+// as the math marker, its own color so "one operation per line" reads as the
+// multi-line answer it is.
+const MODE_LINE_STEPS_RE = /^una operació per línia:?$/i;
 function paintModeLine(el) {
   if (!el || !el.querySelectorAll) return;
   for (const s of el.querySelectorAll("strong")) {
-    s.classList.remove("mode-flag", "mode-flag-full", "mode-flag-word", "mode-flag-math");
+    s.classList.remove("mode-flag", "mode-flag-full", "mode-flag-word", "mode-flag-math", "mode-flag-steps");
     const t = (s.textContent || "").trim();
     if (MODE_LINE_FULL_RE.test(t)) s.classList.add("mode-flag", "mode-flag-full");
     else if (MODE_LINE_WORD_RE.test(t)) s.classList.add("mode-flag", "mode-flag-word");
+    else if (MODE_LINE_STEPS_RE.test(t)) s.classList.add("mode-flag", "mode-flag-steps");
     else if (MODE_LINE_MATH_RE.test(t)) s.classList.add("mode-flag", "mode-flag-math");
   }
 }
@@ -1815,10 +1825,18 @@ const MISSING_WORD_RE = /\*\*Type your answer \(just the missing word\):?\*\*/i;
 // Math bank cards (WP1.3): "**Type your answer:**" with no parenthetical —
 // the learner writes the result of a problem, not a gap in a sentence.
 const MATH_ANSWER_RE = /\*\*Type your answer:?\*\*/i;
+// Steps cards (WP2.2/2.4): bank.ts adds the fixed "**Una operació per línia:**"
+// line to a type:"steps" item — the learner writes the WHOLE worked solution,
+// one operation per line. Checked before MATH_ANSWER_RE: the card keeps the
+// bare "**Type your answer:**" too, and steps must win (text keyboard, not
+// the numeric keypad, and the multi-line placeholder).
+const STEPS_ANSWER_RE = /\*\*Una operació per línia:?\*\*/i;
+const STEPS_PLACEHOLDER = "Escriu una operació per línia…";
 
 function blankExerciseMode(text) {
   if (FULL_SENTENCE_RE.test(text)) return "full";
   if (MISSING_WORD_RE.test(text)) return "word";
+  if (STEPS_ANSWER_RE.test(text)) return "steps";
   if (MATH_ANSWER_RE.test(text)) return "math";
   return null;
 }
@@ -1830,7 +1848,8 @@ const SKILL_LINE_RE = /^(\s*\*{0,2}skill:?\*{0,2}\s*[^\n]*)$/im;
 function injectModeHint(text, mode) {
   const hint =
     mode === "full" ? " — ✍️ ESCRIU LA FRASE SENCERA!" : mode === "word" ? " — 🔤 NOMÉS LA PARAULA"
-    : mode === "math" ? " — 🧮 ESCRIU EL RESULTAT" : "";
+    : mode === "math" ? " — 🧮 ESCRIU EL RESULTAT"
+    : mode === "steps" ? " — 🧮 UNA OPERACIÓ PER LÍNIA" : "";
   if (!hint || !SKILL_LINE_RE.test(text)) return text;
   return text.replace(SKILL_LINE_RE, (m) => m + hint);
 }
@@ -1841,8 +1860,16 @@ function refreshExerciseCard(snap = true) {
   const mode = split.question ? blankExerciseMode(split.question) : null;
   // WP1.8: while the exercise on screen asks for a result (the math bank
   // marker), the composer gets a numeric keypad; every other exercise
-  // reverts to the text keyboard.
-  if (inputEl) inputEl.inputMode = mode === "math" ? "numeric" : "text";
+  // reverts to the text keyboard. A steps card (WP2.4) is the exception
+  // inside math: whole operations per line need the text keyboard, and its
+  // placeholder overrides the mode's — MODE_PLACEHOLDERS still decide every
+  // other card, exactly as runCommand set them.
+  if (inputEl) {
+    inputEl.inputMode = mode === "math" ? "numeric" : "text";
+    inputEl.placeholder = mode === "steps"
+      ? STEPS_PLACEHOLDER
+      : MODE_PLACEHOLDERS[currentMode] || DEFAULT_PLACEHOLDER;
+  }
   if (!EXERCISE_CARD_ENABLED) {
     exerciseCard.hidden = true;
     return;
@@ -1865,6 +1892,9 @@ function refreshExerciseCard(snap = true) {
         badge.hidden = false;
       } else if (mode === "math") {
         badge.textContent = "🧮 Escriu el resultat";
+        badge.hidden = false;
+      } else if (mode === "steps") {
+        badge.textContent = "🧮 Una operació per línia";
         badge.hidden = false;
       } else {
         badge.hidden = true;

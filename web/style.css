@@ -362,6 +362,11 @@ footer#composer.expanded button#expand {
 .mode-flag-math {
   color: #2f6fb0;
 }
+/* Steps cards (WP2.4): the "**Una operació per línia:**" instruction — same
+   blue family, a touch deeper, marking the multi-line answer. */
+.mode-flag-steps {
+  color: #24567f;
+}
 .exercise-card.ex-full-sentence {
   border-left-color: var(--writing-accent);
   background: var(--writing-bg);
@@ -409,6 +414,17 @@ li.fb-right {
   border-radius: 8px;
   padding: 4px 8px;
   margin: 2px 0;
+}
+/* Steps trace (WP2.4): one expected operation per line — monospace so the
+   learner's worked solution and the correct one line up; the fb-wrong /
+   fb-right backgrounds already carry the ❌/✅ colors. */
+li.fb-step-line {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+li.fb-step-line code {
+  background: transparent;
+  padding: 0;
 }
 
 /* ---- latest tutor message: green left edge ("darrera resposta") ---- */

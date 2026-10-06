@@ -1,6 +1,6 @@
 [
   {
-    "id": "m4.mult_2digit.001",
+    "id": "m4.mult_2digit.031",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -42,11 +42,11 @@
     ],
     "answer": "2325",
     "why": "25 = 20 + 5: 93 × 20 = 1860 i 93 × 5 = 465; 1860 + 465 = 2325.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.002",
+    "id": "m4.mult_2digit.032",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -88,11 +88,11 @@
     ],
     "answer": "690",
     "why": "46 = 40 + 6: 15 × 40 = 600 i 15 × 6 = 90; 600 + 90 = 690.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.003",
+    "id": "m4.mult_2digit.033",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -134,11 +134,11 @@
     ],
     "answer": "1677",
     "why": "39 = 30 + 9: 43 × 30 = 1290 i 43 × 9 = 387; 1290 + 387 = 1677.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.004",
+    "id": "m4.mult_2digit.034",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -180,11 +180,11 @@
     ],
     "answer": "696",
     "why": "24 = 20 + 4: 29 × 20 = 580 i 29 × 4 = 116; 580 + 116 = 696.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.005",
+    "id": "m4.mult_2digit.035",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -226,11 +226,11 @@
     ],
     "answer": "1978",
     "why": "86 = 80 + 6: 23 × 80 = 1840 i 23 × 6 = 138; 1840 + 138 = 1978.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.006",
+    "id": "m4.mult_2digit.036",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -272,11 +272,11 @@
     ],
     "answer": "990",
     "why": "15 = 10 + 5: 66 × 10 = 660 i 66 × 5 = 330; 660 + 330 = 990.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.007",
+    "id": "m4.mult_2digit.037",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -318,11 +318,11 @@
     ],
     "answer": "330",
     "why": "22 = 20 + 2: 15 × 20 = 300 i 15 × 2 = 30; 300 + 30 = 330.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.008",
+    "id": "m4.mult_2digit.038",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -364,11 +364,11 @@
     ],
     "answer": "6688",
     "why": "88 = 80 + 8: 76 × 80 = 6080 i 76 × 8 = 608; 6080 + 608 = 6688.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.009",
+    "id": "m4.mult_2digit.039",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -410,11 +410,11 @@
     ],
     "answer": "1230",
     "why": "82 = 80 + 2: 15 × 80 = 1200 i 15 × 2 = 30; 1200 + 30 = 1230.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.010",
+    "id": "m4.mult_2digit.040",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -456,11 +456,11 @@
     ],
     "answer": "3478",
     "why": "94 = 90 + 4: 37 × 90 = 3330 i 37 × 4 = 148; 3330 + 148 = 3478.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.011",
+    "id": "m4.mult_2digit.041",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -502,11 +502,11 @@
     ],
     "answer": "5184",
     "why": "64 = 60 + 4: 81 × 60 = 4860 i 81 × 4 = 324; 4860 + 324 = 5184.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.mult_2digit.012",
+    "id": "m4.mult_2digit.042",
     "competence": "m4.mult_2digit",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -548,7 +548,7 @@
     ],
     "answer": "2720",
     "why": "68 = 60 + 8: 40 × 60 = 2400 i 40 × 8 = 320; 2400 + 320 = 2720.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   }
 ]

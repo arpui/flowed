@@ -41,7 +41,7 @@
     ],
     "answer": "8 3/5",
     "why": "5 × 8 = 40 és el múltiple de 5 que més s'acosta a 43 sense sobrepassar-lo; 43 - 40 = 3 és el residu: 43 ÷ 5 = 8 3/5.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -86,7 +86,7 @@
     ],
     "answer": "9 2/3",
     "why": "3 × 9 = 27 és el múltiple de 3 que més s'acosta a 29 sense sobrepassar-lo; 29 - 27 = 2 és el residu: 29 ÷ 3 = 9 2/3.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -131,7 +131,7 @@
     ],
     "answer": "32 2/3",
     "why": "3 × 32 = 96 és el múltiple de 3 que més s'acosta a 98 sense sobrepassar-lo; 98 - 96 = 2 és el residu: 98 ÷ 3 = 32 2/3.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -176,7 +176,7 @@
     ],
     "answer": "10 7/8",
     "why": "8 × 10 = 80 és el múltiple de 8 que més s'acosta a 87 sense sobrepassar-lo; 87 - 80 = 7 és el residu: 87 ÷ 8 = 10 7/8.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -221,7 +221,7 @@
     ],
     "answer": "4 3/5",
     "why": "5 × 4 = 20 és el múltiple de 5 que més s'acosta a 23 sense sobrepassar-lo; 23 - 20 = 3 és el residu: 23 ÷ 5 = 4 3/5.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -266,7 +266,7 @@
     ],
     "answer": "20 1/2",
     "why": "2 × 20 = 40 és el múltiple de 2 que més s'acosta a 41 sense sobrepassar-lo; 41 - 40 = 1 és el residu: 41 ÷ 2 = 20 1/2.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -311,7 +311,7 @@
     ],
     "answer": "16 3/5",
     "why": "5 × 16 = 80 és el múltiple de 5 que més s'acosta a 83 sense sobrepassar-lo; 83 - 80 = 3 és el residu: 83 ÷ 5 = 16 3/5.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -356,7 +356,7 @@
     ],
     "answer": "11 7/8",
     "why": "8 × 11 = 88 és el múltiple de 8 que més s'acosta a 95 sense sobrepassar-lo; 95 - 88 = 7 és el residu: 95 ÷ 8 = 11 7/8.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -401,7 +401,7 @@
     ],
     "answer": "4 4/9",
     "why": "9 × 4 = 36 és el múltiple de 9 que més s'acosta a 40 sense sobrepassar-lo; 40 - 36 = 4 és el residu: 40 ÷ 9 = 4 4/9.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -446,7 +446,7 @@
     ],
     "answer": "9 3/7",
     "why": "7 × 9 = 63 és el múltiple de 7 que més s'acosta a 66 sense sobrepassar-lo; 66 - 63 = 3 és el residu: 66 ÷ 7 = 9 3/7.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -491,7 +491,7 @@
     ],
     "answer": "11 3/4",
     "why": "4 × 11 = 44 és el múltiple de 4 que més s'acosta a 47 sense sobrepassar-lo; 47 - 44 = 3 és el residu: 47 ÷ 4 = 11 3/4.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
@@ -536,7 +536,7 @@
     ],
     "answer": "5 4/7",
     "why": "7 × 5 = 35 és el múltiple de 7 que més s'acosta a 39 sense sobrepassar-lo; 39 - 35 = 4 és el residu: 39 ÷ 7 = 5 4/7.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   }
 ]

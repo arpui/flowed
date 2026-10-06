@@ -21,10 +21,12 @@ WP2.1 adds the `steps` families (§4.2, full expected traces). Pinned here:
   * the LAST step's value equals the answer, and the answer equals the
     problem's value;
   * error_class is one of the 12 canonical §4.4 classes (db_schema);
-  * status == "generated" — and the proof that hooks/bank.py never serves
-    them: load_bank/pick_item on a bank containing ONLY __steps files return
-    nothing, and bank_left sees no phantom competence (the exact-filename
-    load plus the validated/reviewed status filter are the two guards);
+  * status == "validated" since WP2.3 (the per-line grader is wired) — and
+    the proof that hooks/bank.py serves them from the steps/ subdir:
+    load_bank/pick_item on a bank containing ONLY __steps files return the
+    12 items, bank_left counts them under the real competence (no phantom
+    "__steps" one), and demoting the status back to "generated" hides them
+    again (the status filter is the single remaining guard);
   * the committed steps pilot (seed 42, 12 per family) validates on disk.
 """
 import importlib.util
@@ -271,11 +273,13 @@ STEPS_PILOT = {
     "m4.frac_add_unlike": "common_denominator",
     "m4.div_2x1": "long_division",
 }
-# The committed steps pilot lives in a steps/ SUBDIRECTORY of the bank dir:
-# bank.py's loaders use exact filenames, its counters glob("*.json") without
-# recursion, and tests/test_bank_review.py TheWholeBank globs bank/*/*.json
-# (one level) and grades everything it finds with bank.grade — which has no
-# steps grader yet. The subdir is invisible to all three.
+# The committed steps pilot lives in a steps/ SUBDIRECTORY of the bank dir.
+# Since WP2.2 load_bank reaches it by name (`steps/<cid>__steps.json`) and
+# bank_left/_bank_index walk it with the `__steps` stem normalized back to the
+# competence — but tests/test_bank_review.py TheWholeBank still globs
+# bank/*/*.json (one level) and never sees the subdir, which is the whole
+# point of the location: TheWholeBank grades everything it finds with the
+# language-shaped path.
 STEPS_PILOT_DIR = PILOT / "steps"
 
 
@@ -324,9 +328,9 @@ class StepsItemsTest(unittest.TestCase):
                 for f in mb.STEPS_REQUIRED_FIELDS:
                     self.assertIn(f, it, f"{it.get('id')}: missing {f}")
                 self.assertEqual(it["type"], "steps", it["id"])
-                # NOT validated/reviewed: bank.py would serve those, and the
-                # steps grader (WP2.3) does not exist yet.
-                self.assertEqual(it["status"], "generated", it["id"])
+                # WP2.3 wired the per-line grader: steps items are generated
+                # validated like compute items, and bank.py serves them.
+                self.assertEqual(it["status"], "validated", it["id"])
                 self.assertEqual(it["method"], fam, it["id"])
                 self.assertTrue(it["why"].strip())
                 self.assertEqual(it["instruction"], "Resol-ho pas a pas. Una línia per pas.")
@@ -379,20 +383,23 @@ class StepsItemsTest(unittest.TestCase):
             self.assertEqual(len(keys), len(set(keys)), fam)
 
     def test_ids_sequential(self):
+        # A fresh file in an empty dir starts at .001; ids then continue
+        # across the competence's files (see StepsIdUniquenessTest).
         for fam, items in self.items.items():
             nums = [int(it["id"].rsplit(".", 1)[1]) for it in items]
-            self.assertEqual(nums, list(range(1, len(items) + 1)), fam)
+            self.assertEqual(nums, list(range(nums[0], nums[0] + len(nums))), fam)
 
 
-class StepsNotServedByBankTest(unittest.TestCase):
-    """Proof that the __steps files are invisible to the serving path:
-    load_bank opens exactly <competence>.json, and even a stem that matches
-    is filtered by status (generated is not validated/reviewed)."""
+class StepsServedByBankTest(unittest.TestCase):
+    """WP2.2/2.3 flipped the gate: the __steps files ARE now part of the
+    serving path (load_bank reads `steps/<cid>__steps.json` too, pick_item
+    serves type:"steps"), and the STATUS filter is the only guard left —
+    a demoted "generated" item is invisible again."""
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        bankdir = root / "curriculum" / "bank" / "math-m4"
+        bankdir = root / "curriculum" / "bank" / "math-m4" / "steps"
         bankdir.mkdir(parents=True)
         for cid in STEPS_PILOT:
             shutil.copy(STEPS_PILOT_DIR / f"{cid}__steps.json", bankdir / f"{cid}__steps.json")
@@ -403,26 +410,41 @@ class StepsNotServedByBankTest(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def test_load_bank_and_pick_item_find_nothing(self):
+    def test_load_bank_and_pick_item_serve_steps(self):
         for cid in STEPS_PILOT:
+            items = bankmod.load_bank(self.root, "math-m4", cid, self.data)
+            self.assertEqual(len(items), 12, cid)
+            self.assertTrue(all(it["type"] == "steps" for it in items), cid)
+            self.assertTrue(bankmod.has_bank(self.root, "math-m4", cid, self.data), cid)
+            picked = bankmod.pick_item(self.root, "math-m4", cid, self.data, FIXED_DATE)
+            self.assertIsNotNone(picked, cid)
+            self.assertEqual(picked["type"], "steps", cid)
+
+    def test_bank_left_counts_under_the_real_competence(self):
+        left = bankmod.bank_left(self.root, "math-m4", self.data)
+        self.assertEqual(sorted(left), sorted(STEPS_PILOT), "no phantom __steps competence")
+        for cid, entry in left.items():
+            self.assertEqual(entry, {"unseen": 12, "total": 12}, cid)
+
+    def test_generated_status_is_still_not_served(self):
+        # The status gate survives the flip: demote one file and it vanishes.
+        for cid in STEPS_PILOT:
+            path = self.root / "curriculum" / "bank" / "math-m4" / "steps" / f"{cid}__steps.json"
+            items = _read(path)
+            for it in items:
+                it["status"] = "generated"
+            path.write_text(json.dumps(items, ensure_ascii=False), encoding="utf-8")
             self.assertEqual(bankmod.load_bank(self.root, "math-m4", cid, self.data), [], cid)
             self.assertFalse(bankmod.has_bank(self.root, "math-m4", cid, self.data), cid)
             self.assertIsNone(bankmod.pick_item(self.root, "math-m4", cid, self.data, FIXED_DATE), cid)
-
-    def test_even_the_steps_stem_is_status_filtered(self):
-        # bank_left-style globbing derives the stem "m4.mult_2digit__steps";
-        # load_bank WOULD open that file — but every item is status
-        # "generated", so nothing comes back and no phantom competence appears.
-        for cid in STEPS_PILOT:
-            self.assertEqual(
-                bankmod.load_bank(self.root, "math-m4", f"{cid}__steps", self.data), [], cid)
         self.assertEqual(bankmod.bank_left(self.root, "math-m4", self.data), {})
 
-    def test_real_pilot_serves_only_compute_items(self):
+    def test_real_pilot_serves_compute_and_steps(self):
         with tempfile.TemporaryDirectory() as d:
             items = bankmod.load_bank(REPO, "math-m4", "m4.mult_2digit", d)
-            self.assertGreaterEqual(len(items), 25)
-            self.assertTrue(all(it["type"] != "steps" for it in items))
+            self.assertGreaterEqual(len(items), 25 + 12)
+            self.assertTrue(any(it["type"] == "steps" for it in items))
+            self.assertTrue(any(it["type"] == "compute" for it in items))
 
 
 class StepsPilotOnDiskTest(unittest.TestCase):
@@ -434,21 +456,26 @@ class StepsPilotOnDiskTest(unittest.TestCase):
             self.assertEqual(len(items), 12, cid)
             self.assertEqual(mb.validate_file(path), [], cid)
             self.assertEqual({it["method"] for it in items}, {fam}, cid)
-            self.assertEqual({it["status"] for it in items}, {"generated"}, cid)
+            # WP2.3: the pilot is validated — that is the gate that lets the
+            # steps grader serve it.
+            self.assertEqual({it["status"] for it in items}, {"validated"}, cid)
 
     def test_steps_files_invisible_to_every_bank_glob(self):
-        """Pin the location invariant: the one-level bank glob that
-        tests/test_bank_review.py TheWholeBank uses (and the non-recursive
-        globs in bank_left/_bank_index) must not see the steps files."""
+        """Pin the LOCATION invariant (WP2.2 kept it): the one-level bank glob
+        that tests/test_bank_review.py TheWholeBank uses must not see the steps
+        files — they live in the `steps/` subdir, which load_bank reaches by
+        name. (The old non-recursive-glob invisibility of bank_left/
+        _bank_index is gone on purpose: WP2.2 made those walks see the subdir
+        and normalize the `__steps` stem back to the competence.)"""
         one_level = sorted((REPO / "curriculum" / "bank").glob("*/*.json"))
         self.assertFalse([f for f in one_level if "__steps" in f.name],
                          "steps files must not sit at bank/<stem>/ level")
         self.assertFalse([f for f in PILOT.glob("*.json") if "__steps" in f.name])
-        # ...and the real serving path still returns only compute items.
+        # ...and the real serving path now returns compute AND steps items.
         with tempfile.TemporaryDirectory() as d:
             for cid in STEPS_PILOT:
-                self.assertTrue(all(it["type"] != "steps"
-                                    for it in bankmod.load_bank(REPO, "math-m4", cid, d)), cid)
+                items = bankmod.load_bank(REPO, "math-m4", cid, d)
+                self.assertTrue(any(it["type"] == "steps" for it in items), cid)
 
 
 class StepsValidationRefusesBadItemsTest(unittest.TestCase):
@@ -469,10 +496,14 @@ class StepsValidationRefusesBadItemsTest(unittest.TestCase):
         return it
 
     def test_good_item_accepted(self):
-        self.assertEqual(mb.validate_item(self._steps_item()), [])
+        # _steps_item() defaults to "generated" — the validator now refuses
+        # that (see test_status_generated_rejected), so accept a validated one.
+        self.assertEqual(mb.validate_item(self._steps_item(status="validated")), [])
 
-    def test_status_validated_rejected(self):
-        self.assertTrue(mb.validate_item(self._steps_item(status="validated")))
+    def test_status_generated_rejected(self):
+        # WP2.3 wired the steps grader: "generated" is no longer a status a
+        # steps item may carry — validated/reviewed, same rule as compute.
+        self.assertTrue(mb.validate_item(self._steps_item(status="generated")))
 
     def test_last_step_not_answer_rejected(self):
         bad = self._steps_item()
@@ -504,10 +535,11 @@ class StepsValidationRefusesBadItemsTest(unittest.TestCase):
         bad["steps"][1]["n"] = 5
         self.assertTrue(mb.validate_item(bad))
 
-    def test_build_item_steps_status_generated(self):
+    def test_build_item_steps_status_validated(self):
         import random
         it = mb.build_item("partial_products", random.Random(3), "m4.mult_2digit", 1, "test")
-        self.assertEqual(it["status"], "generated")
+        # WP2.3: the grader exists, so the generator emits served items.
+        self.assertEqual(it["status"], "validated")
         self.assertEqual(it["type"], "steps")
         self.assertEqual(mb.validate_item(it), [])
 

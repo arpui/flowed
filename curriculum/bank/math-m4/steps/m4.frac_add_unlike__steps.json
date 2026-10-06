@@ -1,6 +1,6 @@
 [
   {
-    "id": "m4.frac_add_unlike.001",
+    "id": "m4.frac_add_unlike.031",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -31,11 +31,11 @@
     ],
     "answer": "5/6",
     "why": "Denominador comú 6: 1/2 = 3/6 i 2/6 = 2/6; suma els numeradors (3 + 2 = 5).",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.002",
+    "id": "m4.frac_add_unlike.032",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -74,11 +74,11 @@
     ],
     "answer": "1 1/6",
     "why": "Denominador comú 12: 1/3 = 4/12 i 10/12 = 10/12; suma els numeradors (4 + 10 = 14). Simplifica 14/12 dividint per 2.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.003",
+    "id": "m4.frac_add_unlike.033",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -117,11 +117,11 @@
     ],
     "answer": "1 2/15",
     "why": "Denominador comú 60: 4/5 = 48/60 i 4/12 = 20/60; suma els numeradors (48 + 20 = 68). Simplifica 68/60 dividint per 4.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.004",
+    "id": "m4.frac_add_unlike.034",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -160,11 +160,11 @@
     ],
     "answer": "13/21",
     "why": "Denominador comú 42: 2/6 = 14/42 i 2/7 = 12/42; suma els numeradors (14 + 12 = 26). Simplifica 26/42 dividint per 2.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.005",
+    "id": "m4.frac_add_unlike.035",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -195,11 +195,11 @@
     ],
     "answer": "19/21",
     "why": "Denominador comú 21: 1/3 = 7/21 i 4/7 = 12/21; suma els numeradors (7 + 12 = 19).",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.006",
+    "id": "m4.frac_add_unlike.036",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -238,11 +238,11 @@
     ],
     "answer": "1 4/15",
     "why": "Denominador comú 30: 2/3 = 20/30 i 6/10 = 18/30; suma els numeradors (20 + 18 = 38). Simplifica 38/30 dividint per 2.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.007",
+    "id": "m4.frac_add_unlike.037",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -273,11 +273,11 @@
     ],
     "answer": "1 1/6",
     "why": "Denominador comú 6: 1/2 = 3/6 i 2/3 = 4/6; suma els numeradors (3 + 4 = 7).",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.008",
+    "id": "m4.frac_add_unlike.038",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -308,11 +308,11 @@
     ],
     "answer": "1 4/15",
     "why": "Denominador comú 15: 2/3 = 10/15 i 3/5 = 9/15; suma els numeradors (10 + 9 = 19).",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.009",
+    "id": "m4.frac_add_unlike.039",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -351,11 +351,11 @@
     ],
     "answer": "13/14",
     "why": "Denominador comú 28: 2/4 = 14/28 i 3/7 = 12/28; suma els numeradors (14 + 12 = 26). Simplifica 26/28 dividint per 2.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.010",
+    "id": "m4.frac_add_unlike.040",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -394,11 +394,11 @@
     ],
     "answer": "1",
     "why": "Denominador comú 12: 1/6 = 2/12 i 10/12 = 10/12; suma els numeradors (2 + 10 = 12). Simplifica 12/12 dividint per 12.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.011",
+    "id": "m4.frac_add_unlike.041",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -429,11 +429,11 @@
     ],
     "answer": "13/14",
     "why": "Denominador comú 14: 1/2 = 7/14 i 3/7 = 6/14; suma els numeradors (7 + 6 = 13).",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   },
   {
-    "id": "m4.frac_add_unlike.012",
+    "id": "m4.frac_add_unlike.042",
     "competence": "m4.frac_add_unlike",
     "type": "steps",
     "instruction": "Resol-ho pas a pas. Una línia per pas.",
@@ -472,7 +472,7 @@
     ],
     "answer": "3/4",
     "why": "Denominador comú 24: 4/8 = 12/24 i 3/12 = 6/24; suma els numeradors (12 + 6 = 18). Simplifica 18/24 dividint per 6.",
-    "status": "generated",
+    "status": "validated",
     "source": "mathbank · 2026-10-05 · seed 42"
   }
 ]

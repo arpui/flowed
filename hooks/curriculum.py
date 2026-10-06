@@ -700,6 +700,12 @@ def _bank_checkpoint_items(root, stem: str, cid: str, data_dir, today: str, used
     not practised in the last 7 days — a test, not a replay of this week.
     """
     items = bank_mod.load_bank(Path(root), stem, cid, data_dir)
+    # The level test asks one short question with one short answer, and its
+    # question shape is built from `sentence`. Math items (compute/compare,
+    # and the WP2.2 steps traces — a whole worked solution, not an answer)
+    # have no sentence and do not fit that shape: they stay out of the test,
+    # which falls back to the curriculum's own closed `Check:` examples.
+    items = [it for it in items if "sentence" in it]
     if not items:
         return []
     prog = bank_mod._load_progress(data_dir).get(cid, {})
@@ -1665,7 +1671,11 @@ def _bank_index(root: Path, stem: str, data_dir: str | os.PathLike | None = None
     out: dict[str, dict] = {}
     for d in bank_mod.bank_dirs(root, stem, data_dir):
         for f in sorted(d.glob("*.json")):
-            for it in bank_mod.load_bank(root, stem, f.stem, data_dir):
+            # WP2.2: a steps file is `<cid>__steps.json` inside the steps/
+            # subdir — it belongs to <cid>, and load_bank already merges it
+            # with the competence's main file.
+            cid = f.stem[: -len("__steps")] if f.stem.endswith("__steps") else f.stem
+            for it in bank_mod.load_bank(root, stem, cid, data_dir):
                 out[it["id"]] = it
     return out
 

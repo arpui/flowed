@@ -27,20 +27,19 @@ form the method demands), `value` (its exact value), `accept` (alternative
 lines), `error_class` (the §4.4 taxonomy, validated against
 `db_schema.ERROR_CATEGORIES`) and `why`. They are written to SEPARATE files
 `<competence>__steps.json` in a `steps/` SUBDIRECTORY of the bank dir
-(default: `curriculum/bank/<stem>/steps/`) and carry `status: "generated"` —
-deliberately NOT validated/reviewed, because the steps grader (WP2.3) does
-not exist yet. Three independent guards keep them unserved until WP2.3 wires
-`grade_step` and flips the status:
-  * `hooks/bank.py` `load_bank` opens exactly `<competence>.json` — never a
-    `__steps` sibling, never a subdirectory;
-  * `load_bank` filters `status in (validated, reviewed)`, so even a stem
-    that matched would return nothing;
-  * the subdirectory is invisible to every non-recursive `glob("*.json")`
-    (bank_left, _bank_index) AND to the one-level `bank/*/*.json` glob of
+(default: `curriculum/bank/<stem>/steps/`). WP2.1 shipped them as
+`status: "generated"` because the steps grader did not exist yet; WP2.2/2.3
+wired `load_bank` to the subdir and the per-line grader, so they are now
+generated `status: "validated"` like compute items — the status filter stays
+the gate (a human can demote an item to "generated" to pull it from service).
+Two guards still keep the SUBDIRECTORY out of the language-side paths:
+  * the subdirectory is invisible to the one-level `bank/*/*.json` glob of
     tests/test_bank_review.py TheWholeBank — which grades every item it
-    finds with `bank.grade`, and would crash on a steps item (no `sentence`).
-    (A sibling dir like `bank/math-m4-steps/` would still match that glob;
+    finds with `bank.grade`, and would crash on a steps item (no `sentence`);
+    (a sibling dir like `bank/math-m4-steps/` would still match that glob;
     a nested `steps/` under the stem does not.)
+  * the level test (`_bank_checkpoint_items`) skips items without `sentence`,
+    so a whole worked solution never becomes a one-answer test question.
 Generate them with an explicit `--family <steps family>` (a competence's
 `Bank:` line names its compute family; steps families are chosen per run,
 not per competence).
@@ -565,18 +564,18 @@ def _accept_ok(acc, want: Fraction | None) -> bool:
 
 
 def _validate_steps_item(item: dict) -> list[str]:
-    """Invariants of a §4.2 steps item. Status MUST be "generated": the steps
-    grader (WP2.3) does not exist yet, and bank.py only serves
-    validated/reviewed — so these items stay invisible until it is wired."""
+    """Invariants of a §4.2 steps item. Since WP2.3 (the per-line grader in
+    hooks/bank.py) the status rule is the compute one: validated/reviewed —
+    "generated" now means "not fit to serve", and validate refuses it."""
     errs: list[str] = []
     for f in STEPS_REQUIRED_FIELDS:
         if f not in item:
             errs.append(f"missing field {f!r}")
     if errs:
         return errs
-    if item["status"] != "generated":
-        errs.append(f"steps status {item['status']!r} must be 'generated' "
-                    "(WP2.3 flips it once grade_step is wired)")
+    if item["status"] not in ("validated", "reviewed"):
+        errs.append(f"steps status {item['status']!r} not validated/reviewed "
+                    "(WP2.3 wired the steps grader; generated items are not served)")
     if not _ID_RE.match(item["id"]):
         errs.append(f"bad id {item['id']!r}")
     if not item["id"].startswith(item["competence"] + "."):
@@ -815,10 +814,9 @@ def _build_steps_item(family: str, rng: random.Random, competence_id: str, seq: 
         "steps": cand["steps"],
         "answer": cand["answer"],
         "why": cand["why"],
-        # NOT validated/reviewed on purpose: bank.py serves those, and the
-        # steps grader (WP2.3) does not exist yet. WP2.3 flips this when it
-        # wires grade_step into the bank path.
-        "status": "generated",
+        # WP2.3 wired the per-line grader (hooks/bank.py `_grade_steps`), so
+        # steps items are generator-verified like compute items and served.
+        "status": "validated",
         "source": source,
     }
     errs = validate_item(item)
@@ -830,8 +828,8 @@ def _build_steps_item(family: str, rng: random.Random, competence_id: str, seq: 
 def generate(curriculum_path: Path, competence_id: str, n: int, seed: int,
              out_dir: Path | None, day: str, family: str | None = None) -> tuple[Path, list[dict]]:
     """Append n new items to <out_dir>/<competence>.json (compute families) or
-    <out_dir>/<competence>__steps.json (steps families — never served until
-    WP2.3, see the module docstring). `out_dir=None` means the curriculum's
+    <out_dir>/<competence>__steps.json (steps families — served since WP2.2/2.3,
+    see the module docstring). `out_dir=None` means the curriculum's
     bank dir; steps families default into its `steps/` subdirectory. Ids
     continue the existing numbering; problems already in the file are never
     duplicated. With an explicit `family` the curriculum's `Bank:` line (and
@@ -861,7 +859,24 @@ def generate(curriculum_path: Path, competence_id: str, n: int, seed: int,
         if errs:
             raise GenError("refusing to append to an invalid file:\n" + "\n".join(errs))
     used = {norm_problem(it["problem"]) for it in existing}
+    # Ids are the competence's, not the file's: bank.py merges `<cid>.json` and
+    # `steps/<cid>__steps.json` into ONE item set addressed by id (progress,
+    # the review queue, records), so the numbering continues across BOTH files
+    # — a steps item and a compute item of one competence can never share an id.
     last_num = 0
+    siblings = [path, out_dir / f"{competence_id}.json", out_dir / f"{competence_id}__steps.json"]
+    if out_dir.name == "steps":
+        siblings.append(out_dir.parent / f"{competence_id}.json")
+    seen_paths = set()
+    for sp in siblings:
+        if sp == path or sp in seen_paths or not sp.exists():
+            seen_paths.add(sp)
+            continue
+        seen_paths.add(sp)
+        for it in json.loads(sp.read_text(encoding="utf-8")):
+            m = re.search(r"\.(\d+)$", it.get("id", ""))
+            if m:
+                last_num = max(last_num, int(m.group(1)))
     for it in existing:
         m = re.search(r"\.(\d+)$", it.get("id", ""))
         if m:
