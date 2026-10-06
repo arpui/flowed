@@ -1358,7 +1358,7 @@ export function wordProblemTaskGuard(text: string, command?: string | null): str
 
   // (a) the statement must be a story, not an expression.
   const en = /\*\*Enunciat:?\*\*\s*([^\n]+)/i.exec(task);
-  if (en?.[1] && /^[\d\s.,+\-−×x*/·()=]+$/.test(en[1].trim())) {
+  if (en?.[1] && /^[\d\s.,+\-−×x*/·÷()=]+$/.test(en[1].trim())) {
     return (
       `This is 📖 Problemes: she reads a situation and decides which operation ` +
       `it calls for. "**Enunciat:** 24 ÷ 6" is a bare calculation — a Go card in a ` +

@@ -128,6 +128,21 @@ check("a bare expression as the statement is sent back (it is a Go card)",
 check("its rewrite asks for a real story",
   /story|situation/i.test(wordProblemTaskGuard(WORD_BARE, "math-reading") ?? ""));
 
+// WP3.4 (mathbench): the statement check must fire on its OWN, not only as a
+// side effect of the work check. "24 ÷ 6" with the work properly demanded is
+// still a Go card in a Problemes costume — and ÷ (the division sign the
+// guard's own message names) was missing from the arithmetic class, so this
+// exact card passed. Measured live 2026-10-06.
+const WORD_EXPR_WITH_WORK = `## Problema 5
+
+**Enunciat:** 24 ÷ 6
+
+**Escriu les operacions (una per línia) i el resultat:**`;
+check("a bare expression with the work demanded is still sent back (÷ is arithmetic too)",
+  wordProblemTaskGuard(WORD_EXPR_WITH_WORK, "math-reading") !== null);
+check("and it is the STORY check that fires",
+  /Go card|real story/i.test(wordProblemTaskGuard(WORD_EXPR_WITH_WORK, "math-reading") ?? ""));
+
 const WORD_RESULT_ONLY = `## Problema 4
 
 **Enunciat:** En Pere compra 3 llibretes a 2,50 € cada una i paga amb un bitllet de 10 €. Quants euros li tornen?
