@@ -948,5 +948,81 @@ class LadderScenarioTest(unittest.TestCase):
         self.assertEqual(cu.load_path(d, cur)["checkpoints"][0]["result"], "stay")
 
 
+# ---- WP1.1: the level test with closed MATH checks (Compute: / Steps:) --------
+
+class MathCheckpointTest(unittest.TestCase):
+    M4 = cu.load_curriculum(REPO_ROOT / "curriculum" / "math-m4.md")
+    M7 = cu.load_curriculum(REPO_ROOT / "curriculum" / "math-m7.md")
+
+    def _data(self):
+        td = tempfile.TemporaryDirectory(prefix="test-math-cp-")
+        self.addCleanup(td.cleanup)
+        return Path(td.name)
+
+    def test_compute_check_grading(self):
+        comp = {c["id"]: c for c in self.M7["competencies"]}
+        alg = comp["m7.syntax_letters"]["checks"][0]        # 3x + 5 + 2x → 5x + 5
+        self.assertTrue(cu.grade_check(alg, "5 + 5x"))      # equivalent writing
+        self.assertTrue(cu.grade_check(alg, "5(x+1)"))      # factored form
+        self.assertFalse(cu.grade_check(alg, "5x + 6"))
+        self.assertFalse(cu.grade_check(alg, "3x + 5 + 2x"))  # verbatim retype
+        num = comp["m7.value_numeric"]["checks"][0]         # 2a - 3b, a=5 b=2 → 4
+        self.assertTrue(cu.grade_check(num, "4"))
+        self.assertFalse(cu.grade_check(num, "14"))
+        neg = comp["m7.distributive_letters"]["checks"][2]  # -2 · (x + 4) → -2x - 8
+        self.assertTrue(cu.grade_check(neg, "-2x - 8"))
+        self.assertFalse(cu.grade_check(neg, "-2x + 8"))    # the sign slip
+
+    def test_steps_check_grading(self):
+        st = {c["id"]: c for c in self.M7["competencies"]}["m7.props_grouping"]["checks"][0]
+        self.assertTrue(cu.grade_check(st, "(13 + 7) + 25\n20 + 25\n45"))
+        self.assertTrue(cu.grade_check(st, "(13 + 7) + 25 = 45\n20 + 25 = 45\n45"))
+        self.assertFalse(cu.grade_check(st, "(13 + 7) + 25\n45"))            # missing step
+        self.assertFalse(cu.grade_check(st, "20 + 25\n(13 + 7) + 25\n45"))   # wrong order
+        self.assertFalse(cu.grade_check(st, "(13 + 7) + 25\n20 + 25\n46"))   # a slip fails the test
+
+    def test_math_bank_items_are_level_test_candidates(self):
+        """The KeyError-"sentence" era is over: a math item enters the test with
+        its problem as the prompt and the bank's own grader deciding."""
+        d = self._data()
+        cands = cu._bank_checkpoint_items(REPO_ROOT, "math-m4", "m4.mult_2digit",
+                                          d, "2026-10-06", set())
+        self.assertTrue(cands)
+        self.assertNotIn("sentence", cands[0]["bank"])
+        self.assertEqual(cands[0]["prompt"], cands[0]["bank"]["problem"])
+        q = cu._question(cands[0], 1, 12)
+        self.assertIn("Calcula:", q)
+        self.assertIn(cands[0]["bank"]["problem"], q)
+
+    def test_level_test_end_to_end_on_math(self):
+        d = self._data()
+        start = cu.checkpoint_start(d, self.M4, "2026-10-06", force=True,
+                                    stem="math-m4", root=REPO_ROOT)
+        self.assertTrue(start["ok"], start.get("text"))
+        self.assertEqual(start["total"], 12)
+        r = None
+        for _ in range(12):
+            run = cu._read_json(cu.run_file(d), None)
+            item = run["items"][run["i"]]
+            if item["bank"]["type"] == "steps":
+                ans = "\n".join(s["expect"] for s in item["bank"]["steps"])
+            else:
+                ans = item["bank"]["answer"]
+            r = cu.checkpoint_answer(d, self.M4, "2026-10-06", ans, root=REPO_ROOT)
+        self.assertTrue(r["done"])
+        self.assertEqual(12, r["result"]["correct"])
+        self.assertEqual("pass", r["result"]["result"])
+
+    def test_find_curriculum_for_m7_profile(self):
+        d = self._data()
+        (d / "learner-profile.json").write_text(json.dumps(
+            {"learner": {"name": "T", "target_language": "math",
+                         "target_level": "m7", "current_level": "m7"}}), encoding="utf-8")
+        (d / "certificates.json").write_text(json.dumps(
+            [{"language": "math", "level": "M4", "date": "2026-10-01",
+              "type": "checkpoint", "result": "pass"}]), encoding="utf-8")
+        self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "math-m7.md")
+
+
 if __name__ == "__main__":
     unittest.main()

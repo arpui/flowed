@@ -297,6 +297,97 @@ class TestGradeStep(unittest.TestCase):
         self.assertEqual(v["sides"]["right"]["form"], "5/8")
 
 
+class TestAlgebraic(unittest.TestCase):
+    """WP1.1 — parse_poly / grade_algebraic: expression answers graded by
+    polynomial equivalence (docs/competencies1eso.md, m7)."""
+
+    EQUIV = [
+        ("5x+5", "5+5x"),
+        ("5x+5", "5(x+1)"),
+        ("x(x+5)", "x^2+5x"),
+        ("x(x+5)", "x²+5x"),            # unicode superscript (web notation, §4.5)
+        ("4y+7z+2y+z", "6y+8z"),
+        ("3(x+4)", "3x+12"),
+        ("-2(x+4)", "-2x-8"),           # sign management (complete draft, block B)
+        ("8x+12", "4(2x+3)"),
+        ("4x+xy", "x(4+y)"),
+        ("ax+bx", "x(a+b)"),
+        ("7x+7y", "7(x+y)"),
+        ("2(x+1)", "2x+2"),
+        ("(x+1)(x+2)", "x^2+3x+2"),
+        ("x · x", "x^2"),
+        ("6x ÷ 3", "2x"),               # trivial fraction coefficient
+        ("3 x", "3x"),                  # space between factor and variable
+    ]
+
+    def test_equivalence(self):
+        for a, b in self.EQUIV:
+            with self.subTest(pair=(a, b)):
+                self.assertEqual(mg.parse_poly(a), mg.parse_poly(b))
+
+    def test_canonical_form_render(self):
+        self.assertEqual(mg.poly_form(mg.parse_poly("5+5x")), "5x + 5")
+        self.assertEqual(mg.poly_form(mg.parse_poly("-2(x+4)")), "-2x - 8")
+        self.assertEqual(mg.poly_form(mg.parse_poly("x(x+5)")), "x^2 + 5x")
+
+    BAD = ["x5", "x/y", "x^-1", "x^7", "3 + ", "", "1.000.000", "x + y = 5"]
+
+    def test_bad_notation(self):
+        for text in self.BAD:
+            with self.subTest(text=text):
+                with self.assertRaises(mg.ParseError):
+                    mg.parse_poly(text)
+
+    def test_correct_by_equivalence(self):
+        for exp, got in [("5x+5", "5+5x"), ("5x+5", "5(x+1)"), ("6y+8z", "4y+7z+2y+z")]:
+            with self.subTest(expected=exp, given=got):
+                v = mg.grade_algebraic(exp, got)
+                self.assertEqual((10, "correct"), (v["score"], v["verdict"]))
+
+    def test_near_coefficient_slip(self):
+        for exp, got in [("12x+5", "21x+5"),      # transposition in one coefficient
+                         ("3x+12", "3x+13")]:     # substitution
+            with self.subTest(expected=exp, given=got):
+                v = mg.grade_algebraic(exp, got)
+                self.assertEqual((7, "near"), (v["score"], v["verdict"]))
+
+    def test_categories(self):
+        cases = [
+            ("-2x-8", "-2x+8", "sign"),            # constant negated
+            ("3x+12", "-3x+12", "sign"),           # x-term negated
+            ("6y+8z", "6y", "incomplete"),         # whole term dropped
+            ("6y+8z", "6y+8z+x", "procedure"),     # extra term
+            ("3x+12", "3x+4", "wrong_operation"),  # one coefficient, not sign/slip
+        ]
+        for exp, got, cat in cases:
+            with self.subTest(expected=exp, given=got):
+                v = mg.grade_algebraic(exp, got)
+                self.assertEqual((3, "wrong"), (v["score"], v["verdict"]))
+                self.assertEqual(cat, v["category"])
+                self.assertEqual(cat, v["error_class"])
+
+    def test_verbatim_retype_is_procedure(self):
+        # Equivalence alone cannot see that nothing was transformed: with the
+        # problem given, retyping it verbatim is wrong (procedure).
+        v = mg.grade_algebraic("5x+5", "3x + 5 + 2x", problem="3x + 5 + 2x")
+        self.assertEqual((3, "wrong"), (v["score"], v["verdict"]))
+        self.assertEqual("procedure", v["category"])
+        # reordered-but-unsimplified still passes (documented limitation)
+        self.assertEqual(10, mg.grade_algebraic("5x+5", "2x + 5 + 3x",
+                                                problem="3x + 5 + 2x")["score"])
+
+    def test_empty_and_unparseable(self):
+        self.assertEqual(0, mg.grade_algebraic("5x+5", "")["score"])
+        self.assertEqual(0, mg.grade_algebraic("5x+5", "no ho sé")["score"])
+        v = mg.grade_algebraic("5x+5", "x5")
+        self.assertEqual((3, "wrong"), (v["score"], v["verdict"]))
+        self.assertNotIn("category", v)
+
+    def test_also_accept(self):
+        v = mg.grade_algebraic("5x+5", "10+10x", also_accept=["10 + 10x"])
+        self.assertEqual(10, v["score"])
+
+
 class TestCLI(unittest.TestCase):
     SCRIPT = REPO / "hooks" / "mathgrade.py"
 
@@ -330,6 +421,18 @@ class TestCLI(unittest.TestCase):
         r = self.run_cli("eval", "1/0")
         self.assertEqual(r.returncode, 1)
         self.assertIn("division by zero", json.loads(r.stdout)["error"])
+
+    def test_poly(self):
+        r = self.run_cli("poly", "3x + 5 + 2x")
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(json.loads(r.stdout)["form"], "5x + 5")
+
+    def test_agrade(self):
+        r = self.run_cli("agrade", "5x + 5", "5 + 5x")
+        self.assertEqual(json.loads(r.stdout)["score"], 10)
+        r = self.run_cli("agrade", "-2x - 8", "-2x + 8")
+        out = json.loads(r.stdout)
+        self.assertEqual(out["category"], "sign")
 
 
 if __name__ == "__main__":

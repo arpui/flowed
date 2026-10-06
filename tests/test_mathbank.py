@@ -661,5 +661,218 @@ class StepsValidationRefusesBadItemsTest(unittest.TestCase):
         self.assertEqual(mb.validate_item(it), [])
 
 
+# ------------------------------------------------- m7 algebra pilot (WP1.1) ---
+# docs/competencies1eso.md + docs/AlgebraNumericaBasica.md: the learner
+# transforms EXPRESSIONS. The generator's two-path rule becomes POLYNOMIAL
+# EQUIVALENCE (parse_poly on problem and answer, the same normalizer that
+# grades the learner), and the answers grade 10 through hooks/bank.py's
+# algebraic compute path.
+
+M7_CUR = REPO / "curriculum" / "math-m7.md"
+M7_PILOT = REPO / "curriculum" / "bank" / "math-m7"
+M7_COMPUTE = ["m7.syntax_letters", "m7.value_numeric", "m7.distributive_letters",
+              "m7.factor_letters"]
+M7_STEPS = ["m7.props_grouping", "m7.props_distributive", "m7.props_factor"]
+M7_STEPS_FAMILY = {"m7.props_grouping": "props_grouping_numeric",
+                   "m7.props_distributive": "props_distributive_numeric",
+                   "m7.props_factor": "props_factor_numeric"}
+
+
+def _gen_m7(tmp: Path, competence: str, n: int, seed: int) -> Path:
+    fam = mb.bank_family_for(M7_CUR, competence)
+    args = ["gen", "--curriculum", str(M7_CUR), "--competence", competence,
+            "--n", str(n), "--seed", str(seed), "--out", str(tmp), "--date", FIXED_DATE]
+    if fam in mb.STEPS_FAMILIES:
+        args += ["--family", fam]
+    rc = mb.main(args)
+    assert rc == 0, f"gen failed for {competence}"
+    suffix = "__steps" if fam in mb.STEPS_FAMILIES else ""
+    return tmp / f"{competence}{suffix}.json"
+
+
+class M7CurriculumTest(unittest.TestCase):
+    def test_parses_and_validates(self):
+        cur = cu.load_curriculum(M7_CUR)
+        self.assertEqual(cu.validate_curriculum(cur), [])
+        self.assertEqual(cur["meta"]["language"], "math")
+        self.assertEqual(cur["meta"]["level"], "m7")
+        ids = [c["id"] for c in cur["competencies"]]
+        for cid in M7_COMPUTE + M7_STEPS:
+            self.assertIn(cid, ids)
+
+    def test_every_competence_declares_a_bank_family(self):
+        for cid in M7_COMPUTE + M7_STEPS:
+            fam = mb.bank_family_for(M7_CUR, cid)
+            self.assertIn(fam, set(mb.FAMILIES) | set(mb.STEPS_FAMILIES), cid)
+
+    def test_checks_are_closed_math_types(self):
+        cur = cu.load_curriculum(M7_CUR)
+        for c in cur["competencies"]:
+            self.assertEqual(len(c["checks"]), 3, c["id"])
+            for k in c["checks"]:
+                self.assertIn(k["type"], ("Compute", "Steps"), c["id"])
+
+
+class M7DeterminismTest(unittest.TestCase):
+    def test_same_seed_identical_json(self):
+        with tempfile.TemporaryDirectory() as d1, tempfile.TemporaryDirectory() as d2:
+            for cid in M7_COMPUTE + M7_STEPS:
+                a = _gen_m7(Path(d1), cid, 12, 42).read_text(encoding="utf-8")
+                b = _gen_m7(Path(d2), cid, 12, 42).read_text(encoding="utf-8")
+                self.assertEqual(a, b, f"{cid}: same seed produced different JSON")
+
+    def test_different_seed_different_items(self):
+        with tempfile.TemporaryDirectory() as d1, tempfile.TemporaryDirectory() as d2:
+            for cid in M7_COMPUTE:
+                a = {mb.norm_problem(i["problem"]) for i in _read(_gen_m7(Path(d1), cid, 12, 1))}
+                b = {mb.norm_problem(i["problem"]) for i in _read(_gen_m7(Path(d2), cid, 12, 7))}
+                self.assertLess(len(a & b), len(a), f"{cid}: seed did not change the draw")
+
+
+class M7ItemsTest(unittest.TestCase):
+    """Fresh generation (seed 42, 12 per family) checked end to end."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.items = {}
+        for cid in M7_COMPUTE + M7_STEPS:
+            cls.items[cid] = _read(_gen_m7(Path(cls.tmp.name), cid, 12, 42))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_schema_ids_and_status(self):
+        for cid, items in self.items.items():
+            self.assertEqual(len(items), 12, cid)
+            for i, it in enumerate(items, 1):
+                self.assertEqual(it["id"], f"{cid}.{i:03d}")
+                self.assertEqual(it["status"], "validated")
+                fields = (mb.STEPS_REQUIRED_FIELDS if it["type"] == "steps"
+                          else mb.REQUIRED_FIELDS)
+                for f in fields:
+                    self.assertIn(f, it, f"{it['id']}: missing {f}")
+
+    def test_algebraic_answers_grade_10(self):
+        for cid in M7_COMPUTE:
+            for it in self.items[cid]:
+                self.assertEqual(bankmod.grade(it, it["answer"])["score"], 10,
+                                 f"{it['id']}: {it['problem']} -> {it['answer']}")
+                for a in it["also_accept"]:
+                    self.assertEqual(bankmod.grade(it, a)["score"], 10, f"{it['id']} accept {a}")
+
+    def test_equivalent_learner_writings_grade_10(self):
+        # the whole point of the polynomial normalizer: any equivalent form
+        for it in self.items["m7.syntax_letters"]:
+            self.assertEqual(bankmod.grade(it, it["answer"])["score"], 10)
+        for it in self.items["m7.factor_letters"]:
+            # the expanded problem is equivalent to the factored answer — but
+            # retyping it verbatim is NOT accepted (the task is to transform)
+            self.assertEqual(bankmod.grade(it, it["problem"])["category"], "procedure",
+                             it["id"])
+
+    def test_negative_factor_distributive_present(self):
+        neg = [it for it in self.items["m7.distributive_letters"]
+               if it["problem"].lstrip().startswith("-")]
+        self.assertGreaterEqual(len(neg), 1, "the sign-management case must be in the pilot")
+        for it in neg:
+            self.assertEqual(bankmod.grade(it, it["answer"])["score"], 10, it["id"])
+            # the classic sign slip: flip one coefficient -> wrong, category sign
+            flipped = it["answer"].replace("- ", "+ ", 1) if "- " in it["answer"] else None
+            if flipped:
+                r = bankmod.grade(it, flipped)
+                self.assertEqual(3, r["score"], (it["id"], flipped))
+                self.assertEqual("sign", r.get("category"), (it["id"], flipped))
+
+    def test_factor_levels_covered(self):
+        """The four levels of the draft must all appear in the 12-item pilot:
+        L1 only-letter (kx + ky), L2 letter+number (kx + xy), L3 hidden number
+        (kx + n), L4 powers (x^2 + kx)."""
+        probs = [it["problem"] for it in self.items["m7.factor_letters"]]
+        self.assertTrue(any(re.match(r"(\d+)([a-z]) \+ \1([a-z])$", p) for p in probs), probs)
+        self.assertTrue(any(re.search(r"\+ ([a-z])([a-z])$", p) for p in probs), probs)
+        self.assertTrue(any(re.match(r"(\d+)([a-z]) \+ (\d+)$", p) for p in probs), probs)
+        self.assertTrue(any("^2" in p for p in probs), probs)
+
+    def test_value_numeric_is_numeric_with_expression(self):
+        for it in self.items["m7.value_numeric"]:
+            self.assertTrue(it.get("expression"), it["id"])
+            ev = mathgrade.parse_expr(it["expression"]).value
+            self.assertEqual(ev, mathgrade.parse_expr(it["answer"]).value, it["id"])
+            with self.assertRaises(mathgrade.ParseError):
+                mathgrade.parse_expr(it["problem"])   # the problem is prose
+
+    def test_steps_traces_grade_10(self):
+        for cid in M7_STEPS:
+            for it in self.items[cid]:
+                trace = "\n".join(s["expect"] for s in it["steps"])
+                r = bankmod.grade(it, trace)
+                self.assertEqual(10, r["score"], f"{it['id']}: {trace!r} -> {r}")
+                self.assertEqual("steps", it["type"])
+
+    def test_validation_refuses_non_equivalent_algebraic_answer(self):
+        bad = {"id": "m7.x.001", "competence": "m7.x", "type": "compute",
+               "instruction": "Simplifica.", "problem": "3x + 5 + 2x", "answer": "5x + 6",
+               "also_accept": [], "options": [], "why": "x", "status": "validated",
+               "source": "test"}
+        errs = mb.validate_item(bad)
+        self.assertTrue(any("not equivalent" in e for e in errs), errs)
+
+    def test_ids_unique_across_the_whole_bank_including_m7(self):
+        seen: dict[str, str] = {}
+        dupes = []
+        for f in sorted((REPO / "curriculum" / "bank").glob("*/*.json")) + \
+                 sorted((REPO / "curriculum" / "bank").glob("*/steps/*.json")):
+            for it in _read(f):
+                if it["id"] in seen:
+                    dupes.append((it["id"], seen[it["id"]], f.name))
+                seen[it["id"]] = f.name
+        self.assertEqual([], dupes[:5], f"{len(dupes)} duplicate ids in the bank")
+        for cid in M7_COMPUTE + M7_STEPS:
+            self.assertTrue(any(i.startswith(cid + ".") for i in seen), cid)
+
+
+class M7PilotOnDiskTest(unittest.TestCase):
+    def test_pilot_files_exist_and_validate(self):
+        for cid in M7_COMPUTE:
+            f = M7_PILOT / f"{cid}.json"
+            self.assertTrue(f.exists(), cid)
+            self.assertEqual(mb.validate_file(f), [], cid)
+            self.assertEqual(len(_read(f)), 12, cid)
+        for cid in M7_STEPS:
+            f = M7_PILOT / "steps" / f"{cid}__steps.json"
+            self.assertTrue(f.exists(), cid)
+            self.assertEqual(mb.validate_file(f), [], cid)
+            self.assertEqual(len(_read(f)), 12, cid)
+
+    def test_pilot_answers_grade_10_on_disk(self):
+        for cid in M7_COMPUTE:
+            for it in _read(M7_PILOT / f"{cid}.json"):
+                self.assertEqual(bankmod.grade(it, it["answer"])["score"], 10, it["id"])
+
+    def test_validate_subcommand_passes_on_m7_pilot(self):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = mb.main(["validate", "--curriculum", str(M7_CUR)])
+        self.assertEqual(rc, 0, buf.getvalue())
+        for cid in M7_COMPUTE + M7_STEPS:
+            self.assertIn(f"{cid}", buf.getvalue())
+
+    def test_m4_declarations_make_pilots_visible(self):
+        """WP1.1 gap closed: m4.add_carry / m4.div_2x1 / m4.word_problems are now
+        declared in math-m4.md, so the curriculum (and through it Go/lesson and
+        _bank_index) sees the bank items that already existed."""
+        cur = cu.load_curriculum(REPO / "curriculum" / "math-m4.md")
+        self.assertEqual(cu.validate_curriculum(cur), [])
+        ids = [c["id"] for c in cur["competencies"]]
+        for cid in ("m4.add_carry", "m4.div_2x1", "m4.word_problems"):
+            self.assertIn(cid, ids)
+            self.assertTrue(bankmod.has_bank(REPO, "math-m4", cid, None), cid)
+        index = cu._bank_index(REPO, "math-m4", None)
+        for cid in ("m4.add_carry", "m4.div_2x1", "m4.word_problems"):
+            self.assertTrue(any(i.startswith(cid + ".") for i in index), cid)
+
+
 if __name__ == "__main__":
     unittest.main()
