@@ -4,7 +4,7 @@
     "algorithm": "SM-2",
     "last_updated": "{YYYY-MM-DD}",
     "total_items_tracked": 0,
-    "language": "{target_language}"
+    "language": "Math"
   },
   "daily_limits": {
     "review_items_per_day": 20,

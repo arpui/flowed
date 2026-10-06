@@ -990,7 +990,11 @@ def rebuild_path(data_dir: str | os.PathLike, cur: dict, cfg: dict = CFG, save: 
 # Weak competences are NOT carried into the new course: they stay on the certificate for the
 # teacher, and the SM-2 review keeps working on the mistakes.
 
-LEVELS = ("A0", "A1", "A2", "B1", "B2", "C1", "C2")
+# The language ladder (A0..C2) and the math one (m1..m6, decision D3) share the
+# machinery but never a ladder: ladder() filters curricula by language first, so
+# a math profile only ever compares m-levels and an English profile only ever
+# compares CEFR ones. The index is only meaningful within one subject.
+LEVELS = ("A0", "A1", "A2", "B1", "B2", "C1", "C2", "M1", "M2", "M3", "M4", "M5", "M6")
 
 
 def _lvl(level: str) -> int:
@@ -1582,14 +1586,33 @@ def render_report(cur: dict, path: dict, as_of: str, admin: bool = False, cfg: d
 RETIRED_DUE = "9999-12-31"
 
 
-def _pattern_record(item_id: str, sr_item: dict, pattern: dict | None) -> dict:
+# Math skill keys (DISSENY-MATEMATIQUES C7): an old error pattern's category
+# names which kind of practice it is, so a math record carries a math skill
+# instead of the language vocabulary/grammar split. competency_of() only reads
+# "vocabulary" specially (word-list matching); every math key falls through to
+# the category-tag path, which is exactly right: math competences are tagged
+# with their error categories (#carrying, #simplification…).
+_MATH_SKILL_BY_CATEGORY = {
+    "facts": "computation", "calculation": "computation", "carrying": "computation",
+    "sign": "computation", "place_value": "computation", "simplification": "computation",
+    "unit": "computation",
+    "procedure": "steps", "order_of_operations": "steps", "wrong_operation": "steps",
+    "misread": "problems",
+}
+
+
+def _pattern_record(item_id: str, sr_item: dict, pattern: dict | None, cur: dict | None = None) -> dict:
     """A queue item seen as a record, so competency_of() can place it."""
     pattern = pattern or {}
     ex = (pattern.get("examples") or [{}])[-1] or {}
     cat = str(pattern.get("category") or "").strip().lower()
+    if str(((cur or {}).get("meta") or {}).get("language") or "").strip().lower() == "math":
+        skill = _MATH_SKILL_BY_CATEGORY.get(cat, "reasoning")
+    else:
+        skill = "vocabulary" if item_id.startswith("vocabulary_") or cat == "vocabulary" else "grammar"
     return {
         "item_id": item_id,
-        "skill": "vocabulary" if item_id.startswith("vocabulary_") or cat == "vocabulary" else "grammar",
+        "skill": skill,
         "exercise": str(sr_item.get("content") or ""),
         "learner_answer": str(ex.get("incorrect") or ""),
         "corrections": [{"wrong": str(ex.get("incorrect") or ""), "right": str(ex.get("correct") or sr_item.get("content") or ""),
@@ -1608,7 +1631,7 @@ def legacy_competence(cur: dict, item_id: str, sr_item: dict, pattern: dict | No
     guess sends her to practise a neighbouring competence instead of her own
     mistake ("Go_right_and_then_tu" -> subject_pronouns, measured on nes-en).
     """
-    rec = _pattern_record(item_id, sr_item, pattern)
+    rec = _pattern_record(item_id, sr_item, pattern, cur)
     cid, how = competency_of(cur, rec)
     if not cid:
         return None, how, False

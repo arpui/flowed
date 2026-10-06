@@ -9,14 +9,15 @@
 //   graded — every answer the tutor scored, wherever it came from (free play
 //            included). This is the "✏️ 15 🤩" number.
 //   lesson — answers given inside the guided Review. This is what empties the
-//            badge on the 🎓 button.
-//   speaking / reading — answers given inside those buttons specifically
-//            (not credited by an equivalent exercise surfacing in Mix — same
-//            principle as `lesson`, which only counts inside 🎓 Review too).
-//            Each empties its own badge once ≥1 for the day: mix keeps
-//            choosing whatever exercise types it likes on its own, this is
-//            only a "did you also do one of these today" reminder, never a
-//            gate (2026-09-22, Albert).
+//            badge on the 🔁 button.
+//   reasoning / problems / facts — answers given inside the 📝 Raonament,
+//            📖 Problemes and 📚 Facts buttons specifically (the math skill
+//            keys of C7; not credited by an equivalent exercise surfacing in
+//            Go — same principle as `lesson`, which only counts inside 🔁
+//            Review too). Each empties its own badge once ≥1 for the day: Go
+//            keeps choosing whatever exercise types it likes on its own, this
+//            is only a "did you also do one of these today" reminder, never a
+//            gate (2026-09-22, Albert; math keys WP1.7, 2026-10-06).
 //
 // Kept free of Bun imports so server/test/*.test.ts can exercise it under node.
 
@@ -27,9 +28,9 @@ export interface DailyCounts {
   date: string;
   graded: number;
   lesson: number;
-  speaking: number;
-  reading: number;
-  writing: number;
+  reasoning: number;
+  problems: number;
+  facts: number;
 }
 
 export function today(now = new Date()): string {
@@ -48,12 +49,12 @@ export function readDaily(dataDir: string, date = today()): DailyCounts {
       date,
       graded: n(raw.graded),
       lesson: n(raw.lesson),
-      speaking: n(raw.speaking),
-      reading: n(raw.reading),
-      writing: n(raw.writing),
+      reasoning: n(raw.reasoning),
+      problems: n(raw.problems),
+      facts: n(raw.facts),
     };
   } catch {
-    return { date, graded: 0, lesson: 0, speaking: 0, reading: 0, writing: 0 };
+    return { date, graded: 0, lesson: 0, reasoning: 0, problems: 0, facts: 0 };
   }
 }
 
@@ -163,7 +164,7 @@ export function creditLesson(dataDir: string, date = today()): LessonTally {
 
 export function bumpDaily(
   dataDir: string,
-  delta: { graded?: number; lesson?: number; speaking?: number; reading?: number; writing?: number },
+  delta: { graded?: number; lesson?: number; reasoning?: number; problems?: number; facts?: number },
   date = today()
 ): DailyCounts {
   const current = readDaily(dataDir, date);
@@ -171,9 +172,9 @@ export function bumpDaily(
     date,
     graded: Math.max(0, current.graded + (delta.graded ?? 0)),
     lesson: Math.max(0, current.lesson + (delta.lesson ?? 0)),
-    speaking: Math.max(0, current.speaking + (delta.speaking ?? 0)),
-    reading: Math.max(0, current.reading + (delta.reading ?? 0)),
-    writing: Math.max(0, current.writing + (delta.writing ?? 0)),
+    reasoning: Math.max(0, current.reasoning + (delta.reasoning ?? 0)),
+    problems: Math.max(0, current.problems + (delta.problems ?? 0)),
+    facts: Math.max(0, current.facts + (delta.facts ?? 0)),
   };
   try {
     const file = dailyFile(dataDir, date);

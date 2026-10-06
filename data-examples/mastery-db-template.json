@@ -2,34 +2,34 @@
   "_schema_version": 1,
   "metadata": {
     "last_updated": "{YYYY-MM-DD}",
-    "language": "{target_language}"
+    "language": "Math"
   },
   "skills": {
-    "writing": {
+    "computation": {
       "mastery_level": 0,
       "confidence_score": 0.0,
       "total_practice_time": 0,
       "last_practiced": null
     },
-    "speaking": {
+    "steps": {
       "mastery_level": 0,
       "confidence_score": 0.0,
       "total_practice_time": 0,
       "last_practiced": null
     },
-    "vocabulary": {
+    "problems": {
       "mastery_level": 0,
       "confidence_score": 0.0,
       "total_practice_time": 0,
       "last_practiced": null
     },
-    "reading": {
+    "reasoning": {
       "mastery_level": 0,
       "confidence_score": 0.0,
       "total_practice_time": 0,
       "last_practiced": null
     },
-    "listening": {
+    "facts": {
       "mastery_level": 0,
       "confidence_score": 0.0,
       "total_practice_time": 0,
@@ -37,7 +37,7 @@
     }
   },
   "patterns": {
-    "example_grammar_pattern": {
+    "example_math_pattern": {
       "mastery_level": 0,
       "last_practiced": null,
       "times_practiced": 0,

@@ -79,7 +79,7 @@ function firstPercent(source: JsonRecord, keys: string[]): number | null {
 }
 
 function normalizeSkills(dbs: JsonRecord): Array<Record<string, unknown>> {
-  const known = ["writing", "speaking", "vocabulary", "reading", "listening"];
+  const known = ["computation", "steps", "problems", "reasoning", "facts"];
   const mastery = asRecord(dbs.mastery_db);
   const progress = asRecord(dbs.progress_db);
   const profile = asRecord(dbs.learner_profile);

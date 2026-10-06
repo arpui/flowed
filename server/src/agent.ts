@@ -737,7 +737,10 @@ export class Agent {
   private creditBankAnswer(sessionId: string, inLesson: boolean, key: string): void {
     try {
       const dir = this.dataDir();
-      bumpDaily(dir, { graded: 1, ...(inLesson ? { lesson: 1 } : {}) });
+      // 📚 Facts runs on the bank, so its daily counter is bumped here, not in
+      // creditTurn (same "only inside that button" rule as `lesson`).
+      const inFacts = this.currentCommand.get(sessionId) === "math-vocab";
+      bumpDaily(dir, { graded: 1, ...(inLesson ? { lesson: 1 } : {}), ...(inFacts ? { facts: 1 } : {}) });
       this.lastAnswer.delete(sessionId); // one answer, one credit
       if (!inLesson) return;
       const plan = this.lessonPlan();
@@ -1452,16 +1455,16 @@ export class Agent {
       // flow is the active one, never by an equivalent exercise mix happens to
       // surface on its own — a daily "did you also do one of these" reminder,
       // not a gate (2026-09-22, Albert).
-      const inSpeaking = this.currentCommand.get(sessionId) === "math-speaking";
-      const inReading = this.currentCommand.get(sessionId) === "math-reading";
-      const inWriting = this.currentCommand.get(sessionId) === "math-writing";
+      const inReasoning = this.currentCommand.get(sessionId) === "math-writing";
+      const inProblems = this.currentCommand.get(sessionId) === "math-reading";
+      const inFacts = this.currentCommand.get(sessionId) === "math-vocab";
       const dir = this.dataDir();
       bumpDaily(dir, {
         graded: 1,
         ...(inLesson ? { lesson: 1 } : {}),
-        ...(inSpeaking ? { speaking: 1 } : {}),
-        ...(inReading ? { reading: 1 } : {}),
-        ...(inWriting ? { writing: 1 } : {}),
+        ...(inReasoning ? { reasoning: 1 } : {}),
+        ...(inProblems ? { problems: 1 } : {}),
+        ...(inFacts ? { facts: 1 } : {}),
       });
       // One answer, one credit. Consumed here so that a later turn with no
       // answer of its own — a button, a second assistant message in the same
@@ -1923,7 +1926,7 @@ export class Agent {
         record_id: `${sessionId}:derived:${Date.now()}`,
         session_id: sessionId,
         ts: Date.now(),
-        skill: parsed.skill ?? "vocabulary",
+        skill: parsed.skill ?? "computation",
         exercise: (asked[0] ?? parsed.correctVersion ?? "").slice(0, 200),
         learner_answer: answer.slice(0, 500),
         score: Math.round(parsed.score),
@@ -2042,7 +2045,7 @@ export class Agent {
     };
   }
 
-  /** The learner's CEFR level from the profile, upper-cased, or undefined. */
+  /** The learner's math level (m1..m6) from the profile, upper-cased, or undefined. */
   private learnerLevel(): string | undefined {
     try {
       const prof = JSON.parse(
@@ -2063,9 +2066,9 @@ export class Agent {
     session: number;
     skill?: string;
     lesson: ReturnType<Agent["lessonState"]>;
-    speaking: ReturnType<typeof skillBadge>;
-    reading: ReturnType<typeof skillBadge>;
-    writing: ReturnType<typeof skillBadge>;
+    reasoning: ReturnType<typeof skillBadge>;
+    problems: ReturnType<typeof skillBadge>;
+    facts: ReturnType<typeof skillBadge>;
     mode: string | null;
   } {
     const { count, lastSkill } = this.gradedSoFar(sessionId);
@@ -2090,9 +2093,9 @@ export class Agent {
       session: count,
       skill: lastSkill,
       lesson: this.lessonState(),
-      speaking: skillBadge(daily.speaking),
-      reading: skillBadge(daily.reading),
-      writing: skillBadge(daily.writing),
+      reasoning: skillBadge(daily.reasoning),
+      problems: skillBadge(daily.problems),
+      facts: skillBadge(daily.facts),
       // The button ring (TRACKED_MODE_CMDS in web/app.js) is a purely
       // client-side variable, set only when the learner clicks a mode button —
       // it has no way to know the server is already in a mode after a page

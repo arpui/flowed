@@ -3,11 +3,11 @@
   "metadata": {
     "last_updated": "{YYYY-MM-DD}",
     "total_patterns_tracked": 0,
-    "language": "{target_language}"
+    "language": "Math"
   },
   "error_patterns": {
     "example_pattern_1": {
-      "category": "{grammar|vocabulary|spelling|pronunciation|syntax}",
+      "category": "{calculation|sign|place_value|carrying|order_of_operations|wrong_operation|procedure|facts|simplification|unit|misread|incomplete}",
       "subcategory": "{specific_area}",
       "frequency": 0,
       "mastery_level": 0,

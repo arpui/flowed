@@ -211,7 +211,10 @@ class TheWholeBank(unittest.TestCase):
         for f in sorted((REPO / "curriculum" / "bank").glob("*/*.json")):
             for it in json.loads(f.read_text(encoding="utf-8")):
                 valid = [it["answer"], *it.get("also_accept", [])]
-                if it["type"] in ("complete", "choose"):
+                # _full_sentence fills the "___" of a LANGUAGE sentence; math
+                # items (compute/choose/compare) carry a `problem` instead and
+                # their answer IS the full correct version (WP1.3).
+                if it["type"] in ("complete", "choose") and "sentence" in it:
                     valid += [bank_mod._full_sentence(it), it["answer"].upper()]
                 bad += [(it["id"], a) for a in valid if bank_mod.grade(it, a)["score"] != 10]
         self.assertEqual([], bad[:10], f"{len(bad)} valid answers not graded 10")

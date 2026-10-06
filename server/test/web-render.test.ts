@@ -82,23 +82,23 @@ function check(name: string, cond: boolean, detail?: unknown) {
 const NO_REVIEWS =
   "🎉 No reviews due today! Your spaced repetition is up to date.\n\n" +
   "Want to practice something new? Use the buttons at the top:\n" +
-  "- 🎲 Surprise me! — adaptive mixed practice\n" +
-  "- 📚 Vocabulary — learn new words\n" +
-  "- 📊 Progress — see your stats";
+  "- 🎲 Go — mixed practice from your path\n" +
+  "- 📚 Facts — tables, doubles, halves\n" +
+  "- 📊 Stats — see your numbers";
 
 check("the empty-queue message is a menu", looksLikeMenu(NO_REVIEWS));
 check("and is never tagged as an exercise", isOpenExercise(NO_REVIEWS) === false);
 
 check("the opening menu is a menu",
-  isOpenExercise("Hello, Nes! What would you like to practice today?\n1. 📝 Writing\n2. 🗣️ Speaking") === false);
+  isOpenExercise("Hello, Nes! What would you like to practice today?\n1. 📝 Raonament\n2. 🗣️ Math talk") === false);
 check("the closing menu is a menu",
   isOpenExercise("Use the buttons at the top (🎲 🔁 📚 📝 🗣️ 📖) to continue. What shall we do next?") === false);
 check("the old numbered menu still counts",
   isOpenExercise("Type a number or skill name:") === false);
 check("two button names alone are enough",
-  looksLikeMenu("You could do 📚 Vocabulary or 📝 Writing now."));
+  looksLikeMenu("You could do 📚 Facts or 📝 Raonament now."));
 check("one button name in passing is not a menu",
-  looksLikeMenu("Nice — that is exactly the kind of sentence 📝 Writing drills.") === false);
+  looksLikeMenu("Nice — that is exactly the kind of slip 📝 Raonament drills.") === false);
 
 // The other half: real exercises must survive the widened net.
 check("a translation exercise is still an exercise",
@@ -128,13 +128,13 @@ check("the math hint lands on the Skill line, in Catalan",
 // --- no slash commands reach the screen ------------------------------------
 
 check("a bare command becomes its button",
-  humanizeCommands("Try /math-vocab next.") === "Try **📚 Vocabulary** next.",
+  humanizeCommands("Try /math-vocab next.") === "Try **📚 Facts** next.",
   humanizeCommands("Try /math-vocab next."));
 check("a backticked command becomes its button",
   humanizeCommands("Run `/math-review` first.") === "Run **🔁 Review** first.",
   humanizeCommands("Run `/math-review` first."));
 check("math-learn is the dice button",
-  humanizeCommands("/math-learn").includes("Surprise me!"));
+  humanizeCommands("/math-learn").includes("🎲 Go"));
 check("math-end is the finish button",
   humanizeCommands("/math-end").includes("End"), humanizeCommands("/math-end"));
 check("setup points at the admin, not at a button",

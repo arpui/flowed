@@ -94,8 +94,10 @@ export function dailyFace(graded: number, goal = DEFAULT_DAILY_GOAL): string {
  */
 export type StopMode = "soft" | "hard";
 
-/** Modes that end on their own shape, not on a count of exercises. */
-const SELF_LIMITING_SKILLS = new Set(["writing", "reading"]);
+/** Modes that end on their own shape, not on a count of exercises: one
+ *  explained solution (reasoning) or one word problem (problems) is a whole
+ *  practice, not one item of a dozen. Math skill keys (C7). */
+const SELF_LIMITING_SKILLS = new Set(["reasoning", "problems"]);
 
 export function resolveSessionTarget(profile: unknown): number {
   const prefs = (profile as { preferences?: Record<string, unknown> })?.preferences ?? {};
@@ -234,7 +236,10 @@ export function countGradedInText(messages: Iterable<string>): number {
  * It is shown, never enforced: a dot on the button, and a slot in the Lesson.
  */
 export const SKILL_DEBT_DAYS = 3;
-export const TRACKED_SKILLS = ["writing", "reading", "speaking", "vocabulary"] as const;
+// The five math skill keys (C7). mastery-db stores them under `skills` — the
+// old `skills_mastery` spelling never existed in any writer, so the debts
+// silently read an empty object (WP1.7, 2026-10-06).
+export const TRACKED_SKILLS = ["computation", "steps", "problems", "reasoning", "facts"] as const;
 
 export interface SkillDebt {
   skill: string;
@@ -243,8 +248,8 @@ export interface SkillDebt {
 }
 
 export function skillDebts(masteryDb: unknown, today: string, thresholdDays = SKILL_DEBT_DAYS): SkillDebt[] {
-  const skills = (masteryDb as { skills_mastery?: Record<string, { last_practiced?: unknown }> })
-    ?.skills_mastery ?? {};
+  const skills = (masteryDb as { skills?: Record<string, { last_practiced?: unknown }> })
+    ?.skills ?? {};
   const todayMs = Date.parse(`${today}T00:00:00Z`);
   return TRACKED_SKILLS.map((skill) => {
     const last = skills[skill]?.last_practiced;
@@ -266,12 +271,13 @@ export function skillDebts(masteryDb: unknown, today: string, thresholdDays = SK
  * Days-idle alone is a poor trigger for someone who practises in bursts: a week
  * off makes everything overdue at once. Tying it to lesson cadence instead
  * means the obligation arrives at a steady rate — two lessons as you like, the
- * third carries one piece of writing or reading — and it only fires when the
- * skill really has been skipped.
+ * third carries one piece of reasoning or a word problem — and it only fires
+ * when the skill really has been skipped.
  */
 export const SKILL_SLOT_EVERY = 3;
-/** Only the two that get quietly dropped; nobody avoids flashcards. */
-export const SLOT_SKILLS = ["writing", "reading"] as const;
+/** Only the two that get quietly dropped — the open-ended ones; nobody avoids
+ *  flashcards (facts) and Go is all computation. Math keys (C7). */
+export const SLOT_SKILLS = ["reasoning", "problems"] as const;
 
 export function lessonSkillSlot(
   lessonsCompleted: number,
@@ -309,6 +315,13 @@ const EXERCISE_MARKS = [
   // the exercise: a real plan file from 2026-09-16 has "critical" sitting in
   // its already-asked list, once, standing in for fifteen different questions.
   /\*\*(?:Exercise|Item ID):?\*\*\s*(.+)/gi,
+  // The math bank card (bank.ts, WP1.3): "**Problem:** 24 × 3" with a bare
+  // "**Type your answer:**" below. Without this mark the card only fingerprinted
+  // through EXERCISE_FALLBACK_MARKS — which never runs once any primary mark
+  // matches elsewhere in a bundled feedback+question message, so the
+  // already-asked guard could not reliably stop the bank repeating an item
+  // (found by WP1.6, 2026-10-06).
+  /\*\*Problem:?\*\*\s*(.+)/gi,
   // A Writing exercise is a scenario and a task ("Write a short email…", an
   // instruction, which BARE_INSTRUCTION rightly refuses). It had no fingerprint at
   // all, so the server could not tell that a Writing answer was waiting, and a
@@ -664,7 +677,7 @@ export interface LessonView {
   /** Real weak patterns available to drill. Zero + nothing due = nothing to
    *  review, and the lesson has to be honest about that. */
   material?: number;
-  /** CEFR level from the learner profile, for a lesson built from scratch. */
+  /** Math level (m1..m6) from the learner profile, for a lesson built from scratch. */
   level?: string;
 }
 

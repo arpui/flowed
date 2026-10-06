@@ -25,7 +25,7 @@ def main():
     profile_path = data / "learner-profile.json"
 
     if not profile_path.exists():
-        print("[Fluent] 🌍 Welcome to Fluent - The AI Language Learning Kit!")
+        print("[Fluent] 🧮 Welcome to FlowMath - the AI Math Tutor!")
         print("[Fluent] 📝 Run /math-setup to create your personalized learning profile")
         sys.exit(0)
 
@@ -35,13 +35,15 @@ def main():
 
         learner = profile.get("learner", {})
         name = learner.get("name", "Learner")
-        target_lang = learner.get("target_language", "your target language")
+        # The subject is fixed (target_language = "Math"); it is shown in the
+        # language the tutor explains in, like the web header does.
+        subject = "Matemàtiques"
         current_level = learner.get("current_level", "...")
         target_level = learner.get("target_level", "...")
         streak = profile.get("current_streak_days", 0)
 
-        print(f"[Fluent] 🌍 Welcome back, {name}!")
-        print(f"[Fluent] 📚 Learning: {target_lang}")
+        print(f"[Fluent] 🧮 Welcome back, {name}!")
+        print(f"[Fluent] 📚 Subject: {subject}")
         print(f"[Fluent] 🎯 Level: {current_level} → {target_level}")
         print(f"[Fluent] 🔥 Streak: {streak} days")
 

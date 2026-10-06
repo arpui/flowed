@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fluent DB Reader Script
+FlowMath DB Reader Script
 Loads the 6 learning databases and outputs a JSON object to stdout.
 
 Usage:
@@ -331,7 +331,7 @@ def main():
             if version > CURRENT_SCHEMA_VERSION:
                 schema_warnings.append(
                     f"{path.name}: schema v{version} is newer than supported "
-                    f"v{CURRENT_SCHEMA_VERSION} — upgrade Fluent or migrate before writing"
+                    f"v{CURRENT_SCHEMA_VERSION} — upgrade FlowMath or migrate before writing"
                 )
             elif version < CURRENT_SCHEMA_VERSION:
                 schema_warnings.append(

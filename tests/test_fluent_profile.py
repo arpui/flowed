@@ -7,8 +7,8 @@ and how their sessions are paced is the system owner's call, so the write now
 also exists as a deterministic CLI (`scripts/flowed-profile.py`) and the app
 shows a notice instead of the interview.
 
-These checks cover the CLI's validation (a wrong CEFR level must not reach the
-profile) and the two UI facts that make the change real.
+These checks cover the CLI's validation (a level off the m1..m6 scale must not
+reach the profile) and the two UI facts that make the change real.
 """
 import json
 import subprocess
@@ -26,7 +26,7 @@ class FluentProfileCliTest(unittest.TestCase):
     def setUp(self):
         self.tmp = TemporaryDirectory()
         self.home = Path(self.tmp.name)
-        self.profile_dir = self.home / ".fluent" / "demo-en"
+        self.profile_dir = self.home / ".fluent" / "demo-math"
         self.profile_dir.mkdir(parents=True)
         self.profile = self.profile_dir / "learner-profile.json"
         self.profile.write_text(TEMPLATE.read_text())
@@ -34,7 +34,7 @@ class FluentProfileCliTest(unittest.TestCase):
 
     def run_cli(self, *args):
         return subprocess.run(
-            [sys.executable, str(SCRIPT), "demo-en", *args],
+            [sys.executable, str(SCRIPT), "demo-math", *args],
             capture_output=True, text=True, cwd=REPO_ROOT,
             env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"},
         )
@@ -43,25 +43,27 @@ class FluentProfileCliTest(unittest.TestCase):
         return json.loads(self.profile.read_text())
 
     def test_a_full_setup_completes_the_profile(self):
-        r = self.run_cli("--name", "Nes", "--native", "Catalan", "--target", "English",
-                         "--level", "A2", "--goal", "B1", "--minutes", "20")
+        r = self.run_cli("--name", "Nes", "--native", "Catalan",
+                         "--level", "m4", "--goal", "m5", "--minutes", "20")
         self.assertEqual(r.returncode, 0, r.stderr)
         data = self.read()
         self.assertEqual(data["learner"]["name"], "Nes")
-        self.assertEqual(data["learner"]["current_level"], "A2")
+        self.assertEqual(data["learner"]["current_level"], "m4")
+        self.assertEqual(data["learner"]["target_language"], "Math",
+                         "the subject is fixed: --target defaults to Math")
         self.assertEqual(data["learner"]["daily_goal_minutes"], 20)
         self.assertTrue(data["preferences"]["setup_complete"],
                         "a complete profile must stop the app asking")
 
     def test_template_placeholders_never_survive(self):
-        self.run_cli("--name", "Nes", "--native", "Catalan", "--target", "English",
-                     "--level", "A2", "--goal", "B1")
+        self.run_cli("--name", "Nes", "--native", "Catalan",
+                     "--level", "m4", "--goal", "m5")
         blob = json.dumps(self.read())
         self.assertNotIn('"{', blob, "a {PLACEHOLDER} reached a real profile")
 
     def test_pacing_preferences_are_admin_settable(self):
-        self.run_cli("--name", "Nes", "--native", "Catalan", "--target", "English",
-                     "--level", "A2", "--goal", "B1")
+        self.run_cli("--name", "Nes", "--native", "Catalan",
+                     "--level", "m4", "--goal", "m5")
         r = self.run_cli("--daily-goal", "8", "--stop", "hard", "--review-gate", "off")
         self.assertEqual(r.returncode, 0, r.stderr)
         prefs = self.read()["preferences"]
@@ -73,8 +75,8 @@ class FluentProfileCliTest(unittest.TestCase):
         self.assertIs(prefs["review_gate"], False)
 
     def test_the_old_flag_still_works(self):
-        self.run_cli("--name", "Nes", "--native", "Catalan", "--target", "English",
-                     "--level", "A2", "--goal", "B1")
+        self.run_cli("--name", "Nes", "--native", "Catalan",
+                     "--level", "m4", "--goal", "m5")
         self.run_cli("--session-length", "9")
         self.assertEqual(self.read()["preferences"]["daily_goal"], 9)
 
@@ -82,17 +84,17 @@ class FluentProfileCliTest(unittest.TestCase):
         before = self.profile.read_text()
         r = self.run_cli("--level", "Z9")
         self.assertNotEqual(r.returncode, 0)
-        self.assertIn("A1", r.stderr + r.stdout)
+        self.assertIn("m1", r.stderr + r.stdout)
         self.assertEqual(self.profile.read_text(), before)
 
     def test_the_same_language_twice_is_refused(self):
-        r = self.run_cli("--native", "English", "--target", "English")
+        r = self.run_cli("--native", "Math", "--target", "Math")
         self.assertNotEqual(r.returncode, 0)
         self.assertEqual(json.loads(TEMPLATE.read_text()), self.read())
 
     def test_a_missing_profile_points_at_new_user(self):
         r = subprocess.run(
-            [sys.executable, str(SCRIPT), "nope-en", "--show"],
+            [sys.executable, str(SCRIPT), "nope-math", "--show"],
             capture_output=True, text=True, cwd=REPO_ROOT,
             env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"},
         )
@@ -100,8 +102,8 @@ class FluentProfileCliTest(unittest.TestCase):
         self.assertIn("new-user.sh", r.stderr + r.stdout)
 
     def test_every_write_leaves_a_backup(self):
-        self.run_cli("--name", "Nes", "--native", "Catalan", "--target", "English",
-                     "--level", "A2", "--goal", "B1")
+        self.run_cli("--name", "Nes", "--native", "Catalan",
+                     "--level", "m4", "--goal", "m5")
         self.assertTrue(list(self.profile_dir.glob("learner-profile.json.backup-*")))
 
 

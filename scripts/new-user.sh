@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR: where the profiles live
-# Flowed new-user bootstrap — provisions a fresh learner profile under ~/.flowed/<id>/.
+# FlowMath new-user bootstrap — provisions a fresh learner profile under the
+# profile root (~/.flowmath/<id>/ when FLOWED_HOME says so).
 #
 # Usage:
 #   scripts/new-user.sh <id> [--port N]
 #
-#   <id>   : safe profile id (lowercase letters, digits, hyphens), e.g. test-en
+#   <id>   : safe profile id (lowercase letters, digits, hyphens). Convention:
+#            <nom>-math, e.g. maria-math — the "-math" suffix marks the subject
+#            and keeps these profiles apart from any language fork's.
 #   --port : web port for the launch command hint (default 4100)
 #
 # What it does:
@@ -77,7 +80,7 @@ PASS="$(openssl rand -base64 18 | tr -dc 'a-zA-Z0-9' | cut -c1-16)"
 (umask 077 && printf '%s\n' "$PASS" > "$PWFILE")
 
 echo
-echo "✅ New Flowed profile created: $DATA_DIR"
+echo "✅ New FlowMath profile created: $DATA_DIR"
 echo "   Password: $PASS   (also saved in $PWFILE)"
 echo
 echo "   Seeded 6 DBs from data-examples/. learner-profile.json is a TEMPLATE"

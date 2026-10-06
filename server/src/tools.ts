@@ -538,7 +538,8 @@ export function buildTools(opts: {
   // are denied by the allow-list — so a profile created by new-user.sh stayed a
   // template for ever while the web kept auto-starting the interview. This tool
   // is that missing write, with the fields typed and validated.
-  const CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"];
+  // Math level scale (DISSENY-MATEMATIQUES D3): m1..m6, the primary cycle.
+  const M_LEVELS = ["m1", "m2", "m3", "m4", "m5", "m6"];
 
   const setupTool: ToolDefinition = {
     name: "math_setup_profile",
@@ -548,13 +549,13 @@ export function buildTools(opts: {
       type: "object",
       properties: {
         name: { type: "string", description: "The learner's first name, as they wrote it." },
-        target_language: { type: "string", description: "Language being learned, in English (e.g. English, German)." },
-        native_language: { type: "string", description: "The learner's native language, in English (e.g. Catalan). Never guess: use what they said." },
-        current_level: { type: "string", description: `CEFR level now: ${CEFR.join(" | ")}` },
-        target_level: { type: "string", description: `CEFR level wanted: ${CEFR.join(" | ")}` },
+        target_language: { type: "string", description: 'Subject being learned — always "Math".' },
+        native_language: { type: "string", description: "The language the tutor explains in, in English (e.g. Catalan). Never guess: use what they said." },
+        current_level: { type: "string", description: `Math level now: ${M_LEVELS.join(" | ")}` },
+        target_level: { type: "string", description: `Math level wanted: ${M_LEVELS.join(" | ")}` },
         daily_minutes: { type: "number", description: "Minutes per day they committed to (5-240)." },
-        goals: { type: "array", items: { type: "string" }, description: "Why they are learning, in their words (1-5 short items)." },
-        motivation: { type: "string", description: "travel | work | exam | living_abroad | personal | family" },
+        goals: { type: "array", items: { type: "string" }, description: "Why they are practising, in their words (1-5 short items)." },
+        motivation: { type: "string", description: "school | exam | practice | personal" },
         interests: { type: "array", items: { type: "string" }, description: "Up to 3 interests, used for warmer examples. Optional." },
         about: { type: "string", description: "One line about them, in their words. Optional." },
       },
@@ -568,7 +569,7 @@ export function buildTools(opts: {
       if (name.length < 1 || name.length > 60) {
         return "REJECTED: name must be the learner's first name, 1-60 characters.";
       }
-      const target = String(args.target_language ?? "").trim();
+      let target = String(args.target_language ?? "").trim();
       const native = String(args.native_language ?? "").trim();
       if (!target || !native) {
         return "REJECTED: target_language and native_language are both required.";
@@ -576,12 +577,14 @@ export function buildTools(opts: {
       if (target.toLowerCase() === native.toLowerCase()) {
         return `REJECTED: target_language and native_language cannot both be "${target}". Ask the learner again which one they are learning.`;
       }
-      const level = (v: unknown) => String(v ?? "").trim().toUpperCase();
+      if (target.toLowerCase() === "math") target = "Math"; // the one subject this fork teaches
+      // m1..m6, stored lowercase ("M4" from a chatty model normalizes to "m4").
+      const level = (v: unknown) => String(v ?? "").trim().toLowerCase();
       const current = level(args.current_level);
       const wanted = level(args.target_level);
       for (const [field, value] of [["current_level", current], ["target_level", wanted]] as const) {
-        if (!CEFR.includes(value)) {
-          return `REJECTED: ${field} must be one of ${CEFR.join(", ")} (got ${JSON.stringify(value)}). If the learner does not know, ask one placement question and decide yourself.`;
+        if (!M_LEVELS.includes(value)) {
+          return `REJECTED: ${field} must be one of ${M_LEVELS.join(", ")} (got ${JSON.stringify(value)}). If the learner does not know, ask one placement question and decide yourself.`;
         }
       }
       let minutes = Number(args.daily_minutes);

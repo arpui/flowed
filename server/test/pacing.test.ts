@@ -138,6 +138,33 @@ Complete the sentence with the correct form of the word:
 }
 
 
+// --- the math bank card (bank.ts, WP1.3) fingerprints through the primary marks --
+{
+  const MATH_CARD = `## Exercise 3: Calculation (Easy) Multiplicacions <span class="comp-tag">m4.mult_2digit</span>
+
+**Problem:** 24 × 3
+
+**Type your answer:**`;
+  check("a math bank card fingerprints its problem",
+    exerciseFingerprints(MATH_CARD).includes("24 × 3"), exerciseFingerprints(MATH_CARD));
+  // The shape that actually broke (WP1.6): feedback and the next card in ONE
+  // message. With no primary mark for "**Problem:**", the card only reached
+  // EXERCISE_FALLBACK_MARKS — and the learner's wrong answer rode in with it.
+  const BUNDLED = `❌ Not quite.
+
+**Wrong:** 24 × 3 = 62
+
+**Score: 6/10**
+
+${MATH_CARD}`;
+  const fp = exerciseFingerprints(BUNDLED);
+  check("a bundled feedback+math-card message fingerprints the card",
+    fp.includes("24 × 3"), fp);
+  check("…and not the wrong answer from the feedback",
+    !fp.some((f) => f.includes("62")), fp);
+}
+
+
 // --- the target ------------------------------------------------------------
 check("a profile without the setting gets the default",
   resolveSessionTarget({ preferences: {} }) === DEFAULT_SESSION_LENGTH);
@@ -169,11 +196,11 @@ check("still fires past the target (a missed turn is not a missed close)",
 check("pacing off means never", wrapUpNote(99, 0) === null);
 
 // --- modes that end on their own shape -------------------------------------
-check("a writing session is one scenario, not a count", wrapUpNote(12, 12, "writing") === null);
-check("a reading session is one text", wrapUpNote(12, 12, "reading") === null);
-check("case does not matter", wrapUpNote(12, 12, "Writing") === null);
-check("vocabulary is paced normally", wrapUpNote(12, 12, "vocabulary") !== null);
-check("speaking is paced normally", wrapUpNote(12, 12, "speaking") !== null);
+check("a reasoning session is one explained solution, not a count", wrapUpNote(12, 12, "reasoning") === null);
+check("a problems session is one word problem", wrapUpNote(12, 12, "problems") === null);
+check("case does not matter", wrapUpNote(12, 12, "Reasoning") === null);
+check("facts is paced normally", wrapUpNote(12, 12, "facts") !== null);
+check("computation is paced normally", wrapUpNote(12, 12, "computation") !== null);
 
 
 // --- the stop mode ---------------------------------------------------------
@@ -184,17 +211,17 @@ check("hard when the learner asks for it",
 check("anything else is soft", resolveStopMode({ preferences: { session_stop: "meh" } }) === "soft");
 
 {
-  const soft = wrapUpNote(8, 8, "vocabulary", "soft");
+  const soft = wrapUpNote(8, 8, "facts", "soft");
   check("soft OFFERS instead of closing", !!soft && soft.includes("OFFER to close"), soft);
   check("soft lets them carry on", !!soft && soft.includes("If they choose to continue"));
-  const hard = wrapUpNote(8, 8, "vocabulary", "hard");
+  const hard = wrapUpNote(8, 8, "facts", "hard");
   check("hard closes", !!hard && hard.includes("Do NOT present another exercise"));
   check("both say the learner can already see the count",
     !!soft && !!hard && soft.includes("see that count in the app") && hard.includes("see that count in the app"));
 }
 
-check("writing is not paced", isPaced("writing") === false);
-check("vocabulary is paced", isPaced("vocabulary") === true);
+check("reasoning is not paced", isPaced("reasoning") === false);
+check("facts is paced", isPaced("facts") === true);
 check("no skill yet is paced", isPaced(undefined) === true);
 
 
@@ -288,29 +315,29 @@ const P = { preferences: { session_length: 12 } };
 
 {
   const debts = skillDebts(
-    { skills_mastery: { writing: { last_practiced: "2026-09-01" }, reading: { last_practiced: "2026-09-12" } } },
+    { skills: { reasoning: { last_practiced: "2026-09-01" }, problems: { last_practiced: "2026-09-12" } } },
     "2026-09-13"
   );
-  const writing = debts.find((d) => d.skill === "writing");
-  const reading = debts.find((d) => d.skill === "reading");
-  check("12 days without writing is a debt", writing?.daysIdle === 12 && writing.due === true, writing);
-  check("yesterday's reading is not", reading?.due === false, reading);
+  const reasoning = debts.find((d) => d.skill === "reasoning");
+  const problems = debts.find((d) => d.skill === "problems");
+  check("12 days without reasoning is a debt", reasoning?.daysIdle === 12 && reasoning.due === true, reasoning);
+  check("yesterday's problems is not", problems?.due === false, problems);
   check("never practised counts as owed",
-    debts.find((d) => d.skill === "speaking")?.due === true);
+    debts.find((d) => d.skill === "steps")?.due === true);
 
-  check("every third lesson carries the slot", lessonSkillSlot(2, debts) === "writing");
+  check("every third lesson carries the slot", lessonSkillSlot(2, debts) === "reasoning");
   check("the other two do not",
     lessonSkillSlot(0, debts) === null && lessonSkillSlot(1, debts) === null);
-  check("and it repeats", lessonSkillSlot(5, debts) === "writing");
+  check("and it repeats", lessonSkillSlot(5, debts) === "reasoning");
   check("the most neglected skill wins",
     lessonSkillSlot(2, [
-      { skill: "reading", daysIdle: 20, due: true },
-      { skill: "writing", daysIdle: 4, due: true },
-    ]) === "reading");
+      { skill: "problems", daysIdle: 20, due: true },
+      { skill: "reasoning", daysIdle: 4, due: true },
+    ]) === "problems");
   check("no debt, no slot — the obligation only fires when it is real",
-    lessonSkillSlot(2, [{ skill: "writing", daysIdle: 0, due: false }]) === null);
-  check("vocabulary is never a slot (nobody avoids flashcards)",
-    lessonSkillSlot(2, [{ skill: "vocabulary", daysIdle: 30, due: true }]) === null);
+    lessonSkillSlot(2, [{ skill: "reasoning", daysIdle: 0, due: false }]) === null);
+  check("facts is never a slot (nobody avoids flashcards)",
+    lessonSkillSlot(2, [{ skill: "facts", daysIdle: 30, due: true }]) === null);
 }
 
 {

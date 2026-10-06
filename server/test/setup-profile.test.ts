@@ -42,12 +42,12 @@ function setupTool(dataDir: string) {
 
 const GOOD = {
   name: "Nes",
-  target_language: "English",
+  target_language: "Math",
   native_language: "Catalan",
-  current_level: "a2",
-  target_level: "B1",
+  current_level: "M4",
+  target_level: "m5",
   daily_minutes: 20,
-  goals: ["parlar amb els cosins"],
+  goals: ["millorar les multiplicacions"],
   interests: ["futbol", "dinosaures", "minecraft", "extra que s'ha de retallar"],
 };
 
@@ -60,10 +60,10 @@ const GOOD = {
 
   const profile = JSON.parse(fs.readFileSync(path.join(dir, "learner-profile.json"), "utf8"));
   check("the name is stored", profile.learner.name === "Nes");
-  check("languages are stored", profile.learner.target_language === "English" && profile.learner.native_language === "Catalan");
-  check("a lowercase level is normalized", profile.learner.current_level === "A2", profile.learner.current_level);
+  check("languages are stored", profile.learner.target_language === "Math" && profile.learner.native_language === "Catalan");
+  check("an upper-cased level is normalized to the m-scale", profile.learner.current_level === "m4", profile.learner.current_level);
   check("daily minutes are stored", profile.learner.daily_goal_minutes === 20);
-  check("goals land in focus_areas", Array.isArray(profile.focus_areas) && profile.focus_areas[0] === "parlar amb els cosins");
+  check("goals land in focus_areas", Array.isArray(profile.focus_areas) && profile.focus_areas[0] === "millorar les multiplicacions");
   check("interests are capped at 3", profile.learner.interests.length === 3, profile.learner.interests);
   check("setup is marked complete", profile.preferences.setup_complete === true);
   // A placeholder is a STRING VALUE shaped like "{...}" — not the object braces.
@@ -82,11 +82,11 @@ const GOOD = {
   const tool = setupTool(dir);
   const ctx = { sessionID: "s", messageID: "m", dataDir: dir };
 
-  const same = await tool.execute({ ...GOOD, native_language: "English" }, ctx);
-  check("same language twice is rejected", same.startsWith("REJECTED") && same.includes("which one"), same);
+  const same = await tool.execute({ ...GOOD, native_language: "Math" }, ctx);
+  check("same subject twice is rejected", same.startsWith("REJECTED") && same.includes("which one"), same);
 
   const level = await tool.execute({ ...GOOD, current_level: "beginner" }, ctx);
-  check("a non-CEFR level is rejected, listing the valid ones", level.startsWith("REJECTED") && level.includes("A1, A2"), level);
+  check("a level off the m-scale is rejected, listing the valid ones", level.startsWith("REJECTED") && level.includes("m1, m2"), level);
 
   const noName = await tool.execute({ ...GOOD, name: "  " }, ctx);
   check("an empty name is rejected", noName.startsWith("REJECTED"), noName);

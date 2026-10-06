@@ -8,13 +8,14 @@ in mid-lesson. This script is that write, with the same validation the
 `math_setup_profile` tool applies, and it also carries the pacing
 preferences so a profile can be provisioned in one go.
 
-    scripts/new-user.sh demo-en
-    scripts/flowed-profile.py demo-en --name Nes --native Catalan --target English \\
-        --level A2 --goal B1 --minutes 20 --session-length 8
+    scripts/new-user.sh demo-math
+    scripts/flowed-profile.py demo-math --name Nes --native Catalan \\
+        --level m4 --goal m5 --minutes 20 --session-length 8
 
-    scripts/flowed-profile.py demo-en --session-length 10 --stop soft   # adjust later
-    scripts/flowed-profile.py demo-en --show
+    scripts/flowed-profile.py demo-math --session-length 10 --stop soft   # adjust later
+    scripts/flowed-profile.py demo-math --show
 
+The subject is fixed ("Math"); --target exists only to override it explicitly.
 Nothing here is interactive and nothing is guessed: a value you do not pass is
 a value that does not change.
 """
@@ -30,8 +31,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
 from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
-CEFR = ["A1", "A2", "B1", "B2", "C1", "C2"]
-MOTIVATIONS = ["travel", "work", "exam", "living_abroad", "personal", "family"]
+M_LEVELS = ["m1", "m2", "m3", "m4", "m5", "m6"]  # math level scale (D3)
+MOTIVATIONS = ["school", "exam", "practice", "personal"]
 PLACEHOLDER = lambda v: isinstance(v, str) and v.strip().startswith("{") and v.strip().endswith("}")
 
 
@@ -81,13 +82,13 @@ def summarise(profile: dict) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("profile", help="profile id under ~/.flowed/ (e.g. demo-en), or 'data' for the repo profile")
+    ap.add_argument("profile", help="profile id under the profile root (e.g. demo-math), or 'data' for the repo profile")
     ap.add_argument("--show", action="store_true", help="print the current values and exit")
     ap.add_argument("--name")
-    ap.add_argument("--native", help="native language, in English (e.g. Catalan)")
-    ap.add_argument("--target", help="language being learned, in English (e.g. English)")
-    ap.add_argument("--level", help=f"CEFR level now: {'|'.join(CEFR)}")
-    ap.add_argument("--goal", help=f"CEFR level wanted: {'|'.join(CEFR)}")
+    ap.add_argument("--native", help="the language the tutor explains in, in English (e.g. Catalan)")
+    ap.add_argument("--target", help='subject being learned — fixed "Math"; pass only to override')
+    ap.add_argument("--level", help=f"math level now: {'|'.join(M_LEVELS)}")
+    ap.add_argument("--goal", help=f"math level wanted: {'|'.join(M_LEVELS)}")
     ap.add_argument("--minutes", type=int, help="daily goal, 5-240")
     ap.add_argument("--motivation", choices=MOTIVATIONS)
     ap.add_argument("--interest", action="append", default=[], help="repeatable, up to 3")
@@ -119,9 +120,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.native or args.target:
         native = (args.native or learner.get("native_language") or "").strip()
-        target = (args.target or learner.get("target_language") or "").strip()
+        # The subject is fixed: "Math". --target only exists to say so
+        # explicitly; a template placeholder in the profile counts as absent.
+        existing = (learner.get("target_language") or "").strip()
+        if PLACEHOLDER(existing):
+            existing = ""
+        target = ((args.target or "").strip() or existing or "Math")
         if not native or not target:
-            raise SystemExit("error: --native and --target are both needed the first time")
+            raise SystemExit("error: --native is needed the first time (the language the tutor explains in)")
         if native.lower() == target.lower():
             raise SystemExit(f"error: native and target cannot both be '{target}'")
         learner["native_language"], learner["target_language"] = native, target
@@ -130,9 +136,9 @@ def main(argv: list[str] | None = None) -> int:
     for opt, key in (("level", "current_level"), ("goal", "target_level")):
         value = getattr(args, opt)
         if value:
-            if value.upper() not in CEFR:
-                raise SystemExit(f"error: --{opt} must be one of {', '.join(CEFR)}")
-            learner[key] = value.upper()
+            if value.lower() not in M_LEVELS:
+                raise SystemExit(f"error: --{opt} must be one of {', '.join(M_LEVELS)}")
+            learner[key] = value.lower()  # m1..m6, stored lowercase
             changed.append(key)
 
     if args.minutes is not None:

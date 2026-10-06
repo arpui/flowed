@@ -1,7 +1,7 @@
 {
   "_schema_version": 1,
   "metadata": {
-    "language": "{target_language}",
+    "language": "Math",
     "learner_name": "{name}",
     "total_sessions": 0
   },
@@ -12,15 +12,15 @@
       "time_start": "{HH:MM:SS}",
       "time_end": "{HH:MM:SS}",
       "duration_minutes": 0,
-      "skill_practiced": "{writing|speaking|vocabulary|reading|listening|mixed}",
-      "command_used": "{/fluent-learn|/fluent-vocab|/fluent-writing|/fluent-speaking|/fluent-reading|/fluent-review}",
+      "skill_practiced": "{computation|steps|problems|reasoning|facts|mixed}",
+      "command_used": "{/math-learn|/math-vocab|/math-writing|/math-speaking|/math-reading|/math-review}",
       "exercises_completed": 0,
       "exercises_correct": 0,
       "exercises_incorrect": 0,
       "accuracy": 0.0,
       "focus_areas": [
-        "{grammar_pattern}",
-        "{vocabulary_topic}"
+        "{error_pattern}",
+        "{competence_id}"
       ],
       "new_patterns_encountered": [
         "{pattern_name}"

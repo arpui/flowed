@@ -2,7 +2,7 @@
   "_schema_version": 1,
   "metadata": {
     "last_updated": "{YYYY-MM-DD}",
-    "language": "{target_language}",
+    "language": "Math",
     "tracking_started": "{YYYY-MM-DD}"
   },
   "overall_stats": {
@@ -22,27 +22,27 @@
     }
   ],
   "skill_progress": {
-    "writing": {
+    "computation": {
       "sessions": 0,
       "accuracy": 0.0,
       "last_practiced": null
     },
-    "speaking": {
+    "steps": {
       "sessions": 0,
       "accuracy": 0.0,
       "last_practiced": null
     },
-    "vocabulary": {
+    "problems": {
       "sessions": 0,
       "accuracy": 0.0,
       "last_practiced": null
     },
-    "reading": {
+    "reasoning": {
       "sessions": 0,
       "accuracy": 0.0,
       "last_practiced": null
     },
-    "listening": {
+    "facts": {
       "sessions": 0,
       "accuracy": 0.0,
       "last_practiced": null

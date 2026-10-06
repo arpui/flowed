@@ -278,14 +278,14 @@ function stripMachineBlocks(text) {
 // should never be the one who finds out. Rewriting at render time is the only
 // guarantee: whatever the model says, what reaches the screen names a button.
 const BUTTON_NAMES = {
-  "math-learn": "🎲 Surprise me!",
+  "math-learn": "🎲 Go",
   "math-review": "🔁 Review",
-  "math-vocab": "📚 Vocabulary",
-  "math-writing": "📝 Writing",
-  "math-speaking": "🗣️ Speaking",
-  "math-reading": "📖 Reading",
-  "math-progress": "📊 Progress",
-  "math-checkpoint": "🧪 Level test",
+  "math-vocab": "📚 Facts",
+  "math-writing": "📝 Raonament",
+  "math-speaking": "🗣️ Math talk",
+  "math-reading": "📖 Problemes",
+  "math-progress": "📊 Stats",
+  "math-checkpoint": "🧪 Test",
   "math-end": "🏁 End",
   "math-setup": "l'administrador",
   "math-use": "l'administrador",
@@ -383,16 +383,15 @@ function errText(e) {
 // actually recorded — the model is not asked to keep score.
 const paceEl = $("#pace");
 
-// 📖 Reading is hard to follow below A1 (math-reading's own skill file says
-// so: "skip below A1 mastery 3") — hidden until the learner is past A1, so
-// nobody on a fresh A0 profile finds it and gets a text they can't read
-// (2026-09-22, Albert). `p.lesson.level` already carries the learner's
-// current CEFR level (lessonState() reads it from learner-profile.json), so
-// no new server field is needed. Level unknown → stays hidden (fails safe).
-const CEFR_ORDER = ["A0", "A1", "A2", "B1", "B2", "C1", "C2"];
-function readingUnlocked(level) {
-  const i = CEFR_ORDER.indexOf(String(level || "").toUpperCase());
-  return i > CEFR_ORDER.indexOf("A1");
+// 📖 Problemes (word problems) need a reading level the youngest cycle does
+// not have yet — hidden until m2, mirroring the old "past A1" gate
+// (2026-09-22, Albert; math scale D3, WP1.7). `p.lesson.level` already
+// carries the learner's current level — lessonState() upper-cases it, hence
+// the toLowerCase() here. Level unknown → stays hidden (fails safe).
+const M_ORDER = ["m0", "m1", "m2", "m3", "m4", "m5", "m6"];
+function problemsUnlocked(level) {
+  const i = M_ORDER.indexOf(String(level || "").trim().toLowerCase());
+  return i >= M_ORDER.indexOf("m2");
 }
 
 // The button ring is a client-side memory of the last mode button clicked —
@@ -414,10 +413,10 @@ function renderPace(p) {
   if (!p || typeof p.graded !== "number") {
     paceEl.hidden = true;
     renderLessonBadge(null);
-    renderSkillBadge(speakingBtn, speakingWasPending, (v) => (speakingWasPending = v), null, "");
-    renderSkillBadge(readingBtn, readingWasPending, (v) => (readingWasPending = v), null, "");
-    renderSkillBadge(writingBtn, writingWasPending, (v) => (writingWasPending = v), null, "");
-    if (readingBtn) readingBtn.hidden = true;
+    renderSkillBadge(factsBtn, factsWasPending, (v) => (factsWasPending = v), null, "");
+    renderSkillBadge(problemsBtn, problemsWasPending, (v) => (problemsWasPending = v), null, "");
+    renderSkillBadge(reasoningBtn, reasoningWasPending, (v) => (reasoningWasPending = v), null, "");
+    if (problemsBtn) problemsBtn.hidden = true;
     return;
   }
   // The day's effort, with a face that climbs to the goal. No target line and
@@ -433,16 +432,16 @@ function renderPace(p) {
     : `${p.graded} exercicis avui`;
   paceEl.hidden = false;
   renderLessonBadge(p.lesson);
-  renderSkillBadge(speakingBtn, speakingWasPending, (v) => (speakingWasPending = v),
-    p.speaking, "Speaking d'avui");
-  renderSkillBadge(readingBtn, readingWasPending, (v) => (readingWasPending = v),
-    p.reading, "Reading d'avui");
-  renderSkillBadge(writingBtn, writingWasPending, (v) => (writingWasPending = v),
-    p.writing, "Writing d'avui");
-  if (readingBtn) readingBtn.hidden = !readingUnlocked(p.lesson && p.lesson.level);
+  renderSkillBadge(factsBtn, factsWasPending, (v) => (factsWasPending = v),
+    p.facts, "Fets d'avui");
+  renderSkillBadge(problemsBtn, problemsWasPending, (v) => (problemsWasPending = v),
+    p.problems, "Problemes d'avui");
+  renderSkillBadge(reasoningBtn, reasoningWasPending, (v) => (reasoningWasPending = v),
+    p.reasoning, "Raonament d'avui");
+  if (problemsBtn) problemsBtn.hidden = !problemsUnlocked(p.lesson && p.lesson.level);
 }
 
-// The badge on 🎓 Lesson. Amber while there is work, a green tick for a moment
+// The badge on 🔁 Review. Amber while there is work, a green tick for a moment
 // when it empties, then nothing. It never disables anything: the learner can
 // press whatever they like, the badge just says what is still owed.
 const lessonBtn = document.querySelector('#commands button[data-cmd="math-review"]');
@@ -487,22 +486,24 @@ function renderLessonBadge(lesson) {
   }
 }
 
-// The same "1 pending today" reminder on 🗣️ Speaking and 📖 Reading — same
-// principle as 🎓 Review (a daily badge, cleared only by using that button,
-// never by an equivalent exercise surfacing on its own in Mix), but with
+// The same "1 pending today" reminder on 📚 Facts and 📖 Problemes — same
+// principle as 🔁 Review (a daily badge, cleared only by using that button,
+// never by an equivalent exercise surfacing on its own in Go), but with
 // none of Review's own complexity: always a fixed target of 1, so this is a
 // small generic version reused for both buttons rather than duplicating
-// `renderLessonBadge`'s richer (due/slot) logic. Never a gate — Mix keeps
+// `renderLessonBadge`'s richer (due/slot) logic. Never a gate — Go keeps
 // choosing whatever it likes; this only says "you haven't done one of these
-// today" (2026-09-22, Albert).
-const speakingBtn = document.querySelector('#commands button[data-cmd="math-speaking"]');
-const readingBtn = document.querySelector('#commands button[data-cmd="math-reading"]');
-// 📝 Writing joined them on 2026-09-23 (Albert): the one practice where she writes her
-// own words, owed once a day at every level — like Speaking, unlike Reading (> A1).
-const writingBtn = document.querySelector('#commands button[data-cmd="math-writing"]');
-let speakingWasPending = false;
-let readingWasPending = false;
-let writingWasPending = false;
+// today" (2026-09-22, Albert; math keys WP1.7). 🗣️ Math talk has no counter:
+// "talk" is not one of the five math skill keys.
+const factsBtn = document.querySelector('#commands button[data-cmd="math-vocab"]');
+const problemsBtn = document.querySelector('#commands button[data-cmd="math-reading"]');
+// 📝 Raonament joined them on 2026-09-23 (Albert): the one practice where she
+// explains her own reasoning, owed once a day at every level — like Facts,
+// unlike Problemes (>= m2).
+const reasoningBtn = document.querySelector('#commands button[data-cmd="math-writing"]');
+let factsWasPending = false;
+let problemsWasPending = false;
+let reasoningWasPending = false;
 
 function renderSkillBadge(btn, wasPending, setWasPending, view, label) {
   if (!btn) return;
@@ -1055,7 +1056,7 @@ async function send(text) {
 // anyway and Stats/End are one-shot, not a place you stay). A plain ring, not
 // a color, so it never collides with the pending (amber) / done (green)
 // meaning those three buttons already carry.
-const TRACKED_MODE_CMDS = ["math-learn", "math-review", "math-reading", "math-speaking", "math-writing"];
+const TRACKED_MODE_CMDS = ["math-learn", "math-review", "math-vocab", "math-reading", "math-speaking", "math-writing"];
 function updateActiveModeButton() {
   for (const cmd of TRACKED_MODE_CMDS) {
     const btn = document.querySelector(`#commands button[data-cmd="${cmd}"]`);
@@ -1345,11 +1346,11 @@ const progressOverlay = $("#progress-overlay");
 const progressBody = $("#progress-body");
 
 const SKILL_LABELS = {
-  writing: "Escriptura",
-  speaking: "Expressió oral",
-  vocabulary: "Vocabulari",
-  reading: "Lectura",
-  listening: "Comprensió oral",
+  computation: "Càlcul",
+  steps: "Passos",
+  problems: "Problemes",
+  reasoning: "Raonament",
+  facts: "Fets",
 };
 
 function skillLabel(name) {
@@ -1535,7 +1536,10 @@ function renderProgress(d) {
   const warnings = Array.isArray(d.warnings) ? d.warnings : [];
 
   const lvl = [learner.current_level, learner.target_level].filter(Boolean).join(" → ");
-  const headerSub = [learner.name, learner.target_language, lvl].filter(Boolean).join(" · ");
+  // target_language is the fixed subject ("Math"); the header shows its name
+  // in the language the tutor explains in, like session-start.py does.
+  const subject = learner.target_language ? "Matemàtiques" : null;
+  const headerSub = [learner.name, subject, lvl].filter(Boolean).join(" · ");
 
   const kpis = [
     ["🔥", streak.current_days ?? 0, "dies de ratxa"],
@@ -1639,12 +1643,12 @@ document.addEventListener("keydown", (e) => {
 const DEFAULT_PLACEHOLDER = "Escriu la teva resposta…";
 const MODE_PLACEHOLDERS = {
   "math-end": "Sessió tancada — tria una pràctica a dalt…",
-  "math-learn": "Respon l'exercici…",
+  "math-learn": "Escriu el resultat…",
   "math-review": "Escriu el que recordis…",
-  "math-vocab": "Escriu la traducció…",
-  "math-writing": "Escriu el teu text en l'idioma meta…",
-  "math-speaking": "Respon com en una conversa real…",
-  "math-reading": "Respon segons el text…",
+  "math-vocab": "Escriu el resultat…",
+  "math-writing": "Explica com ho has resolt…",
+  "math-speaking": "Explica la teva estratègia…",
+  "math-reading": "Resol el problema…",
   "math-checkpoint": "Escriu la teva resposta…",
 };
 let currentMode = null;
@@ -1735,7 +1739,7 @@ const MENU_RE = new RegExp(
 // Two or more practice-button names in one message is a menu, whatever words
 // surround them. Cheaper and more robust than chasing every phrasing a 14B
 // model invents.
-const BUTTON_MENTION_RE = /(surprise\s+me|🎲|🔁\s*review|📚\s*vocabulary|📝\s*writing|🗣️?\s*speaking|📖\s*reading|📊\s*progress)/gi;
+const BUTTON_MENTION_RE = /(🎲\s*go|🔁\s*review|📚\s*facts|📝\s*raonament|🗣️?\s*math\s*talk|📖\s*problemes|📊\s*stats)/gi;
 function looksLikeMenu(text) {
   if (MENU_RE.test(text)) return true;
   const hits = String(text || "").match(BUTTON_MENTION_RE);
@@ -1832,15 +1836,19 @@ function injectModeHint(text, mode) {
 }
 
 function refreshExerciseCard(snap = true) {
+  const last = lastTutorText();
+  const split = last ? splitFeedbackQuestion(last.text) : { question: "" };
+  const mode = split.question ? blankExerciseMode(split.question) : null;
+  // WP1.8: while the exercise on screen asks for a result (the math bank
+  // marker), the composer gets a numeric keypad; every other exercise
+  // reverts to the text keyboard.
+  if (inputEl) inputEl.inputMode = mode === "math" ? "numeric" : "text";
   if (!EXERCISE_CARD_ENABLED) {
     exerciseCard.hidden = true;
     return;
   }
-  const last = lastTutorText();
-  const split = last ? splitFeedbackQuestion(last.text) : { question: "" };
   if (split.question) {
     exerciseMsgId = last.mid;
-    const mode = blankExerciseMode(split.question);
     exerciseBody.innerHTML = md(humanizeCommands(injectModeHint(split.question, mode)));
     exerciseCard.hidden = false;
     const fullSentence = mode === "full";

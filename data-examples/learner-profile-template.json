@@ -6,12 +6,12 @@
     "other_languages": [
       "{OTHER_LANGUAGES_YOU_SPEAK}"
     ],
-    "target_language": "{LANGUAGE_YOU_WANT_TO_LEARN}",
-    "current_level": "{A1|A2|B1|B2|C1|C2}",
-    "target_level": "{A2|B1|B2|C1|C2}",
+    "target_language": "Math",
+    "current_level": "m4",
+    "target_level": "m5",
     "daily_goal_minutes": 30,
     "learning_style": "{conversational|academic|immersive|balanced}",
-    "motivation": "{travel|work|exam|living_abroad|personal|family}"
+    "motivation": "{school|exam|practice|personal}"
   },
   "profile_created": "{YYYY-MM-DD}",
   "last_updated": "{YYYY-MM-DD}",
@@ -19,31 +19,31 @@
   "total_sessions": 0,
   "total_study_minutes": 0,
   "skills": {
-    "writing": {
+    "computation": {
       "current_level": 0,
       "confidence": 0,
       "last_practiced": null,
       "total_practice_time": 0
     },
-    "speaking": {
+    "steps": {
       "current_level": 0,
       "confidence": 0,
       "last_practiced": null,
       "total_practice_time": 0
     },
-    "vocabulary": {
+    "problems": {
       "current_level": 0,
       "confidence": 0,
       "last_practiced": null,
       "total_practice_time": 0
     },
-    "reading": {
+    "reasoning": {
       "current_level": 0,
       "confidence": 0,
       "last_practiced": null,
       "total_practice_time": 0
     },
-    "listening": {
+    "facts": {
       "current_level": 0,
       "confidence": 0,
       "last_practiced": null,
@@ -62,8 +62,8 @@
   "preferences": {
     "difficulty_preference": "adaptive",
     "exercise_types_preferred": [
-      "conversation",
-      "writing",
+      "computation",
+      "problems",
       "quick_drills"
     ],
     "feedback_style": "immediate_with_explanation",
