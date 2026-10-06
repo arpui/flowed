@@ -27,6 +27,14 @@ ready_share: 50
 > de plantilles del generador amb una línia `Bank: <família>` (p. ex. `Bank: mult_2digit`).
 > `scripts/mathbank.py` la llegeix directament del `.md`; `hooks/curriculum.py` l'ignora
 > (clau desconeguda). Una competència sense `Bank:` no té banc generable.
+>
+> **WP1.1 (2026-10-06):** les tres competències pilot que el banc ja tenia generades i
+> validades però que el currículum no declarava — `m4.add_carry`, `m4.div_2x1` (steps,
+> renumerats `.001–.012` a WP2.1) i `m4.word_problems` (compute/choose, els primers
+> ítems `choose` del banc) — queden declarades aquí amb les seves línies `Bank:`.
+> Fins ara Go/lliçó no les servien perquè no eren al `.md` (forat registrat); els ítems
+> `.031–.042` de `mult_2digit` i `frac_add_unlike` pertanyen a les competències
+> existents (compute + steps del mateix id).
 
 ---
 
@@ -58,6 +66,33 @@ Check:
 - Compute: 23,8 + 7,6 → 31,4
 - Compute: 48,9 + 25,5 → 74,4
 
+### m4.add_carry — Suma amb transport (descomposició) [core]
+Can do: Add two 2-digit numbers with carrying by splitting each into tens and units, adding the columns, and combining.
+Depth: normal
+Weight: 2
+Forms: Separa cada sumand en desenes i unitats (27 = 20 + 7); suma les desenes entre elles; suma les unitats — si passen de 9 hi ha transport; ajunta els dos resultats parcials.
+Tags: #carrying, #place_value, #calculation, suma, transport, desenes, unitats, arrestando, suma parcial
+Signals: suma, sumar, transport, anar, portar, desenes, unitats, total
+Bank: partial_sums
+Check:
+- Steps: 27 + 16 → 20 + 10 ; 7 + 6 ; 30 + 13
+- Steps: 35 + 28 → 30 + 20 ; 5 + 8 ; 50 + 13
+- Steps: 46 + 27 → 40 + 20 ; 6 + 7 ; 60 + 13
+
+### m4.div_2x1 — Divisió de 2 xifres entre 1 (amb residu) [core]
+Can do: Divide a 2-digit number by a 1-digit number with a remainder: the biggest multiple that fits, the subtraction that leaves the remainder, and the result as a mixed number.
+Depth: normal
+Weight: 2
+Requires: m4.mult_2digit
+Forms: Busca el múltiple del divisor més gran que no sobrepassi el dividend (5 × 8 = 40 per a 43 ÷ 5); resta'l per veure el residu (43 − 40 = 3); escriu el resultat com a quocient + residu/divisor (8 3/5).
+Tags: #facts, #procedure, #calculation, divisió, quocient, residu, múltiple, taula de multiplicar, fracció mixta
+Signals: divideix, divisió, quocient, residu, sobra, múltiple, repartir
+Bank: long_division
+Check:
+- Steps: 43 ÷ 5 → 5 × 8 ; 43 - 40 ; 8 3/5
+- Steps: 25 ÷ 3 → 3 × 8 ; 25 - 24 ; 8 1/3
+- Steps: 47 ÷ 6 → 6 × 7 ; 47 - 42 ; 7 5/6
+
 ## Fraccions
 
 ### m4.frac_add_unlike — Suma de fraccions amb denominadors diferents [core]
@@ -87,3 +122,19 @@ Check:
 - Compute: 3/4 ? 2/3 → >
 - Compute: 2/5 ? 3/5 → <
 - Compute: 2/3 ? 4/6 → =
+
+## Problemes
+
+### m4.word_problems — Problemes verbals (triar i resoldre l'operació) [core]
+Can do: Read a short story problem, decide which operation solves it, and carry it out to the result (or name the operation).
+Depth: normal
+Weight: 2
+Requires: m4.mult_2digit
+Forms: Llegeix l'enunciat i busca la pista de l'operació («repartir igualment entre» = divisió, «quants en falten» = resta, «el doble» = multiplicar per 2, «en total» = suma o producte); escriu l'operació amb els números del problema i calcula el resultat.
+Tags: #misread, #wrong_operation, #procedure, #calculation, problema verbal, repartir, doble, quants en falten, en total, operació
+Signals: problema, reparteix, compra, li tornen, quants, falten, doble, total, part
+Bank: word_problems
+Check:
+- Compute: En Marc reparteix 16 pomes igualment entre 4 amics. Quants en toquen a cada amic? → 4
+- Compute: Un àlbum té 30 espais i la Laia ja n'ha omplert 12. Quants espais li falten? → 18
+- Compute: Una pizza tallada en 8 parts iguals; en Pere se'n menja 3. Quina part de la pizza queda? → 5/8
