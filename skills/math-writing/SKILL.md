@@ -27,6 +27,25 @@ words. Closed exercises — a result to compute, a gap to fill, a sentence to
 complete — belong to 🎲 Go, which drills the same procedures. Never set one
 here, at any level: the task is tiny at m1, but it is still hers to explain.
 
+## The three math guards (WP3.3)
+
+Every task this practice sets must pass three rules — the server rejects the
+turn and asks for a rewrite when it does not:
+
+1. **Never a bare list.** "Fes una llista de…" asks for items, not reasons.
+   The deliverable is an explanation in her own words, with the reason
+   attached. (A task may name the words or steps to use — that is a scaffold,
+   not a list to produce.)
+2. **Always require justification.** The task must ask HOW or WHY: "explica
+   com ho has resolt i per què funciona", "per què 3 + 2 × 4 no és 20?",
+   "demostra-ho", "troba l'error i explica'l", "inventa un problema que es
+   resolgui amb …". A task that only asks for a result is Go under another
+   name.
+3. **The answer alone does not score.** Say it in the task itself: the number
+   without the reasoning scores low on procedure and justification. The deep
+   rubric (WP3.1) grades four dimensions — answer, procedure, justification,
+   communication — and a bare result is weak on three of them.
+
 ## Instructions
 
 ### 1. Load context
@@ -108,14 +127,21 @@ Don't correct mid-composition. Let the learner finish.
 
 ### 5. Systematic error analysis
 
-Check the answer for these categories:
+Grade the four dimensions of the WP3.1 rubric — the same ones
+`math_deep_evaluate` judges (task='explain' | 'error-analysis' |
+'compare-strategies'; the server's rubric maps the score onto the closed
+path's 10/7/3 bands):
 
-1. **Procedure** — the sequence of steps is wrong for the task
-2. **Wrong operation** — the justification picks + when the situation needs ×, etc.
-3. **Misread** — the explanation answers a different problem than the one asked
-4. **Missing justification** — right result, no reason given ("per què?" unanswered)
-5. **Calculation** — arithmetic slips inside the explanation
-6. **Form** — the work is not written as asked (one operation per line, units)
+1. **Answer** — is the final result correct, when the task has one
+2. **Procedure** — are the steps sound and complete: the sequence, the
+   operation choice (`wrong_operation` when the justification picks + where
+   the situation needs ×), the order, the carrying
+3. **Justification** — does she say WHY, not just WHAT? A right result with no
+   reason ("per què?" unanswered) is weak here; a bare answer with no
+   reasoning at all lands in the 0-4 band
+4. **Communication** — is the math written clearly: notation, units, one
+   operation per line (`misread` when the explanation answers a different
+   problem than the one asked)
 
 Tag each finding with a severity: 🔴 critical, 🟡 moderate, 🟢 minor.
 Categories are the math ones from `math-feedback-formatter` — `procedure`,
@@ -151,18 +177,20 @@ For reasoning, the quoted parts are often whole steps or claims:
 Group them by severity if the text is long, but never drop the parenthesis.
 Categories: see the `math-feedback-formatter` skill (single source of truth).
 
-### 📝 Corrected Version
+The corrected reasoning uses the CANONICAL marker — `**Correct version:**`
+on its own line, the full corrected reasoning in quotes on the next line.
+The persistence fallback parses exactly that; a heading like
+"### Corrected Version" is invisible to it and the corrected answer is lost:
 
-```
-{the full corrected reasoning}
-```
+**Correct version:**
+"{the full corrected reasoning}"
 
 **Score: {X}/10**
 
-**Breakdown:**
+**Breakdown:** (the four rubric dimensions, WP3.1)
 - Procedure: {Y}/10
 - Justification: {Z}/10
-- Calculation: {W}/10
+- Answer: {W}/10
 - Communication: {V}/10
 
 ---
@@ -254,16 +282,13 @@ Learner: *(adds 29 + 17 as 30 + 20 − 3, with one arithmetic slip in the middle
 > - 🟡 "30 + 20 = 50" → **"30 + 17 = 47"** (calculation — you added 20 instead of the 17 you were compensating for)
 > - 🟢 "47 − 3 = 46" → **"47 − 1 = 46"** (procedure — you rounded 29 up by 1, so take 1 back, not 3)
 >
-> ### 📝 Corrected Version
->
-> ```
-> 29 + 17 = 30 + 17 − 1 = 47 − 1 = 46
-> ```
+> **Correct version:**
+> "29 + 17 = 30 + 17 − 1 = 47 − 1 = 46"
 >
 > **Score: 7/10**
 > - Procedure: 8/10 — the compensation idea is right.
 > - Justification: 6/10 — you did not say why you subtract 1.
-> - Calculation: 7/10 — one slip mid-way.
+> - Answer: 7/10 — right at the end, one slip mid-way.
 > - Communication: 7/10 — clear enough to follow.
 
 Note the correction lines: marker, quoted wrong text, arrow, bold quoted
@@ -287,6 +312,10 @@ correction, then `(category — why)` in parentheses. That is what gets parsed.
 
 - **Never a gap.** No `___`, nothing to complete, nothing to copy — at any level.
   The server rejects a Writing turn that contains one.
+- **Never a bare list, always a justification.** "Fes una llista de…" is not
+  reasoning, and a task that only asks for a result is Go under another name.
+  Every task asks HOW or WHY and says the answer alone will not score — the
+  server rejects a Raonament task that does neither (WP3.3 guards).
 - **Lower levels: one short task at a time**, graded, then the next. **Upper
   levels: one task per session** — depth over breadth.
 - **Wait for the full answer** before correcting.

@@ -49,6 +49,7 @@ import {
   turnGuard,
   pictureGuard,
   writingBlankGuard,
+  reasoningTaskGuard,
   hasExerciseHeader,
   alignExerciseNumber,
   bounceReason,
@@ -158,6 +159,18 @@ interface TurnKind {
 // kind "command" is created by the caller and passed as the first user turn.
 
 const OPEN_PRACTICES = new Set(["math-speaking", "math-writing", "math-reading"]);
+
+// Which math practice (C7 skill key) a command runs. A derived record — the
+// fallback for a tutor that graded in prose and skipped math_record_answer —
+// knows the practice from the active command, which beats guessing it from a
+// heading that may not name one at all.
+const COMMAND_SKILL: Record<string, string> = {
+  "math-writing": "reasoning",
+  "math-speaking": "reasoning",
+  "math-reading": "problems",
+  "math-vocab": "facts",
+  "math-learn": "computation",
+};
 
 export class Agent {
   private db: FluentDB;
@@ -1891,6 +1904,7 @@ export class Agent {
       const compAtStart = this.assignedCompetence.get(sessionId) ?? null;
       const note = pictureGuard(text)
         ?? writingBlankGuard(text, this.currentCommand.get(sessionId))
+        ?? reasoningTaskGuard(text, this.currentCommand.get(sessionId))
         ?? turnGuard({
         inLesson,
         pending: lesson.pending,
@@ -2101,7 +2115,9 @@ export class Agent {
         record_id: `${sessionId}:derived:${Date.now()}`,
         session_id: sessionId,
         ts: Date.now(),
-        skill: parsed.skill ?? "computation",
+        // Math skill keys (C7): the active command names the practice; a
+        // heading in the feedback is the fallback; computation the default.
+        skill: COMMAND_SKILL[this.currentCommand.get(sessionId) ?? ""] ?? parsed.skill ?? "computation",
         exercise: (asked[0] ?? parsed.correctVersion ?? "").slice(0, 200),
         learner_answer: answer.slice(0, 500),
         score: Math.round(parsed.score),

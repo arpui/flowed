@@ -163,28 +163,151 @@ export function normalizeCategory(raw: unknown): string | null {
   return CATEGORY_SET.has(canon) ? canon : null;
 }
 
-const DEEP_RUBRIC = [
-  "You are the evaluation engine of the Fluent language-learning system (the 'deep' model role).",
-  "You receive ONE learner answer plus its context. Produce a structured evaluation with exactly these sections:",
+// WP3.1 (C3): the MATH rubric. It replaces the language rubric that judged
+// "communicativeness" and corrected words: here the deliverable is a line of
+// work, and what is judged is the answer, the PROCEDURE, the justification and
+// the communication of the math — never the Catalan of the explanation (a
+// language slip in the learner's own language is not a math error; the
+// feedback-formatter skill says the same, and the categories below are the
+// math taxonomy, not grammar names).
+//
+// Score bands are deliberately the SAME scale the closed path uses — the steps
+// v1/v2 grader (hooks/bank.py `finalize_steps`) hands out 10 (everything right
+// first try) / 7 (a step needed a retry) / 3 (a step had to be revealed), and
+// an open rubric that scored by a different logic would make the reasoning
+// counters and the bank counters incomparable. Mapping:
+//   10   = result right (when the task has one), procedure sound AND complete,
+//          justification present — the closed 10.
+//   8-9  = everything sound; only minor communication slips (units, notation,
+//          an unsimplified form) — still the closed 10 band.
+//   5-7  = the core procedure is right but something a second attempt would
+//          fix: missing justification, one calculation slip inside an
+//          otherwise sound procedure — the closed 7 ("va necessitar un segon
+//          intent").
+//   0-4  = the procedure or the result is wrong, the task was misread, or the
+//          learner gave only a bare answer with no reasoning at all — the
+//          closed 3 ("no et sortia; te'l vaig haver de revelar").
+export const DEEP_RUBRIC = [
+  "You are the evaluation engine of the FlowMath math-tutoring system (the 'deep' model role).",
+  "You receive ONE learner answer to an open math task plus its context. Judge the MATH and the",
+  "reasoning — never the language the answer is written in: a spelling or grammar slip in the",
+  "learner's own language is not an error here. Produce a structured evaluation with exactly these sections:",
   "",
   "## CORRECTIONS",
   // Categories: keep in sync with ERROR_CATEGORIES in hooks/db_schema.py
   // (tests/test_error_categories.py fails if they drift apart).
   'One line per error, in EXACTLY this shape: `- "incorrect" → **"correct"** (category — short reason)`.',
   `Allowed categories: ${ERROR_CATEGORIES.join(", ")}.`,
+  "Quote numbers, operations or whole lines of work — never words of the learner's language.",
   "Prefix each line with its severity: 🔴 critical | 🟡 moderate | 🟢 minor. If there are no errors, write: None.",
   "",
   "## CORRECT VERSION",
   "The full corrected answer (identical to the learner's answer if there are no errors).",
   "",
   "## SCORE",
-  "An integer 0-10 plus one justification line. Scale: 10 perfect; 8-9 minor slips, fully communicative; 6-7 understandable with noticeable errors; 4-5 partial communication; 0-3 communication breaks.",
+  "An integer 0-10 plus one justification line. Judge four dimensions:",
+  "- answer: is the final result correct, when the task has one",
+  "- procedure: are the steps sound and complete — the operations, their order, the carrying",
+  "- justification: does the learner say WHY, not just WHAT; a bare result with no reasoning is weak here",
+  "- communication: is the math written clearly — notation, units, one operation per line",
+  "Bands — the same 10/7/3 scale the closed exercises use (10 all-first-try / 7 needed a retry / 3 needed revealing):",
+  "10 = result right (when present), procedure sound and complete, justification present, nothing to fix;",
+  "8-9 = everything sound, only minor communication slips (units, notation, an unsimplified form);",
+  "5-7 = the core procedure is right but something a second attempt would fix — missing justification,",
+  "one calculation slip inside an otherwise sound procedure;",
+  "0-4 = the procedure or the result is wrong, the task was misread, or the learner gave only a bare",
+  "answer with no reasoning at all.",
   "",
   "## FEEDBACK",
   "1-2 encouraging sentences for the learner, naming what they got right.",
   "",
-  "Rules: stay compact and factual; never address the learner directly (the tutor presents your output); never invent errors that are not in the answer; judge in the target language named in the context.",
+  "Rules: stay compact and factual; never address the learner directly (the tutor presents your output);",
+  "never invent errors that are not in the answer; write the corrections in the learner's language named",
+  "in the context, but grade only the math.",
 ].join("\n");
+
+// ---- open-task kinds (WP3.1) ------------------------------------------------
+// The shapes of open math practice the tutor can send. WP3.3's Raonament
+// (📝 math-writing) sends 'explain' / 'error-analysis' / 'compare-strategies';
+// WP3.2's open word problems will send 'word-problem'. The rubric is one
+// rubric — the kind only tells the evaluator what the learner was asked, so it
+// judges the right deliverable (a justification vs a found error vs a chosen
+// strategy).
+export const DEEP_TASKS = ["explain", "error-analysis", "compare-strategies", "word-problem"] as const;
+
+// Read-old/write-new (same pattern as FLUENT_*→FLOWED_* in scripts/lib-paths.sh):
+// the language-era task names are what the prompts sent until WP3.1
+// ('writing' | 'speaking' | 'reading' | 'scoring'). A stale prompt or a chatty
+// model may still send one — map it to its math kind instead of rejecting the
+// call and losing the evaluation.
+const LEGACY_DEEP_TASKS: Record<string, string> = {
+  writing: "explain",
+  speaking: "explain",
+  reading: "word-problem",
+  scoring: "explain",
+  // other spellings a model drifts into
+  "explain-reasoning": "explain",
+  reasoning: "explain",
+  "word-problem-solution": "word-problem",
+  "strategy-comparison": "compare-strategies",
+  "error-correction": "error-analysis",
+  "find-error": "error-analysis",
+};
+
+export function normalizeDeepTask(raw: unknown): string {
+  const t = String(raw ?? "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+  if ((DEEP_TASKS as readonly string[]).includes(t)) return t;
+  return LEGACY_DEEP_TASKS[t] ?? "explain";
+}
+
+// ---- skill keys (C7) ---------------------------------------------------------
+// The five math practices; the record's `skill` field is persisted into
+// .records/ and read back by persist-session/accumulate-session, so it must
+// carry math keys. Read-old/write-new: records written before WP3.1 (and older
+// prompts) carry the language-era names — normalizeSkillKey maps them, and
+// hooks/db_schema.py normalize_skill_key mirrors it for the stored side.
+export const SKILL_KEYS = ["computation", "steps", "problems", "reasoning", "facts"] as const;
+
+const LEGACY_SKILL_KEYS: Record<string, string> = {
+  writing: "reasoning",
+  speaking: "reasoning",
+  listening: "facts",
+  reading: "problems",
+  vocabulary: "facts",
+  grammar: "computation",
+};
+
+// Surface names for the math practices (a feedback heading like
+// "## Repte de Raonament", a chatty model's skill argument) — mirrors
+// SKILL_SURFACE_ALIASES in hooks/db_schema.py.
+const SKILL_SURFACE_ALIASES: Record<string, string> = {
+  raonament: "reasoning",
+  razonamiento: "reasoning",
+  reasoning: "reasoning",
+  problema: "problems",
+  problemes: "problems",
+  problemas: "problems",
+  problem: "problems",
+  passos: "steps",
+  pasos: "steps",
+  step: "steps",
+  fet: "facts",
+  fets: "facts",
+  hecho: "facts",
+  hechos: "facts",
+  calcul: "computation",
+  "càlcul": "computation",
+  calculo: "computation",
+  "cálculo": "computation",
+};
+
+export function normalizeSkillKey(raw: unknown): string {
+  const s = String(raw ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  if ((SKILL_KEYS as readonly string[]).includes(s)) return s;
+  const legacy = LEGACY_SKILL_KEYS[s];
+  if (legacy) return legacy;
+  return SKILL_SURFACE_ALIASES[s] ?? "computation";
+}
 
 export interface DeepEvaluator {
   /** Config for the deep model role. */
@@ -319,13 +442,13 @@ export function buildTools(opts: {
   const deepTool: ToolDefinition = {
     name: "math_deep_evaluate",
     description:
-      "Delegate evaluation of a learner answer to the deep model role (focused rubric in a clean context). Use it for free-composition answers: writing texts, speaking replies, open-ended reading answers, or final scoring. Call it at most ONCE, and only with the learner's real, already-submitted answer — never with placeholder, hypothetical or invented content. Returns a structured evaluation (CORRECTIONS / CORRECT VERSION / SCORE / FEEDBACK) to present to the learner in your feedback format. If the result starts with 'DEEP UNAVAILABLE', follow the instructions in the message (usually: evaluate the answer yourself in the same format, or continue the session without calling the tool).",
+      "Delegate evaluation of a learner answer to the deep model role (focused math rubric in a clean context: answer, procedure, justification, communication — never language). Use it for open math answers: a reasoning explanation, an error found and explained, a strategy comparison, or an open word-problem solution. Never for closed bank items — the server grades those itself. Call it at most ONCE, and only with the learner's real, already-submitted answer — never with placeholder, hypothetical or invented content. Returns a structured evaluation (CORRECTIONS / CORRECT VERSION / SCORE / FEEDBACK) to present to the learner in your feedback format. If the result starts with 'DEEP UNAVAILABLE', follow the instructions in the message (usually: evaluate the answer yourself in the same format, or continue the session without calling the tool).",
     parameters: {
       type: "object",
       properties: {
-        task: { type: "string", description: "Evaluation task: 'writing' | 'speaking' | 'reading' | 'scoring'" },
+        task: { type: "string", description: `Open-task kind: ${DEEP_TASKS.map((t) => `'${t}'`).join(" | ")} (legacy names writing/speaking/reading/scoring are still accepted and mapped)` },
         answer: { type: "string", description: "The learner's exact answer to evaluate" },
-        context: { type: "string", description: "Exercise context: the original prompt/question, target language, learner level, and any expected answer or key points" },
+        context: { type: "string", description: "Exercise context: the original task, the learner's language and level, and the expected procedure or key points" },
       },
       required: ["task", "answer", "context"],
     },
@@ -347,6 +470,7 @@ export function buildTools(opts: {
         return `DEEP UNAVAILABLE (rejection ${r.count} of 3): this tool was already called for the current answer. Present the evaluation you already received — do not call it again this turn.`;
       }
 
+      const task = normalizeDeepTask(args.task);
       const cfg = opts.deep;
       const url = `${cfg.baseURL.replace(/\/+$/, "")}/chat/completions`;
       const body = {
@@ -359,7 +483,7 @@ export function buildTools(opts: {
           { role: "system", content: DEEP_RUBRIC },
           {
             role: "user",
-            content: `Task: ${args.task}\n\nContext:\n${args.context}\n\nLearner answer:\n"""\n${args.answer}\n"""`,
+            content: `Task: ${task}\n\nContext:\n${args.context}\n\nLearner answer:\n"""\n${args.answer}\n"""`,
           },
         ],
       };
@@ -412,7 +536,7 @@ export function buildTools(opts: {
     parameters: {
       type: "object",
       properties: {
-        skill: { type: "string", description: "vocabulary | writing | speaking | reading | grammar" },
+        skill: { type: "string", description: `${SKILL_KEYS.join(" | ")} — the math practice this answer belongs to (reasoning for explaining/justifying, problems for word problems, facts for the drill)` },
         exercise: { type: "string", description: "The exercise you presented, one line." },
         learner_answer: { type: "string", description: "The learner's answer, verbatim." },
         score: { type: "number", description: "The score you gave, 0-10." },
@@ -507,7 +631,11 @@ export function buildTools(opts: {
         record_id: `${sid}:${ctx?.messageID ?? "m"}:${n}`,
         session_id: sid,
         ts: Date.now(),
-        skill: String(args.skill ?? "writing").trim().toLowerCase() || "writing",
+        // Math skill keys (C7). Read-old/write-new: a language-era name still
+        // arriving from an older prompt is mapped to its math counterpart
+        // (writing→reasoning, reading→problems, vocabulary→facts, …) instead
+        // of being stored verbatim and inventing a phantom skill downstream.
+        skill: normalizeSkillKey(args.skill),
         exercise: String(args.exercise ?? "").trim(),
         learner_answer: answer,
         score: Math.round(score),

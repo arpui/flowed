@@ -33,7 +33,7 @@ SESSIONS_DB_REL = ("sessions", "sessions.db")
 LEGACY_SESSIONS_DB_REL = (".opencode", "opencode", "opencode.db")
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from db_schema import normalize_error_category  # noqa: E402
+from db_schema import normalize_error_category, normalize_skill_key  # noqa: E402
 from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 UPDATE_DB = SCRIPT_DIR / "update-db.py"
@@ -365,7 +365,12 @@ def records_to_payload(records):
         except (TypeError, ValueError):
             score = 0
         exercises.append({
-            "type": (rec.get("skill") or "computation"),  # math skill keys (C7); was "writing"
+            # Math skill keys (C7). Read-old/write-new (WP3.1): records written
+            # before the math fork carry language-era names ("writing",
+            # "vocabulary", …) and update-db re-applies them on every
+            # persistence — normalize_skill_key maps them to the math practice
+            # instead of inventing a phantom skill in progress-db/mastery-db.
+            "type": normalize_skill_key(rec.get("skill")),
             "question": str(rec.get("exercise", ""))[:200],
             "learner_answer": str(rec.get("learner_answer", ""))[:500],
             "correct_answer": "",

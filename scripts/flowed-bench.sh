@@ -9,6 +9,7 @@
 #   scripts/flowed-bench.sh --go --quick        # només targetes del banc a pràctica lliure
 #   scripts/flowed-bench.sh --facts --quick     # només el drill de fets (model)
 #   scripts/flowed-bench.sh --review --quick    # només la lliçó (cua sembrada)
+#   scripts/flowed-bench.sh --reasoning --quick # 📝 Raonament obert (WP3.3: tasca d'explicar + rúbrica WP3.1)
 #   scripts/flowed-bench.sh --days --quick --repeat 1   # 5 dies seguits: l'SM-2 fa tornar el fallat i allunya l'encertat
 #   scripts/flowed-bench.sh --curriculum --quick --repeat 1   # 5 dies d'un alumne simulat A1→A2 en pràctica lliure: competència assignada, exercici, registre, camí
 #   scripts/flowed-bench.sh --curriculum --quick --repeat 1 --span 12   # el mateix, 12 dies (per veure consolidar i el cicle d'oblit)
@@ -58,6 +59,7 @@ while [[ $# -gt 0 ]]; do
     --steps)   SCENARIOS=(--scenario steps);   shift ;;
     --facts)   SCENARIOS=(--scenario facts);   shift ;;
     --review)  SCENARIOS=(--scenario review);  shift ;;
+    --reasoning) SCENARIOS=(--scenario reasoning); shift ;;
     --days)    SCENARIOS=(--scenario days);    shift ;;
     --curriculum) SCENARIOS=(--scenario curriculum); shift ;;
     --ladder)  SCENARIOS=(--scenario ladder);  shift ;;

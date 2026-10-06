@@ -9,6 +9,9 @@
 // structured records of math_record_answer.
 //
 // Kept free of Bun imports so server/test/*.test.ts can exercise it under node.
+// (normalizeSkillKey lives in tools.ts — the record layer's single source for
+// the five math skill keys — and pulls in nothing but node builtins.)
+import { normalizeSkillKey } from "./tools.ts";
 
 /** Exercises per practice session when the profile does not say. */
 export const DEFAULT_SESSION_LENGTH = 12;
@@ -1253,12 +1256,19 @@ export function pictureGuard(text: string): string | null {
  * else", which is Go with another name and left the app with no free
  * production at all. The skill says so; this is what makes it true.
  */
+// Where the task she is being GIVEN starts: a practice heading or the
+// **Task:** label. Shared by the two Raonament guards below — the feedback
+// half of a reply quotes her text and the corrected version, and only the
+// task half is judged.
+const REASONING_TASK_CUT =
+  /#{1,3}\s*(?:✍️|📝)?\s*(?:Writing|Raonament|Reasoning|Repte)\s*(?:Exercise|Task)?|\*\*Task:?\*\*/i;
+
 export function writingBlankGuard(text: string, command?: string | null): string | null {
   if (command !== "math-writing") return null;
   const t = String(text || "");
   // The feedback half of a reply quotes her text and the corrected version;
   // only the task she is being given matters here.
-  const cut = t.search(/#{1,3}\s*(?:✍️|📝)?\s*(?:Writing|Raonament|Reasoning)\s*(?:Exercise|Task)?|\*\*Task:?\*\*/i);
+  const cut = t.search(REASONING_TASK_CUT);
   const task = cut >= 0 ? t.slice(cut) : t;
   if (!/___+/.test(task) && !/\b(?:fill in the (?:gap|blank)s?|complete the sentences?|completa|emplena els? buits?)\b/i.test(task)) return null;
   return (
@@ -1267,6 +1277,59 @@ export function writingBlankGuard(text: string, command?: string | null): string
     `small thing to explain, justify or invent ("explica com ho has resolt", "per què 3 + 2 × 4 no és ` +
     `20?", "inventa un problema que es resolgui amb 3/4 + 1/8") — no "___", nothing to complete, nothing to copy.`
   );
+}
+
+/**
+ * WP3.3 math guards for Raonament (📝). The practice dies two ways, both seen
+ * in the language fork's Writing: the task asks for a LIST — items to produce,
+ * not reasons to give — or it asks for a result with no reason attached, which
+ * is Go under another name. The math-writing skill says never a bare list and
+ * always a justification; this is what makes it true. The third WP3.3 rule —
+ * an answer that is only the result scores low on procedure/justification —
+ * lives in the deep rubric (tools.ts DEEP_RUBRIC), because it is about her
+ * answer, not about the task; the rewrite note below makes the tutor say it
+ * out loud when it fires.
+ *
+ * Only the task half is judged (same cut as writingBlankGuard): a reply that
+ * only gives feedback, or a summary, presents no task and passes through.
+ */
+export function reasoningTaskGuard(text: string, command?: string | null): string | null {
+  if (command !== "math-writing") return null;
+  const t = String(text || "");
+  const cut = t.search(REASONING_TASK_CUT);
+  if (cut < 0) return null; // no task being presented this turn
+  const task = t.slice(cut);
+
+  // (a) never a bare list.
+  if (
+    /\b(?:fes|feu|fem|crea|make|do|create)\s+(?:una?\s+|la\s+)?(?:llista|llistat|lista|list)\b|llista de|llistat de|\benumera\b|anomena\s+(?:tots|totes|tothom)|\blist of\b|\benumerate\b|\bname all\b/i.test(
+      task
+    )
+  ) {
+    return (
+      `This is Raonament (📝): she explains her mathematical thinking in her own words. A list to ` +
+      `produce is not a justification — "fes una llista de…" asks for items, not reasons. Write the ` +
+      `turn again asking for ONE explanation with the reason attached: "explica com ho has resolt i per ` +
+      `què funciona", "per què 3 + 2 × 4 no és 20?", "troba l'error i explica'l" — no bare list.`
+    );
+  }
+
+  // (b) always require justification: the task must ask HOW or WHY, in any of
+  //     the shapes the skill offers (explain / why / justify / prove / find
+  //     the error / invent a problem / which operation and why).
+  if (
+    !/\b(?:explica|per què|perquè|com ho (?:has|heu|vas|vau|faries|faràs|faras|fareu)|com funciona|com ho faries|com ho feu|justifica|demostra|motiva|argumenta|raona|troba|inventa|necessites|quina operació|què cal|què necessites|why|explain|justify|prove|how did you|which operation|what operation)\b/i.test(
+      task
+    )
+  ) {
+    return (
+      `This is Raonament (📝): every task must ask her to explain or justify, not only to produce a ` +
+      `result — a task with no "explica / per què / justifica / demostra" is a closed Go exercise under ` +
+      `another name. Write the turn again: state the situation, then ask HOW or WHY, and tell her that ` +
+      `the answer alone, without the reasoning, will not score.`
+    );
+  }
+  return null;
 }
 
 export function turnGuard(st: TurnGuardState): string | null {
@@ -1753,11 +1816,21 @@ const SCORE_LINE_RE = /\*{0,2}Score:?\*{0,2}\s*(\d{1,2})\s*\/\s*10/i;
  *  "Score", and the learner's answer vanished from the databases. Five records
  *  for eight graded answers, measured. */
 const BARE_SCORE_RE = /\b(\d{1,2})\s*\/\s*10\b/;
+// WP3.3: the quoted parts go up to 400 chars, not 120. In Raonament a
+// correction quotes a WHOLE explanation or claim — the skill says so — and a
+// 120-char cap silently dropped those lines from the derived record (seen
+// live: a 158-char wrong part, corrections: [] in .records, while the Python
+// prose fallback, which has no cap, found it). The two parsers must agree.
 const CORRECTION_RE =
-  /^[-*]\s*[🔴🟡🟢❌✅]?\s*["“']([^"”'\n]{1,120})["”']\s*(?:→|->|=>)\s*\*{0,2}["“']?([^"”'*\n]{1,120})["”']?\*{0,2}\s*(?:\(([^)\n]{0,80})\))?/u;
-const CORRECT_VERSION_RE = /\*\*Correct version:?\*\*\s*\n+\s*["“']?([^\n"”']{1,200})/i;
+  /^[-*]\s*[🔴🟡🟢❌✅]?\s*["“']([^"”\n]{1,400})["”']\s*(?:→|->|=>)\s*\*{0,2}["“']?([^"”\n*]{1,400})["”']?\*{0,2}\s*(?:\(([^)\n]{0,80})\))?/u;
+const CORRECT_VERSION_RE = /\*\*Correct version:?\*\*\s*\n+\s*["“']?([^\n"”']{1,400})/i;
+// WP3.1: the math practices first (the five skill keys C7, plus the surface
+// spellings a math heading actually carries — "Repte de Raonament",
+// "Problema 3"). The language-era words stay at the end so an old heading is
+// still recognized and mapped to its math counterpart by normalizeSkillKey,
+// never stored as a phantom skill.
 const SKILL_IN_HEADING_RE =
-  /^#{1,6}[^\n]*?\b(vocabulary|grammar|spelling|writing|reading|speaking|listening|capitalization|agreement|tenses|punctuation)\b/im;
+  /^#{1,6}[^\n]*?\b(computation|steps|problems|reasoning|facts|raonament|problema|problemes|passos|fets|càlcul|calcul|vocabulary|grammar|spelling|writing|reading|speaking|listening|capitalization|agreement|tenses|punctuation)\b/im;
 
 /** Everything `math_record_answer` would have carried, read out of the reply
  *  the learner just got. Returns null when the turn did not grade anything. */
@@ -1794,7 +1867,9 @@ export function parseFeedback(text: string): ParsedFeedback | null {
     score: n,
     corrections,
     ...(cv ? { correctVersion: cv[1]!.trim() } : {}),
-    ...(heading ? { skill: heading[1]!.toLowerCase() } : {}),
+    // Math skill keys (C7): a math heading ("Repte de Raonament") and a
+    // language-era one both normalize to one of the five.
+    ...(heading ? { skill: normalizeSkillKey(heading[1]) } : {}),
   };
 }
 

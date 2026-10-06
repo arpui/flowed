@@ -191,6 +191,73 @@ def normalize_error_category(raw) -> str:
     return DEFAULT_ERROR_CATEGORY
 
 
+# --- Skill keys (C7) ---------------------------------------------------------
+# The five math practices. The record's `skill` field (math_record_answer, the
+# server's derived and bank records) is persisted into .records/ and read back
+# by persist-session/accumulate-session, and it keys skill_scores /
+# skills_practiced downstream — so it must carry math keys. The TS mirror is
+# SKILL_KEYS in server/src/tools.ts (tests/test_deep_rubric.py keeps them in
+# sync).
+SKILL_KEYS = ("computation", "steps", "problems", "reasoning", "facts")
+
+# Read-old/write-new (WP3.1, same pattern as FLUENT_*→FLOWED_* in
+# scripts/lib-paths.sh): records written before the math fork carry the
+# language-era skill names, and update-db re-applies old records on every
+# persistence (restore T0, re-apply). Mapping them here means a stored
+# "writing" record lands on "reasoning" instead of inventing a phantom skill
+# in progress-db and mastery-db.
+LEGACY_SKILL_KEYS = {
+    "writing": "reasoning",
+    "speaking": "reasoning",
+    "listening": "facts",
+    "reading": "problems",
+    "vocabulary": "facts",
+    "grammar": "computation",
+}
+
+# Surface names for the math practices, in the languages a Catalan classroom
+# mixes — a feedback heading ("## Repte de Raonament") or a chatty model's
+# skill argument. Accents are kept by the normalization, so they are listed as
+# written.
+SKILL_SURFACE_ALIASES = {
+    "raonament": "reasoning",
+    "razonamiento": "reasoning",
+    "reasoning": "reasoning",
+    "problema": "problems",
+    "problemes": "problems",
+    "problemas": "problems",
+    "problem": "problems",
+    "passos": "steps",
+    "pasos": "steps",
+    "step": "steps",
+    "fet": "facts",
+    "fets": "facts",
+    "hecho": "facts",
+    "hechos": "facts",
+    "calcul": "computation",
+    "càlcul": "computation",
+    "calculo": "computation",
+    "cálculo": "computation",
+}
+
+DEFAULT_SKILL_KEY = "computation"
+
+
+def normalize_skill_key(raw) -> str:
+    """Map a skill label to one of SKILL_KEYS.
+
+    Canonical names pass through; language-era names (LEGACY_SKILL_KEYS) and
+    surface spellings (SKILL_SURFACE_ALIASES) are mapped; anything else falls
+    back to DEFAULT_SKILL_KEY — mirrors normalizeSkillKey in tools.ts.
+    """
+    s = str(raw or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if s in SKILL_KEYS:
+        return s
+    if s in LEGACY_SKILL_KEYS:
+        return LEGACY_SKILL_KEYS[s]
+    return SKILL_SURFACE_ALIASES.get(s, DEFAULT_SKILL_KEY)
+
+
 # --- Mastery decay ----------------------------------------------------------
 # Skill mastery only ever went up: a learner who had not written a line in two
 # months was still "4 stars at writing", and the tutor planned accordingly.

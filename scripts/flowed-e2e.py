@@ -636,6 +636,8 @@ def run(args, quiet: bool = False) -> Report | int:
         return run_math_journey(args, cli, prof_dir, rep, quiet)
     if args.scenario == "steps2":
         return run_steps_v2(args, cli, prof_dir, rep, quiet)
+    if args.scenario == "reasoning":
+        return run_reasoning(args, cli, prof_dir, rep, quiet)
 
     print(f"❌ escenari desconegut: {args.scenario}", file=sys.stderr)
     return 2
@@ -995,6 +997,202 @@ def run_math_journey(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> R
     if args.transcript:
         Path(args.transcript).expanduser().write_text(
             f"# Sessió matemàtica e2e — {prof_dir.name} — {sid}\n\n"
+            + "\n\n---\n\n".join(transcript), encoding="utf-8")
+        print(f"\ntranscripció: {args.transcript}")
+
+    if quiet:
+        bad = [lbl for ok, lbl, _ in rep.rows if not ok]
+        print(f"  → {len(rep.rows) - len(bad)}/{len(rep.rows)} bé"
+              + (f" · falla: {', '.join(bad)}" if bad else "")
+              + f" · guard {rep.guards}×")
+        return rep
+    rep.render()
+    return rep
+
+
+# ---- WP3.3: open reasoning (📝 Raonament), end to end ------------------------
+#
+# The open path the closed bank cannot cover: the tutor sets ONE reasoning task
+# (explain / find the error / compare strategies / invent a problem), the
+# learner writes her reasoning, and the answer is graded through the WP3.1
+# rubric (math_deep_evaluate on the remote model). The scenario answers with a
+# deliberate, category-tagged slip — a fraction sum done straight across, or a
+# decomposition with one arithmetic slip — so the feedback MUST come back with
+# a math-taxonomy correction line, a correct version and a score, and the
+# record must land under skill "reasoning" (the C7 key this path credits).
+
+def reasoning_answer(task: str) -> str:
+    """A learner's explanation with a deliberate slip, matched to what the
+    task on screen actually asks. Fractions: the classic add-across
+    (wrong_operation). Integers: a decomposition with one arithmetic slip
+    (calculation). Neither: a generic strategy explanation (the tutor then
+    grades whatever it is — the contract is what is checked).
+
+    The expression is taken from a WORKED line ("20 − 13 = 7") when the task
+    shows one — a bare "a op b" search once grabbed the length range "3-5"
+    from "3-5 frases" and answered a subtraction task with "3 - 5 = 8"."""
+    OP = r"[+\-−×x*/·]"
+    fm = re.search(r"(\d{1,2})\s*/\s*(\d{1,2})\s*([+\-])\s*(\d{1,2})\s*/\s*(\d{1,2})", task)
+    if fm:
+        n1, d1, n2, d2 = (int(fm.group(i)) for i in (1, 2, 4, 5))
+        op = fm.group(3)
+        wn, wd = n1 + n2, d1 + d2          # add straight across — the slip
+        return (f"Primer converteixo i després sumo: {n1}/{d1} {op} {n2}/{d2} = {wn}/{wd}. "
+                "Per què funciona: perquè sumant a dalt i a baix les dues parts queden "
+                "juntes en una sola fracció.")
+    em = (re.search(rf"(\d{{1,3}})\s*({OP})\s*(\d{{1,3}})\s*=", task)
+          or re.search(rf"(\d{{1,3}})\s*({OP})\s*(\d{{1,3}})(?!\s*(?:frases|paraules|words|dias|dies))", task))
+    if em:
+        a, op, b = int(em.group(1)), em.group(2), int(em.group(3))
+        val = (a + b if op == "+" else
+               a - b if op in "-−" else
+               a * b if op in "×x*·" else
+               (a / b if b else 0))
+        wrong = round(val) + 10            # one arithmetic slip, procedure sound
+        return (f"Primer separo les parts i després les ajunto: {a} {op} {b} em surt {wrong}. "
+                "Per què funciona: perquè descompondre no canvia el resultat, només el fa "
+                "més fàcil de fer de cap.")
+    return ("Primer llegeixo què demana l'enunciat i trió l'operació: si reparteix entre "
+            "iguals, divisió. Després calculo a poc a poc i comprovo que el resultat té "
+            "sentit. Per què funciona: perquè repartir entre iguals és exactament dividir.")
+
+
+def run_reasoning(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> Report | int:
+    from db_schema import ERROR_CATEGORIES
+    transcript: list[str] = []
+    started = time.time()
+    today = date.today().isoformat()
+
+    sid = cli.new_session()
+    print(f"perfil {prof_dir.name} · port {args.port} · reasoning (📝 raonament obert)")
+    wait_quiet(prof_dir)
+    archive(prof_dir / ".daily")
+    archive(prof_dir / ".update-state")
+    print(f"sessió {sid}")
+
+    replies: list[str] = []
+    log_path = prof_dir / f"math-web-{args.port}.log"
+
+    def press(cmd: str, label: str) -> str:
+        t = time.time()
+        body = tutor_text(cli.command(sid, cmd))
+        replies.append(body)
+        transcript.append(f"## {label}\n\n{body}")
+        print(f"  [{label}] → {time.time() - t:.0f}s")
+        return body
+
+    def say(answer: str) -> str:
+        t = time.time()
+        body = tutor_text(cli.say(sid, answer))
+        replies.append(body)
+        transcript.append(f"## resposta {len(replies)}: «{answer[:120]}»\n\n{body}")
+        flags = []
+        if not MARKER.search(body): flags.append("sense marcador")
+        if "Correct version:" not in body: flags.append("sense versió correcta")
+        if not SCORE.search(body): flags.append("sense nota")
+        print(f"  {len(replies)} «{answer[:40]}» → {time.time() - t:.0f}s"
+              + (f"  ⚠ {', '.join(flags)}" if flags else "  ok"))
+        return body
+
+    def score_of(reply: str) -> int | None:
+        m = SCORE.search(reply)
+        return int(re.split(r"\s*/\s*", m.group(0))[0]) if m else None
+
+    # --- 📝 Raonament: the open task, then the graded answer ------------------
+    txt = press("math-writing", "📝 Raonament")
+    rep.check(bool(re.search(r"explica|per què|justifica|demostra|troba|inventa|com ho", txt, re.I)),
+              "el Raonament obre amb una tasca que demana justificació",
+              txt.strip().splitlines()[0][:70] if txt.strip() else "(buit)")
+    rep.check("___" not in txt, "la tasca no és un gap-fill", "")
+    rep.check(not re.search(r"\b(?:llista|llistat|enumera)\b", txt, re.I),
+              "la tasca no demana una llista (guard WP3.3)", "")
+
+    answer = reasoning_answer(txt)
+    body = say(answer)
+
+    # the WP3.1 contract on the graded feedback
+    rep.check(bool(MARKER.search(body)), "la resposta rep un marcador", "")
+    rep.check("Correct version:" in body, "el feedback mostra la versió correcta", "")
+    sc = score_of(body)
+    rep.check(sc is not None, "el feedback porta nota", f"{sc}/10" if sc is not None else "")
+    cats = re.findall(r"→ \*\*\"[^\"]+\"\*\* \((\w+)", body)
+    rep.check(bool(cats), "el feedback corregeix amb línies de correcció",
+              ",".join(cats) if cats else body[:100].replace("\n", " "))
+    rep.check(bool(cats) and all(c in ERROR_CATEGORIES for c in cats),
+              "les correccions usen la taxonomia matemàtica (mai gramàtica)",
+              ",".join(cats) if cats else "(cap)")
+    if sc is not None:
+        rep.check(sc <= 8, "un lliscament deliberat no treu un 9-10", f"{sc}/10")
+
+    # --- 🏁 End: the record and the counter -----------------------------------
+    txt = press("math-end", "🏁 End")
+    rep.check(bool(txt.strip()), "el tutor fa el resum de tancament", f"{len(txt)} car.")
+    wait_quiet(prof_dir)
+
+    rec_lines: list[dict] = []
+    rf = prof_dir / ".records" / f"{sid}.jsonl"
+    if rf.exists():
+        for line in rf.read_text().splitlines():
+            try:
+                rec_lines.append(json.loads(line))
+            except ValueError:
+                pass
+    reasoning_recs = [r for r in rec_lines if r.get("skill") == "reasoning"]
+    rep.check(bool(reasoning_recs), "el registre de la resposta oberta es guarda amb skill «reasoning»",
+              json.dumps([r.get("skill") for r in rec_lines])[:120])
+    if reasoning_recs:
+        rep.check(bool(reasoning_recs[0].get("corrections")),
+                  "el registre porta les correccions categoritzades",
+                  json.dumps(reasoning_recs[0].get("corrections"))[:140])
+
+    try:
+        daily = json.loads((prof_dir / ".daily" / f"{today}.json").read_text())
+    except (OSError, ValueError):
+        daily = {}
+    rep.check(int(daily.get("reasoning") or 0) >= 1, "el comptador de Raonament del dia avança",
+              json.dumps({k: daily.get(k) for k in ("graded", "reasoning")}))
+
+    braced = [BRACE.search(on_screen(r)) for r in replies]
+    rep.check(not any(braced), "cap clau de plantilla a la pantalla",
+              next((m.group(0) for m in braced if m), ""))
+    leaks = [m.group(0) for m in CEFR_LEAK.finditer(on_screen("\n".join(replies)))]
+    rep.check(not leaks, "cap menció de nivell CEFR en una sessió de matemàtiques",
+              leaks[0] if leaks else "")
+
+    results = sorted((prof_dir / "results").glob("*.md"), key=lambda f: f.stat().st_mtime) \
+        if (prof_dir / "results").is_dir() else []
+    rep.check(bool(results) and results[-1].stat().st_mtime >= started,
+              "el fitxer de resultats es escriu al tancament",
+              results[-1].name if results else "(cap)")
+
+    guards = prof_dir / ".metrics" / "guards.jsonl"
+    fired = []
+    if guards.exists():
+        for line in guards.read_text().splitlines():
+            try:
+                g = json.loads(line)
+            except ValueError:
+                continue
+            if g.get("session") != sid:
+                continue
+            note = str(g.get("note", ""))
+            if note.strip().startswith("rewritten"):
+                continue
+            fired.append(note[:70])
+    rep.guards = len(fired)
+    if fired:
+        print(f"\nel guard del servidor ha actuat {len(fired)} cop(s):")
+        for f in fired:
+            print(f"  ↻ {f}")
+
+    warns = [l for l in log_path.read_text(errors="ignore").splitlines()
+             if "⚠" in l and sid in l] if log_path.exists() else []
+    rep.check(not warns, "cap avís del servidor per aquesta sessió",
+              warns[0][:90] if warns else "")
+
+    if args.transcript:
+        Path(args.transcript).expanduser().write_text(
+            f"# Raonament obert e2e — {prof_dir.name} — {sid}\n\n"
             + "\n\n---\n\n".join(transcript), encoding="utf-8")
         print(f"\ntranscripció: {args.transcript}")
 
@@ -2427,12 +2625,14 @@ def main() -> int:
     ap.add_argument("--transcript", help="write everything the tutor said to this file")
     ap.add_argument("--user", default="opencode", help="basic-auth user (default: opencode)")
     ap.add_argument("--password", help="basic-auth password (default: the profile's .web-password)")
-    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "days", "curriculum", "ladder"), default="lesson",
+    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "reasoning", "days", "curriculum", "ladder"), default="lesson",
                     help="lesson (WP1.9, per defecte): 🔁 Review amb la cua sembrada (compute/compare/"
                          "steps, la primera de passos fallida a propòsit) + 🎲 Go + 📚 Facts + 🏁 End i la "
                          "persistència · review: només la lliçó · steps: una lliçó només de targetes de "
                          "passos · go: només targetes del banc a pràctica lliure · facts: només el drill "
-                         "de fets · "
+                         "de fets · reasoning (WP3.3): 📝 Raonament obert — el tutor planteja una tasca "
+                         "d'explicar, l'alumne respon amb un lliscament deliberat i el feedback ha de "
+                         "venir amb correccions de la taxonomia matemàtica (rúbrica WP3.1) · "
                          "days: N dies seguits (el rellotge avança); l'SM-2 ha de fer tornar el "
                          "que es falla i allunyar el que s'encerta · "
                          "curriculum: N dies d'un alumne simulat A1→A2 en pràctica lliure (Mix + Vocabulary): "
