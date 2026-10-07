@@ -614,3 +614,32 @@ Després, `scripts/flowed-stop.sh && scripts/flowed-start.sh`.
 - [ ] Mesura de VRAM real a 36864/f16 (pas 5) — l'única dada nova.
 - [ ] Decidir quan es mouen `alex-en` i `sam-en`.
 - [ ] Si llvm passa a ser la bona: on queda railab (desenvolupament?).
+
+---
+
+## Addendum WP5.2 (2026-10-07) — què t'ha de set extra on el que corré is the unified core
+
+The procedure above still holds (rsync the dir → `bun install` → swap `.env` →
+rsync the profiles → the pas checks). Three things the core adds that this
+document predates:
+
+1. **`FLOWED_HOME` on llvm.** `.env.rapve` does not set it, so the core would
+   default to `~/.flowed`. Set it explicitly in the machine's `.env` — e.g.
+   `FLOWED_HOME=/home/albert/.flowmath` (or a production home). The lib-paths
+   fix (WP5.1) means a `FLOWED_HOME` in `.env` is now honored at source time;
+   without it, `new-user.sh` provisions into the wrong home (the very bug the
+   fix names).
+2. **`FLOWED_WEBS` for the core's profiles.** `.env.rapve` lists the language
+   product's webs (`alex-en:4100 sam-en:4101 demo-en:4102`). The core serves
+   whatever profiles exist on the machine — math at 4200+ and the language
+   learners you move over; list them with their ports.
+3. **The manifest travels for free.** `config/domain.json` is in the repo, so
+   the rsync carries it; each learner's domain is its level scale (A1..C2 →
+   language, m1..m7 → math) — no per-learner config, nothing else to set.
+
+Moving a real language learner from `flowed-language` to the core: the 6 DBs +
+`.records` + `sessions/sessions.db` are the same format, so copying the profile
+dir under the core's `FLOWED_HOME` is the whole migration. Before doing it with
+real learners, land the polish list in `docs/RUNNING.md` §7 (declare `Bank:`
+competences in `en-*.md` so Go/Review are model-free like math's; e2e-prove the
+button labels; exercise TTS).
