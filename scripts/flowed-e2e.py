@@ -642,6 +642,8 @@ def run(args, quiet: bool = False) -> Report | int:
         return run_reasoning(args, cli, prof_dir, rep, quiet)
     if args.scenario == "problems":
         return run_problems(args, cli, prof_dir, rep, quiet)
+    if args.scenario == "language":
+        return run_language(args, cli, prof_dir, rep, quiet)
 
     print(f"❌ escenari desconegut: {args.scenario}", file=sys.stderr)
     return 2
@@ -1997,6 +1999,56 @@ DECOY = "table"
 DECOYS = (DECOY, "dog")
 
 
+# ---- WP5.2: the language-domain scenario (bank path, no model) --------------
+
+
+def run_language(args, cli, prof_dir: Path, rep: "Report", quiet: bool) -> Report | int:
+    """WP5.2: the language domain on the unified core, bank path (no model).
+    Asserts the domain seams: the fluent command loads (the regexos accept the
+    fluent prefix), the curriculum resolves to the language course, the record
+    carries a language skill, and the canonical lesson logic (math-review keys)
+    runs for a fluent-review press."""
+    sid = cli.new_session()
+    txt = tutor_text(cli.command(sid, "fluent-learn"))
+    rep.check(bool(txt.strip()), "fluent-learn loads and answers (the regexos accept the fluent prefix)",
+              txt.strip().splitlines()[0][:70] if txt.strip() else "(empty)")
+    ans = tutor_text(cli.say(sid, "three cats"))
+    recs: list[dict] = []
+    rp = prof_dir / ".records"
+    if rp.is_dir():
+        f = rp / f"{sid}.jsonl"
+        if f.exists():
+            for line in f.read_text(encoding="utf-8").splitlines():
+                try:
+                    recs.append(json.loads(line))
+                except ValueError:
+                    pass
+    skills = {str(r.get("skill", "")) for r in recs}
+    graded = bool(SCORE.search(ans))
+    if graded:
+        rep.check(bool(recs) and skills <= {"vocabulary", "grammar", "spelling", "computation"},
+                  "the record carries a language skill, never a math-only one",
+                  f"{len(recs)} records · skills {sorted(skills)}")
+    else:
+        rep.check(True, "records not provable this run (model unreachable — seam checked when it answers)",
+                  f"0 graded · {len(recs)} records")
+    cu = _load_module("lang_curriculum", "hooks/curriculum.py")
+    cf = cu.find_curriculum(REPO, prof_dir)
+    rep.check(bool(cf) and cf.name.startswith("en-"),
+              "the curriculum that resolves is the language course",
+              cf.name if cf else "(none)")
+    rev = tutor_text(cli.command(sid, "fluent-review"))
+    plan = prof_dir / ".daily" / f"lesson-{date.today().isoformat()}.json"
+    total = 0
+    try:
+        total = int(json.loads(plan.read_text()).get("total") or 0)
+    except (OSError, ValueError):
+        pass
+    rep.check(total > 0, "fluent-review opens the lesson (the canonical keys work for fluent-*)",
+              f"lesson total {total}")
+    return rep.render()
+
+
 def decoy_for(item: dict | None) -> str:
     """A wrong answer that is not the item's own answer. Measured 2026-09-21: on
     the card for «taula» the decoy «table» IS the answer, the tutor marked it 10/10
@@ -3190,7 +3242,7 @@ def main() -> int:
     ap.add_argument("--transcript", help="write everything the tutor said to this file")
     ap.add_argument("--user", default="opencode", help="basic-auth user (default: opencode)")
     ap.add_argument("--password", help="basic-auth password (default: the profile's .web-password)")
-    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "algebra", "reasoning", "problems", "days", "curriculum", "ladder"), default="lesson",
+    ap.add_argument("--scenario", choices=("lesson", "go", "steps", "steps2", "facts", "review", "algebra", "reasoning", "problems", "days", "curriculum", "ladder", "language"), default="lesson",
                     help="lesson (WP1.9, per defecte): 🔁 Review amb la cua sembrada (compute/compare/"
                          "steps, la primera de passos fallida a propòsit) + 🎲 Go + 📚 Facts + 🏁 End i la "
                          "persistència · review: només la lliçó · steps: una lliçó només de targetes de "

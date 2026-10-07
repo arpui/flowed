@@ -791,7 +791,7 @@ export function requiredSkills(body: string): string[] {
     .replace(/[[\]]/g, " ")
     .split(/[,\s]+/)
     .map((x) => x.trim())
-    .filter((x) => /^math-[a-z0-9-]+$/.test(x));
+    .filter((x) => /^(math|fluent)-[a-z0-9-]+$/.test(x));
 }
 
 /**

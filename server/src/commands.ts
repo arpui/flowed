@@ -35,7 +35,7 @@ export interface ResolvedCommand {
  * server loads.
  */
 function readSkillFile(root: string, name: string): string | undefined {
-  if (!/^math-[a-z0-9-]+$/.test(name)) return undefined;
+  if (!/^(math|fluent)-[a-z0-9-]+$/.test(name)) return undefined;
   try {
     const body = fs.readFileSync(path.join(root, "skills", name, "SKILL.md"), "utf8").trim();
     return body || undefined;

@@ -409,8 +409,8 @@ export function buildTools(opts: {
     },
     execute: async (args: Record<string, unknown>) => {
       const name = String(args.name ?? "").trim();
-      if (!/^math-[a-z0-9-]+$/.test(name)) {
-        return `[skill error: '${name}' is not a valid math-* skill name]`;
+      if (!/^(math|fluent)-[a-z0-9-]+$/.test(name)) {
+        return `[skill error: '${name}' is not a valid domain skill name]`;
       }
       const file = path.join(opts.root, "skills", name, "SKILL.md");
       try {

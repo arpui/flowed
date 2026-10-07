@@ -1998,6 +1998,34 @@ inputEl.addEventListener("input", () => {
   composerEl.classList.remove("awaiting");
   autosize();
 });
+// WP5.2: the button bar is domain-aware. data-cmd stays the canonical
+// (math-*) key so the JS queries keep working; the SENT command carries the
+// domain prefix (a language profile presses fluent-*), and the visible labels
+// swap per the manifest's web_labels (config/domain.json is the authority;
+// this map mirrors it for the static shell).
+const LANG_LABELS = {
+  "math-learn": ["🎲", "Surprise me!"],
+  "math-review": ["🔁", "Review"],
+  "math-vocab": ["📚", "Vocabulary"],
+  "math-writing": ["📝", "Writing"],
+  "math-reading": ["📖", "Reading"],
+  "math-speaking": ["🗣️", "Speaking"],
+  "math-progress": ["📊", "Progress"],
+  "math-end": ["🏁", "Acaba"],
+};
+if (window.__FLOWED_DOMAIN === "language") {
+  document.querySelectorAll("#commands button[data-cmd]").forEach((b) => {
+    const key = b.dataset.cmd;
+    if (key === "math-checkpoint") { b.hidden = true; return; }
+    const l = LANG_LABELS[key];
+    if (l) {
+      const span = b.querySelector("span:not(.badge)");
+      if (span) span.textContent = l[1];
+      const iconNode = b.childNodes[0];
+      if (iconNode && iconNode.nodeType === 3) iconNode.textContent = l[0] + "";
+    }
+  });
+}
 document.querySelectorAll("#commands button").forEach((b) =>
   b.addEventListener("click", () => {
     // 📊 Progress opens the visual dashboard directly (no agent turn).
@@ -2005,7 +2033,8 @@ document.querySelectorAll("#commands button").forEach((b) =>
       if (!busy) openProgress();
       return;
     }
-    runCommand(b.dataset.cmd);
+    const dom = window.__FLOWED_DOMAIN === "language" ? "fluent" : "math";
+    runCommand(dom + "-" + b.dataset.cmd.replace(/^math-/, ""));
   }),
 );
 $("#new-session").addEventListener("click", newSession);

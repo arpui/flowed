@@ -1204,9 +1204,11 @@ check("and an empty fingerprint never reaches the list",
   const next = src.slice(start + 10).search(/\n  (?:private|public|async) /);
   const body = src.slice(start, next < 0 ? undefined : start + 10 + next);
   check("level test: no model in the loop", body.length > 200 && !/runTurn|executeTurn|resolveModel\(agent, this\.models\)\s*;\s*const msg = .*runTurn/.test(body));
+  // WP5.2: the check keys on the canonical cmdKey (fluent-* normalizes to math-*
+  // at the entry seam) — same behavior, domain-neutral.
   check("level test: the button is answered before any command file is loaded",
-    src.indexOf('commandName === "math-checkpoint"') > 0 &&
-      src.indexOf('commandName === "math-checkpoint"') < src.indexOf("await loadCommand(commandName"));
+    src.indexOf('cmdKey === "math-checkpoint"') > 0 &&
+      src.indexOf('cmdKey === "math-checkpoint"') < src.indexOf("await loadCommand(commandName"));
   check("level test: the answers of a running test go to it, also after a restart",
     src.includes('this.checkpointTurn(sessionId, "answer", text)') && src.includes('cmd === undefined) && this.checkpointRunning()'));
   check("level test: a test of another day is not answered", src.includes("run.day ===") && src.includes("checkpoint-run.json"));

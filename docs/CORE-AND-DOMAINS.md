@@ -71,14 +71,16 @@ pictureGuard, bounce, pruneHistory).
 
 ## Verified / pending
 
-- Verified: math suite stays green (the gates are inert for math profiles);
-  `tests/test_domain.py` green; server harnesses + tsc green.
-- PENDING (documented, not executed): the web BUTTONS per domain (the button
-  bar is static in the web shell — it must read `web_labels` from the manifest);
-  the TTS gate by domain (`config/domain.json tts` is the flag; `tts.ts` still
-  reads `config/fluent.json`); the command-prefix regexos in tools.ts/commands.ts
-  still match only `math-` — they must be parameterized by the manifest's
-  `command_prefix` before a language profile can run commands here.
-- The language domain has never been e2e-tested in the unified core — the
-  `flowed` repo remains the reference until a `language` e2e scenario runs
-  here. Rollback of any piece: `git revert` the WP5.2 commits.
+- Verified (WP5.2b, same day): the command/skill regexos accept both prefixes
+  (`commands.ts`, `tools.ts`, `pacing.ts`); the entry seam canonicalizes
+  `fluent-*` → `math-*` for the logic while loading the raw domain file; the
+  web injects `window.__FLOWED_DOMAIN` and swaps the button bar; the TTS gate
+  reads the manifest per domain; and the `language` e2e scenario passes 4/4
+  live (fluent-learn loads, a `grammar` record lands, the curriculum resolves
+  to the language course, `fluent-review` opens the lesson). Suites: 728 tests
+  + 14 harnessos + tsc 0.
+- PENDING polish (see RUNNING.md §7): button labels not e2e-proven (DOM not
+  exercised), TTS not exercised, `en-A2.md` declares no `Bank:` competences
+  (the language bank path falls to the model today), and the stray
+  `~/.flowed/test-lang` profile to delete.
+- Rollback of any piece: `git revert` the WP5.2 commits (`9fcc1b0`, WP5.2b).

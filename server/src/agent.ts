@@ -516,11 +516,15 @@ export class Agent {
     // Which practice the learner is in right now — the Lesson credits only
     // answers given inside it.
     const prevCommand = this.currentCommand.get(sessionId);
-    this.currentCommand.set(sessionId, commandName);
+    // WP5.2: the practice LOGIC keys on the canonical (math-*) name, so the
+    // engine is domain-neutral (a fluent-review behaves as the review lesson);
+    // loading and labels keep the RAW domain name below.
+    const cmdKey = commandName.replace(/^fluent-/, "math-");
+    this.currentCommand.set(sessionId, cmdKey);
     if (this.currentCommand.size > 500) this.currentCommand.clear();
     this.answerInFront.set(sessionId, false);
     // The level test is run by the server (docs/ESQUEMA-APRENENTATGE.md): no model in the loop.
-    if (commandName === "math-checkpoint") return this.checkpointTurn(sessionId, "start", "");
+    if (cmdKey === "math-checkpoint") return this.checkpointTurn(sessionId, "start", "");
     // A button starts a new exercise in a new practice, so the previous practice's
     // exercise is no longer the one being answered. Left standing, a Writing
     // answer was graded as the answer to the Vocabulary word shown before it
@@ -546,7 +550,7 @@ export class Agent {
     // the model continues instead of re-greeting (prompt rules alone lose to
     // the greeting template). Skipped for math-end (own finalization flow).
     let body = resolved.body;
-    if (commandName !== "math-end" && continuing) {
+    if (cmdKey !== "math-end" && continuing) {
       // Measured live, 2026-09-22, test-en: pressing Reading right after Speaking
       // did not switch the content — the tutor kept asking Speaking-style
       // "Question N" cards under the Reading button, twice in one session. The
@@ -574,7 +578,7 @@ export class Agent {
     const outcome = await this.executeTurn(sessionId, agent, system, history, this.toolsFor(sessionId));
 
     // Auto-run math-db-updater for math-end command to finalize Capa B
-    if (commandName === "math-end") {
+    if (cmdKey === "math-end") {
       await this.runDbUpdater(sessionId, dataDir);
     }
 

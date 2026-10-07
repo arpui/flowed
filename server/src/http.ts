@@ -352,7 +352,27 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             ".css": "text/css",
             ".svg": "image/svg+xml",
           }[ext] ?? "application/octet-stream";
-        return new Response(fs.readFileSync(file), {
+        let body = fs.readFileSync(file);
+        // WP5.2: the shell carries the profile's domain so the web can pick
+        // its button bar (same rule as hooks/domain.py: explicit field, else
+        // level scale).
+        if (rel === "index.html") {
+          let dom = "math";
+          try {
+            const prof = JSON.parse(fs.readFileSync(path.join(opts.dataDir(), "learner-profile.json"), "utf8"));
+            const explicit = String(prof?.domain ?? "").trim().toLowerCase();
+            if (explicit) dom = explicit;
+            else {
+              const lv = String(prof?.learner?.current_level ?? prof?.learner?.target_level ?? "").trim().toUpperCase();
+              if (/^[A-C][12]$/.test(lv)) dom = "language";
+            }
+          } catch {
+            /* no profile — math default */
+          }
+          const s = String(body);
+          body = s.replace("</head>", `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};</script></head>`);
+        }
+        return new Response(body, {
           headers: { "content-type": ct, "cache-control": "no-cache" },
         });
       }
@@ -457,8 +477,30 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       // there is no tool and no extra context per turn. When no voice is
       // installed the UI is told so and simply shows no speaker buttons —
       // never a button that fails.
+      // WP5.2: TTS follows the DOMAIN (config/domain.json `tts`), not the
+      // machine config alone — a language profile hears voices even when the
+      // fork's config/fluent.json keeps them off for math.
+      const domOfProfile = (): string => {
+        try {
+          const prof = JSON.parse(fs.readFileSync(path.join(opts.dataDir(), "learner-profile.json"), "utf8"));
+          const explicit = String(prof?.domain ?? "").trim().toLowerCase();
+          if (explicit) return explicit;
+          const lv = String(prof?.learner?.current_level ?? prof?.learner?.target_level ?? "").trim().toUpperCase();
+          if (/^[A-C][12]$/.test(lv)) return "language";
+        } catch { /* no profile — math default */ }
+        return "math";
+      };
+      const ttsForDomain = (): TtsConfig => {
+        const base = opts.tts ?? DEFAULT_TTS;
+        try {
+          const man = JSON.parse(fs.readFileSync(path.join(opts.root, "config", "domain.json"), "utf8"));
+          const spec = (man.domains ?? {})[domOfProfile()] ?? {};
+          if (spec.tts === true && base.binary) return { ...base, enabled: true };
+        } catch { /* no manifest — machine config decides */ }
+        return base;
+      };
       if (p === "/api/math/tts-state") {
-        const cfg = opts.tts ?? DEFAULT_TTS;
+        const cfg = ttsForDomain();
         const language = readTargetLanguage(opts.dataDir());
         return json({
           enabled: cfg.enabled && !!voiceFor(cfg, language),
@@ -467,7 +509,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       }
 
       if (p === "/api/math/say") {
-        const cfg = opts.tts ?? DEFAULT_TTS;
+        const cfg = ttsForDomain();
         const text = url.searchParams.get("text") ?? "";
         const language = url.searchParams.get("lang") || readTargetLanguage(opts.dataDir());
         const cacheDir = path.join(opts.dataDir(), ".audio");
