@@ -1546,9 +1546,9 @@ function renderProgress(d) {
   const warnings = Array.isArray(d.warnings) ? d.warnings : [];
 
   const lvl = [learner.current_level, learner.target_level].filter(Boolean).join(" → ");
-  // target_language is the fixed subject ("Math"); the header shows its name
-  // in the language the tutor explains in, like session-start.py does.
-  const subject = learner.target_language ? "Matemàtiques" : null;
+  // WP5.2: the header subject follows the profile's domain (config/domain.json
+  // manifest; read-db.py resolves it and http.ts passes it through).
+  const subject = d.domain === "language" ? (learner.target_language || null) : "Matemàtiques";
   const headerSub = [learner.name, subject, lvl].filter(Boolean).join(" · ");
 
   const kpis = [

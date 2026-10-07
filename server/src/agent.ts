@@ -63,6 +63,14 @@ import {
   type LessonView,
 } from "./pacing";
 import {
+  foreignScriptGuard,
+  languageDirectionGuard,
+  stripForeignScript,
+  foreignScript,
+  vocabularyDueNote,
+  writingLengthNote,
+} from "./domain-language";
+import {
   readDaily,
   bumpDaily,
   readTally,
@@ -377,6 +385,10 @@ export class Agent {
     // (rollback = delete these 3 lines; agent files keep their legacy copies).
     const shared = this.readRuleFile(path.join("prompts", "agents", "rules.md")).trim();
     if (shared) blocks.push(`Shared behavioral rules (apply on top of everything above):\n\n${shared}`);
+    // WP5.2: the domain's own rules load LAST, so they win over the shared
+    // ones (rules-<domain>.md; missing file = nothing extra).
+    const domRules = this.readRuleFile(path.join("prompts", "agents", `rules-${this.domainForSession()}.md`)).trim();
+    if (domRules) blocks.push(`Domain rules (apply on top of everything above):\n\n${domRules}`);
     // The practice the learner is in. Last block, so it wins any generic rule
     // above it, and present on EVERY turn — not only on the turn that happened
     // to load it.
@@ -1785,6 +1797,18 @@ export class Agent {
   ): void {
     try {
       const texts = view().parts.filter((p) => (p as { type?: string }).type === "text") as Array<{ id?: string; text?: string }>;
+      // WP5.2: language domain — drop characters of a script the learner cannot
+      // read (14B, Reading, 2026-09-27: "swings, 滑梯, and…" in an A1 text).
+      if (this.domainForSession() === "language") {
+        const langs = this.learnerLanguages();
+        for (const p of texts) {
+          const t = String(p.text ?? "");
+          if (p.id && foreignScript(t, langs.target, langs.native)) {
+            this.db.updatePart(String(p.id), { type: "text", text: stripForeignScript(t, langs.target, langs.native) });
+            this.logGuard(sessionId, "foreign script dropped", t);
+          }
+        }
+      }
       if (!recordArgs || this.answerInFront.get(sessionId) !== true) return;
       const shown = view().parts.some((p) => {
         const q = p as { type?: string; text?: string };
@@ -1910,10 +1934,15 @@ export class Agent {
       // "Number: one" into an unrelated articles_plurals exercise that had
       // nothing to do with numbers.
       const compAtStart = this.assignedCompetence.get(sessionId) ?? null;
-      const note = pictureGuard(text)
+      // WP5.2: the language-domain guards (domain-language.ts) run only for a
+      // language profile; a math profile pays nothing (langs stays null).
+      const langs = this.domainForSession() === "language" ? this.learnerLanguages() : null;
+      const note = (langs ? foreignScriptGuard(text, langs.target, langs.native) : null)
+        ?? pictureGuard(text)
         ?? writingBlankGuard(text, this.currentCommand.get(sessionId))
         ?? reasoningTaskGuard(text, this.currentCommand.get(sessionId))
         ?? wordProblemTaskGuard(text, this.currentCommand.get(sessionId))
+        ?? (langs ? languageDirectionGuard(text, langs.target, langs.native) : null)
         ?? turnGuard({
         inLesson,
         pending: lesson.pending,
@@ -2258,6 +2287,39 @@ export class Agent {
     }
   }
 
+  /** WP5.2 — the profile's domain: explicit `domain` field first, level scale
+   *  second (A1..C2 → language, m1..m7 → math), manifest default last. The
+   *  Python twin is hooks/domain.py; config/domain.json is the manifest. */
+  private domainForSession(): string {
+    try {
+      const prof = JSON.parse(
+        fs.readFileSync(path.join(this.dataDir(), "learner-profile.json"), "utf8")
+      );
+      const explicit = String(prof?.domain ?? "").trim().toLowerCase();
+      if (explicit) return explicit;
+      const lv = String(prof?.learner?.current_level ?? prof?.learner?.target_level ?? "").trim().toUpperCase();
+      if (/^m\d/.test(lv)) return "math";
+      if (/^[A-C][12]$/.test(lv)) return "language";
+    } catch {
+      /* fall through to the default below */
+    }
+    return "math";
+  }
+
+  /** The learner's native/target languages from the profile (language domain). */
+  private learnerLanguages(): { native?: string; target?: string } {
+    try {
+      const prof = JSON.parse(
+        fs.readFileSync(path.join(this.dataDir(), "learner-profile.json"), "utf8")
+      );
+      const pick = (v: unknown) =>
+        typeof v === "string" && v.trim() && !v.includes("{") ? v.trim() : undefined;
+      return { native: pick(prof?.learner?.native_language), target: pick(prof?.learner?.target_language) };
+    } catch {
+      return {};
+    }
+  }
+
   /** Where the learner is in this session — the UI shows it, deterministically. */
   sessionProgress(sessionId: string): {
     graded: number;
@@ -2531,6 +2593,23 @@ export class Agent {
     ].includes(cmd)
       ? this.topicsNoteFor(sessionId)
       : null;
+    // WP5.2: language-domain pacing notes (domain-language.ts) — the writing
+    // length table and the due-words note, only for a language profile.
+    if (this.domainForSession() === "language") {
+      if (cmd === "fluent-writing") {
+        const w = writingLengthNote(this.learnerLevel());
+        return [free, w, topics].filter(Boolean).join(" ") || null;
+      }
+      if (cmd === "fluent-vocab") {
+        try {
+          const sr = JSON.parse(fs.readFileSync(path.join(this.dataDir(), "spaced-repetition.json"), "utf8"));
+          const due = vocabularyDueNote(sr, todayISO(), this.lessonPlan().covered, 5, this.learnerLanguages());
+          if (due) return [free, due].filter(Boolean).join(" ") || null;
+        } catch {
+          /* no queue — fall through to the generic note */
+        }
+      }
+    }
     if (this.currentCommand.get(sessionId) === "math-writing") {
       // No forced structure any more (Albert, 2026-09-24): Writing used to
       // borrow the exact grammar competence Go was drilling THIS turn

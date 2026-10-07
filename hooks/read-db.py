@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from main_paths import data_dir, force_utf8_io  # noqa: E402
 from db_schema import CURRENT_SCHEMA_VERSION, get_schema_version, decay_config  # noqa: E402
+from domain import domain_for_profile  # noqa: E402 (WP5.2 domain adapter)
 
 force_utf8_io()
 DATA_DIR = data_dir()
@@ -445,6 +446,7 @@ def main():
             "streak_active": streak_active,
             "days_since_last_session": days_since,
             "steps_precision": steps_precision(),
+            "domain": domain_for_profile(profile),
         },
     }
     if not full:

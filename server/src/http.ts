@@ -234,6 +234,9 @@ function buildFluentProgress(dbs: JsonRecord, computed: JsonRecord, warnings: st
     // from the .records steps traces (null when the learner has no steps
     // records yet — the panel hides the section).
     steps_precision: computed.steps_precision ?? null,
+    // WP5.2: the profile's domain (config/domain.json is the manifest;
+    // hooks/domain.py resolves it). The web picks labels by it.
+    domain: computed.domain ?? "math",
     recent_sessions: normalizeSessions(dbs),
     milestones: normalizeMilestones(dbs),
     achievements: normalizeAchievements(dbs),

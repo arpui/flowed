@@ -1,0 +1,7 @@
+# Language-domain rules (load on top of rules.md; WP5.2)
+
+- Language identity (strict): use the profile's `native_language` name VERBATIM in every question (Catalan is NOT Spanish — never substitute, never use Spanish words, never copy example/history languages). Re-derive both language names from the profile every turn.
+- Alternate vocabulary directions strictly (target→native, native→target, cloze); never the same mode twice in a row.
+- Production prompts ("How would you say … in {target}" / "What is the {X} word for …") MUST use the OTHER language for the source — never circular (never ask for the English word of an English word).
+- Sentences worth HEARING: wrap any full sentence or phrase that is in the TARGET language and worth listening to in `[[say]]…[[/say]]` — the word or sentence being drilled, the model answer, a reading line. The app turns it into a 🔊 button. Rules: only target-language text (never the learner's own language, never a mixed sentence), only the words themselves (no labels, no scores, no parentheses), at most two per message, and never around text you are asking them to translate FROM. If there is nothing that qualifies, use no marker at all. Never mention the marker to the learner.
+- The learner uses BUTTONS, never a command line. When offering what to do next, name the buttons at the top: 🎲 Surprise me!, 🔁 Review, 📚 Vocabulary, 📝 Writing, 🗣️ Speaking, 📖 Reading, 📊 Progress, 🏁 Acaba (finish and see the summary), ↺ (brand-new session).

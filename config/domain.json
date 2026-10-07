@@ -1,0 +1,35 @@
+{
+  "_comment": "WP5.2 — the domain manifest. The core (engine: server, hooks, web, SM-2, pacing, records) is domain-neutral and reads this file; a domain is DATA + a thin adapter (tutor layer, graders, labels, level scale). A future domain plugs in by adding an entry here plus its dirs — nothing else in the core changes. `default` is what a profile without an explicit `domain` field gets when inference fails.",
+  "default": "math",
+  "domains": {
+    "language": {
+      "level_scale": ["A1", "A2", "B1", "B2", "C1", "C2"],
+      "command_prefix": "fluent",
+      "skill_prefix": "fluent",
+      "curriculum_glob": "curriculum/en-*.md",
+      "bank_dir": "curriculum/bank/en-*",
+      "grader": "language",
+      "taxonomy_extra": ["vocabulary", "spelling", "grammar"],
+      "tts": true,
+      "web_labels": {
+        "buttons": "📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End",
+        "subject": null
+      }
+    },
+    "math": {
+      "level_scale": ["m1", "m2", "m3", "m4", "m5", "m6", "m7"],
+      "cefr_scale": [],
+      "command_prefix": "math",
+      "skill_prefix": "math",
+      "curriculum_glob": "curriculum/math-m*.md",
+      "bank_dir": "curriculum/bank/math-m*",
+      "grader": "mathgrade",
+      "taxonomy_extra": ["sign", "incomplete", "procedure", "wrong_operation", "calculation"],
+      "tts": false,
+      "web_labels": {
+        "buttons": "🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End",
+        "subject": "Matemàtiques"
+      }
+    }
+  }
+}
