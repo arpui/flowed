@@ -38,7 +38,7 @@
     ],
     "answer": "96",
     "why": "10 + 2 es trenca en dues multiplicacions fàcils: 8 × 10 = 80 i 8 × 2 = 16; 80 + 16 = 96.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -80,7 +80,7 @@
     ],
     "answer": "96",
     "why": "20 + 4 es trenca en dues multiplicacions fàcils: 4 × 20 = 80 i 4 × 4 = 16; 80 + 16 = 96.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -122,7 +122,7 @@
     ],
     "answer": "424",
     "why": "50 + 3 es trenca en dues multiplicacions fàcils: 8 × 50 = 400 i 8 × 3 = 24; 400 + 24 = 424.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -164,7 +164,7 @@
     ],
     "answer": "21",
     "why": "10 - 3 es trenca en dues multiplicacions fàcils: 3 × 10 = 30 i 3 × 3 = 9; 30 - 9 = 21.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -206,7 +206,7 @@
     ],
     "answer": "364",
     "why": "50 + 2 es trenca en dues multiplicacions fàcils: 7 × 50 = 350 i 7 × 2 = 14; 350 + 14 = 364.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -248,7 +248,7 @@
     ],
     "answer": "336",
     "why": "50 - 8 es trenca en dues multiplicacions fàcils: 8 × 50 = 400 i 8 × 8 = 64; 400 - 64 = 336.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -290,7 +290,7 @@
     ],
     "answer": "224",
     "why": "30 + 2 es trenca en dues multiplicacions fàcils: 7 × 30 = 210 i 7 × 2 = 14; 210 + 14 = 224.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -332,7 +332,7 @@
     ],
     "answer": "132",
     "why": "40 - 7 es trenca en dues multiplicacions fàcils: 4 × 40 = 160 i 4 × 7 = 28; 160 - 28 = 132.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -374,7 +374,7 @@
     ],
     "answer": "108",
     "why": "30 - 3 es trenca en dues multiplicacions fàcils: 4 × 30 = 120 i 4 × 3 = 12; 120 - 12 = 108.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -416,7 +416,7 @@
     ],
     "answer": "111",
     "why": "30 + 7 es trenca en dues multiplicacions fàcils: 3 × 30 = 90 i 3 × 7 = 21; 90 + 21 = 111.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -458,7 +458,7 @@
     ],
     "answer": "171",
     "why": "10 + 9 es trenca en dues multiplicacions fàcils: 9 × 10 = 90 i 9 × 9 = 81; 90 + 81 = 171.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -500,7 +500,7 @@
     ],
     "answer": "96",
     "why": "10 + 6 es trenca en dues multiplicacions fàcils: 6 × 10 = 60 i 6 × 6 = 36; 60 + 36 = 96.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   }
 ]

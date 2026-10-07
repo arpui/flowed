@@ -1579,6 +1579,20 @@ function renderProgress(d) {
       }).join("")
     : '<p class="p-empty">Encara no hi ha dades per skill.</p>';
 
+  const sp = d.steps_precision || {};
+  const spRows = Array.isArray(sp.per_step) ? sp.per_step : [];
+  const stepsHtml = sp.items
+    ? `${spRows.map((s) => {
+        const r = Math.max(0, Math.min(100, Number(s.ok_rate) || 0));
+        return `<div class="skill-row">
+          <div class="skill-top"><span><strong>pas ${s.n}</strong></span><span class="acc">${fmtPct(s.ok_rate)}</span></div>
+          <div class="bar"><i style="width:${r}%"></i></div>
+          <div class="skill-meta">${s.seen ?? 0} attempts</div>
+        </div>`;
+      }).join("")}
+      <div class="skill-meta">fluïdesa de càlcul: ${fmtPct(sp.first_try_rate)} first-try · ${fmtPct(sp.retry_rate)} retried · ${fmtPct(sp.revealed_rate)} revealed · ${sp.items} items</div>`
+    : '<p class="p-empty">Encara no hi ha dades per pas.</p>';
+
   const patsHtml = weak.length
     ? `<ul class="pat-list">${weak.map((p) => `<li>
         <span class="pat-id">${esc(prettyId(p.id))}</span> <span class="chip">${esc(p.category || "general")}</span>
@@ -1626,6 +1640,7 @@ function renderProgress(d) {
   return `${warnHtml}
     <section><p class="progress-sub">${esc(headerSub || "—")}</p><div class="kpis">${kpis}</div>${dueChips}</section>
     <section><h3>Mastery per skill</h3>${skillsHtml}</section>
+    <section><h3>Precisió per pas</h3>${stepsHtml}</section>
     <section><h3>Patrons febles</h3>${patsHtml}</section>
     <section><h3>Tendència d'encert</h3>${trendHtml}</section>
     <section><h3>Resum setmanal</h3>${weeklyHtml}</section>

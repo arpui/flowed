@@ -160,6 +160,81 @@ def curriculum_progress(today: str) -> dict | None:
         return None
 
 
+def steps_precision() -> dict | None:
+    """WP4.1 — per-step precision and calculation fluency from the .records
+    steps traces.
+
+    The server files a `steps: [{n, ok, got, propagated?}]` trace on every
+    steps record (agent.ts appendBankRecord, hooks/bank.py _grade_steps);
+    until now nothing read it. Per step position `n` we keep the ok-rate over
+    REAL attempts only — a `propagated` step is the error cascade after the
+    first failure, not the learner's own try, so it stays out of both
+    numerator and denominator. Fluency uses the v2 score scale (10 = every
+    step right on the first try, 7 = one needed a second intent, 3 = a step
+    had to be revealed); v1 whole-trace grading conflates a digit slip into
+    the 7 band, which is acceptable for the pilot and documented here.
+    Returns None when the learner has no steps records yet — the panel hides
+    the section instead of showing zeros."""
+    per_step: dict = {}
+    items = first_try = retried = revealed = 0
+    seen_ids = set()
+    for path in sorted((DATA_DIR / ".records").glob("*.jsonl")):
+        try:
+            with open(path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        rec = json.loads(line)
+                    except ValueError:
+                        continue
+                    if not isinstance(rec, dict) or rec.get("skill") != "steps":
+                        continue
+                    rid = rec.get("record_id")
+                    if rid:
+                        if rid in seen_ids:
+                            continue
+                        seen_ids.add(rid)
+                    steps = rec.get("steps")
+                    if not isinstance(steps, list):
+                        continue
+                    items += 1
+                    try:
+                        score = int(rec.get("score"))
+                    except (TypeError, ValueError):
+                        score = 0
+                    if score >= 10:
+                        first_try += 1
+                    elif score >= 7:
+                        retried += 1
+                    else:
+                        revealed += 1
+                    for s in steps:
+                        if not isinstance(s, dict) or s.get("propagated"):
+                            continue
+                        n = s.get("n")
+                        if not isinstance(n, int) or isinstance(n, bool):
+                            continue
+                        cell = per_step.setdefault(n, [0, 0])
+                        cell[0] += 1
+                        cell[1] += 1 if s.get("ok") else 0
+        except OSError:
+            continue
+    if not items:
+        return None
+    return {
+        "items": items,
+        "per_step": [
+            {"n": n, "seen": seen, "ok_rate": round(100 * ok / seen, 1)}
+            for n, (seen, ok) in sorted(per_step.items())
+        ],
+        "first_try_rate": round(100 * first_try / items, 1),
+        "retry_rate": round(100 * retried / items, 1),
+        "revealed_rate": round(100 * revealed / items, 1),
+    }
+
+
 def compact_databases(databases: dict, today: str) -> dict:
     """Build a small view of the 6 databases (see module docstring)."""
     out = {}
@@ -369,6 +444,7 @@ def main():
             "next_session_id": next_session_id(sessions),
             "streak_active": streak_active,
             "days_since_last_session": days_since,
+            "steps_precision": steps_precision(),
         },
     }
     if not full:

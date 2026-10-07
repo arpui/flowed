@@ -11,7 +11,7 @@
     ],
     "options": [],
     "why": "4x − 2x = 2x i 3y + 3y = 6y; només es poden agrupar les lletres iguals.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -26,7 +26,7 @@
     ],
     "options": [],
     "why": "Agrupa les z: 2z + 6z = 8z; el número 4 va sol a la seva banda.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -41,7 +41,7 @@
     ],
     "options": [],
     "why": "4x − 2x = 2x i 2y + 3y = 5y; només es poden agrupar les lletres iguals.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -56,7 +56,7 @@
     ],
     "options": [],
     "why": "Agrupa les z: 6z + 2z = 8z; el número 11 va sol a la seva banda.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -71,7 +71,7 @@
     ],
     "options": [],
     "why": "Agrupa les z: 6z + 5z = 11z; el número 6 va sol a la seva banda.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -86,7 +86,7 @@
     ],
     "options": [],
     "why": "Les y amb les y (3y + 2y = 5y) i les x amb les x (7x + 3x = 10x).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -101,7 +101,7 @@
     ],
     "options": [],
     "why": "Les x amb les x (2x + 2x = 4x) i les y amb les y (2y + 1y = 3y).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -116,7 +116,7 @@
     ],
     "options": [],
     "why": "Les z amb les z (2z + 2z = 4z) i les y amb les y (7y + 1y = 8y).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -131,7 +131,7 @@
     ],
     "options": [],
     "why": "Les z amb les z (6z + 2z = 8z) i les y amb les y (8y + 2y = 10y).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -146,7 +146,7 @@
     ],
     "options": [],
     "why": "4x − 2x = 2x i 4y + 2y = 6y; només es poden agrupar les lletres iguals.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -161,7 +161,7 @@
     ],
     "options": [],
     "why": "Agrupa les x: 5x + 4x = 9x; el número 10 va sol a la seva banda.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -176,7 +176,7 @@
     ],
     "options": [],
     "why": "5x − 3x = 2x i 4y + 3y = 7y; només es poden agrupar les lletres iguals.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   }
 ]

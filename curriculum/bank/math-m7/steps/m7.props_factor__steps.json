@@ -38,7 +38,7 @@
     ],
     "answer": "40",
     "why": "El factor comú 8 queda fora: 8 × (3 + 2) = 8 × 5 = 40 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -80,7 +80,7 @@
     ],
     "answer": "36",
     "why": "El factor comú 4 queda fora: 4 × (5 + 4) = 4 × 9 = 36 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -122,7 +122,7 @@
     ],
     "answer": "104",
     "why": "El factor comú 8 queda fora: 8 × (10 + 3) = 8 × 13 = 104 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -164,7 +164,7 @@
     ],
     "answer": "3",
     "why": "El factor comú 3 queda fora: 3 × (3 - 2) = 3 × 1 = 3 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -206,7 +206,7 @@
     ],
     "answer": "91",
     "why": "El factor comú 7 queda fora: 7 × (11 + 2) = 7 × 13 = 91 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -248,7 +248,7 @@
     ],
     "answer": "176",
     "why": "El factor comú 8 queda fora: 8 × (12 + 10) = 8 × 22 = 176 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -290,7 +290,7 @@
     ],
     "answer": "102",
     "why": "El factor comú 6 queda fora: 6 × (11 + 6) = 6 × 17 = 102 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -332,7 +332,7 @@
     ],
     "answer": "12",
     "why": "El factor comú 3 queda fora: 3 × (8 - 4) = 3 × 4 = 12 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -374,7 +374,7 @@
     ],
     "answer": "8",
     "why": "El factor comú 4 queda fora: 4 × (7 - 5) = 4 × 2 = 8 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -416,7 +416,7 @@
     ],
     "answer": "60",
     "why": "El factor comú 6 queda fora: 6 × (3 + 7) = 6 × 10 = 60 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -458,7 +458,7 @@
     ],
     "answer": "56",
     "why": "El factor comú 7 queda fora: 7 × (6 + 2) = 7 × 8 = 56 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -500,7 +500,7 @@
     ],
     "answer": "35",
     "why": "El factor comú 7 queda fora: 7 × (8 - 3) = 7 × 5 = 35 — estalvies dues multiplicacions.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   }
 ]

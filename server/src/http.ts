@@ -230,6 +230,10 @@ function buildFluentProgress(dbs: JsonRecord, computed: JsonRecord, warnings: st
     skills: normalizeSkills(dbs),
     patterns: normalizeWeakPatterns(dbs),
     trends: normalizeTrends(dbs),
+    // WP4.1: per-step precision + calculation fluency, computed by read-db.py
+    // from the .records steps traces (null when the learner has no steps
+    // records yet — the panel hides the section).
+    steps_precision: computed.steps_precision ?? null,
     recent_sessions: normalizeSessions(dbs),
     milestones: normalizeMilestones(dbs),
     achievements: normalizeAchievements(dbs),

@@ -11,7 +11,7 @@
     ],
     "options": [],
     "why": "El 2 de fora multiplica absolutament tot: 2 × z = 2z i 2 × (-2) = -4.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -26,7 +26,7 @@
     ],
     "options": [],
     "why": "El 3 de fora multiplica absolutament tot: 3 × x = 3x i 3 × (-3) = -9.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -41,7 +41,7 @@
     ],
     "options": [],
     "why": "El -3 de fora multiplica els dos termes: -3 × z = -3z i -3 × (z + 6) = -18. Amb un nombre negatiu de fora, els signes de dins canvien en desplegar.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -56,7 +56,7 @@
     ],
     "options": [],
     "why": "El 2 de fora multiplica absolutament tot: 2 × y = 2y i 2 × (2) = 4.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -71,7 +71,7 @@
     ],
     "options": [],
     "why": "El -2 de fora multiplica els dos termes: -2 × x = -2x i -2 × (x + 6) = -12. Amb un nombre negatiu de fora, els signes de dins canvien en desplegar.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -86,7 +86,7 @@
     ],
     "options": [],
     "why": "El -3 de fora multiplica els dos termes: -3 × x = -3x i -3 × (x + 6) = -18. Amb un nombre negatiu de fora, els signes de dins canvien en desplegar.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -101,7 +101,7 @@
     ],
     "options": [],
     "why": "El -2 de fora multiplica els dos termes: -2 × y = -2y i -2 × (y - 4) = 8. Amb un nombre negatiu de fora, els signes de dins canvien en desplegar.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -116,7 +116,7 @@
     ],
     "options": [],
     "why": "El 3 de fora multiplica absolutament tot: 3 × x = 3x i 3 × (5) = 15.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -131,7 +131,7 @@
     ],
     "options": [],
     "why": "El 3 de fora multiplica absolutament tot: 3 × x = 3x i 3 × (4) = 12.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -146,7 +146,7 @@
     ],
     "options": [],
     "why": "El 2 de fora multiplica absolutament tot: 2 × y = 2y i 2 × (-4) = -8.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -161,7 +161,7 @@
     ],
     "options": [],
     "why": "El 4 de fora multiplica absolutament tot: 4 × z = 4z i 4 × (-2) = -8.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -176,7 +176,7 @@
     ],
     "options": [],
     "why": "El 2 de fora multiplica absolutament tot: 2 × z = 2z i 2 × (5) = 10.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   }
 ]

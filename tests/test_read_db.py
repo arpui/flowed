@@ -166,6 +166,44 @@ class ReadDbTest(unittest.TestCase):
         _, r = self._result()
         self.assertEqual(r["computed"]["next_session_id"], "session-008")
 
+    def test_steps_precision_absent_without_records(self):
+        _, r = self._result()
+        self.assertIsNone(r["computed"]["steps_precision"])
+
+    def test_steps_precision_from_records(self):
+        # WP4.1: the .records steps traces (agent.ts appendBankRecord shape)
+        # feed per-step precision + calculation fluency.
+        recs = [
+            # v1 whole-trace: step 2 failed, step 3 is the cascade (not an attempt)
+            {"record_id": "s1:bank:1", "session_id": "session-001", "skill": "steps",
+             "score": 3, "steps": [{"n": 1, "ok": True, "got": "a"},
+                                   {"n": 2, "ok": False, "got": "b"},
+                                   {"n": 3, "ok": False, "got": "c", "propagated": True}]},
+            # v2 clean: every step right on the first try
+            {"record_id": "s1:bank:2", "session_id": "session-001", "skill": "steps",
+             "score": 10, "steps": [{"n": 1, "ok": True, "got": "a"},
+                                    {"n": 2, "ok": True, "got": "b"}]},
+            # duplicate record_id must not double-count
+            {"record_id": "s1:bank:2", "session_id": "session-001", "skill": "steps",
+             "score": 10, "steps": [{"n": 1, "ok": True}]},
+            # a compute record is not a steps trace
+            {"record_id": "s1:bank:3", "session_id": "session-001", "skill": "computation",
+             "score": 10},
+        ]
+        (self.data / ".records").mkdir()
+        (self.data / ".records" / "session-001.jsonl").write_text(
+            "\n".join(json.dumps(r) for r in recs) + "\n")
+        _, r = self._result()
+        sp = r["computed"]["steps_precision"]
+        self.assertEqual(sp["items"], 2)
+        by_n = {e["n"]: e for e in sp["per_step"]}
+        self.assertEqual(by_n[1], {"n": 1, "seen": 2, "ok_rate": 100.0})
+        self.assertEqual(by_n[2], {"n": 2, "seen": 2, "ok_rate": 50.0})
+        self.assertNotIn(3, by_n)  # propagated step is not an attempt
+        self.assertEqual(sp["first_try_rate"], 50.0)
+        self.assertEqual(sp["retry_rate"], 0.0)
+        self.assertEqual(sp["revealed_rate"], 50.0)
+
 
 if __name__ == "__main__":
     unittest.main()

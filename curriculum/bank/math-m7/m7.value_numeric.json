@@ -9,7 +9,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 4 × 5 = 20 i 2 × 4 = 8; 20 + 8 = 28. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "4 × 5 + 2 × 4"
   },
@@ -23,7 +23,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 5 × 2 = 10 i 2 × 3 = 6; 10 - 6 = 4. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "5 × 2 - 2 × 3"
   },
@@ -37,7 +37,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 3 × 8 = 24 i 4 × 5 = 20; 24 - 20 = 4. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "3 × 8 - 4 × 5"
   },
@@ -51,7 +51,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 4 × 7 = 28 i 3 × 8 = 24; 28 - 24 = 4. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "4 × 7 - 3 × 8"
   },
@@ -65,7 +65,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 2 × 8 = 16 i 2 × 3 = 6; 16 - 6 = 10. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "2 × 8 - 2 × 3"
   },
@@ -79,7 +79,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 4 × 9 = 36 i 2 × 3 = 6; 36 + 6 = 42. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "4 × 9 + 2 × 3"
   },
@@ -93,7 +93,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 4 × 7 = 28 i 4 × 5 = 20; 28 + 20 = 48. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "4 × 7 + 4 × 5"
   },
@@ -107,7 +107,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 3 × 3 = 9 i 3 × 5 = 15; 9 + 15 = 24. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "3 × 3 + 3 × 5"
   },
@@ -121,7 +121,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 5 × 7 = 35 i 4 × 4 = 16; 35 - 16 = 19. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "5 × 7 - 4 × 4"
   },
@@ -135,7 +135,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 4 × 3 = 12 i 4 × 4 = 16; 12 + 16 = 28. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "4 × 3 + 4 × 4"
   },
@@ -149,7 +149,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 5 × 6 = 30 i 3 × 5 = 15; 30 + 15 = 45. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "5 × 6 + 3 × 5"
   },
@@ -163,7 +163,7 @@
     "also_accept": [],
     "options": [],
     "why": "Substitueix: 3 × 6 = 18 i 2 × 8 = 16; 18 - 16 = 2. La lletra és una casella on entra el número.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42",
     "expression": "3 × 6 - 2 × 8"
   }

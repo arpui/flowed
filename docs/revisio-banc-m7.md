@@ -2,6 +2,8 @@
 
 Generats per `scripts/mathbank.py` (llavor 42) a partir de les plantilles dels drafts `docs/competencies1eso.md` i `docs/AlgebraNumericaBasica.md`. Cada ítem porta la resposta validada pel corrector (`mathgrade`). Revisió per mostreig, com al banc d'idiomes: canvia `status` a `"reviewed"` als que aprovis a `curriculum/bank/math-m7/`.
 
+**Tancat 2026-10-07:** l'Albert revisat i confirmat els 84 ítems — alls now `"status": "reviewed"` in `curriculum/bank/math-m7/` (`mathbank.py validate` green for m7 and m4). Decision «does `AlgebraNumericaBasica.md` cross more m7 competences?» **deferred** — more competences can be added later (the generator and the bank structure support it without touching anything else).
+
 ## m7.props_grouping — 12 ítems (steps)
 
 **001** · Resol-ho pas a pas. Una línia per pas.

@@ -9,7 +9,7 @@
     "also_accept": [],
     "options": [],
     "why": "El 6 es repeteix a tots dos termes: 6x + 6y = 6(x + y).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -22,7 +22,7 @@
     "also_accept": [],
     "options": [],
     "why": "El que es repeteix és la x: 3x + xy = x(3 + y).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -35,7 +35,7 @@
     "also_accept": [],
     "options": [],
     "why": "x^2 vol dir x · x: x · x + 2 · x = x(x + 2). La x es repeteix a tot arreu.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -48,7 +48,7 @@
     "also_accept": [],
     "options": [],
     "why": "El 5 es repeteix a tots dos termes: 5x + 5y = 5(x + y).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -61,7 +61,7 @@
     "also_accept": [],
     "options": [],
     "why": "El que es repeteix és la z: 8z + zx = z(8 + x).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -74,7 +74,7 @@
     "also_accept": [],
     "options": [],
     "why": "z^2 vol dir z · z: z · z + 6 · z = z(z + 6). La z es repeteix a tot arreu.",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -87,7 +87,7 @@
     "also_accept": [],
     "options": [],
     "why": "El 8 es repeteix a tots dos termes: 8x + 8z = 8(x + z).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -100,7 +100,7 @@
     "also_accept": [],
     "options": [],
     "why": "La taula del 2 és compartida: 10x + 4 = 2 · 5x + 2 · 2 = 2(5x + 2).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -113,7 +113,7 @@
     "also_accept": [],
     "options": [],
     "why": "La taula del 6 és compartida: 18y + 12 = 6 · 3y + 6 · 2 = 6(3y + 2).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -126,7 +126,7 @@
     "also_accept": [],
     "options": [],
     "why": "El 5 es repeteix a tots dos termes: 5z + 5y = 5(z + y).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -139,7 +139,7 @@
     "also_accept": [],
     "options": [],
     "why": "El 3 es repeteix a tots dos termes: 3x + 3z = 3(x + z).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   },
   {
@@ -152,7 +152,7 @@
     "also_accept": [],
     "options": [],
     "why": "La taula del 4 és compartida: 12y + 16 = 4 · 3y + 4 · 4 = 4(3y + 4).",
-    "status": "validated",
+    "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
   }
 ]
