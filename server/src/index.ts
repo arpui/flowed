@@ -24,7 +24,7 @@ const BUILD_STAMP = buildStamp(
   (d) => fs.readdirSync(d)
 );
 
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 
 function resolveRoot(): string {
   // Prefer the project root (contains AGENTS.md). When launched from the repo

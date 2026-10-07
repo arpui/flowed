@@ -2,6 +2,50 @@
 
 All notable changes to Fluent will be documented in this file.
 
+## [0.6.0] — 2026-10-07
+
+The unified core: one engine, two domains (`language|math`), and the plan for
+more. This release is the fork's whole WP0–WP5.2 arc landed as a product.
+
+### Added
+
+- **Domains** (WP5.2): `config/domain.json` (the manifest — the single place
+  that knows a domain), `hooks/domain.py` (the resolver), `server/src/domain-
+  language.ts` (the language machinery, restored and gated), the `fluent-*`
+  tutor layer (11 skills + 10 commands), `rules-math.md`/`rules-language.md`.
+  A future domain plugs in with one manifest entry + its dirs
+  (`docs/CORE-AND-DOMAINS.md` has the checklist).
+- **Precisió per pas** (WP4.1): `computed.steps_precision` in `read-db.py`
+  (ok-rate per step position over real attempts + calculation fluency from the
+  v2 score bands) and the panel section in `web/app.js`.
+- **`language` e2e scenario** (verified 4/4 live: fluent commands load, a
+  `grammar`/`vocabulary` record lands, the language curriculum resolves,
+  `fluent-review` opens the lesson).
+- Docs: `docs/CORE-AND-DOMAINS.md` (the contract), `docs/RUNNING.md` (the
+  operational map: dirs, homes, ports per learner, the test recipe, the git
+  state), `docs/MIGRACIO-LLVM.md` WP5.2 addendum.
+
+### Fixed (the WP5.1 cherry-picks, now in the core itself)
+
+- Session rotation keys on the SQLite live session id (the transcript parse
+  always fell back to `session-001`; one mixed T0 barrejant sessions).
+- The bank review path no longer skips the FIRST due item (`pacingNote`'s
+  model-path pre-pick is filtered out of `used` before `review-pick`).
+- A session with nothing to persist exits 0 (the sweeper re-ran Capa B every
+  minute forever and could roll a seeded SM-2 queue back over).
+- `CORRECTION_RE` cap 120→400 + apostrophes (long Catalan corrections were
+  silently dropped from the derived record — silent divergence with the
+  Python fallback).
+- `lib-paths.sh` resolves `FLOWED_HOME` AFTER loading `.env`.
+
+### Changed
+
+- The command logic is domain-neutral: the entry seam canonicalizes `fluent-*`
+  → `math-*` for the engine while loading the raw domain file; the name regexos
+  accept both prefixes.
+- Suite: 728 Python tests + 14 server harnesses (was ~460/13 in the language
+  product).
+
 ## [0.5.2] — 2026-08-26
 
 ### Fixed
