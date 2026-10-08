@@ -620,6 +620,7 @@ def _grade_math(item: dict, raw_answer: str) -> dict:
     if r["verdict"] in ("wrong", "empty") and not r.get("note"):
         r["note"] = item.get("why", "")  # the language path's rule: wrong explains
     r["correct_version"] = full
+    r["given"] = given  # what was typed (after "lhs =" is dropped): the feedback names equivalent forms
     return r
 
 

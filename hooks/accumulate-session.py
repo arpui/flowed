@@ -233,10 +233,10 @@ def _results_report(payload: dict) -> dict:
     }
 
 
-def rebuild_skill_scores(payload: dict):
+def rebuild_skill_scores(payload: dict, domain: str = "math"):
     scores = {}
     for e in payload.get("exercises", []):
-        skill = e.get("type", "computation")  # math skill keys (C7); was "writing"
+        skill = e.get("type") or ps.default_skill_key(domain)  # the domain's skill keys (WP6)
         s = scores.setdefault(skill, {"exercises": 0, "correct": 0})
         s["exercises"] += 1
         if e.get("score", 0) >= 8:
@@ -268,6 +268,8 @@ def main():
         print("[Fluent] ⚠ accumulate-session: no learner-profile.json — skipping", file=sys.stderr)
         sys.exit(0)
 
+    # The profile's domain decides the skills and error categories (WP6).
+    domain = ps.domain_for_dir(data_dir)
     ps.set_sessions_db(ps.resolve_sessions_db(data_dir))
     if not ps.SESSIONS_DB.exists():
         print(f"[Fluent] ⚠ accumulate-session: sessions DB not found "
@@ -340,7 +342,7 @@ def main():
     # every run — they are append-only and the payload is rebuilt from scratch,
     # so this stays idempotent.
     records = ps.read_records(data_dir, session_id)
-    rec_exercises, rec_errors, rec_reviews = ps.records_to_payload(records)
+    rec_exercises, rec_errors, rec_reviews = ps.records_to_payload(records, domain)
     records_changed = len(records) != draft.get("records_count", 0)
 
     recorded_items = {r["item_id"] for r in rec_reviews}
@@ -361,8 +363,8 @@ def main():
     new_transcript = [(role, text) for _, role, text in new]
 
     # Parse exercises from new graded feedback, enriching with learner answers
-    new_exercises_raw = ps.parse_exercises(new_transcript)
-    new_patterns = ps.parse_error_patterns(new_transcript)
+    new_exercises_raw = ps.parse_exercises(new_transcript, domain)
+    new_patterns = ps.parse_error_patterns(new_transcript, domain)
 
     # Enrich exercises with learner_answer by looking back in the full transcript
     new_exercises = []
@@ -414,7 +416,7 @@ def main():
     merged_errors = rec_errors + prose_errors
     skill_scores = {}
     for ex in merged_exercises:
-        sc = skill_scores.setdefault(ex.get("type", "computation"), {"exercises": 0, "correct": 0})  # C7
+        sc = skill_scores.setdefault(ex.get("type") or ps.default_skill_key(domain), {"exercises": 0, "correct": 0})
         sc["exercises"] += 1
         if ex.get("score", 0) >= 8:
             sc["correct"] += 1

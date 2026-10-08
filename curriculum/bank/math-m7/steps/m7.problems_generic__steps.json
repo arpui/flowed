@@ -1,86 +1,96 @@
 [
- {
-  "id": "m7.problems_generic.001",
-  "competence": "m7.problems_generic",
-  "type": "steps",
-  "instruction": "Llegeix el problema i resol-lo pas a pas: una operació per línia (sense unitats).",
-  "problem": "La Laia compra 4 entrades de cinema a 7 € cadascuna i 4 paquets de crispetes a 3 € cadascun. Quant paga en total?",
-  "method": "distributive",
-  "steps": [
-   {
-    "n": 1,
-    "expect": "4 × (7 + 3)",
-    "value": "40",
-    "accept": [
-     "4 × 7 + 4 × 3"
+  {
+    "id": "m7.problems_generic.001",
+    "competence": "m7.problems_generic",
+    "type": "steps",
+    "instruction": "Llegeix el problema i resol-lo pas a pas: una operació per línia (sense unitats).",
+    "problem": "La Laia compra 4 entrades de cinema a 7 € cadascuna i 4 paquets de crispetes a 3 € cadascun. Quant paga en total?",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 + 3",
+        "value": "10",
+        "accept": [
+          "7 + 3 = 10"
+        ],
+        "error_class": "wrong_operation",
+        "goal": "Compra el mateix nombre d'entrades que de paquets, així que el 4 es repeteix: calcula primer quant costen junts una entrada i un paquet de crispetes",
+        "why": "Una entrada (7) i un paquet (3) junts: 7 + 3 = 10 €."
+      },
+      {
+        "n": 2,
+        "expect": "4 × 10",
+        "value": "40",
+        "accept": [
+          "10 × 4",
+          "4 × (7 + 3)",
+          "4 × 7 + 4 × 3",
+          "28 + 12"
+        ],
+        "error_class": "wrong_operation",
+        "goal": "Factor comú: multiplica el preu de cada parella (entrada + paquet) pel nombre de vegades que ho compra",
+        "why": "Ho compra 4 vegades: 4 × 10 (és el mateix que 4 × 7 + 4 × 3)."
+      },
+      {
+        "n": 3,
+        "expect": "40",
+        "value": "40",
+        "accept": [],
+        "error_class": "calculation",
+        "goal": "Calcula el resultat final: quants euros paga en total",
+        "why": "4 × 10 = 40: paga 40 €."
+      }
     ],
-    "error_class": "wrong_operation",
-    "why": "Són 4 entrades i 4 paquets: pots ajuntar el preu d'una entrada i unes crispetes (7 + 3) i multiplicar per 4."
-   },
-   {
-    "n": 2,
-    "expect": "4 × 10",
-    "value": "40",
-    "accept": [
-     "28 + 12"
+    "answer": "40",
+    "why": "4 × (7 + 3) = 4 × 10 = 40 €.",
+    "status": "validated",
+    "source": "claude · 2026-10-08 · prova problemes genèrics",
+    "expression": "4 × (7 + 3)"
+  },
+  {
+    "id": "m7.problems_generic.002",
+    "competence": "m7.problems_generic",
+    "type": "steps",
+    "instruction": "Llegeix el problema i resol-lo pas a pas: una operació per línia (sense unitats).",
+    "problem": "Un autobús surt amb 38 passatgers. A la primera parada en baixen 12 i en pugen 9. A la segona parada en baixen 15. Quants passatgers queden a l'autobús?",
+    "method": "sequence",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "38 - 12 + 9",
+        "value": "35",
+        "accept": [
+          "38 - 12 + 9 = 35",
+          "38 + 9 - 12"
+        ],
+        "error_class": "wrong_operation",
+        "goal": "Primera parada: parteix dels 38 passatgers, resta els que baixen i suma els que pugen (escriu l'operació amb els tres nombres)",
+        "why": "A la primera parada: baixar és restar (− 12) i pujar és sumar (+ 9)."
+      },
+      {
+        "n": 2,
+        "expect": "35 - 15",
+        "value": "20",
+        "accept": [],
+        "error_class": "wrong_operation",
+        "goal": "Segona parada: parteix dels passatgers que queden després de la primera i resta els que baixen",
+        "why": "A la segona parada en baixen 15: restem."
+      },
+      {
+        "n": 3,
+        "expect": "20",
+        "value": "20",
+        "accept": [],
+        "error_class": "calculation",
+        "goal": "Calcula el resultat final: quants passatgers queden a l'autobús",
+        "why": "35 − 15 = 20 passatgers."
+      }
     ],
-    "error_class": "calculation",
-    "why": "7 + 3 = 10 (o bé 4 × 7 = 28 i 4 × 3 = 12)."
-   },
-   {
-    "n": 3,
-    "expect": "40",
-    "value": "40",
-    "accept": [],
-    "error_class": "calculation",
-    "why": "4 × 10 = 40: paga 40 €."
-   }
-  ],
-  "answer": "40",
-  "why": "4 × (7 + 3) = 4 × 10 = 40 €.",
-  "status": "validated",
-  "source": "claude · 2026-10-08 · prova problemes genèrics",
-  "expression": "4 × (7 + 3)"
- },
- {
-  "id": "m7.problems_generic.002",
-  "competence": "m7.problems_generic",
-  "type": "steps",
-  "instruction": "Llegeix el problema i resol-lo pas a pas: una operació per línia (sense unitats).",
-  "problem": "Un autobús surt amb 38 passatgers. A la primera parada en baixen 12 i en pugen 9. A la segona parada en baixen 15. Quants passatgers queden a l'autobús?",
-  "method": "sequence",
-  "steps": [
-   {
-    "n": 1,
-    "expect": "38 - 12 + 9",
-    "value": "35",
-    "accept": [
-     "38 - 12 + 9 = 35"
-    ],
-    "error_class": "wrong_operation",
-    "why": "A la primera parada: baixar és restar (− 12) i pujar és sumar (+ 9)."
-   },
-   {
-    "n": 2,
-    "expect": "35 - 15",
-    "value": "20",
-    "accept": [],
-    "error_class": "wrong_operation",
-    "why": "A la segona parada en baixen 15: restem."
-   },
-   {
-    "n": 3,
-    "expect": "20",
-    "value": "20",
-    "accept": [],
-    "error_class": "calculation",
-    "why": "35 − 15 = 20 passatgers."
-   }
-  ],
-  "answer": "20",
-  "why": "38 − 12 + 9 = 35; 35 − 15 = 20.",
-  "status": "validated",
-  "source": "claude · 2026-10-08 · prova problemes genèrics",
-  "expression": "38 - 12 + 9 - 15"
- }
+    "answer": "20",
+    "why": "38 − 12 + 9 = 35; 35 − 15 = 20.",
+    "status": "validated",
+    "source": "claude · 2026-10-08 · prova problemes genèrics",
+    "expression": "38 - 12 + 9 - 15"
+  }
 ]

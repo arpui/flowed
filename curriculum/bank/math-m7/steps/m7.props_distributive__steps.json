@@ -15,7 +15,8 @@
           "8 × 10 + 8 × 2 = 96"
         ],
         "error_class": "procedure",
-        "why": "El 8 de fora multiplica els dos termes del parèntesi."
+        "why": "El 8 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -25,7 +26,8 @@
           "80 + 16 = 96"
         ],
         "error_class": "facts",
-        "why": "8 × 10 = 80 i 8 × 2 = 16."
+        "why": "8 × 10 = 80 i 8 × 2 = 16.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -33,7 +35,8 @@
         "value": "96",
         "accept": [],
         "error_class": "calculation",
-        "why": "80 + 16 = 96."
+        "why": "80 + 16 = 96.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "96",
@@ -57,7 +60,8 @@
           "4 × 20 + 4 × 4 = 96"
         ],
         "error_class": "procedure",
-        "why": "El 4 de fora multiplica els dos termes del parèntesi."
+        "why": "El 4 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -67,7 +71,8 @@
           "80 + 16 = 96"
         ],
         "error_class": "facts",
-        "why": "4 × 20 = 80 i 4 × 4 = 16."
+        "why": "4 × 20 = 80 i 4 × 4 = 16.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -75,7 +80,8 @@
         "value": "96",
         "accept": [],
         "error_class": "calculation",
-        "why": "80 + 16 = 96."
+        "why": "80 + 16 = 96.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "96",
@@ -99,7 +105,8 @@
           "8 × 50 + 8 × 3 = 424"
         ],
         "error_class": "procedure",
-        "why": "El 8 de fora multiplica els dos termes del parèntesi."
+        "why": "El 8 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -109,7 +116,8 @@
           "400 + 24 = 424"
         ],
         "error_class": "facts",
-        "why": "8 × 50 = 400 i 8 × 3 = 24."
+        "why": "8 × 50 = 400 i 8 × 3 = 24.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -117,7 +125,8 @@
         "value": "424",
         "accept": [],
         "error_class": "calculation",
-        "why": "400 + 24 = 424."
+        "why": "400 + 24 = 424.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "424",
@@ -141,7 +150,8 @@
           "3 × 10 - 3 × 3 = 21"
         ],
         "error_class": "procedure",
-        "why": "El 3 de fora multiplica els dos termes del parèntesi."
+        "why": "El 3 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -151,7 +161,8 @@
           "30 - 9 = 21"
         ],
         "error_class": "facts",
-        "why": "3 × 10 = 30 i 3 × 3 = 9."
+        "why": "3 × 10 = 30 i 3 × 3 = 9.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -159,7 +170,8 @@
         "value": "21",
         "accept": [],
         "error_class": "calculation",
-        "why": "30 - 9 = 21."
+        "why": "30 - 9 = 21.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "21",
@@ -183,7 +195,8 @@
           "7 × 50 + 7 × 2 = 364"
         ],
         "error_class": "procedure",
-        "why": "El 7 de fora multiplica els dos termes del parèntesi."
+        "why": "El 7 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -193,7 +206,8 @@
           "350 + 14 = 364"
         ],
         "error_class": "facts",
-        "why": "7 × 50 = 350 i 7 × 2 = 14."
+        "why": "7 × 50 = 350 i 7 × 2 = 14.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -201,7 +215,8 @@
         "value": "364",
         "accept": [],
         "error_class": "calculation",
-        "why": "350 + 14 = 364."
+        "why": "350 + 14 = 364.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "364",
@@ -225,7 +240,8 @@
           "8 × 50 - 8 × 8 = 336"
         ],
         "error_class": "procedure",
-        "why": "El 8 de fora multiplica els dos termes del parèntesi."
+        "why": "El 8 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -235,7 +251,8 @@
           "400 - 64 = 336"
         ],
         "error_class": "facts",
-        "why": "8 × 50 = 400 i 8 × 8 = 64."
+        "why": "8 × 50 = 400 i 8 × 8 = 64.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -243,7 +260,8 @@
         "value": "336",
         "accept": [],
         "error_class": "calculation",
-        "why": "400 - 64 = 336."
+        "why": "400 - 64 = 336.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "336",
@@ -267,7 +285,8 @@
           "7 × 30 + 7 × 2 = 224"
         ],
         "error_class": "procedure",
-        "why": "El 7 de fora multiplica els dos termes del parèntesi."
+        "why": "El 7 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -277,7 +296,8 @@
           "210 + 14 = 224"
         ],
         "error_class": "facts",
-        "why": "7 × 30 = 210 i 7 × 2 = 14."
+        "why": "7 × 30 = 210 i 7 × 2 = 14.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -285,7 +305,8 @@
         "value": "224",
         "accept": [],
         "error_class": "calculation",
-        "why": "210 + 14 = 224."
+        "why": "210 + 14 = 224.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "224",
@@ -309,7 +330,8 @@
           "4 × 40 - 4 × 7 = 132"
         ],
         "error_class": "procedure",
-        "why": "El 4 de fora multiplica els dos termes del parèntesi."
+        "why": "El 4 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -319,7 +341,8 @@
           "160 - 28 = 132"
         ],
         "error_class": "facts",
-        "why": "4 × 40 = 160 i 4 × 7 = 28."
+        "why": "4 × 40 = 160 i 4 × 7 = 28.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -327,7 +350,8 @@
         "value": "132",
         "accept": [],
         "error_class": "calculation",
-        "why": "160 - 28 = 132."
+        "why": "160 - 28 = 132.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "132",
@@ -351,7 +375,8 @@
           "4 × 30 - 4 × 3 = 108"
         ],
         "error_class": "procedure",
-        "why": "El 4 de fora multiplica els dos termes del parèntesi."
+        "why": "El 4 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -361,7 +386,8 @@
           "120 - 12 = 108"
         ],
         "error_class": "facts",
-        "why": "4 × 30 = 120 i 4 × 3 = 12."
+        "why": "4 × 30 = 120 i 4 × 3 = 12.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -369,7 +395,8 @@
         "value": "108",
         "accept": [],
         "error_class": "calculation",
-        "why": "120 - 12 = 108."
+        "why": "120 - 12 = 108.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "108",
@@ -393,7 +420,8 @@
           "3 × 30 + 3 × 7 = 111"
         ],
         "error_class": "procedure",
-        "why": "El 3 de fora multiplica els dos termes del parèntesi."
+        "why": "El 3 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -403,7 +431,8 @@
           "90 + 21 = 111"
         ],
         "error_class": "facts",
-        "why": "3 × 30 = 90 i 3 × 7 = 21."
+        "why": "3 × 30 = 90 i 3 × 7 = 21.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -411,7 +440,8 @@
         "value": "111",
         "accept": [],
         "error_class": "calculation",
-        "why": "90 + 21 = 111."
+        "why": "90 + 21 = 111.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "111",
@@ -435,7 +465,8 @@
           "9 × 10 + 9 × 9 = 171"
         ],
         "error_class": "procedure",
-        "why": "El 9 de fora multiplica els dos termes del parèntesi."
+        "why": "El 9 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -445,7 +476,8 @@
           "90 + 81 = 171"
         ],
         "error_class": "facts",
-        "why": "9 × 10 = 90 i 9 × 9 = 81."
+        "why": "9 × 10 = 90 i 9 × 9 = 81.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -453,7 +485,8 @@
         "value": "171",
         "accept": [],
         "error_class": "calculation",
-        "why": "90 + 81 = 171."
+        "why": "90 + 81 = 171.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "171",
@@ -477,7 +510,8 @@
           "6 × 10 + 6 × 6 = 96"
         ],
         "error_class": "procedure",
-        "why": "El 6 de fora multiplica els dos termes del parèntesi."
+        "why": "El 6 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
       },
       {
         "n": 2,
@@ -487,7 +521,8 @@
           "60 + 36 = 96"
         ],
         "error_class": "facts",
-        "why": "6 × 10 = 60 i 6 × 6 = 36."
+        "why": "6 × 10 = 60 i 6 × 6 = 36.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
       },
       {
         "n": 3,
@@ -495,7 +530,8 @@
         "value": "96",
         "accept": [],
         "error_class": "calculation",
-        "why": "60 + 36 = 96."
+        "why": "60 + 36 = 96.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "96",

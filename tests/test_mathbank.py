@@ -602,11 +602,11 @@ class StepsValidationRefusesBadItemsTest(unittest.TestCase):
               "problem": "12 × 25", "method": "partial_products",
               "steps": [
                   {"n": 1, "expect": "12 × 20", "value": "240",
-                   "accept": ["12*20", "12 × 20 = 240"], "error_class": "procedure", "why": "a"},
+                   "accept": ["12*20", "12 × 20 = 240"], "error_class": "procedure", "why": "a", "goal": "g1"},
                   {"n": 2, "expect": "12 × 5", "value": "60",
-                   "accept": [], "error_class": "calculation", "why": "b"},
+                   "accept": [], "error_class": "calculation", "why": "b", "goal": "g2"},
                   {"n": 3, "expect": "240 + 60", "value": "300",
-                   "accept": [], "error_class": "carrying", "why": "c"},
+                   "accept": [], "error_class": "carrying", "why": "c", "goal": "g3"},
               ],
               "answer": "300", "why": "w", "status": "generated", "source": "test"}
         it.update(over)

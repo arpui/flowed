@@ -8,6 +8,7 @@ import path from "node:path";
 import type { Agent } from "./agent";
 import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
+import { skillKeysFor } from "./tools";
 
 export interface HttpConfig {
   root: string;
@@ -78,15 +79,14 @@ function firstPercent(source: JsonRecord, keys: string[]): number | null {
   return null;
 }
 
-function normalizeSkills(dbs: JsonRecord): Array<Record<string, unknown>> {
-  const known = ["computation", "steps", "problems", "reasoning", "facts"];
+function normalizeSkills(dbs: JsonRecord, domain: string = "math"): Array<Record<string, unknown>> {
+  // The skills are the DOMAIN's own (WP6): a language profile lists writing,
+  // speaking, vocabulary…, never Càlcul / Fets, even when the stored databases
+  // were seeded from the math templates or polluted by an earlier run.
   const mastery = asRecord(dbs.mastery_db);
   const progress = asRecord(dbs.progress_db);
   const profile = asRecord(dbs.learner_profile);
-  const names = new Set<string>(known);
-  for (const k of Object.keys(asRecord(mastery.skills))) names.add(k);
-  for (const k of Object.keys(asRecord(progress.skill_progress))) names.add(k);
-  for (const k of Object.keys(asRecord(profile.skills))) names.add(k);
+  const names = new Set<string>(skillKeysFor(domain));
 
   return [...names].map((name) => {
     const ms = asRecord(asRecord(mastery.skills)[name]);
@@ -227,7 +227,7 @@ function buildFluentProgress(dbs: JsonRecord, computed: JsonRecord, warnings: st
       total_review_items: Object.keys(asRecord(sr.items)).length,
       next_session_id: textOr(computed.next_session_id, ""),
     },
-    skills: normalizeSkills(dbs),
+    skills: normalizeSkills(dbs, String(computed.domain ?? "math")),
     patterns: normalizeWeakPatterns(dbs),
     trends: normalizeTrends(dbs),
     // WP4.1: per-step precision + calculation fluency, computed by read-db.py
@@ -288,7 +288,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
   const unauth = () =>
     new Response("Unauthorized", {
       status: 401,
-      headers: { "WWW-Authenticate": 'Basic realm="FlowMath", charset="UTF-8"' },
+      headers: { "WWW-Authenticate": 'Basic realm="FlowEd", charset="UTF-8"' },
     });
 
   const json = (data: unknown, status = 200) =>
@@ -372,18 +372,30 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
           const s = String(body);
           // The domain's open practices (manifest `open_practices`): the web
           // hides the buttons of the ones it does not run.
+          // Brand + icon too (manifest `brand`/`favicon`): the static shell is
+          // the math one, a language profile must not read Math.
           let open: string[] | null = null;
+          let brand = "FlowEd", label = "Math", favicon = "🧮";
+          let hidden: string[] = [];
           try {
             const man = JSON.parse(fs.readFileSync(path.join(opts.root, "config", "domain.json"), "utf8"));
-            const list = man?.domains?.[dom]?.open_practices;
-            if (Array.isArray(list)) open = list.map(String);
+            const d = man?.domains?.[dom];
+            if (Array.isArray(d?.open_practices)) open = d.open_practices.map(String);
+            if (d?.brand) brand = String(d.brand);
+            if (d?.domain_label) label = String(d.domain_label);
+            if (Array.isArray(d?.hidden_commands)) hidden = d.hidden_commands.map(String);
+            if (d?.favicon) favicon = String(d.favicon);
           } catch {
-            /* no manifest: every practice stays visible */
+            /* no manifest: every practice stays visible, the shell keeps its brand */
           }
-          body = s.replace(
-            "</head>",
-            `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};window.__FLOWED_OPEN=${JSON.stringify(open)};</script></head>`
-          );
+          body = s
+            .replace(/<title>[^<]*<\/title>/, `<title>${brand} · ${label} v${opts.version}</title>`)
+            .replace(/<div class="brand">.*?<\/div>/, `<div class="brand">${brand}<span class="brand-domain"> · ${label}</span></div>`)
+            .replace("🧮</text>", `${favicon}</text>`)
+            .replace(
+              "</head>",
+              `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};window.__FLOWED_OPEN=${JSON.stringify(open)};window.__FLOWED_BRAND=${JSON.stringify(brand + " · " + label)};window.__FLOWED_HIDDEN=${JSON.stringify(hidden)};</script></head>`
+            );
         }
         return new Response(body, {
           headers: { "content-type": ct, "cache-control": "no-cache" },
@@ -405,7 +417,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
 
       // agents list (UI requires the "learner" agent to exist)
       if (p === "/api/agent") {
-        return json([{ name: "learner", title: "FlowMath learner" }]);
+        return json([{ name: "learner", title: "FlowEd learner" }]);
       }
 
       // setup-state (auto-start /math-setup for onboarding)

@@ -62,6 +62,7 @@ header {
 }
 
 .brand { font-weight: 700; font-size: 1.05rem; }
+.brand-domain { font-weight: 500; opacity: .65; }
 
 /* Where you are in the session: count, and the target when there is one. */
 .pace {

@@ -33,7 +33,8 @@ SESSIONS_DB_REL = ("sessions", "sessions.db")
 LEGACY_SESSIONS_DB_REL = (".opencode", "opencode", "opencode.db")
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-from db_schema import normalize_error_category, normalize_skill_key  # noqa: E402
+from db_schema import normalize_error_category, normalize_skill_key, default_skill_key  # noqa: E402
+from domain import domain_for_dir  # noqa: E402  (taxonomy per domain)
 from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 UPDATE_DB = SCRIPT_DIR / "update-db.py"
@@ -230,7 +231,7 @@ def _feedback_of(text):
     return int(score_match.group(1)), text
 
 
-def parse_exercises(transcript):
+def parse_exercises(transcript, domain="math"):
     """Parse exercises from a (role, text) transcript.
 
     A graded feedback (assistant text containing '**Score: X/10**') closes an
@@ -271,15 +272,25 @@ def parse_exercises(transcript):
         # vocabulary/reading) named skills this product no longer has; a prose
         # fallback that invents them writes phantom skill_scores entries.
         seg = text.lower()
-        exercise_type = "computation"
-        if any(w in seg for w in ['steps', 'passos', 'operació per línia']):
-            exercise_type = "steps"
-        elif any(w in seg for w in ['flashcard', 'fact', 'fets', 'taula de multiplicar', 'equival', 'doble', 'meitat']):
-            exercise_type = "facts"
-        elif any(w in seg for w in ['problema', 'word problem', 'problemes']):
-            exercise_type = "problems"
-        elif any(w in seg for w in ['explica', 'justifica', 'raonament', 'per què']):
-            exercise_type = "reasoning"
+        if str(domain).strip().lower() == "language":
+            # The language product's rule (FlowEd 0.5): never a math skill here.
+            exercise_type = "writing"
+            if any(w in seg for w in ['say', 'tell me', 'answer in', 'speaking', '🗣', 'speak']):
+                exercise_type = "speaking"
+            elif any(w in seg for w in ['flashcard', 'vocab', 'translate', 'means']):
+                exercise_type = "vocabulary"
+            elif any(w in seg for w in ['read', 'reading', 'comprehension', 'text']):
+                exercise_type = "reading"
+        else:
+            exercise_type = "computation"
+            if any(w in seg for w in ['steps', 'passos', 'operació per línia']):
+                exercise_type = "steps"
+            elif any(w in seg for w in ['flashcard', 'fact', 'fets', 'taula de multiplicar', 'equival', 'doble', 'meitat']):
+                exercise_type = "facts"
+            elif any(w in seg for w in ['problema', 'word problem', 'problemes']):
+                exercise_type = "problems"
+            elif any(w in seg for w in ['explica', 'justifica', 'raonament', 'per què']):
+                exercise_type = "reasoning"
 
         exercises.append({
             "type": exercise_type,
@@ -356,7 +367,7 @@ def pattern_id_for(category, wrong, right=None):
     return f"{category}_{key.replace(' ', '_')[:20]}"
 
 
-def records_to_payload(records):
+def records_to_payload(records, domain="math"):
     """(exercises, errors, review_results) from structured records."""
     exercises, errors, reviews, seen = [], [], {}, set()
     for rec in records:
@@ -370,7 +381,7 @@ def records_to_payload(records):
             # "vocabulary", …) and update-db re-applies them on every
             # persistence — normalize_skill_key maps them to the math practice
             # instead of inventing a phantom skill in progress-db/mastery-db.
-            "type": normalize_skill_key(rec.get("skill")),
+            "type": normalize_skill_key(rec.get("skill"), domain),
             "question": str(rec.get("exercise", ""))[:200],
             "learner_answer": str(rec.get("learner_answer", ""))[:500],
             "correct_answer": "",
@@ -381,7 +392,7 @@ def records_to_payload(records):
         for corr in rec.get("corrections", []) or []:
             if not isinstance(corr, dict):
                 continue
-            category = normalize_error_category(corr.get("category"))
+            category = normalize_error_category(corr.get("category"), domain)
             wrong = str(corr.get("wrong", "")).strip()
             right = str(corr.get("right", "")).strip()
             if not wrong or not right:
@@ -486,7 +497,7 @@ def known_review_results(review_results, data_dir):
     return kept
 
 
-def parse_error_patterns(transcript):
+def parse_error_patterns(transcript, domain="math"):
     """Extract error patterns from feedback.
 
     A correction is a learner MISTAKE when the tutor marks it as one, and a
@@ -531,7 +542,7 @@ def parse_error_patterns(transcript):
                 continue  # a confirmation of what they got right
             if score >= 10 and not marked:
                 continue  # flawless answer: this is a demonstration
-            cat = normalize_error_category(m.group(3))
+            cat = normalize_error_category(m.group(3), domain)
             # The same rule as the structured path, which was fixed and this one
             # was not: the id names the thing being LEARNED, never the slip. Both
             # parsers run over the same session, so keying them differently
@@ -593,11 +604,14 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
     # parsers below fill in only the answers the tutor narrated but did not
     # record. Capa B re-applies the WHOLE session, so it must read both — if it
     # dropped either, closing a session would undo what Capa A just applied.
+    # The profile's domain decides which skills and error categories exist
+    # (WP6): a language learner's records never land on math skills.
+    domain = domain_for_dir(data_dir_for_records) if data_dir_for_records else "math"
     records = read_records(data_dir_for_records, session_id)
-    rec_exercises, rec_errors, rec_reviews = records_to_payload(records)
+    rec_exercises, rec_errors, rec_reviews = records_to_payload(records, domain)
 
-    prose_exercises = parse_exercises(transcript)
-    prose_patterns = parse_error_patterns(transcript)
+    prose_exercises = parse_exercises(transcript, domain)
+    prose_patterns = parse_error_patterns(transcript, domain)
     block_reviews = parse_review_results(transcript)
 
     recorded_answers = {answer_key(e["learner_answer"]) for e in rec_exercises}

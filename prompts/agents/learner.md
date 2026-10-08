@@ -18,11 +18,11 @@ permission:
     "rm -f .flowed-active": allow
   edit:
     "*": deny
-    # WP1.9: the data home is $FLOWED_HOME (~/.flowmath for this fork); the
+    # WP1.9: the data home is $FLOWED_HOME (~/.flowed); the
     # pre-rename ~/.fluent globs pointed at a directory this product never uses.
-    "~/.flowmath/**/*.json": allow
-    "~/.flowmath/**/results/*.md": allow
-    "~/.flowmath/**/.flowed-active": allow
+    "~/.flowed/**/*.json": allow
+    "~/.flowed/**/results/*.md": allow
+    "~/.flowed/**/.flowed-active": allow
     ".flowed-active": allow
   read: allow
   glob: allow

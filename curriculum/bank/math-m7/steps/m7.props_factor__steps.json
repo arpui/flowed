@@ -15,7 +15,8 @@
           "8 × (3 + 2) = 40"
         ],
         "error_class": "procedure",
-        "why": "El 8 es repeteix als dos productes: treu-lo fora."
+        "why": "El 8 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -25,7 +26,8 @@
           "8 × 5 = 40"
         ],
         "error_class": "calculation",
-        "why": "3 + 2 = 5."
+        "why": "3 + 2 = 5.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -33,7 +35,8 @@
         "value": "40",
         "accept": [],
         "error_class": "facts",
-        "why": "8 × 5 = 40."
+        "why": "8 × 5 = 40.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "40",
@@ -57,7 +60,8 @@
           "4 × (5 + 4) = 36"
         ],
         "error_class": "procedure",
-        "why": "El 4 es repeteix als dos productes: treu-lo fora."
+        "why": "El 4 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -67,7 +71,8 @@
           "4 × 9 = 36"
         ],
         "error_class": "calculation",
-        "why": "5 + 4 = 9."
+        "why": "5 + 4 = 9.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -75,7 +80,8 @@
         "value": "36",
         "accept": [],
         "error_class": "facts",
-        "why": "4 × 9 = 36."
+        "why": "4 × 9 = 36.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "36",
@@ -99,7 +105,8 @@
           "8 × (10 + 3) = 104"
         ],
         "error_class": "procedure",
-        "why": "El 8 es repeteix als dos productes: treu-lo fora."
+        "why": "El 8 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -109,7 +116,8 @@
           "8 × 13 = 104"
         ],
         "error_class": "calculation",
-        "why": "10 + 3 = 13."
+        "why": "10 + 3 = 13.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -117,7 +125,8 @@
         "value": "104",
         "accept": [],
         "error_class": "facts",
-        "why": "8 × 13 = 104."
+        "why": "8 × 13 = 104.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "104",
@@ -141,7 +150,8 @@
           "3 × (3 - 2) = 3"
         ],
         "error_class": "procedure",
-        "why": "El 3 es repeteix als dos productes: treu-lo fora."
+        "why": "El 3 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -151,7 +161,8 @@
           "3 × 1 = 3"
         ],
         "error_class": "calculation",
-        "why": "3 - 2 = 1."
+        "why": "3 - 2 = 1.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -159,7 +170,8 @@
         "value": "3",
         "accept": [],
         "error_class": "facts",
-        "why": "3 × 1 = 3."
+        "why": "3 × 1 = 3.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "3",
@@ -183,7 +195,8 @@
           "7 × (11 + 2) = 91"
         ],
         "error_class": "procedure",
-        "why": "El 7 es repeteix als dos productes: treu-lo fora."
+        "why": "El 7 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -193,7 +206,8 @@
           "7 × 13 = 91"
         ],
         "error_class": "calculation",
-        "why": "11 + 2 = 13."
+        "why": "11 + 2 = 13.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -201,7 +215,8 @@
         "value": "91",
         "accept": [],
         "error_class": "facts",
-        "why": "7 × 13 = 91."
+        "why": "7 × 13 = 91.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "91",
@@ -225,7 +240,8 @@
           "8 × (12 + 10) = 176"
         ],
         "error_class": "procedure",
-        "why": "El 8 es repeteix als dos productes: treu-lo fora."
+        "why": "El 8 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -235,7 +251,8 @@
           "8 × 22 = 176"
         ],
         "error_class": "calculation",
-        "why": "12 + 10 = 22."
+        "why": "12 + 10 = 22.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -243,7 +260,8 @@
         "value": "176",
         "accept": [],
         "error_class": "facts",
-        "why": "8 × 22 = 176."
+        "why": "8 × 22 = 176.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "176",
@@ -267,7 +285,8 @@
           "6 × (11 + 6) = 102"
         ],
         "error_class": "procedure",
-        "why": "El 6 es repeteix als dos productes: treu-lo fora."
+        "why": "El 6 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -277,7 +296,8 @@
           "6 × 17 = 102"
         ],
         "error_class": "calculation",
-        "why": "11 + 6 = 17."
+        "why": "11 + 6 = 17.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -285,7 +305,8 @@
         "value": "102",
         "accept": [],
         "error_class": "facts",
-        "why": "6 × 17 = 102."
+        "why": "6 × 17 = 102.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "102",
@@ -309,7 +330,8 @@
           "3 × (8 - 4) = 12"
         ],
         "error_class": "procedure",
-        "why": "El 3 es repeteix als dos productes: treu-lo fora."
+        "why": "El 3 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -319,7 +341,8 @@
           "3 × 4 = 12"
         ],
         "error_class": "calculation",
-        "why": "8 - 4 = 4."
+        "why": "8 - 4 = 4.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -327,7 +350,8 @@
         "value": "12",
         "accept": [],
         "error_class": "facts",
-        "why": "3 × 4 = 12."
+        "why": "3 × 4 = 12.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "12",
@@ -351,7 +375,8 @@
           "4 × (7 - 5) = 8"
         ],
         "error_class": "procedure",
-        "why": "El 4 es repeteix als dos productes: treu-lo fora."
+        "why": "El 4 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -361,7 +386,8 @@
           "4 × 2 = 8"
         ],
         "error_class": "calculation",
-        "why": "7 - 5 = 2."
+        "why": "7 - 5 = 2.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -369,7 +395,8 @@
         "value": "8",
         "accept": [],
         "error_class": "facts",
-        "why": "4 × 2 = 8."
+        "why": "4 × 2 = 8.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "8",
@@ -393,7 +420,8 @@
           "6 × (3 + 7) = 60"
         ],
         "error_class": "procedure",
-        "why": "El 6 es repeteix als dos productes: treu-lo fora."
+        "why": "El 6 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -403,7 +431,8 @@
           "6 × 10 = 60"
         ],
         "error_class": "calculation",
-        "why": "3 + 7 = 10."
+        "why": "3 + 7 = 10.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -411,7 +440,8 @@
         "value": "60",
         "accept": [],
         "error_class": "facts",
-        "why": "6 × 10 = 60."
+        "why": "6 × 10 = 60.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "60",
@@ -435,7 +465,8 @@
           "7 × (6 + 2) = 56"
         ],
         "error_class": "procedure",
-        "why": "El 7 es repeteix als dos productes: treu-lo fora."
+        "why": "El 7 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -445,7 +476,8 @@
           "7 × 8 = 56"
         ],
         "error_class": "calculation",
-        "why": "6 + 2 = 8."
+        "why": "6 + 2 = 8.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -453,7 +485,8 @@
         "value": "56",
         "accept": [],
         "error_class": "facts",
-        "why": "7 × 8 = 56."
+        "why": "7 × 8 = 56.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "56",
@@ -477,7 +510,8 @@
           "7 × (8 - 3) = 35"
         ],
         "error_class": "procedure",
-        "why": "El 7 es repeteix als dos productes: treu-lo fora."
+        "why": "El 7 es repeteix als dos productes: treu-lo fora.",
+        "goal": "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis"
       },
       {
         "n": 2,
@@ -487,7 +521,8 @@
           "7 × 5 = 35"
         ],
         "error_class": "calculation",
-        "why": "8 - 3 = 5."
+        "why": "8 - 3 = 5.",
+        "goal": "Calcula el parèntesi i escriu la multiplicació que en queda"
       },
       {
         "n": 3,
@@ -495,7 +530,8 @@
         "value": "35",
         "accept": [],
         "error_class": "facts",
-        "why": "7 × 5 = 35."
+        "why": "7 × 5 = 35.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "35",

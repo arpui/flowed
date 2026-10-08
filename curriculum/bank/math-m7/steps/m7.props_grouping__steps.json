@@ -15,7 +15,8 @@
           "(2 × 5) × 20 = 200"
         ],
         "error_class": "procedure",
-        "why": "2 × 5 fa 10: agrupa-los primer."
+        "why": "2 × 5 fa 10: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -25,7 +26,8 @@
           "10 × 20 = 200"
         ],
         "error_class": "facts",
-        "why": "2 × 5 = 10."
+        "why": "2 × 5 = 10.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -33,7 +35,8 @@
         "value": "200",
         "accept": [],
         "error_class": "calculation",
-        "why": "10 × 20 = 200."
+        "why": "10 × 20 = 200.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "200",
@@ -57,7 +60,8 @@
           "(5 + 15) + 37 = 57"
         ],
         "error_class": "procedure",
-        "why": "5 i 15 sumen 20: agrupa'ls primer."
+        "why": "5 i 15 sumen 20: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -67,7 +71,8 @@
           "20 + 37 = 57"
         ],
         "error_class": "calculation",
-        "why": "5 + 15 = 20."
+        "why": "5 + 15 = 20.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -75,7 +80,8 @@
         "value": "57",
         "accept": [],
         "error_class": "calculation",
-        "why": "20 + 37 = 57."
+        "why": "20 + 37 = 57.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "57",
@@ -99,7 +105,8 @@
           "(4 + 36) + 4 = 44"
         ],
         "error_class": "procedure",
-        "why": "4 i 36 sumen 40: agrupa'ls primer."
+        "why": "4 i 36 sumen 40: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -109,7 +116,8 @@
           "40 + 4 = 44"
         ],
         "error_class": "calculation",
-        "why": "4 + 36 = 40."
+        "why": "4 + 36 = 40.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -117,7 +125,8 @@
         "value": "44",
         "accept": [],
         "error_class": "calculation",
-        "why": "40 + 4 = 44."
+        "why": "40 + 4 = 44.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "44",
@@ -141,7 +150,8 @@
           "(18 + 2) + 4 = 24"
         ],
         "error_class": "procedure",
-        "why": "18 i 2 sumen 20: agrupa'ls primer."
+        "why": "18 i 2 sumen 20: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -151,7 +161,8 @@
           "20 + 4 = 24"
         ],
         "error_class": "calculation",
-        "why": "18 + 2 = 20."
+        "why": "18 + 2 = 20.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -159,7 +170,8 @@
         "value": "24",
         "accept": [],
         "error_class": "calculation",
-        "why": "20 + 4 = 24."
+        "why": "20 + 4 = 24.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "24",
@@ -183,7 +195,8 @@
           "(2 × 50) × 37 = 3700"
         ],
         "error_class": "procedure",
-        "why": "2 × 50 fa 100: agrupa-los primer."
+        "why": "2 × 50 fa 100: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -193,7 +206,8 @@
           "100 × 37 = 3700"
         ],
         "error_class": "facts",
-        "why": "2 × 50 = 100."
+        "why": "2 × 50 = 100.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -201,7 +215,8 @@
         "value": "3700",
         "accept": [],
         "error_class": "calculation",
-        "why": "100 × 37 = 3700."
+        "why": "100 × 37 = 3700.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "3700",
@@ -225,7 +240,8 @@
           "(19 + 21) + 3 = 43"
         ],
         "error_class": "procedure",
-        "why": "19 i 21 sumen 40: agrupa'ls primer."
+        "why": "19 i 21 sumen 40: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -235,7 +251,8 @@
           "40 + 3 = 43"
         ],
         "error_class": "calculation",
-        "why": "19 + 21 = 40."
+        "why": "19 + 21 = 40.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -243,7 +260,8 @@
         "value": "43",
         "accept": [],
         "error_class": "calculation",
-        "why": "40 + 3 = 43."
+        "why": "40 + 3 = 43.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "43",
@@ -267,7 +285,8 @@
           "(4 × 25) × 30 = 3000"
         ],
         "error_class": "procedure",
-        "why": "4 × 25 fa 100: agrupa-los primer."
+        "why": "4 × 25 fa 100: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -277,7 +296,8 @@
           "100 × 30 = 3000"
         ],
         "error_class": "facts",
-        "why": "4 × 25 = 100."
+        "why": "4 × 25 = 100.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -285,7 +305,8 @@
         "value": "3000",
         "accept": [],
         "error_class": "calculation",
-        "why": "100 × 30 = 3000."
+        "why": "100 × 30 = 3000.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "3000",
@@ -309,7 +330,8 @@
           "(8 + 12) + 24 = 44"
         ],
         "error_class": "procedure",
-        "why": "8 i 12 sumen 20: agrupa'ls primer."
+        "why": "8 i 12 sumen 20: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -319,7 +341,8 @@
           "20 + 24 = 44"
         ],
         "error_class": "calculation",
-        "why": "8 + 12 = 20."
+        "why": "8 + 12 = 20.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -327,7 +350,8 @@
         "value": "44",
         "accept": [],
         "error_class": "calculation",
-        "why": "20 + 24 = 44."
+        "why": "20 + 24 = 44.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "44",
@@ -351,7 +375,8 @@
           "(8 + 32) + 25 = 65"
         ],
         "error_class": "procedure",
-        "why": "8 i 32 sumen 40: agrupa'ls primer."
+        "why": "8 i 32 sumen 40: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -361,7 +386,8 @@
           "40 + 25 = 65"
         ],
         "error_class": "calculation",
-        "why": "8 + 32 = 40."
+        "why": "8 + 32 = 40.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -369,7 +395,8 @@
         "value": "65",
         "accept": [],
         "error_class": "calculation",
-        "why": "40 + 25 = 65."
+        "why": "40 + 25 = 65.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "65",
@@ -393,7 +420,8 @@
           "(8 × 25) × 19 = 3800"
         ],
         "error_class": "procedure",
-        "why": "8 × 25 fa 200: agrupa-los primer."
+        "why": "8 × 25 fa 200: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -403,7 +431,8 @@
           "200 × 19 = 3800"
         ],
         "error_class": "facts",
-        "why": "8 × 25 = 200."
+        "why": "8 × 25 = 200.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -411,7 +440,8 @@
         "value": "3800",
         "accept": [],
         "error_class": "calculation",
-        "why": "200 × 19 = 3800."
+        "why": "200 × 19 = 3800.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "3800",
@@ -435,7 +465,8 @@
           "(2 × 50) × 32 = 3200"
         ],
         "error_class": "procedure",
-        "why": "2 × 50 fa 100: agrupa-los primer."
+        "why": "2 × 50 fa 100: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -445,7 +476,8 @@
           "100 × 32 = 3200"
         ],
         "error_class": "facts",
-        "why": "2 × 50 = 100."
+        "why": "2 × 50 = 100.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -453,7 +485,8 @@
         "value": "3200",
         "accept": [],
         "error_class": "calculation",
-        "why": "100 × 32 = 3200."
+        "why": "100 × 32 = 3200.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "3200",
@@ -477,7 +510,8 @@
           "(4 × 5) × 8 = 160"
         ],
         "error_class": "procedure",
-        "why": "4 × 5 fa 20: agrupa-los primer."
+        "why": "4 × 5 fa 20: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
       },
       {
         "n": 2,
@@ -487,7 +521,8 @@
           "20 × 8 = 160"
         ],
         "error_class": "facts",
-        "why": "4 × 5 = 20."
+        "why": "4 × 5 = 20.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
       },
       {
         "n": 3,
@@ -495,7 +530,8 @@
         "value": "160",
         "accept": [],
         "error_class": "calculation",
-        "why": "20 × 8 = 160."
+        "why": "20 × 8 = 160.",
+        "goal": "Calcula el resultat final"
       }
     ],
     "answer": "160",

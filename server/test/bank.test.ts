@@ -173,5 +173,23 @@ const fbEmpty = bankFeedback(stepsEmpty);
 check("empty steps: every step says nothing was written, no crash",
   fbEmpty.includes("no has escrit res per a aquest pas") && fbEmpty.includes("**Score: 0/10**"), fbEmpty);
 
+// A translate card must show the sentence to translate even when the
+// instruction does not repeat it (x.good_luck_babe.002 asked about nothing).
+const trItem = { ...(item("a1.can_ability") as BankItem), type: "translate", instruction: "Say it in English.", sentence: "Bona sort!" } as BankItem;
+const trCard = bankExerciseCard(trItem, 2, "Easy", "Song");
+check("translate card shows the sentence", trCard.includes("«Bona sort!»") && trCard.includes("**Translate:** Say it in English: "), trCard);
+const trItem2 = { ...trItem, instruction: "What is the English word for 'la veritat'?", sentence: "la veritat" } as BankItem;
+check("translate card does not repeat a sentence already in the instruction", !bankExerciseCard(trItem2, 2, "Easy", "Song").includes("«"));
+
+// A right answer in another form says so and explains how it is done
+// (4/5 + 4/12 answered 68/60 for 1 2/15: "Perfect!" alone explained nothing).
+const fracItem = { id: "m4.frac_add_unlike.050", competence: "m4.frac_add_unlike", type: "compute", instruction: "", problem: "4/5 + 4/12", answer: "1 2/15", also_accept: [], options: [], why: "Denominador comú 60. Com a nombre mixt: 17/15 = 1 + 2/15.", status: "validated" } as unknown as BankItem;
+const fbEq = bankFeedback({ score: 10, verdict: "correct", note: "", correct_version: "4/5 + 4/12 = 1 2/15", given: "68/60", item: fracItem });
+check("equivalent form is named", fbEq.includes("Has escrit «68/60»: val el mateix que «1 2/15»"), fbEq);
+check("a right answer explains how it is done", fbEq.includes("**Com es fa:** Denominador comú 60") && fbEq.includes("1 + 2/15"), fbEq);
+check("the parseable contract survives", /\*\*Correct version:\*\*\n"4\/5 \+ 4\/12 = 1 2\/15"/.test(fbEq) && /\*\*Score: 10\/10\*\*/.test(fbEq), fbEq);
+const fbSame = bankFeedback({ score: 10, verdict: "correct", note: "", correct_version: "4/5 + 4/12 = 1 2/15", given: "1 2/15", item: fracItem });
+check("the same form adds no equivalence line", !fbSame.includes("val el mateix"), fbSame);
+
 console.log(failures === 0 ? "\nbank: all checks passed" : `\nbank: ${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);

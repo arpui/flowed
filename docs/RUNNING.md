@@ -28,7 +28,7 @@ prompts/agents/    rules.md (shared) + rules-math.md + rules-language.md
 ```
 
 Homes (where the learners' data lives — NOT in the repo):
-- `~/.flowmath` — this fork/core's home (the `.env` sets `FLOWED_HOME`; the
+- `~/.flowed` — this fork/core's home (the `.env` sets `FLOWED_HOME`; the
   `.env` is gitignored, so a fresh worktree without it falls back to
   `~/.flowed` — that is exactly the bug the lib-paths fix addresses; when
   running from a worktree, export `FLOWED_HOME` explicitly).
@@ -45,7 +45,7 @@ scripts/flowed-web.sh --app <id> --port <N>    # start; prints login + password
 scripts/flowed-web.sh --stop --port <N>        # stop one instance
 ```
 
-The password lives in `~/.flowmath/<id>/.web-password` (stable across
+The password lives in `~/.flowed/<id>/.web-password` (stable across
 restarts). Ports in use now: 4200 test-math, 4201 test-m7, 4203 albert-math,
 4205 test-lang (the language test). Production `flowed` keeps its own ports in
 its own repo/home — the two never collide.
@@ -75,8 +75,8 @@ its own repo/home — the two never collide.
 Suites first (cheap, no model):
 
 ```bash
-python3 -m unittest discover -s tests        # 728 OK (math + domain loader)
-(cd server && bun --test test/*.test.ts)     # 14 harnessos OK
+python3 -m unittest discover -s tests        # 767 OK (math + domain loader + taxonomia)
+(cd server && bun --test test/*.test.ts)     # 17 harnessos OK (també amb `node --experimental-strip-types server/test/<x>.test.ts`)
 (cd server && bun x tsc --noEmit)            # 0 errors (http.ts i web-render arreglats 2026-10-08)
 ```
 
@@ -85,14 +85,14 @@ path runs without it):
 
 ```bash
 # math (already the reference): profile test-m7, scenario algebra
-FLOWED_HOME=$HOME/.flowmath python3 scripts/flowed-e2e.py test-m7 --port 4201 --scenario algebra
+FLOWED_HOME=$HOME/.flowed python3 scripts/flowed-e2e.py test-m7 --port 4201 --scenario algebra
 
 # language (WP5.2): provision once, then the language scenario
-FLOWED_HOME=$HOME/.flowmath bash scripts/new-user.sh test-lang --port 4205
+FLOWED_HOME=$HOME/.flowed bash scripts/new-user.sh test-lang --port 4205
 # (patch the profile: domain=language, target English, level A2 — or run /math-setup)
-FLOWED_HOME=$HOME/.flowmath bash scripts/flowed-web.sh --app test-lang --port 4205
-FLOWED_HOME=$HOME/.flowmath python3 scripts/flowed-e2e.py test-lang --port 4205 --scenario language --password <pw>
-FLOWED_HOME=$HOME/.flowmath bash scripts/flowed-web.sh --stop --port 4205
+FLOWED_HOME=$HOME/.flowed bash scripts/flowed-web.sh --app test-lang --port 4205
+FLOWED_HOME=$HOME/.flowed python3 scripts/flowed-e2e.py test-lang --port 4205 --scenario language --password <pw>
+FLOWED_HOME=$HOME/.flowed bash scripts/flowed-web.sh --stop --port 4205
 ```
 
 Verified today: the `language` scenario passes 4/4 (fluent commands load, a
@@ -102,7 +102,7 @@ Verified today: the `language` scenario passes 4/4 (fluent commands load, a
 ### Tot d'una: `scripts/flowed-verify.sh` (2026-10-08)
 
 Suites + e2e en directe (language a `test-lang`:4205, algebra a `test-m7`:4201)
-contra el model remot, amb `FLOWED_HOME=~/.flowmath` i `FLOWED_DEEP_MANAGED=0`.
+contra el model remot, amb `FLOWED_HOME=~/.flowed` i `FLOWED_DEEP_MANAGED=0`.
 Es nega a córrer contra `~/.flowed`/`~/.fluent` o un perfil que no sigui de prova.
 Informe a `results/verify-<data>/summary.md` + un `.log` per pas i les
 transcripcions dels e2e. `TUTORBENCH=1` hi afegeix el tutor bench.
@@ -110,6 +110,40 @@ transcripcions dels e2e. `TUTORBENCH=1` hi afegeix el tutor bench.
 Per a un agent (Claude Code a railab): skill `flowed-verify` — executa el
 script, classifica cada fallada (codi / model / entorn) amb evidència i deixa
 `results/verify-<data>/ANALISI.md` amb el veredicte.
+
+### Taxonomia per domini (2026-10-08, WP6)
+
+Les habilitats i les categories d'error són **del domini**, no del nucli:
+
+| | math | language |
+|---|---|---|
+| habilitats | computation · steps · problems · reasoning · facts | writing · speaking · vocabulary · reading · grammar · listening |
+| categories d'error | les 12 de mates | les 15 de language (+ 5 antigues) |
+| si no la reconeix | `calculation` | `grammar` |
+
+Abans el nucli només coneixia les de mates: `grammar` es desava com a `computation`
+(Càlcul a les Stats), `vocabulary` com a `facts`, i «I went» com a `calculation_I_went`.
+Ara cada punt pregunta el domini del perfil (`hooks/db_schema.py`, `server/src/taxonomy.ts`;
+dos mirall, `tests/test_taxonomy.py` els manté iguals). El panell només llista les
+habilitats del domini i amaga «Precisió per pas» a language. L'eina de registre i el
+ritme de la Lliçó també són del domini.
+
+- **Auditar un perfil:** `python3 scripts/flowed-check.py taxonomy <perfil>` (o `--dir`):
+  surt 1 si hi troba habilitats o categories d'un altre domini.
+- **Coherència registres ↔ BDs:** `python3 scripts/flowed-check.py reconcile <perfil>` (o `--dir`): cada
+  registre ha de veure's a progress, mastery, mistakes, session-log i SM-2; exit 1 si no.
+- **Perfil nou de language:** `scripts/new-user.sh <id> --domain language` i
+  `scripts/flowed-profile.py <id> --domain language --name … --native Catalan --target English --level A1 --goal A2`
+  (plantilles a `data-examples/language/`). Abans tots els perfils sortien de les plantilles de mates.
+- Compte: `test-lang` va rebre registres de mates (tutor bench d'abans) i té dades barrejades;
+  és perfil de prova, es pot refer amb les dues comandes de dalt.
+
+### Provar a mà a railab: `scripts/flowed-dev.sh` (2026-10-08)
+
+Engega les webs de prova (`test-lang`:4205, `test-m7`:4201) contra el model
+remot, sense exportar res al terminal: `scripts/flowed-dev.sh up | status | down`.
+Només perfils `test*/demo*/e2e*` de `~/.flowed`. Altres perfils o ports:
+`DEV_WEBS="test-lang:4205 test-nes:4206" scripts/flowed-dev.sh up`.
 
 ### Canvis del 2026-10-08 (després de la verificació)
 

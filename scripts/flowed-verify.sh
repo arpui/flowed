@@ -7,13 +7,13 @@
 # Escriu results/verify-<data>/summary.md (+ un .log per pas) per analitzar-lo
 # després (skill flowed-verify). No puja cap model: fa servir el remot.
 #
-# Seguretat: només perfils de prova (test*/demo*/e2e*) i mai el home de
-# producció (~/.flowed) ni el llegat (~/.fluent).
+# Seguretat: tot va a ~/.flowed però només amb perfils de prova (test*/demo*/e2e*);
+# mai el llegat (~/.fluent).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-export FLOWED_HOME="${FLOWED_HOME:-$HOME/.flowmath}"
+export FLOWED_HOME="${FLOWED_HOME:-$HOME/.flowed}"
 export FLOWED_DEEP_BASE_URL="${FLOWED_DEEP_BASE_URL:-http://192.168.31.102:12321/v1}"
 export FLOWED_DEEP_MANAGED=0
 LANG_PROFILE="${LANG_PROFILE:-test-lang}"; LANG_PORT="${LANG_PORT:-4205}"
@@ -21,9 +21,9 @@ MATH_PROFILE="${MATH_PROFILE:-test-m7}";   MATH_PORT="${MATH_PORT:-4201}"
 BUN="$(command -v bun || echo "$HOME/.bun/bin/bun")"
 
 home_real="$(readlink -f "$FLOWED_HOME")"
-for forbidden in "$HOME/.flowed" "$HOME/.fluent"; do
+for forbidden in "$HOME/.fluent"; do
   if [[ "$home_real" == "$(readlink -f "$forbidden")" ]]; then
-    echo "error: FLOWED_HOME=$FLOWED_HOME és un home de producció/llegat — fes servir ~/.flowmath" >&2
+    echo "error: FLOWED_HOME=$FLOWED_HOME és el home llegat — fes servir ~/.flowed (només perfils test*/demo*/e2e*)" >&2
     exit 2
   fi
 done

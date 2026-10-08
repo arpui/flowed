@@ -12,6 +12,7 @@
 // (normalizeSkillKey lives in tools.ts — the record layer's single source for
 // the five math skill keys — and pulls in nothing but node builtins.)
 import { normalizeSkillKey } from "./tools.ts";
+import { isLanguage, LANGUAGE_TRACKED_SKILLS, LANGUAGE_SLOT_SKILLS } from "./taxonomy.ts";
 
 /** Exercises per practice session when the profile does not say. */
 export const DEFAULT_SESSION_LENGTH = 12;
@@ -244,18 +245,28 @@ export const SKILL_DEBT_DAYS = 3;
 // silently read an empty object (WP1.7, 2026-10-06).
 export const TRACKED_SKILLS = ["computation", "steps", "problems", "reasoning", "facts"] as const;
 
+/** The skills the Lesson watches for neglect in this domain (WP6). */
+export function trackedSkillsFor(domain?: string | null): readonly string[] {
+  return isLanguage(domain) ? LANGUAGE_TRACKED_SKILLS : TRACKED_SKILLS;
+}
+
 export interface SkillDebt {
   skill: string;
   daysIdle: number | null; // null = never practised
   due: boolean;
 }
 
-export function skillDebts(masteryDb: unknown, today: string, thresholdDays = SKILL_DEBT_DAYS): SkillDebt[] {
-  const skills = (masteryDb as { skills?: Record<string, { last_practiced?: unknown }> })
+export function skillDebts(
+  masteryDb: unknown,
+  today: string,
+  thresholdDays = SKILL_DEBT_DAYS,
+  skills: readonly string[] = TRACKED_SKILLS
+): SkillDebt[] {
+  const stored = (masteryDb as { skills?: Record<string, { last_practiced?: unknown }> })
     ?.skills ?? {};
   const todayMs = Date.parse(`${today}T00:00:00Z`);
-  return TRACKED_SKILLS.map((skill) => {
-    const last = skills[skill]?.last_practiced;
+  return skills.map((skill) => {
+    const last = stored[skill]?.last_practiced;
     if (typeof last !== "string" || !last.trim()) {
       return { skill, daysIdle: null, due: true };
     }
@@ -281,16 +292,21 @@ export const SKILL_SLOT_EVERY = 3;
 /** Only the two that get quietly dropped — the open-ended ones; nobody avoids
  *  flashcards (facts) and Go is all computation. Math keys (C7). */
 export const SLOT_SKILLS = ["reasoning", "problems"] as const;
+/** The two skills a Lesson may reserve a slot for, per domain (WP6). */
+export function slotSkillsFor(domain?: string | null): readonly string[] {
+  return isLanguage(domain) ? LANGUAGE_SLOT_SKILLS : SLOT_SKILLS;
+}
 
 export function lessonSkillSlot(
   lessonsCompleted: number,
   debts: SkillDebt[],
-  every = SKILL_SLOT_EVERY
+  every = SKILL_SLOT_EVERY,
+  slotSkills: readonly string[] = SLOT_SKILLS
 ): string | null {
   if (every <= 0) return null;
   if ((Math.max(0, lessonsCompleted) + 1) % every !== 0) return null;
   const candidates = debts
-    .filter((d) => (SLOT_SKILLS as readonly string[]).includes(d.skill) && d.due)
+    .filter((d) => slotSkills.includes(d.skill) && d.due)
     .sort((a, b) => (b.daysIdle ?? 9999) - (a.daysIdle ?? 9999));
   return candidates[0]?.skill ?? null;
 }
@@ -1904,7 +1920,7 @@ const SKILL_IN_HEADING_RE =
 
 /** Everything `math_record_answer` would have carried, read out of the reply
  *  the learner just got. Returns null when the turn did not grade anything. */
-export function parseFeedback(text: string): ParsedFeedback | null {
+export function parseFeedback(text: string, domain: string = "math"): ParsedFeedback | null {
   const body = String(text || "");
   const score = SCORE_LINE_RE.exec(body) ?? BARE_SCORE_RE.exec(body);
   if (!score) return null;
@@ -1939,7 +1955,7 @@ export function parseFeedback(text: string): ParsedFeedback | null {
     ...(cv ? { correctVersion: cv[1]!.trim() } : {}),
     // Math skill keys (C7): a math heading ("Repte de Raonament") and a
     // language-era one both normalize to one of the five.
-    ...(heading ? { skill: normalizeSkillKey(heading[1]) } : {}),
+    ...(heading ? { skill: normalizeSkillKey(heading[1], domain) } : {}),
   };
 }
 

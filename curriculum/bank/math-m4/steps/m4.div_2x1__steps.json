@@ -16,7 +16,8 @@
           "5 × 8 = 40"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 5 més gran que no sobrepassi 43: 5 × 8 = 40."
+        "why": "El múltiple de 5 més gran que no sobrepassi 43: 5 × 8 = 40.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -26,7 +27,8 @@
           "43 - 40 = 3"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 43: el que en sobra (3) és el residu."
+        "why": "Resta'l a 43: el que en sobra (3) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -36,7 +38,8 @@
           "43/5"
         ],
         "error_class": "procedure",
-        "why": "Quocient 8 i residu 3: 43 ÷ 5 = 8 3/5."
+        "why": "Quocient 8 i residu 3: 43 ÷ 5 = 8 3/5.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "8 3/5",
@@ -61,7 +64,8 @@
           "3 × 9 = 27"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 3 més gran que no sobrepassi 29: 3 × 9 = 27."
+        "why": "El múltiple de 3 més gran que no sobrepassi 29: 3 × 9 = 27.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -71,7 +75,8 @@
           "29 - 27 = 2"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 29: el que en sobra (2) és el residu."
+        "why": "Resta'l a 29: el que en sobra (2) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -81,7 +86,8 @@
           "29/3"
         ],
         "error_class": "procedure",
-        "why": "Quocient 9 i residu 2: 29 ÷ 3 = 9 2/3."
+        "why": "Quocient 9 i residu 2: 29 ÷ 3 = 9 2/3.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "9 2/3",
@@ -106,7 +112,8 @@
           "3 × 32 = 96"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 3 més gran que no sobrepassi 98: 3 × 32 = 96."
+        "why": "El múltiple de 3 més gran que no sobrepassi 98: 3 × 32 = 96.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -116,7 +123,8 @@
           "98 - 96 = 2"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 98: el que en sobra (2) és el residu."
+        "why": "Resta'l a 98: el que en sobra (2) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -126,7 +134,8 @@
           "98/3"
         ],
         "error_class": "procedure",
-        "why": "Quocient 32 i residu 2: 98 ÷ 3 = 32 2/3."
+        "why": "Quocient 32 i residu 2: 98 ÷ 3 = 32 2/3.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "32 2/3",
@@ -151,7 +160,8 @@
           "8 × 10 = 80"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 8 més gran que no sobrepassi 87: 8 × 10 = 80."
+        "why": "El múltiple de 8 més gran que no sobrepassi 87: 8 × 10 = 80.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -161,7 +171,8 @@
           "87 - 80 = 7"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 87: el que en sobra (7) és el residu."
+        "why": "Resta'l a 87: el que en sobra (7) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -171,7 +182,8 @@
           "87/8"
         ],
         "error_class": "procedure",
-        "why": "Quocient 10 i residu 7: 87 ÷ 8 = 10 7/8."
+        "why": "Quocient 10 i residu 7: 87 ÷ 8 = 10 7/8.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "10 7/8",
@@ -196,7 +208,8 @@
           "5 × 4 = 20"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 5 més gran que no sobrepassi 23: 5 × 4 = 20."
+        "why": "El múltiple de 5 més gran que no sobrepassi 23: 5 × 4 = 20.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -206,7 +219,8 @@
           "23 - 20 = 3"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 23: el que en sobra (3) és el residu."
+        "why": "Resta'l a 23: el que en sobra (3) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -216,7 +230,8 @@
           "23/5"
         ],
         "error_class": "procedure",
-        "why": "Quocient 4 i residu 3: 23 ÷ 5 = 4 3/5."
+        "why": "Quocient 4 i residu 3: 23 ÷ 5 = 4 3/5.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "4 3/5",
@@ -241,7 +256,8 @@
           "2 × 20 = 40"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 2 més gran que no sobrepassi 41: 2 × 20 = 40."
+        "why": "El múltiple de 2 més gran que no sobrepassi 41: 2 × 20 = 40.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -251,7 +267,8 @@
           "41 - 40 = 1"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 41: el que en sobra (1) és el residu."
+        "why": "Resta'l a 41: el que en sobra (1) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -261,7 +278,8 @@
           "41/2"
         ],
         "error_class": "procedure",
-        "why": "Quocient 20 i residu 1: 41 ÷ 2 = 20 1/2."
+        "why": "Quocient 20 i residu 1: 41 ÷ 2 = 20 1/2.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "20 1/2",
@@ -286,7 +304,8 @@
           "5 × 16 = 80"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 5 més gran que no sobrepassi 83: 5 × 16 = 80."
+        "why": "El múltiple de 5 més gran que no sobrepassi 83: 5 × 16 = 80.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -296,7 +315,8 @@
           "83 - 80 = 3"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 83: el que en sobra (3) és el residu."
+        "why": "Resta'l a 83: el que en sobra (3) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -306,7 +326,8 @@
           "83/5"
         ],
         "error_class": "procedure",
-        "why": "Quocient 16 i residu 3: 83 ÷ 5 = 16 3/5."
+        "why": "Quocient 16 i residu 3: 83 ÷ 5 = 16 3/5.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "16 3/5",
@@ -331,7 +352,8 @@
           "8 × 11 = 88"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 8 més gran que no sobrepassi 95: 8 × 11 = 88."
+        "why": "El múltiple de 8 més gran que no sobrepassi 95: 8 × 11 = 88.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -341,7 +363,8 @@
           "95 - 88 = 7"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 95: el que en sobra (7) és el residu."
+        "why": "Resta'l a 95: el que en sobra (7) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -351,7 +374,8 @@
           "95/8"
         ],
         "error_class": "procedure",
-        "why": "Quocient 11 i residu 7: 95 ÷ 8 = 11 7/8."
+        "why": "Quocient 11 i residu 7: 95 ÷ 8 = 11 7/8.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "11 7/8",
@@ -376,7 +400,8 @@
           "9 × 4 = 36"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 9 més gran que no sobrepassi 40: 9 × 4 = 36."
+        "why": "El múltiple de 9 més gran que no sobrepassi 40: 9 × 4 = 36.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -386,7 +411,8 @@
           "40 - 36 = 4"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 40: el que en sobra (4) és el residu."
+        "why": "Resta'l a 40: el que en sobra (4) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -396,7 +422,8 @@
           "40/9"
         ],
         "error_class": "procedure",
-        "why": "Quocient 4 i residu 4: 40 ÷ 9 = 4 4/9."
+        "why": "Quocient 4 i residu 4: 40 ÷ 9 = 4 4/9.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "4 4/9",
@@ -421,7 +448,8 @@
           "7 × 9 = 63"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 7 més gran que no sobrepassi 66: 7 × 9 = 63."
+        "why": "El múltiple de 7 més gran que no sobrepassi 66: 7 × 9 = 63.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -431,7 +459,8 @@
           "66 - 63 = 3"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 66: el que en sobra (3) és el residu."
+        "why": "Resta'l a 66: el que en sobra (3) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -441,7 +470,8 @@
           "66/7"
         ],
         "error_class": "procedure",
-        "why": "Quocient 9 i residu 3: 66 ÷ 7 = 9 3/7."
+        "why": "Quocient 9 i residu 3: 66 ÷ 7 = 9 3/7.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "9 3/7",
@@ -466,7 +496,8 @@
           "4 × 11 = 44"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 4 més gran que no sobrepassi 47: 4 × 11 = 44."
+        "why": "El múltiple de 4 més gran que no sobrepassi 47: 4 × 11 = 44.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -476,7 +507,8 @@
           "47 - 44 = 3"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 47: el que en sobra (3) és el residu."
+        "why": "Resta'l a 47: el que en sobra (3) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -486,7 +518,8 @@
           "47/4"
         ],
         "error_class": "procedure",
-        "why": "Quocient 11 i residu 3: 47 ÷ 4 = 11 3/4."
+        "why": "Quocient 11 i residu 3: 47 ÷ 4 = 11 3/4.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "11 3/4",
@@ -511,7 +544,8 @@
           "7 × 5 = 35"
         ],
         "error_class": "facts",
-        "why": "El múltiple de 7 més gran que no sobrepassi 39: 7 × 5 = 35."
+        "why": "El múltiple de 7 més gran que no sobrepassi 39: 7 × 5 = 35.",
+        "goal": "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)"
       },
       {
         "n": 2,
@@ -521,7 +555,8 @@
           "39 - 35 = 4"
         ],
         "error_class": "calculation",
-        "why": "Resta'l a 39: el que en sobra (4) és el residu."
+        "why": "Resta'l a 39: el que en sobra (4) és el residu.",
+        "goal": "Resta aquest múltiple al dividend per trobar el residu"
       },
       {
         "n": 3,
@@ -531,7 +566,8 @@
           "39/7"
         ],
         "error_class": "procedure",
-        "why": "Quocient 5 i residu 4: 39 ÷ 7 = 5 4/7."
+        "why": "Quocient 5 i residu 4: 39 ÷ 7 = 5 4/7.",
+        "goal": "Escriu el resultat: quocient i residu com a nombre mixt"
       }
     ],
     "answer": "5 4/7",

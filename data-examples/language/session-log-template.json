@@ -1,0 +1,42 @@
+{
+  "_schema_version": 1,
+  "metadata": {
+    "language": "{target_language}",
+    "learner_name": "{name}",
+    "total_sessions": 0
+  },
+  "sessions": [
+    {
+      "session_id": "001",
+      "date": "{YYYY-MM-DD}",
+      "time_start": "{HH:MM:SS}",
+      "time_end": "{HH:MM:SS}",
+      "duration_minutes": 0,
+      "skill_practiced": "{writing|speaking|vocabulary|reading|listening|mixed}",
+      "command_used": "{/fluent-learn|/fluent-vocab|/fluent-writing|/fluent-speaking|/fluent-reading|/fluent-review}",
+      "exercises_completed": 0,
+      "exercises_correct": 0,
+      "exercises_incorrect": 0,
+      "accuracy": 0.0,
+      "focus_areas": [
+        "{grammar_pattern}",
+        "{vocabulary_topic}"
+      ],
+      "new_patterns_encountered": [
+        "{pattern_name}"
+      ],
+      "mastered_this_session": [
+        "{pattern_that_reached_level_5}"
+      ],
+      "notes": "{any_observations_or_achievements}",
+      "streak_day": 0
+    }
+  ],
+  "milestones": [
+    {
+      "date": "{YYYY-MM-DD}",
+      "milestone": "{description}",
+      "session_id": "001"
+    }
+  ]
+}

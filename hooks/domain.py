@@ -50,6 +50,16 @@ def domain_for_profile(profile: dict) -> str:
     return inferred or manifest().get("default", "math")
 
 
+def domain_for_dir(data_dir) -> str:
+    """The domain of the profile in `data_dir` (reads learner-profile.json).
+    Never raises: no profile, or one without clues, gets the manifest default."""
+    try:
+        prof = json.loads((Path(data_dir).expanduser() / "learner-profile.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        prof = {}
+    return domain_for_profile(prof if isinstance(prof, dict) else {})
+
+
 def spec(domain: str) -> dict:
     return manifest().get("domains", {}).get(domain, {})
 

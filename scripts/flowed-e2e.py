@@ -3226,7 +3226,7 @@ def datetime_day(rec: dict) -> str:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("profile", nargs="?", default="test-math",
-                    help="profile id under the data home (~/.flowmath/)")
+                    help="profile id under the data home (~/.flowed/)")
     ap.add_argument("--dir", help="explicit profile directory")
     ap.add_argument("--port", type=int, default=4200)
     ap.add_argument("--course", choices=("A1", "A2"), default="A2",

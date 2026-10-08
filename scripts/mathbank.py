@@ -219,6 +219,18 @@ def dec_add(rng: random.Random) -> dict:
     }
 
 
+def mixed_gloss(answer: str) -> str:
+    """For a mixed-number answer ("1 2/15"): say what the notation means
+    ("17/15 = 1 + 2/15"); the written form has no "+", and learners read it as
+    1 · 2/15 or 12/15 (2026-10-08, Albert). Empty for anything else."""
+    m = re.fullmatch(r"(\d+) (\d+)/(\d+)", str(answer).strip())
+    if not m:
+        return ""
+    w, r, d = (int(x) for x in m.groups())
+    return (f" Com a nombre mixt: {w * d + r}/{d} = {w} + {r}/{d}, que s'escriu {w} {r}/{d} "
+            f"(sense el «+»).")
+
+
 def frac_add_unlike(rng: random.Random) -> dict:
     """Sum of two proper fractions, denominators <= 12, unlike; the sum over the
     common denominator is reducible about half the time (both cases by design)."""
@@ -245,6 +257,7 @@ def frac_add_unlike(rng: random.Random) -> dict:
            f"suma els numeradors ({a1} + {a2} = {num}).")
     if math.gcd(num, L) > 1:
         why += f" Simplifica {num}/{L} dividint per {math.gcd(num, L)}."
+    why += mixed_gloss(_fmt_frac(s))
     return {
         "type": "compute",
         "instruction": "Calcula i simplifica si es pot.",
@@ -1047,7 +1060,56 @@ _ID_RE = re.compile(r"^[A-Za-z0-9_.-]+\.\d{3,}$")
 
 STEPS_REQUIRED_FIELDS = ("id", "competence", "type", "instruction", "problem",
                          "method", "steps", "answer", "why", "status", "source")
-STEP_REQUIRED_KEYS = ("n", "expect", "value", "accept", "error_class", "why")
+STEP_REQUIRED_KEYS = ("n", "expect", "value", "accept", "error_class", "why", "goal")
+
+# What to do at each step, per method (2026-10-08, Albert): the learner sees
+# it BEFORE writing the step, so it names the property/technique and never the
+# result. Keyed by (method, n); a "last" entry covers the final step.
+STEP_GOALS: dict[str, dict] = {
+    "partial_sums": {1: "Suma només les desenes (descompon cada nombre en desenes + unitats)",
+                     2: "Suma només les unitats",
+                     "last": "Ajunta la suma de les desenes amb la de les unitats"},
+    "partial_products": {1: "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes",
+                         2: "Multiplica el primer factor per les unitats",
+                         "last": "Suma els dos productes parcials"},
+    "long_division": {1: "Busca el múltiple del divisor més gran que no passi del dividend (escriu la multiplicació)",
+                      2: "Resta aquest múltiple al dividend per trobar el residu",
+                      "last": "Escriu el resultat: quocient i residu com a nombre mixt"},
+    "common_denominator": {1: "Passa les dues fraccions a un denominador comú i escriu-ne la suma",
+                           2: "Suma els numeradors (el denominador no canvia)",
+                           "last": "Simplifica la fracció (nombre mixt si cal)"},
+    "distributive": {1: "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)",
+                     2: "Calcula cada multiplicació i escriu la suma o resta dels resultats",
+                     "last": "Calcula el resultat final"},
+    "common_factor": {1: "Factor comú: treu fora el nombre que es repeteix i escriu la suma o resta entre parèntesis",
+                      2: "Calcula el parèntesi i escriu la multiplicació que en queda",
+                      "last": "Calcula el resultat final"},
+    "grouping": {1: "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)",
+                 2: "Calcula el parèntesi i escriu l'operació que en queda",
+                 "last": "Calcula el resultat final"},
+}
+
+
+def default_goal(method: str, n: int, total: int) -> str | None:
+    """The method's stock goal for step `n` of `total`, or None (unknown
+    method: a hand-written item must carry its own goals)."""
+    tbl = STEP_GOALS.get(method)
+    if not tbl:
+        return None
+    if n == total and n > 1:
+        return tbl["last"]
+    return tbl.get(n) or tbl["last"]
+
+
+def fill_goals(item: dict) -> dict:
+    """Give every step of a steps item a `goal` it lacks (never overwrites)."""
+    steps = item.get("steps", [])
+    for st in steps:
+        if not str(st.get("goal", "")).strip():
+            g = default_goal(item.get("method", ""), st.get("n", 0), len(steps))
+            if g:
+                st["goal"] = g
+    return item
 
 
 def _accept_ok(acc, want: Fraction | None) -> bool:
@@ -1107,6 +1169,10 @@ def _validate_steps_item(item: dict) -> list[str]:
                         f"the §4.4 taxonomy {db_schema.ERROR_CATEGORIES}")
         if not str(st.get("why", "")).strip():
             errs.append(f"{tag}: empty why")
+        if not str(st.get("goal", "")).strip():
+            errs.append(f"{tag}: empty goal (what to do / which property — the learner sees it)")
+        elif re.search(r"\d+\s*[=×x*+\-]\s*\d+", str(st["goal"])):
+            errs.append(f"{tag}: goal must not contain a computation (it would give the step away)")
         ev = vv = None
         try:
             ev = mathgrade.parse_expr(st.get("expect")).value
@@ -1380,6 +1446,7 @@ def _build_steps_item(family: str, rng: random.Random, competence_id: str, seq: 
         "status": "validated",
         "source": source,
     }
+    fill_goals(item)
     errs = validate_item(item)
     if errs:
         raise GenError(f"{family}: generated an invalid item: " + "; ".join(errs))

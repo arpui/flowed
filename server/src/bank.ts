@@ -46,6 +46,9 @@ export interface BankStep {
   accept?: string[];
   error_class?: string;
   why?: string;
+  /** What to do in this step / which property to apply — shown BEFORE the
+   *  learner writes it, so it must not give the result (2026-10-08, Albert). */
+  goal?: string;
 }
 
 /** One graded step (WP2.3): `got` is the learner's line for that step or
@@ -65,6 +68,8 @@ export interface BankGrade {
   correct_version: string;
   /** What the learner typed, as mathgrade parsed it (math items). */
   got?: string;
+  /** compute items: what the learner typed (the right-hand side when they wrote an equation). */
+  given?: string;
   /** steps items only: one entry per expected step, in order. */
   steps?: BankStepGrade[];
   /** steps items: the first failure's category and step number; algebraic
@@ -131,7 +136,11 @@ export function bankExerciseCard(
       return `${head}\n\n**Problem:** ${item.problem}\n\n**Una operació per línia:**\n\n` +
         stepsV2CardTail(item);
     }
-    return `${head}\n\n**Problem:** ${item.problem}\n\n**Una operació per línia:**\n\n**Type your answer:**`;
+    // v1 (whole trace at once): list what each line is for, when the item says.
+    const plan = (item.steps ?? []).filter((x) => x.goal)
+      .map((x) => `${x.n}. ${x.goal!.replace(/[.:]+$/, "")}`).join("\n");
+    const planBlock = plan ? `\n\n**Passos:**\n\n${plan}` : "";
+    return `${head}\n\n**Problem:** ${item.problem}${planBlock}\n\n**Una operació per línia:**\n\n**Type your answer:**`;
   }
   if (isMathItem(item)) {
     // Math card: the problem, the options when the answer is a pick, and the
@@ -144,7 +153,12 @@ export function bankExerciseCard(
     return `${head}\n\n**Meaning:** ${item.instruction} ${item.sentence}\n**Word:** ___`;
   }
   if (item.type === "translate") {
-    return `${head}\n\n**Translate:** ${item.instruction}\n**Word:** ___`;
+    // The sentence to translate must be ON the card: an instruction that only
+    // says "Say it in English." (x.good_luck_babe.002) asked about nothing.
+    const sent = item.sentence?.trim();
+    const shown = sent && !item.instruction.toLowerCase().includes(sent.toLowerCase())
+      ? `${item.instruction.replace(/[.:]+$/, "")}: «${sent}»` : item.instruction;
+    return `${head}\n\n**Translate:** ${shown}\n**Word:** ___`;
   }
   if (item.type === "correct") {
     return `${head}\n\n**Sentence to correct:** "${item.sentence}"\n\n**Type the correct sentence:**`;
@@ -281,8 +295,16 @@ function mathFeedback(g: BankGrade): string {
         : g.verdict === "near"
           ? "Very close — read the note and try the next one!"
           : "Keep practising — you'll get it.";
+  // A right answer in ANOTHER form (68/60 for 1 2/15) says so, and a right answer
+  // always says how it is done: "Perfect!" alone explained nothing (2026-10-08).
+  const norm = (t: string) => t.replace(/\s+/g, "").toLowerCase();
+  const want = String(g.item.answer ?? "");
+  const given = String(g.given ?? "").trim();
+  const sameForm = !given || norm(given) === norm(want) || (g.item.also_accept ?? []).some((a) => norm(a) === norm(given));
+  const equiv = known && !sameForm ? `\n\nHas escrit «${given}»: val el mateix que «${want}».` : "";
+  const how = known && g.item.why ? `\n\n**Com es fa:** ${g.item.why}` : "";
   return (
-    `${lead}\n\n**Corrections:**\n${correctionLine}\n\n**Correct version:**\n"${g.correct_version}"\n\n` +
+    `${lead}${equiv}\n\n**Corrections:**\n${correctionLine}\n\n**Correct version:**\n"${g.correct_version}"${how}\n\n` +
     `**Score: ${g.score}/10** ${closing}`
   );
 }

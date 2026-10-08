@@ -10,6 +10,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { ToolDefinition, ToolContext } from "./llm";
+import {
+  isLanguage, domainOfDataDir, normalizeLanguageCategory, normalizeLanguageSkill,
+  LANGUAGE_ERROR_CATEGORIES, LANGUAGE_SKILL_KEYS, DEFAULT_LANGUAGE_ERROR_CATEGORY,
+} from "./taxonomy.ts";
 
 export type { ToolContext };
 
@@ -61,7 +65,20 @@ export const ERROR_CATEGORIES = [
 
 const CATEGORY_SET = new Set<string>(ERROR_CATEGORIES);
 
-export function normalizeCategory(raw: unknown): string | null {
+/** The error categories the tutor may emit in this domain (math: the 12
+ *  above; language: the 15 of the language product — see taxonomy.ts). */
+export function errorCategoriesFor(domain?: string | null): readonly string[] {
+  return isLanguage(domain) ? LANGUAGE_ERROR_CATEGORIES : ERROR_CATEGORIES;
+}
+
+/** What an unrecognized label becomes (derived records only; the record tool
+ *  rejects it instead): math "calculation", language "grammar". */
+export function defaultCategoryFor(domain?: string | null): string {
+  return isLanguage(domain) ? DEFAULT_LANGUAGE_ERROR_CATEGORY : "calculation";
+}
+
+export function normalizeCategory(raw: unknown, domain: string = "math"): string | null {
+  if (isLanguage(domain)) return normalizeLanguageCategory(raw);
   const c = String(raw ?? "").trim().toLowerCase().replace(/[-\s]+/g, "_");
   // Surface terms in Catalan, Spanish and English; mirrors
   // ERROR_CATEGORY_ALIASES in hooks/db_schema.py (kept in sync by
@@ -312,7 +329,13 @@ const SKILL_SURFACE_ALIASES: Record<string, string> = {
   "cálculo": "computation",
 };
 
-export function normalizeSkillKey(raw: unknown): string {
+/** The skills a practice can be filed under in this domain. */
+export function skillKeysFor(domain?: string | null): readonly string[] {
+  return isLanguage(domain) ? LANGUAGE_SKILL_KEYS : SKILL_KEYS;
+}
+
+export function normalizeSkillKey(raw: unknown, domain: string = "math"): string {
+  if (isLanguage(domain)) return normalizeLanguageSkill(raw);
   const s = String(raw ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
   if ((SKILL_KEYS as readonly string[]).includes(s)) return s;
   const legacy = LEGACY_SKILL_KEYS[s];
@@ -379,6 +402,24 @@ const DISABLED_MSG =
   "DEEP UNAVAILABLE: this tool is DISABLED for this session — it was already called repeatedly with non-answer content. STOP calling it now. Do not evaluate anything with it. Continue the session directly: present the next exercise to the learner and wait for their answer.";
 
 // ---- tools -----------------------------------------------------------------
+
+/** The tool definitions as the model of THIS domain must see them: the record
+ *  tool's skill and category lists are the domain's own (a language tutor is
+ *  never offered "calculation"). Math keeps the definitions as built. */
+export function toolsForDomain(defs: ToolDefinition[], domain?: string | null): ToolDefinition[] {
+  if (!isLanguage(domain)) return defs;
+  return defs.map((t) => {
+    if (t.name !== "math_record_answer") return t;
+    const params = JSON.parse(JSON.stringify(t.parameters)) as Record<string, any>;
+    const props = params.properties ?? {};
+    if (props.skill) {
+      props.skill.description = `${LANGUAGE_SKILL_KEYS.join(" | ")} — the language skill this answer belongs to (grammar or vocabulary for the drills, writing / speaking / reading for the open practices)`;
+    }
+    const cat = props.corrections?.items?.properties?.category;
+    if (cat) cat.description = `One of: ${LANGUAGE_ERROR_CATEGORIES.join(", ")}`;
+    return { ...t, parameters: params };
+  });
+}
 
 export function buildTools(opts: {
   root: string;
@@ -586,6 +627,8 @@ export function buildTools(opts: {
         return "REJECTED: too many records for this session; stop calling this tool and continue the practice.";
       }
 
+      // The profile's domain decides which skills and categories exist.
+      const domain = domainOfDataDir(dataDir);
       const score = Number(args.score);
       if (!Number.isFinite(score) || score < 0 || score > 10) {
         return `REJECTED: score must be a number between 0 and 10 (got ${JSON.stringify(args.score)}).`;
@@ -599,9 +642,9 @@ export function buildTools(opts: {
       const rawCorrections = Array.isArray(args.corrections) ? args.corrections : [];
       for (const raw of rawCorrections) {
         const c = (raw ?? {}) as Record<string, unknown>;
-        const category = normalizeCategory(c.category);
+        const category = normalizeCategory(c.category, domain);
         if (!category) {
-          return `REJECTED: unknown category ${JSON.stringify(c.category)}. Allowed: ${ERROR_CATEGORIES.join(", ")}.`;
+          return `REJECTED: unknown category ${JSON.stringify(c.category)}. Allowed: ${errorCategoriesFor(domain).join(", ")}.`;
         }
         const wrong = String(c.wrong ?? "").trim();
         const right = String(c.right ?? "").trim();
@@ -646,7 +689,7 @@ export function buildTools(opts: {
         // arriving from an older prompt is mapped to its math counterpart
         // (writing→reasoning, reading→problems, vocabulary→facts, …) instead
         // of being stored verbatim and inventing a phantom skill downstream.
-        skill: normalizeSkillKey(args.skill),
+        skill: normalizeSkillKey(args.skill, domain),
         exercise: String(args.exercise ?? "").trim(),
         learner_answer: answer,
         score: Math.round(score),

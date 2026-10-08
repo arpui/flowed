@@ -9,7 +9,9 @@ so a check is always one line:
     python3 scripts/flowed-check.py sm2 test-en
     python3 scripts/flowed-check.py records test-en --dir /some/other/profile
 
-Checks: profile · sm2 · patterns · mastery · records · metrics · sessions.
+Checks: profile · sm2 · patterns · mastery · records · metrics · sessions · taxonomy · reconcile
+(reconcile: every record is reflected in progress / mastery / mistakes / session log / SM-2; exit 1 if not)
+(taxonomy: only the skills and error categories of the profile's own domain; exit 1 if not).
 It never writes anything.
 """
 from __future__ import annotations
@@ -27,8 +29,12 @@ from datetime import date, datetime
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
 from main_paths import profiles_root  # noqa: E402  (where the profiles live)
+from domain import domain_for_profile  # noqa: E402
+import db_schema  # noqa: E402  (the taxonomy of each domain)
 
-CHECKS = ("profile", "sm2", "patterns", "mastery", "records", "metrics", "sessions", "tts", "sortida", "historial", "lliço", "obertes")
+CHECKS = ("profile", "sm2", "patterns", "mastery", "records", "metrics", "sessions", "tts", "sortida", "historial", "lliço", "obertes", "taxonomy", "reconcile")
+
+PROBLEMS: list[str] = []  # what `taxonomy` found; main() turns it into the exit code
 
 
 def load(path: Path):
@@ -147,6 +153,50 @@ def check_mastery(d: Path):
             flag = f"  ↓ decaigut des de {earned}"
         print(f"  {name:12} nivell {level} (guanyat {earned}) · últim {s.get('last_practiced')}"
               f" · fa {idle if idle is not None else '?'} dies{flag}")
+
+
+def check_taxonomy(d: Path):
+    """Does the profile hold only its OWN domain's skills and error categories?
+
+    A language profile with Càlcul/Fets in its Stats, or `calculation_*` among
+    its patterns, was written by a core that filed everything under math (fixed
+    2026-10-08, WP6). Exit code 1 when anything foreign is found, so it can gate
+    a move to production."""
+    head("taxonomia del domini")
+    profile = load(d / "learner-profile.json") or {}
+    domain = domain_for_profile(profile)
+    # "Foreign" = a key that belongs to the OTHER domain's own lists. An unknown
+    # name (a record that says "spelling") is not foreign: the normalizers map it.
+    other = "math" if domain == "language" else "language"
+    foreign_skills = set(db_schema.skill_keys(other))
+    foreign_cats = set(db_schema.error_categories(other))
+    print(f"  domini: {domain}")
+    found = []
+    for fname, where in (("mastery-db.json", "skills"), ("progress-db.json", "skill_progress")):
+        for k in (load(d / fname) or {}).get(where, {}) or {}:
+            if k in foreign_skills:
+                found.append(f"{fname}: habilitat d'un altre domini «{k}»")
+    for pid, pat in ((load(d / "mistakes-db.json") or {}).get("error_patterns", {}) or {}).items():
+        cat = pat.get("category") if isinstance(pat, dict) else None
+        if cat in foreign_cats and not str(pid).startswith("example_"):
+            found.append(f"mistakes-db.json: categoria d'un altre domini «{cat}» ({pid})")
+    for f in sorted((d / ".records").glob("*.jsonl")) if (d / ".records").is_dir() else []:
+        for line in f.read_text(encoding="utf-8").splitlines():
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            if rec.get("skill") in foreign_skills:
+                found.append(f".records/{f.name}: habilitat d'un altre domini «{rec['skill']}»")
+    uniq = list(dict.fromkeys(found))
+    if not uniq:
+        print("  ✅ només habilitats i categories del seu domini")
+        return
+    for line in uniq[:25]:
+        print(f"  ❌ {line}")
+    if len(uniq) > 25:
+        print(f"  … i {len(uniq) - 25} més")
+    PROBLEMS.extend(uniq)
 
 
 def check_records(d: Path):
@@ -732,6 +782,125 @@ def check_open(d: Path):
     print("  la resposta igualment; «sense cap eina» inclou els torns de presentar exercici.")
 
 
+def check_reconcile(d: Path):
+    """Is what the learner answered (.records) what ended up in the DBs?
+
+    Records are the source of truth; progress / mastery / mistakes / session
+    log / SM-2 are derived from them when a session is persisted. Hard failures
+    (❌, exit 1) are a record that no DB reflects at all; ⚠ are differences that
+    are normal while a session is still open (its records are not persisted
+    until it ends). Read-only."""
+    head("coherència registres ↔ bases de dades")
+    profile = load(d / "learner-profile.json") or {}
+    domain = domain_for_profile(profile)
+    recs = []
+    rdir = d / ".records"
+    for f in sorted(rdir.glob("*.jsonl")) if rdir.is_dir() else []:
+        for line in f.read_text(encoding="utf-8").splitlines():
+            try:
+                r = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(r, dict) and r.get("score") is not None:
+                recs.append(r)
+    uniq = {r.get("record_id") or id(r): r for r in recs}
+    recs = list(uniq.values())
+    print(f"  domini: {domain} · registres: {len(recs)}")
+    if not recs:
+        print("  (cap registre: res a comparar)")
+        return
+    bad = []
+    skills = set(db_schema.skill_keys(domain))
+    cats = set(db_schema.error_categories(domain))
+    for r in recs:
+        sc = r.get("score")
+        if not isinstance(sc, (int, float)) or not 0 <= sc <= 10:
+            bad.append(f"registre {r.get('record_id')}: nota fora de 0..10 ({sc!r})")
+    by_skill = collections.Counter(db_schema.normalize_skill_key(r.get("skill"), domain) for r in recs)
+    print(f"  per habilitat  : {dict(by_skill)}")
+    unknown = {r.get("skill") for r in recs if r.get("skill") and r.get("skill") not in skills}
+    if unknown:
+        print(f"  ⚠ habilitats no canòniques als registres (el normalitzador les mapeja): {sorted(unknown)}")
+
+    pdb = load(d / "progress-db.json") or {}
+    total = (pdb.get("overall_stats") or {}).get("total_exercises")
+    ok_n = sum(1 for r in recs if r.get("score", 0) >= 8)
+    print(f"  progress-db    : exercicis {total} · registres {len(recs)} ({ok_n} amb nota >= 8)")
+    if not total:
+        bad.append("progress-db.json: 0 exercicis però hi ha registres (la sessió no s'ha persistit?)")
+    # The precise check is per session: the last session's records against the
+    # session-log entry the draft assigned to it. Comparing grand totals is
+    # noise as soon as the profile has history from before the records existed.
+    draft = load(d / "session-draft.json") or {}
+    live, sid = draft.get("live_session"), draft.get("session_id")
+    live_file = rdir / f"{live}.jsonl" if live else None
+    if live_file is not None and live_file.exists():
+        n_live = len({json.loads(x).get("record_id") or x for x in live_file.read_text(encoding="utf-8").splitlines() if x.strip()})
+        entry = next((x for x in (load(d / "session-log.json") or {}).get("sessions", []) if x.get("session_id") == sid), None)
+        if entry is None:
+            bad.append(f"session-log.json: la sessió {sid} té {n_live} registres però no hi surt")
+        else:
+            done_live = int(entry.get("exercises_completed") or 0)
+            print(f"  última sessió  : {sid} · {n_live} registres · {done_live} exercicis al session-log")
+            if done_live < n_live:
+                bad.append(f"{sid}: {n_live} registres però el session-log només n'hi té {done_live} (resposta perduda)")
+            elif done_live > n_live:
+                print(f"  ⚠ {done_live - n_live} resposta(es) qualificades només en prosa (el tutor no les va registrar); "
+                      "es guarden pel parser de text")
+    elif total and total != len(recs):
+        print(f"  ℹ totals difereixen ({total} vs {len(recs)}): hi ha dades d'abans dels registres o sessions sense registres")
+
+    mdb = (load(d / "mastery-db.json") or {}).get("skills", {}) or {}
+    for k in by_skill:
+        s = mdb.get(k)
+        if not isinstance(s, dict) or not s.get("last_practiced"):
+            bad.append(f"mastery-db.json: «{k}» té registres però cap last_practiced")
+    sl = (load(d / "session-log.json") or {}).get("sessions", []) or []
+    done = sum(int(x.get("exercises_completed") or 0) for x in sl if isinstance(x, dict) and not str(x.get("session_id", "")).startswith("{"))
+    print(f"  session-log    : {len(sl)} sessions · {done} exercicis")
+    if recs and not sl:
+        bad.append("session-log.json: hi ha registres però cap sessió")
+
+    pats = (load(d / "mistakes-db.json") or {}).get("error_patterns", {}) or {}
+    pats = {k: v for k, v in pats.items() if not str(k).startswith("example_")}
+    wrong = [r for r in recs if (r.get("score") or 0) < 8 or r.get("corrections")]
+    print(f"  errors         : {len(wrong)} registres amb error · {len(pats)} patrons")
+    if wrong and not pats:
+        bad.append("mistakes-db.json: hi ha registres amb error però cap patró")
+    for pid, pat in pats.items():
+        if isinstance(pat, dict) and pat.get("category") not in cats:
+            bad.append(f"mistakes-db.json: categoria «{pat.get('category')}» fora de la taxonomia de {domain} ({pid})")
+
+    items = (load(d / "spaced-repetition.json") or {}).get("items", {}) or {}
+    items = {k: v for k, v in items.items() if not str(k).startswith("example_")}
+    with_item = {r["item_id"] for r in recs if r.get("item_id") and r.get("sm2_quality") is not None}
+    missing = sorted(i for i in with_item if i not in items)
+    low = {k.lower(): k for k in items}
+    pat_ids = set((load(d / "mistakes-db.json") or {}).get("error_patterns", {}) or {})
+    when = {r["item_id"]: datetime.fromtimestamp((r.get("ts") or 0) / 1000).strftime("%Y-%m-%d")
+            for r in recs if r.get("item_id") in missing and (r.get("ts") or 0) > 10**11}
+    for mid in missing:
+        near = [k for k in items if k.lower().startswith(mid.lower()[:18]) or mid.lower() in k.lower()]
+        print(f"  ⚠ ítem revisat sense entrada a SM-2: {mid}"
+              f" · registre del {when.get(mid, '?')}"
+              f" · {'és un patró a mistakes-db' if mid in pat_ids else 'no és a mistakes-db'}"
+              f"{' · semblants: ' + str(near[:3]) if near else ''}")
+    print(f"  SM-2           : {len(items)} ítems · {len(with_item)} ítems de banc revisats als registres")
+    # Only a RECENT review that SM-2 does not know is a failure of the current
+    # code; an old one is data from before this pipeline (reported above as ⚠).
+    recent = [m for m in missing if m in when
+              and (date.today() - datetime.strptime(when[m], "%Y-%m-%d").date()).days <= 2]
+    if recent:
+        bad.append(f"spaced-repetition.json: {len(recent)} ítems revisats avui/ahir sense entrada (p.ex. {recent[:3]})")
+
+    if not bad:
+        print("  ✅ tot el que hi ha als registres es veu a les bases de dades")
+        return
+    for line in bad[:25]:
+        print(f"  ❌ {line}")
+    PROBLEMS.extend(bad)
+
+
 RUNNERS = {
     "profile": check_profile,
     "sm2": check_sm2,
@@ -745,6 +914,8 @@ RUNNERS = {
     "historial": check_historial,
     "lliço": check_lesson,
     "obertes": check_open,
+    "taxonomy": check_taxonomy,
+    "reconcile": check_reconcile,
 }
 
 
@@ -770,7 +941,7 @@ def main() -> int:
     for name in (CHECKS if args.check == "all" else (args.check,)):
         RUNNERS[name](profile_dir)
     print()
-    return 0
+    return 1 if (args.check in ("taxonomy", "reconcile") and PROBLEMS) else 0
 
 
 if __name__ == "__main__":

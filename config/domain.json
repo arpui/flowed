@@ -11,6 +11,9 @@
       "grader": "language",
       "taxonomy_extra": ["vocabulary", "spelling", "grammar"],
       "tts": true,
+      "brand": "FlowEd",
+      "domain_label": "Language",
+      "favicon": "🌍",
       "open_practices": ["speaking", "writing", "reading"],
       "web_labels": {
         "buttons": "📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End",
@@ -27,6 +30,11 @@
       "grader": "mathgrade",
       "taxonomy_extra": ["sign", "incomplete", "procedure", "wrong_operation", "calculation"],
       "tts": false,
+      "brand": "FlowEd",
+      "domain_label": "Math",
+      "favicon": "🧮",
+      "_hidden_comment": "2026-10-08 (Albert): Facts depends on the model and needs many more trials — hidden, not removed (code paths stay). Remove from this list to bring the button back.",
+      "hidden_commands": ["math-vocab"],
       "_open_practices_comment": "2026-10-08 (Albert): no open practices with a general model in math — it invents problems that do not add up and cannot check a calculation. Re-enable here (speaking/writing/reading) only with a math-trained model; the code paths stay.",
       "open_practices": [],
       "web_labels": {

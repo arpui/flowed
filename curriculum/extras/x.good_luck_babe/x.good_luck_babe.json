@@ -17,7 +17,7 @@
   "id": "x.good_luck_babe.002",
   "competence": "x.good_luck_babe",
   "type": "translate",
-  "instruction": "Say it in English.",
+  "instruction": "Say it in English: 'Bona sort!'",
   "sentence": "Bona sort!",
   "context": "",
   "answer": "Good luck",

@@ -177,14 +177,77 @@ LEGACY_ERROR_CATEGORIES = (
 # unknowns are single slips, and would pollute the error profile.
 DEFAULT_ERROR_CATEGORY = "calculation"
 
+# --- Taxonomy per domain (WP6, 2026-10-08) -------------------------------------
+# Skills, error categories and their fallbacks belong to the DOMAIN of the
+# profile, not to the core: a language learner's grammar slip must never land
+# on "calculation", nor her vocabulary on the math skill "facts". The math
+# lists above are the math domain's; these are the language domain's, restored
+# from the language product (FlowEd 0.5) where they were never mixed. The TS
+# mirror is server/src/taxonomy.ts (tests/test_taxonomy.py keeps both, and the
+# manifest, in sync). `domain` is the manifest name (hooks/domain.py); anything
+# that is not "language" is math, which is also what every old call site meant.
+LANGUAGE_ERROR_CATEGORIES = LEGACY_ERROR_CATEGORIES  # the 15 (see above)
+# Ids of the oldest FlowEd; 0.5 still accepted them verbatim (stored data).
+LANGUAGE_OLD_CATEGORIES = ("writing", "pronunciation", "reflexive", "subject", "gerund")
+LANGUAGE_ERROR_CATEGORY_ALIASES = {
+    "wordorder": "word_order",
+    "preposition": "prepositions",
+    "pronoun": "pronouns",
+    "tense": "tenses",
+    "informal_formal": "formal_informal",
+    "reading": "comprehension",
+    "inference": "comprehension",
+    "detail": "comprehension",
+    "past": "tenses",
+    "present": "tenses",
+    "future": "tenses",
+    "past_tense": "tenses",
+    "present_tense": "tenses",
+    "verb_tense": "tenses",
+    "verb": "tenses",
+    "conjugation": "tenses",
+    "article": "articles",
+    "capitalisation": "capitalization",
+    "caps": "capitalization",
+    "word_choice": "vocabulary",
+    "wording": "vocabulary",
+    "plural": "agreement",
+    "singular": "agreement",
+    "number": "agreement",
+    "subject_verb": "agreement",
+    "formality": "formal_informal",
+    "typo": "spelling",
+}
+DEFAULT_LANGUAGE_ERROR_CATEGORY = "grammar"
 
-def normalize_error_category(raw) -> str:
+
+def is_language(domain) -> bool:
+    return str(domain or "").strip().lower() == "language"
+
+
+def error_categories(domain="math") -> tuple:
+    """The error categories the tutor may emit in this domain."""
+    return LANGUAGE_ERROR_CATEGORIES if is_language(domain) else ERROR_CATEGORIES
+
+
+def default_error_category(domain="math") -> str:
+    return DEFAULT_LANGUAGE_ERROR_CATEGORY if is_language(domain) else DEFAULT_ERROR_CATEGORY
+
+
+def normalize_error_category(raw, domain="math") -> str:
     """Map a category label written by the tutor to a canonical one.
 
     Accepts hyphens and spaces ("word-order", "word order") and known aliases.
-    Unknown labels fall back to DEFAULT_ERROR_CATEGORY.
+    Unknown labels fall back to the DOMAIN's default (math: "calculation";
+    language: "grammar"). `domain` defaults to math, as every call site did
+    before the taxonomy became per-domain.
     """
     cat = str(raw or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if is_language(domain):
+        cat = LANGUAGE_ERROR_CATEGORY_ALIASES.get(cat, cat)
+        if cat in LANGUAGE_ERROR_CATEGORIES or cat in LANGUAGE_OLD_CATEGORIES:
+            return cat
+        return DEFAULT_LANGUAGE_ERROR_CATEGORY
     cat = ERROR_CATEGORY_ALIASES.get(cat, cat)
     if cat in ERROR_CATEGORIES or cat in LEGACY_ERROR_CATEGORIES:
         return cat
@@ -242,15 +305,55 @@ SKILL_SURFACE_ALIASES = {
 
 DEFAULT_SKILL_KEY = "computation"
 
+# The language domain's skills (FlowEd 0.5: writing | speaking | vocabulary |
+# reading | grammar, plus listening for the panel). Surface names in the
+# languages a Catalan classroom mixes, like the math ones above.
+LANGUAGE_SKILL_KEYS = ("writing", "speaking", "vocabulary", "reading", "grammar", "listening")
+LANGUAGE_SKILL_ALIASES = {
+    "vocab": "vocabulary", "vocabulari": "vocabulary", "vocabulario": "vocabulary",
+    "words": "vocabulary", "flashcards": "vocabulary", "facts": "vocabulary",
+    "gramatica": "grammar", "gramàtica": "grammar", "gramática": "grammar",
+    "escriptura": "writing", "escritura": "writing", "redaccio": "writing",
+    "redacció": "writing", "spelling": "writing", "ortografia": "writing",
+    "lectura": "reading", "comprehension": "reading",
+    "parla": "speaking", "oral": "speaking", "conversa": "speaking",
+    "conversation": "speaking", "pronunciation": "speaking",
+    "escolta": "listening", "comprensio_oral": "listening",
+    "comprensió_oral": "listening",
+}
+# A math key arriving in a language profile (a misrouted turn, old pollution):
+# land it on the nearest language skill instead of inventing a math skill there.
+MATH_TO_LANGUAGE_SKILL = {
+    "computation": "grammar", "steps": "grammar", "problems": "reading",
+    "reasoning": "writing", "facts": "vocabulary",
+}
+DEFAULT_LANGUAGE_SKILL_KEY = "writing"
 
-def normalize_skill_key(raw) -> str:
-    """Map a skill label to one of SKILL_KEYS.
 
-    Canonical names pass through; language-era names (LEGACY_SKILL_KEYS) and
-    surface spellings (SKILL_SURFACE_ALIASES) are mapped; anything else falls
-    back to DEFAULT_SKILL_KEY — mirrors normalizeSkillKey in tools.ts.
+def skill_keys(domain="math") -> tuple:
+    """The skills a practice can be filed under in this domain."""
+    return LANGUAGE_SKILL_KEYS if is_language(domain) else SKILL_KEYS
+
+
+def default_skill_key(domain="math") -> str:
+    return DEFAULT_LANGUAGE_SKILL_KEY if is_language(domain) else DEFAULT_SKILL_KEY
+
+
+def normalize_skill_key(raw, domain="math") -> str:
+    """Map a skill label to one of this domain's skill keys.
+
+    Math: canonical names pass through; language-era names (LEGACY_SKILL_KEYS)
+    and surface spellings (SKILL_SURFACE_ALIASES) are mapped; anything else
+    falls back to DEFAULT_SKILL_KEY — mirrors normalizeSkillKey in tools.ts.
+    Language: its own keys pass through, never onto the math ones.
     """
     s = str(raw or "").strip().lower().replace("-", "_").replace(" ", "_")
+    if is_language(domain):
+        if s in LANGUAGE_SKILL_KEYS:
+            return s
+        if s in LANGUAGE_SKILL_ALIASES:
+            return LANGUAGE_SKILL_ALIASES[s]
+        return MATH_TO_LANGUAGE_SKILL.get(s, DEFAULT_LANGUAGE_SKILL_KEY)
     if s in SKILL_KEYS:
         return s
     if s in LEGACY_SKILL_KEYS:

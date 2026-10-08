@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
 from main_paths import profiles_root  # noqa: E402  (where the profiles live)
 
 M_LEVELS = ["m1", "m2", "m3", "m4", "m5", "m6", "m7"]  # math scale (D3: m1–m6 primària; WP1.1 afegeix m7 = 1r ESO; m8/m9 = 2n/3r ESO quan arribin)
+L_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"]  # language scale (CEFR) — the language domain
 MOTIVATIONS = ["school", "exam", "practice", "personal"]
 PLACEHOLDER = lambda v: isinstance(v, str) and v.strip().startswith("{") and v.strip().endswith("}")
 
@@ -86,9 +87,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--show", action="store_true", help="print the current values and exit")
     ap.add_argument("--name")
     ap.add_argument("--native", help="the language the tutor explains in, in English (e.g. Catalan)")
-    ap.add_argument("--target", help='subject being learned — fixed "Math"; pass only to override')
-    ap.add_argument("--level", help=f"math level now: {'|'.join(M_LEVELS)}")
-    ap.add_argument("--goal", help=f"math level wanted: {'|'.join(M_LEVELS)}")
+    ap.add_argument("--domain", choices=["math", "language"],
+                    help="the profile's domain (default: the one it already has; math if none). "
+                         "language: --target is the language being learned, levels are A1..C2")
+    ap.add_argument("--target", help='subject being learned — math: fixed "Math"; language: the language (e.g. English)')
+    ap.add_argument("--level", help=f"level now: math {'|'.join(M_LEVELS)} · language {'|'.join(L_LEVELS)}")
+    ap.add_argument("--goal", help=f"level wanted: math {'|'.join(M_LEVELS)} · language {'|'.join(L_LEVELS)}")
     ap.add_argument("--minutes", type=int, help="daily goal, 5-240")
     ap.add_argument("--motivation", choices=MOTIVATIONS)
     ap.add_argument("--interest", action="append", default=[], help="repeatable, up to 3")
@@ -112,6 +116,16 @@ def main(argv: list[str] | None = None) -> int:
     prefs = profile.setdefault("preferences", {})
     changed: list[str] = []
 
+    # The domain decides the level scale and what the target is. Explicit flag
+    # first, then the profile's own field, then the level it already has.
+    domain = args.domain or str(profile.get("domain") or "").strip().lower()
+    if not domain:
+        domain = "language" if str(learner.get("current_level") or "").upper() in L_LEVELS else "math"
+    if args.domain and profile.get("domain") != domain:
+        profile["domain"] = domain
+        changed.append("domain")
+    scale = L_LEVELS if domain == "language" else M_LEVELS
+
     if args.name:
         if not 1 <= len(args.name.strip()) <= 60:
             raise SystemExit("error: --name must be 1-60 characters")
@@ -125,6 +139,8 @@ def main(argv: list[str] | None = None) -> int:
         existing = (learner.get("target_language") or "").strip()
         if PLACEHOLDER(existing):
             existing = ""
+        if domain == "language" and not ((args.target or "").strip() or existing):
+            raise SystemExit("error: --target is needed for a language profile (the language being learned, e.g. English)")
         target = ((args.target or "").strip() or existing or "Math")
         if not native or not target:
             raise SystemExit("error: --native is needed the first time (the language the tutor explains in)")
@@ -136,9 +152,10 @@ def main(argv: list[str] | None = None) -> int:
     for opt, key in (("level", "current_level"), ("goal", "target_level")):
         value = getattr(args, opt)
         if value:
-            if value.lower() not in M_LEVELS:
-                raise SystemExit(f"error: --{opt} must be one of {', '.join(M_LEVELS)}")
-            learner[key] = value.lower()  # m1..m6, stored lowercase
+            if value.lower() not in [l.lower() for l in scale]:
+                raise SystemExit(f"error: --{opt} must be one of {', '.join(scale)} (domain {domain})")
+            # math m1..m7 stored lowercase; language A1..C2 stored uppercase
+            learner[key] = value.upper() if domain == "language" else value.lower()
             changed.append(key)
 
     if args.minutes is not None:

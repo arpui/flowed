@@ -15,7 +15,8 @@
           "20 + 10 = 30"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 27 = 20 + 7, 16 = 10 + 6."
+        "why": "Separa desenes i unitats: 27 = 20 + 7, 16 = 10 + 6.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -25,7 +26,8 @@
           "7 + 6 = 13"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 7 + 6 = 13, que passa de 9 (transport)."
+        "why": "Suma les unitats: 7 + 6 = 13, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -35,7 +37,8 @@
           "30 + 13 = 43"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "43",
@@ -59,7 +62,8 @@
           "40 + 40 = 80"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 48 = 40 + 8, 44 = 40 + 4."
+        "why": "Separa desenes i unitats: 48 = 40 + 8, 44 = 40 + 4.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -69,7 +73,8 @@
           "8 + 4 = 12"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 8 + 4 = 12, que passa de 9 (transport)."
+        "why": "Suma les unitats: 8 + 4 = 12, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -79,7 +84,8 @@
           "80 + 12 = 92"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "92",
@@ -103,7 +109,8 @@
           "60 + 10 = 70"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 67 = 60 + 7, 17 = 10 + 7."
+        "why": "Separa desenes i unitats: 67 = 60 + 7, 17 = 10 + 7.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -113,7 +120,8 @@
           "7 + 7 = 14"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 7 + 7 = 14, que passa de 9 (transport)."
+        "why": "Suma les unitats: 7 + 7 = 14, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -123,7 +131,8 @@
           "70 + 14 = 84"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "84",
@@ -147,7 +156,8 @@
           "10 + 20 = 30"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 16 = 10 + 6, 24 = 20 + 4."
+        "why": "Separa desenes i unitats: 16 = 10 + 6, 24 = 20 + 4.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -157,7 +167,8 @@
           "6 + 4 = 10"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 6 + 4 = 10, que passa de 9 (transport)."
+        "why": "Suma les unitats: 6 + 4 = 10, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -167,7 +178,8 @@
           "30 + 10 = 40"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "40",
@@ -191,7 +203,8 @@
           "70 + 10 = 80"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 77 = 70 + 7, 16 = 10 + 6."
+        "why": "Separa desenes i unitats: 77 = 70 + 7, 16 = 10 + 6.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -201,7 +214,8 @@
           "7 + 6 = 13"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 7 + 6 = 13, que passa de 9 (transport)."
+        "why": "Suma les unitats: 7 + 6 = 13, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -211,7 +225,8 @@
           "80 + 13 = 93"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "93",
@@ -235,7 +250,8 @@
           "40 + 30 = 70"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 48 = 40 + 8, 32 = 30 + 2."
+        "why": "Separa desenes i unitats: 48 = 40 + 8, 32 = 30 + 2.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -245,7 +261,8 @@
           "8 + 2 = 10"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 8 + 2 = 10, que passa de 9 (transport)."
+        "why": "Suma les unitats: 8 + 2 = 10, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -255,7 +272,8 @@
           "70 + 10 = 80"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "80",
@@ -279,7 +297,8 @@
           "20 + 20 = 40"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 26 = 20 + 6, 24 = 20 + 4."
+        "why": "Separa desenes i unitats: 26 = 20 + 6, 24 = 20 + 4.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -289,7 +308,8 @@
           "6 + 4 = 10"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 6 + 4 = 10, que passa de 9 (transport)."
+        "why": "Suma les unitats: 6 + 4 = 10, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -299,7 +319,8 @@
           "40 + 10 = 50"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "50",
@@ -323,7 +344,8 @@
           "40 + 10 = 50"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 46 = 40 + 6, 18 = 10 + 8."
+        "why": "Separa desenes i unitats: 46 = 40 + 6, 18 = 10 + 8.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -333,7 +355,8 @@
           "6 + 8 = 14"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 6 + 8 = 14, que passa de 9 (transport)."
+        "why": "Suma les unitats: 6 + 8 = 14, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -343,7 +366,8 @@
           "50 + 14 = 64"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "64",
@@ -367,7 +391,8 @@
           "50 + 30 = 80"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 59 = 50 + 9, 33 = 30 + 3."
+        "why": "Separa desenes i unitats: 59 = 50 + 9, 33 = 30 + 3.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -377,7 +402,8 @@
           "9 + 3 = 12"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 9 + 3 = 12, que passa de 9 (transport)."
+        "why": "Suma les unitats: 9 + 3 = 12, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -387,7 +413,8 @@
           "80 + 12 = 92"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "92",
@@ -411,7 +438,8 @@
           "30 + 40 = 70"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 39 = 30 + 9, 47 = 40 + 7."
+        "why": "Separa desenes i unitats: 39 = 30 + 9, 47 = 40 + 7.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -421,7 +449,8 @@
           "9 + 7 = 16"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 9 + 7 = 16, que passa de 9 (transport)."
+        "why": "Suma les unitats: 9 + 7 = 16, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -431,7 +460,8 @@
           "70 + 16 = 86"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "86",
@@ -455,7 +485,8 @@
           "10 + 20 = 30"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 19 = 10 + 9, 27 = 20 + 7."
+        "why": "Separa desenes i unitats: 19 = 10 + 9, 27 = 20 + 7.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -465,7 +496,8 @@
           "9 + 7 = 16"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 9 + 7 = 16, que passa de 9 (transport)."
+        "why": "Suma les unitats: 9 + 7 = 16, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -475,7 +507,8 @@
           "30 + 16 = 46"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "46",
@@ -499,7 +532,8 @@
           "10 + 20 = 30"
         ],
         "error_class": "procedure",
-        "why": "Separa desenes i unitats: 14 = 10 + 4, 27 = 20 + 7."
+        "why": "Separa desenes i unitats: 14 = 10 + 4, 27 = 20 + 7.",
+        "goal": "Suma només les desenes (descompon cada nombre en desenes + unitats)"
       },
       {
         "n": 2,
@@ -509,7 +543,8 @@
           "4 + 7 = 11"
         ],
         "error_class": "carrying",
-        "why": "Suma les unitats: 4 + 7 = 11, que passa de 9 (transport)."
+        "why": "Suma les unitats: 4 + 7 = 11, que passa de 9 (transport).",
+        "goal": "Suma només les unitats"
       },
       {
         "n": 3,
@@ -519,7 +554,8 @@
           "30 + 11 = 41"
         ],
         "error_class": "carrying",
-        "why": "Ajunta les desenes amb les unitats."
+        "why": "Ajunta les desenes amb les unitats.",
+        "goal": "Ajunta la suma de les desenes amb la de les unitats"
       }
     ],
     "answer": "41",

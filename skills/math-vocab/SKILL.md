@@ -180,7 +180,7 @@ Session fields: `session_id`, `date`, `duration_minutes`, `command_used`,
 **Persistence is automatic — you write nothing.** The FlowMath server folds every
 graded answer into the learner databases as it happens (Capa A) and finalizes
 the session itself (Capa B, on `/math-end` or after 30 min idle), including
-the results file under `~/.flowmath/<id>/results/`. Do NOT call `update-db.py`,
+the results file under `~/.flowed/<id>/results/`. Do NOT call `update-db.py`,
 do NOT call `persist-session.py`, do NOT write any file: you have no write tool,
 those calls are denied by the allow-list, and each denial eats context. Your only
 persistence job is to grade in the canonical feedback format — that is what the

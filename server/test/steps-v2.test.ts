@@ -92,6 +92,19 @@ const v1card = bankExerciseCard(item, 4, "Easy", "Multiplicacions");
 check("v1 card unchanged (all-at-once)", v1card.includes("**Type your answer:**") && !v1card.includes("Pas 1 de 3"), v1card);
 check("card tail matches the state machine's", stepsV2CardTail(item).startsWith("**Pas 1 de 3"), stepsV2CardTail(item));
 
+// ---- per-step goals (2026-10-08): the learner is told WHAT to write ---------
+const gItem: BankItem = { ...item, steps: item.steps!.map((x, i) => ({ ...x, goal: ["Descompon i multiplica per les desenes", "Multiplica per les unitats", "Suma els dos productes"][i] })) };
+const gCard = bankExerciseCard(gItem, 4, "Easy", "Multiplicacions", undefined, "v2");
+check("card with goal tells what to do in step 1", gCard.includes("**Pas 1 de 3** — Descompon i multiplica per les desenes.") && gCard.includes("**Escriu només aquesta operació:**"), gCard);
+let gs = stepsV2Init();
+const gmv = stepsV2Handle(gItem, gs, "correct", "93 × 20");
+check("advance note carries the NEXT step's goal", stepsV2Note(gItem, gmv).includes("**Pas 2 de 3** — Multiplica per les unitats."), stepsV2Note(gItem, gmv));
+const gry = stepsV2Handle(gItem, gs, "wrong", "x");
+check("retry note repeats the goal", stepsV2Note(gItem, gry).includes("Multiplica per les unitats"), stepsV2Note(gItem, gry));
+check("resume carries the goal", stepsV2Resume(gItem, gs).includes("Multiplica per les unitats"), stepsV2Resume(gItem, gs));
+const g1 = bankExerciseCard(gItem, 4, "Easy", "Multiplicacions");
+check("v1 card lists the goals", g1.includes("**Passos:**") && g1.includes("3. Suma els dos productes"), g1);
+
 // ---- the final feedback (v2 shape) ------------------------------------------
 const gNear: BankGrade = {
   score: 7, verdict: "near", note: "el pas 2 va necessitar un segon intent",

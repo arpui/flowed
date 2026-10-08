@@ -11,7 +11,7 @@ corregeix codi ni fa commit sense que l'Albert ho demani.
 
 ## Regles que no es negocien
 
-- Mai tocar `~/.flowed` (producció) ni `~/.fluent` (llegat). Les proves van a `~/.flowmath`.
+- Tot viu a `~/.flowed` (`~/.flowmath` ja no existeix; `~/.fluent` és llegat: no tocar-lo). Dins `~/.flowed` només es toquen perfils de prova (`test*`, `demo*`, `e2e*`); mai `naia-en`, `iona-en` ni `nes-en` (només es llegeix per fer la còpia `test-nes`).
 - Mai els perfils `naia-en` ni `iona-en`. Només perfils de prova: `test*`, `demo*`, `e2e*`.
 - No pujar cap model local: el model és el remot `http://192.168.31.102:12321/v1` (`FLOWED_DEEP_MANAGED=0`).
 - `flowed-language` només es retira amb el veredicte «llest» i la confirmació de l'Albert.
@@ -29,8 +29,8 @@ Si no hi ha `bun` o no hi arriba, no ho intentis d'una altra manera: digues-ho.
 
 Què fa el script (per repetir un pas a mà):
 1. `model-health`: `/health` del model remot.
-2. `unittest`: `python3 -m unittest discover -s tests` (referència 2026-10-08: 728 OK).
-3. `ts-harnesses`: cada `server/test/*.test.ts` amb bun (referència: 14 OK).
+2. `unittest`: `python3 -m unittest discover -s tests` (referència 2026-10-08: 767 OK).
+3. `ts-harnesses`: cada `server/test/*.test.ts` amb bun (referència: 17 OK).
 4. `tsc`: `bun x tsc --noEmit` a `server/` (referència: 0 errors).
 5. En directe, per domini: arrenca la web de prova, passa `scripts/flowed-e2e.py`
    (`--scenario language` a `test-lang`:4205, `--scenario algebra` a `test-m7`:4201)

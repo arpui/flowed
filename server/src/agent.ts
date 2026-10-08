@@ -7,7 +7,8 @@ import fs from "node:fs";
 import path from "node:path";
 import type { FluentDB, SessionRow, MessageRow } from "./db";
 import { runTurn, type ToolDefinition, type TurnPart, type ModelConfig, type ToolStep, type TurnMetrics } from "./llm";
-import { buildTools, normalizeCategory, type DeepEvaluator } from "./tools";
+import { buildTools, normalizeCategory, defaultCategoryFor, toolsForDomain, type DeepEvaluator } from "./tools";
+import { domainOfDataDir, isLanguage, LANGUAGE_COMMAND_SKILL } from "./taxonomy";
 import { loadCommand } from "./commands";
 import { bankExerciseCard, bankFeedback, difficultyLabel, type BankItem, type BankGrade } from "./bank";
 import { stepsV2Init, stepsV2Handle, stepsV2Note, stepsV2Resume, type StepsV2State } from "./steps";
@@ -33,6 +34,10 @@ import {
   openPracticeOf,
   hasNextAfterScore,
   skillDebts,
+  SKILL_DEBT_DAYS,
+  SKILL_SLOT_EVERY,
+  trackedSkillsFor,
+  slotSkillsFor,
   exerciseFingerprints,
   pruneHistory,
   historyBudget,
@@ -371,9 +376,11 @@ export class Agent {
   }
 
   private toolsFor(sessionId: string): ToolDefinition[] {
-    return this.recordsFromText(sessionId)
+    const defs = this.recordsFromText(sessionId)
       ? this.tools.definitions.filter((t) => t.name !== "math_record_answer")
       : this.tools.definitions;
+    // The record tool's skill and category lists are the profile's domain's own.
+    return toolsForDomain(defs, this.domainForSession());
   }
 
   private buildSystemPrompt(agent: string, sessionId?: string): string {
@@ -2141,15 +2148,18 @@ export class Agent {
    */
   private deriveRecord(sessionId: string, text: string, askedBefore: string[]): void {
     try {
-      const parsed = parseFeedback(text);
+      const domain = this.domainForSession();
+      const parsed = parseFeedback(text, domain);
       if (!parsed) return;
       const answer = (this.lastAnswer.get(sessionId) ?? "").trim();
       if (!answer) return;
       const corrections = parsed.corrections
-        // Unrecognized label → the default category, mirroring
-        // DEFAULT_ERROR_CATEGORY in hooks/db_schema.py ("calculation": a slip
-        // is the most common unknown in math practice).
-        .map((c) => ({ ...c, category: normalizeCategory(c.category) ?? "calculation" }))
+        // Unrecognized label → the DOMAIN's default category, mirroring
+        // default_error_category in hooks/db_schema.py (math "calculation": a
+        // slip is the most common unknown in math practice; language
+        // "grammar"). It used to be "calculation" for everyone, which is how a
+        // language slip like "I went" became `calculation_I_went`.
+        .map((c) => ({ ...c, category: normalizeCategory(c.category, domain) ?? defaultCategoryFor(domain) }))
         .filter((c) => c.wrong && c.right);
       // The exercise THIS answer was for — captured by the caller before
       // `this.lastAsked` was overwritten with whatever this same reply asks
@@ -2168,7 +2178,8 @@ export class Agent {
         ts: Date.now(),
         // Math skill keys (C7): the active command names the practice; a
         // heading in the feedback is the fallback; computation the default.
-        skill: COMMAND_SKILL[this.currentCommand.get(sessionId) ?? ""] ?? parsed.skill ?? "computation",
+        skill: (isLanguage(domain) ? LANGUAGE_COMMAND_SKILL : COMMAND_SKILL)[this.currentCommand.get(sessionId) ?? ""]
+          ?? parsed.skill ?? (isLanguage(domain) ? "writing" : "computation"),
         exercise: (asked[0] ?? parsed.correctVersion ?? "").slice(0, 200),
         learner_answer: answer.slice(0, 500),
         score: Math.round(parsed.score),
@@ -2214,7 +2225,13 @@ export class Agent {
     let slot: string | null = null;
     try {
       const mastery = JSON.parse(fs.readFileSync(path.join(dir, "mastery-db.json"), "utf8"));
-      slot = lessonSkillSlot(readTally(dir).completed, skillDebts(mastery, date));
+      const dom = domainOfDataDir(dir);
+      slot = lessonSkillSlot(
+        readTally(dir).completed,
+        skillDebts(mastery, date, SKILL_DEBT_DAYS, trackedSkillsFor(dom)),
+        SKILL_SLOT_EVERY,
+        slotSkillsFor(dom)
+      );
     } catch {
       /* no mastery db yet: no slot */
     }
@@ -2339,19 +2356,7 @@ export class Agent {
    *  second (A1..C2 → language, m1..m7 → math), manifest default last. The
    *  Python twin is hooks/domain.py; config/domain.json is the manifest. */
   private domainForSession(): string {
-    try {
-      const prof = JSON.parse(
-        fs.readFileSync(path.join(this.dataDir(), "learner-profile.json"), "utf8")
-      );
-      const explicit = String(prof?.domain ?? "").trim().toLowerCase();
-      if (explicit) return explicit;
-      const lv = String(prof?.learner?.current_level ?? prof?.learner?.target_level ?? "").trim().toUpperCase();
-      if (/^m\d/.test(lv)) return "math";
-      if (/^[A-C][12]$/.test(lv)) return "language";
-    } catch {
-      /* fall through to the default below */
-    }
-    return "math";
+    return domainOfDataDir(this.dataDir());
   }
 
   /** The learner's native/target languages from the profile (language domain). */

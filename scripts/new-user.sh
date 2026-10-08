@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-paths.sh"   # FLOWED_HOME_DIR: where the profiles live
 # FlowMath new-user bootstrap — provisions a fresh learner profile under the
-# profile root (~/.flowmath/<id>/ when FLOWED_HOME says so).
+# profile root (~/.flowed/<id>/ when FLOWED_HOME says so).
 #
 # Usage:
-#   scripts/new-user.sh <id> [--port N]
+#   scripts/new-user.sh <id> [--port N] [--domain math|language]
 #
 #   <id>   : safe profile id (lowercase letters, digits, hyphens). Convention:
 #            <nom>-math, e.g. maria-math — the "-math" suffix marks the subject
 #            and keeps these profiles apart from any language fork's.
 #   --port : web port for the launch command hint (default 4100)
+#   --domain: math (default) or language — the DBs are seeded from the domain's own
+#            templates (data-examples/ or data-examples/language/), so a language
+#            profile never starts with math skills (WP6). Then scripts/flowed-profile.py
+#            --domain language fills in who the learner is.
 #
 # What it does:
 #   1. Validates <id> (no paths/spaces/uppercase — must be a safe dir name).
@@ -29,18 +33,26 @@ ROOT="$(dirname "$SCRIPT_DIR")"
 TEMPLATE_DIR="$ROOT/data-examples"
 
 PORT=4100
+DOMAIN=math
 ID=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --port) PORT="${2:-}"; shift ;;
+    --domain) DOMAIN="${2:-}"; shift ;;
     -*) echo "error: unknown option $1"; exit 2 ;;
     *) ID="$1" ;;
   esac
   shift
 done
 
+case "$DOMAIN" in
+  math) ;;
+  language) TEMPLATE_DIR="$ROOT/data-examples/language" ;;
+  *) echo "error: --domain must be math or language (got '$DOMAIN')"; exit 2 ;;
+esac
+
 if [[ -z "$ID" ]]; then
-  echo "usage: scripts/new-user.sh <id> [--port N]"
+  echo "usage: scripts/new-user.sh <id> [--port N] [--domain math|language]"
   exit 2
 fi
 

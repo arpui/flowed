@@ -399,8 +399,12 @@ const paceEl = $("#pace");
 // carries the learner's current level — lessonState() upper-cases it, hence
 // the toLowerCase() here. Level unknown → stays hidden (fails safe).
 const M_ORDER = ["m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7"];  // m7 = 1r ESO (WP1.1); m8/m9 reserved for 2n/3r ESO
+const L_ORDER = ["a1", "a2", "b1", "b2", "c1", "c2"];
 function problemsUnlocked(level) {
-  const i = M_ORDER.indexOf(String(level || "").trim().toLowerCase());
+  const lv = String(level || "").trim().toLowerCase();
+  // Language: Reading unlocks above A1 (as in 0.5). Math: Problemes from m2.
+  if (window.__FLOWED_DOMAIN === "language") return L_ORDER.indexOf(lv) >= 1;
+  const i = M_ORDER.indexOf(lv);
   return i >= M_ORDER.indexOf("m2");
 }
 
@@ -743,14 +747,14 @@ function userBubbleHTML(text) {
     const label = DEBUG ? "next" : "";
     return `<span class="chip" title="next">⏭${label}</span>`;
   }
-  const m = /^Execute\s+\/(math-[a-z0-9-]+)/im.exec(text || "");
+  const m = /^Execute\s+\/((?:math|fluent)-[a-z0-9-]+)/im.exec(text || "");
   if (m) {
-    const key = m[1].slice("math-".length);
-    const icons = { learn: "🎲", checkpoint: "🧪", review: "🔄", vocab: "📖", writing: "📝", speaking: "🗣️", reading: "👀", progress: "📊", setup: "⚙️" };
+    const key = m[1].replace(/^(?:math|fluent)-/, "");
+    const icons = { end: "🏁", learn: "🎲", checkpoint: "🧪", review: "🔄", vocab: "📖", writing: "📝", speaking: "🗣️", reading: "👀", progress: "📊", setup: "⚙️" };
     // Learner view: icon only (the command text adds nothing for the learner).
     // Debug mode reveals which command was started.
-    const label = DEBUG ? ` /math-${esc(key)}` : "";
-    return `<span class="chip" title="/math-${esc(key)}">${icons[key] || "🎯"}${label}</span>`;
+    const label = DEBUG ? ` /${esc(m[1])}` : "";
+    return `<span class="chip" title="/${esc(m[1])}">${icons[key] || "🎯"}${label}</span>`;
   }
   return md(text);
 }
@@ -991,7 +995,7 @@ async function ensureSession() {
     sessionId = null;
     localStorage.removeItem("math.session");
   }
-  const s = await api("/session", { method: "POST", body: { title: "FlowMath" } });
+  const s = await api("/session", { method: "POST", body: { title: window.__FLOWED_BRAND || "FlowEd" } });
   sessionId = s.id || s.info?.id;
   if (!sessionId) throw new Error("no s'ha pogut crear la sessió");
   localStorage.setItem("math.session", sessionId);
@@ -1033,7 +1037,6 @@ async function send(text) {
   autosize();
   composerEl.classList.remove("awaiting");
   setBusy(true);
-  showThinkingTip();
   try {
     const res = await api(`/session/${enc(sessionId)}/message`, {
       method: "POST",
@@ -1080,7 +1083,6 @@ async function runCommand(cmd) {
   updateActiveModeButton();
   inputEl.placeholder = MODE_PLACEHOLDERS[cmd] || DEFAULT_PLACEHOLDER;
   setBusy(true);
-  showThinkingTip();
   try {
     const res = await api(`/session/${enc(sessionId)}/command`, {
       method: "POST",
@@ -1291,18 +1293,6 @@ setInterval(() => {
   }
 }, 1000);
 
-// One-time hint: the first characters can take a few seconds (context + tools).
-function showThinkingTip() {
-  if (localStorage.getItem("math.tip.thinking")) return;
-  localStorage.setItem("math.tip.thinking", "1");
-  const div = document.createElement("div");
-  div.className = "msg hint";
-  div.innerHTML =
-    '<div class="md"><em>💡 El primer caràcter pot trigar uns segons (el model carrega el context i les eines). Quan arribi contingut, el comptador desapareix.</em></div>';
-  messagesEl.appendChild(div);
-  scrollIfNear();
-}
-
 function clearAllPlaceholders() {
   for (const entry of renderedMsgs.values()) clearPlaceholder(entry);
 }
@@ -1356,11 +1346,19 @@ const progressOverlay = $("#progress-overlay");
 const progressBody = $("#progress-body");
 
 const SKILL_LABELS = {
+  // math
   computation: "Càlcul",
   steps: "Passos",
   problems: "Problemes",
   reasoning: "Raonament",
   facts: "Fets",
+  // language (as in FlowEd 0.5)
+  writing: "Escriptura",
+  speaking: "Expressió oral",
+  vocabulary: "Vocabulari",
+  reading: "Lectura",
+  grammar: "Gramàtica",
+  listening: "Comprensió oral",
 };
 
 function skillLabel(name) {
@@ -1640,7 +1638,7 @@ function renderProgress(d) {
   return `${warnHtml}
     <section><p class="progress-sub">${esc(headerSub || "—")}</p><div class="kpis">${kpis}</div>${dueChips}</section>
     <section><h3>Mastery per skill</h3>${skillsHtml}</section>
-    <section><h3>Precisió per pas</h3>${stepsHtml}</section>
+    ${d.domain === "language" ? "" : `<section><h3>Precisió per pas</h3>${stepsHtml}</section>`}
     <section><h3>Patrons febles</h3>${patsHtml}</section>
     <section><h3>Tendència d'encert</h3>${trendHtml}</section>
     <section><h3>Resum setmanal</h3>${weeklyHtml}</section>
@@ -2004,27 +2002,38 @@ inputEl.addEventListener("input", () => {
 // swap per the manifest's web_labels (config/domain.json is the authority;
 // this map mirrors it for the static shell).
 const LANG_LABELS = {
-  "math-learn": ["🎲", "Surprise me!"],
-  "math-review": ["🔁", "Review"],
-  "math-vocab": ["📚", "Vocabulary"],
-  "math-writing": ["📝", "Writing"],
-  "math-reading": ["📖", "Reading"],
-  "math-speaking": ["🗣️", "Speaking"],
-  "math-progress": ["📊", "Progress"],
-  "math-end": ["🏁", "Acaba"],
+  "math-learn": ["🎲", "Go", "Go — grammar & vocabulary from your path"],
+  "math-review": ["🎓", "Review", "Today's review"],
+  "math-reading": ["📖", "Reading", "Reading — unlocks above A1"],
+  "math-writing": ["📝", "Writing", "Writing — write your own sentences"],
+  "math-speaking": ["🗣️", "Speaking", "Speaking"],
+  "math-progress": ["📊", "Stats", "Progress"],
+  "math-end": ["🏁", "End", "End this session and see the summary"],
 };
+// Order of the language bar (as in 0.5): Go, Review, Reading, Writing, Speaking, Test, Stats, End.
+const LANG_ORDER = ["math-learn", "math-review", "math-reading", "math-writing", "math-speaking", "math-checkpoint", "math-progress", "math-end"];
 if (window.__FLOWED_DOMAIN === "language") {
+  const nav = document.querySelector("#commands");
   document.querySelectorAll("#commands button[data-cmd]").forEach((b) => {
     const key = b.dataset.cmd;
+    // Checkpoint opens by the server; Vocabulary lives inside Go for language.
     if (key === "math-checkpoint") { b.hidden = true; return; }
+    if (key === "math-vocab") { b.hidden = true; return; }
     const l = LANG_LABELS[key];
     if (l) {
       const span = b.querySelector("span:not(.badge)");
       if (span) span.textContent = l[1];
       const iconNode = b.childNodes[0];
       if (iconNode && iconNode.nodeType === 3) iconNode.textContent = l[0] + "";
+      b.title = l[2];
     }
   });
+  if (nav) {
+    LANG_ORDER.forEach((k) => {
+      const b = nav.querySelector(`button[data-cmd="${k}"]`);
+      if (b) nav.appendChild(b);
+    });
+  }
 }
 // Open practices the profile's domain runs (manifest `open_practices`,
 // injected by the server; null = no manifest, everything stays). Math has none
@@ -2033,8 +2042,12 @@ function practiceOpen(cmd) {
   const m = /^math-(speaking|writing|reading)$/.exec(cmd || "");
   return !m || !Array.isArray(window.__FLOWED_OPEN) || window.__FLOWED_OPEN.includes(m[1]);
 }
+// Commands the manifest hides (`hidden_commands`; Facts in math, 2026-10-08).
+function commandHidden(cmd) {
+  return Array.isArray(window.__FLOWED_HIDDEN) && window.__FLOWED_HIDDEN.includes(cmd);
+}
 document.querySelectorAll("#commands button[data-cmd]").forEach((b) => {
-  if (!practiceOpen(b.dataset.cmd)) b.hidden = true;
+  if (!practiceOpen(b.dataset.cmd) || commandHidden(b.dataset.cmd)) b.hidden = true;
 });
 document.querySelectorAll("#commands button").forEach((b) =>
   b.addEventListener("click", () => {
@@ -2055,7 +2068,7 @@ $("#new-session").addEventListener("click", newSession);
   if (brand) {
     let clicks = 0, timer = 0;
     brand.style.cursor = "pointer";
-    brand.title = "FlowMath (triple-clic: mode debug)";
+    brand.title = (window.__FLOWED_BRAND || "FlowEd") + " (triple-clic: mode debug)";
     brand.addEventListener("click", () => {
       clicks++;
       clearTimeout(timer);

@@ -766,7 +766,11 @@ def update_session_log(log: dict, session: dict, streak: int):
 
     sessions = log.setdefault("sessions", [])
     # Dedup: replace existing entry with same session_id, else append
-    sessions[:] = [s for s in sessions if s.get("session_id") != session["session_id"]]
+    # The template ships one placeholder session ("date": "{YYYY-MM-DD}"): it is
+    # not a session, and left in it made every new profile start at 1 session.
+    sessions[:] = [s for s in sessions
+                   if s.get("session_id") != session["session_id"]
+                   and not str(s.get("date", "")).startswith("{")]
     sessions.append(entry)
 
     for m in session.get("milestones", []):

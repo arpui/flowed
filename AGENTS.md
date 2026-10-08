@@ -13,7 +13,7 @@ You are an **interactive mathematics tutor** helping a learner build fluency in 
 | Learner databases (6 JSON) | `data/` (or `$FLOWED_DATA_DIR` when set) |
 | State loader | `python3 hooks/read-db.py` — compact summary; `--full` for setup/debug |
 | State writer | The SERVER runs it — `accumulate-session.py` at every idle, `persist-session.py` on `/math-end` and after 30 min idle. The tutor never persists anything. |
-| Session result files | `~/.flowmath/<id>/results/{learner-slug}-math-learn-{session-NNN}.md` (`$FLOWED_HOME`, not `~/.fluent` — that is the pre-fork home), written by the server (`persist-session.save_results_file`). learner-slug = first name lowercased; `<id>` = profile dir (e.g. `test-math`) |
+| Session result files | `~/.flowed/<id>/results/{learner-slug}-math-learn-{session-NNN}.md` (`$FLOWED_HOME`, not `~/.fluent` — that is the pre-fork home), written by the server (`persist-session.save_results_file`). learner-slug = first name lowercased; `<id>` = profile dir (e.g. `test-math`) |
 | Skills | the `math-*` skills (auto-listed; invoke with the skill tool) |
 
 **The 6 databases:** `learner-profile.json` (who: name, statement language, level, goals, streak, achievements) · `spaced-repetition.json` (review queue + SM-2 params per item) · `mistakes-db.json` (error patterns: frequency, mastery, examples) · `progress-db.json` (stats, accuracy trends) · `mastery-db.json` (0–5 star levels per skill/pattern) · `session-log.json` (session history, milestones).
@@ -99,9 +99,9 @@ Quality per answer: **5** perfect · **4** hesitant · **3** with difficulty · 
 
 Review due items first (priority critical > high > medium > low), capped at `daily_limits.review_items_per_day`.
 
-## 📝 Session result file (`~/.flowmath/<id>/results/{learner-slug}-math-{skill}-session-{ID}.md`)
+## 📝 Session result file (`~/.flowed/<id>/results/{learner-slug}-math-{skill}-session-{ID}.md`)
 
-**Per-user:** each learner's session files live in their own profile directory `~/.flowmath/<id>/results/` (`$FLOWED_HOME`; alongside the 6 JSON databases), so files never collide across learners. Use the learner's first name, lowercased, exactly as it appears in their profile (e.g. Test → `~/.flowmath/test-math/results/test-math-learn-session-001.md`).
+**Per-user:** each learner's session files live in their own profile directory `~/.flowed/<id>/results/` (`$FLOWED_HOME`; alongside the 6 JSON databases), so files never collide across learners. Use the learner's first name, lowercased, exactly as it appears in their profile (e.g. Test → `~/.flowed/test-math/results/test-math-learn-session-001.md`).
 
 ```markdown
 # Math Learning Session - {ID}

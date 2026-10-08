@@ -625,7 +625,7 @@ document predates:
 
 1. **`FLOWED_HOME` on llvm.** `.env.rapve` does not set it, so the core would
    default to `~/.flowed`. Set it explicitly in the machine's `.env` — e.g.
-   `FLOWED_HOME=/home/albert/.flowmath` (or a production home). The lib-paths
+   `FLOWED_HOME=/home/albert/.flowed` (or a production home). The lib-paths
    fix (WP5.1) means a `FLOWED_HOME` in `.env` is now honored at source time;
    without it, `new-user.sh` provisions into the wrong home (the very bug the
    fix names).
@@ -643,3 +643,149 @@ dir under the core's `FLOWED_HOME` is the whole migration. Before doing it with
 real learners, land the polish list in `docs/RUNNING.md` §7 (declare `Bank:`
 competences in `en-*.md` so Go/Review are model-free like math's; e2e-prove the
 button labels; exercise TTS).
+
+---
+
+## Pas a FlowEd 0.6 (nucli unificat: language + math) — 2026-10-08 `[railab]` `[llvm]`
+
+**Idea:** la 0.6 va a un directori nou (`/opt/flowed-0.6`) i es prova **en
+paral·lel**, amb un home de prova (`~/.flowed-06`) i ports de prova, mentre la
+0.5 continua servint les alumnes. Només quan funciona es fa el relleu (canvi de
+symlink, segons). Tornar enrere = tornar a moure el symlink.
+
+> **2026-10-08 — condició abans de moure alumnes de language a la 0.6:** la taxonomia
+> d'habilitats i categories és ara per domini (ARQUITECTURA G.21). Fins llavors la 0.6
+> desava el language amb claus de mates. Comprova-ho amb una **còpia** d'un perfil real
+> (`cp -a ~/.flowed/nes-en ~/.flowed/test-nes`), fes-hi una sessió amb
+> `scripts/flowed-dev.sh` i passa `python3 scripts/flowed-check.py taxonomy test-nes` i `… reconcile test-nes`
+> (ha de dir ✅). Al llvm, després del relleu: el mateix sobre `~/.flowed/<perfil>`.
+
+**Usuaris:**
+
+| Perfil | Domini | Què cal fer |
+|---|---|---|
+| `naia-en`, `iona-en` | language | res: mateix home (`~/.flowed`), mateix format de dades |
+| `nes-en` | language | res; és el perfil de tanteig de language |
+| nou de mates (`nes-m7`, canvia el nom si vols) | math | crear-lo a `~/.flowed`, port 4200 |
+
+Un sol home per als dos dominis. El domini surt del nivell del perfil
+(A1..C2 → language, m1..m7 → math). **Perill:** un perfil sense nivell cau a
+`math` (el valor per defecte del manifest) → la comprovació del pas 2 ho detecta.
+
+### 0. Preparar `[llvm]`
+
+```bash
+readlink -f /opt/flowed | tee ~/flowed-anterior.txt
+grep -E '^FLOWED_(HOME|WEBS|DEEP_PORT|DEEP_BACKEND|DEEP_MANAGED)=' /opt/flowed/.env
+grep -rn "opt/flowed" ~/.config/systemd/user ~/.config/autostart /etc/systemd/system 2>/dev/null; crontab -l 2>/dev/null | grep -i flowed
+sudo cp -a "$(readlink -f /opt/flowed)" /opt/flowed-0.6
+sudo chown -R "$USER:$USER" /opt/flowed-0.6
+```
+
+El `chown` cal perquè la 0.5 és de root: sense ell, el rsync del pas 1 no
+pot escriure-hi (i falla en silenci entre moltes línies). La còpia porta l'`.env` i el `node_modules` de la 0.5 (el model no canvia).
+Si l'arrencada a l'inici apunta a un camí que no és `/opt/flowed`, apunta-ho.
+
+### 1. Codi `[railab]`
+
+```bash
+rsync -av --delete \
+  --exclude 'obsolet/' --exclude 'node_modules/' --exclude '__pycache__/' \
+  --exclude '.env' --exclude '_to_delete/' --exclude '.flowed-active' \
+  --exclude '.claude/' --exclude 'results/' --exclude '_archive/' \
+  --exclude '.fluent/' --exclude '.fluent-dev/' --exclude '.deploy_scratch*' \
+  --exclude 'iona-en-sessions.db*' \
+  ~/projects/flowed/ llvm:/opt/flowed-0.6/ 2>&1 | grep -iE "error|denied|failed" ; echo "rsync acabat"
+```
+
+Només ha de sortir `rsync acabat`. Qualsevol línia abans = no ha arribat.
+
+### 2. Prova en paral·lel `[llvm]` — tot en el MATEIX terminal
+
+**Opcional.** Camí directe (el que es va fer servir): només les comprovacions
+(`git log`, `bun install`, unittest amb `FLOWED_HOME=$HOME/.flowed-06` davant,
+`domain.py`) i saltar al pas 3; la prova es fa a 4102/4200 després del relleu.
+
+Els `export` fan que res d'aquest terminal toqui `~/.flowed` ni els ports de les alumnes.
+
+```bash
+cd /opt/flowed-0.6
+export FLOWED_HOME=$HOME/.flowed-06
+export FLOWED_WEBS="nes-en:4302 nes-m7:4300"
+export FLOWED_DEEP_MANAGED=0
+export FLOWED_TTS_DIR=$HOME/.flowed/_tts
+git log --oneline -1
+(cd server && bun install)
+python3 -m unittest discover -s tests -q 2>&1 | tail -1
+FLOWED_HOME=$HOME/.flowed python3 hooks/domain.py
+```
+
+- `git log`: `5c36688 0.6.0: verificació …`
+- unittest: acaba en `OK`
+- `domain.py`: `naia-en`, `iona-en`, `nes-en` → `language`. Si algun diu `math`, **atura't**.
+
+```bash
+mkdir -p $FLOWED_HOME
+cp -a ~/.flowed/nes-en $FLOWED_HOME/
+bash scripts/new-user.sh nes-m7 --port 4300
+python3 scripts/flowed-profile.py nes-m7 --name Nes --native Catalan --level m7 --goal m7 --minutes 20
+bash scripts/flowed-start.sh --webs-only --dry-run --yes
+bash scripts/flowed-start.sh --webs-only --yes
+cat $FLOWED_HOME/nes-m7/.web-password
+```
+
+El `--dry-run` ha de llistar només `nes-en :4302` i `nes-m7 :4300`.
+
+Des del teu ordinador (túnel, sense obrir ports): `ssh -L 4300:localhost:4300 -L 4302:localhost:4302 llvm`
+i obre `http://localhost:4302` (nes-en) i `http://localhost:4300` (nes-m7, usuari `nes`).
+
+| Comprovar | On |
+|---|---|
+| capçalera `v0.6.0` | les dues |
+| Lliçó, 🎲 Go, una pràctica Writing o Speaking, 🔊 veu | nes-en (4302) |
+| només Go / Review / Facts (sense Speaking/Writing/Reading) | nes-m7 (4300) |
+| 🎲 Go corregeix; si surt un problema amb enunciat, es fa per passos | nes-m7 (4300) |
+
+Aturar la prova (mateix terminal): `bash scripts/flowed-stop.sh --webs-only`
+
+### 3. Relleu `[llvm]` — terminal NOU (sense els `export` de prova)
+
+```bash
+env | grep '^FLOWED_'
+cd /opt/flowed && scripts/flowed-stop.sh --webs-only
+tar czf ~/backup-flowed-$(date +%Y%m%d-%H%M).tgz -C ~ .flowed
+cd /opt/flowed-0.6
+grep -q '^FLOWED_HOME=' .env || echo "FLOWED_HOME=$HOME/.flowed" >> .env
+sed -i -E 's/^FLOWED_WEBS="?([^"]*)"?$/FLOWED_WEBS="\1 nes-m7:4200"/' .env
+grep -E '^FLOWED_(HOME|WEBS)=' .env
+bash scripts/new-user.sh nes-m7 --port 4200
+python3 scripts/flowed-profile.py nes-m7 --name Nes --native Catalan --level m7 --goal m7 --minutes 20
+if [ -L /opt/flowed ]; then sudo ln -sfn /opt/flowed-0.6 /opt/flowed; else sudo mv /opt/flowed /opt/flowed-0.5 && echo /opt/flowed-0.5 > ~/flowed-anterior.txt && sudo ln -s /opt/flowed-0.6 /opt/flowed; fi
+ls -l /opt/flowed
+cd /opt/flowed && scripts/flowed-start.sh --webs-only --dry-run --yes
+scripts/flowed-start.sh --webs-only --yes
+for p in 4100 4101 4102 4200; do echo "$p $(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:$p/)"; done
+```
+
+- `env | grep` ha de sortir buit (si no, és el terminal de prova).
+- `grep` de l'`.env`: `FLOWED_HOME=/home/albert/.flowed` i `FLOWED_WEBS` amb `nes-m7:4200` al final.
+- `curl`: els 4 ports responen (`401` = viu, demana contrasenya).
+- Perfil de mates **nou i net** a producció (el de prova es queda a `~/.flowed-06`).
+- Prova curta a `nes-en` (4102) i `nes-m7` (4200), com al pas 2.
+
+### 4. Tornar enrere `[llvm]`
+
+```bash
+cd /opt/flowed && scripts/flowed-stop.sh --webs-only
+sudo ln -sfn "$(cat ~/flowed-anterior.txt)" /opt/flowed
+cd /opt/flowed && scripts/flowed-start.sh --webs-only --yes
+```
+
+La 0.5 ignora `nes-m7` (no és al seu `FLOWED_WEBS`). Els perfils de language
+tenen el mateix format a les dues versions; el `tar` del pas 3 és per si de cas.
+
+### 5. Després (quan la 0.6 porti uns dies bé)
+
+- `mv ~/.flowed-06 ~/_to_delete_flowed-06` (el home de prova).
+- `/opt/flowed-0.5` (o el que digui `~/flowed-anterior.txt`) es pot arxivar.
+- Retirar `flowed-language` a railab.

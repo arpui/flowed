@@ -115,7 +115,18 @@ export function stepWantLine(s: BankStep): string {
  *  web/app.js detects it to switch the composer; the per-step notes do NOT
  *  repeat it, the web keeps the mode sticky instead). */
 export function stepsV2CardTail(item: BankItem): string {
-  return `**Pas 1 de ${item.steps?.length ?? 0} — escriu només aquesta operació:**`;
+  return stepPrompt(item, 1);
+}
+
+/** The prompt of step `k` (1-based). A step with a `goal` says WHAT to do
+ *  there (the property or the technique to apply) — without it the learner
+ *  cannot know what "the operation of step 1" is (2026-10-08, Albert). Steps
+ *  without a goal keep the bare prompt. */
+export function stepPrompt(item: BankItem, k: number): string {
+  const N = item.steps?.length ?? 0;
+  const goal = (item.steps ?? []).find((s) => s.n === k)?.goal?.trim();
+  if (!goal) return `**Pas ${k} de ${N} — escriu només aquesta operació:**`;
+  return `**Pas ${k} de ${N}** — ${goal.replace(/[.:]+$/, "")}.\n\n**Escriu només aquesta operació:**`;
 }
 
 /** The per-step note after a graded line. No Score marker, no correction
@@ -127,17 +138,19 @@ export function stepsV2Note(item: BankItem, move: StepsV2Move): string {
   const k = move.step.n;
   const prob = item.problem ? `**Problema:** ${item.problem}` : "";
   if (move.kind === "advance" && !move.done) {
-    return `✅ Pas ${k} de ${N} correcte.\n\n${prob}\n\nPas ${k + 1} de ${N} — escriu només aquesta operació.`;
+    return `✅ Pas ${k} de ${N} correcte.\n\n${prob}\n\n${stepPrompt(item, k + 1)}`;
   }
   if (move.kind === "retry") {
     const lead = move.result.near
       ? `🟡 Gairebé, pas ${k} de ${N}: el resultat és a un dígit del que toca.`
       : `❌ Aquesta línia no és el pas ${k} de ${N}.`;
-    return `${lead}\n\n${prob}\n\nEscriu només aquest pas i torna-ho a provar.`;
+    const goal = (item.steps ?? []).find((x) => x.n === k)?.goal?.trim();
+    const hint = goal ? `\n\n**Pas ${k} de ${N}** — ${goal.replace(/[.:]+$/, "")}.` : "";
+    return `${lead}\n\n${prob}${hint}\n\nEscriu només aquest pas i torna-ho a provar.`;
   }
   if (move.kind === "reveal" && !move.done) {
     return `❌ El pas ${k} de ${N} és: \`${stepWantLine(move.step)}\`.\n\n${prob}\n\n` +
-      `Pas ${k + 1} de ${N} — escriu només aquesta operació.`;
+      stepPrompt(item, k + 1);
   }
   return ""; // done: the final feedback card (with the trace) follows this turn
 }
@@ -147,5 +160,8 @@ export function stepsV2Note(item: BankItem, move: StepsV2Move): string {
 export function stepsV2Resume(item: BankItem, state: StepsV2State): string {
   const N = item.steps?.length ?? 0;
   const k = (item.steps ?? [])[state.stepIdx]?.n ?? state.stepIdx + 1;
-  return `Anem pel pas ${k} de ${N} de «${item.problem ?? ""}» — escriu només aquesta operació.`;
+  const goal = (item.steps ?? [])[state.stepIdx]?.goal?.trim();
+  return goal
+    ? `Anem pel pas ${k} de ${N} de «${item.problem ?? ""}» — ${goal.replace(/[.:]+$/, "")}. Escriu només aquesta operació.`
+    : `Anem pel pas ${k} de ${N} de «${item.problem ?? ""}» — escriu només aquesta operació.`;
 }

@@ -1885,3 +1885,56 @@ quantes vegades l'app el fa rellegir un prompt de ~17k tokens.
   del dia es reescrivia per «already asked hello, test». Sota l'encapçalament
   d'obertura ara només compta una línia que acaba en «?», i les salutacions mai.
 - Proves: `server/test/shown-text.test.ts`.
+
+## G.21 Taxonomia per domini: habilitats i categories d'error (2026-10-08, 0.6)
+
+**Què passava.** El nucli unificat només coneixia la taxonomia de mates. Un perfil de
+language desava `grammar` com a `computation` (Càlcul a les Stats), `vocabulary` com a
+`facts`, una etiqueta desconeguda com a `calculation` (`calculation_I_went`), la Lliçó
+reservava un «slot» de `reasoning`/`problems` i el panell mostrava «Precisió per pas».
+La verificació d'abans comprovava que les comandes i els registres arribaven, no què es
+desava. `taxonomy_extra` del manifest no el llegia cap codi.
+
+**Ara.** Cada domini té les seves habilitats i categories, i tot punt que n'escull una
+pregunta el domini del perfil (`domain_for_dir` a Python, `domainOfDataDir` a TS: camp
+`domain` explícit, si no l'escala de nivell):
+
+| | math | language |
+|---|---|---|
+| habilitats | computation, steps, problems, reasoning, facts | writing, speaking, vocabulary, reading, grammar, listening |
+| categories | les 12 de mates | les 15 de language + 5 antigues (`gerund`…) |
+| valor per defecte | `calculation` / `computation` | `grammar` / `writing` |
+| habilitats vigilades per la Lliçó | les 5 | writing, reading, speaking, vocabulary |
+| slot de la Lliçó | reasoning, problems | writing, reading |
+
+- **Fonts:** `hooks/db_schema.py` (Python) i `server/src/taxonomy.ts` (+ les taules de mates
+  de `tools.ts`). `tests/test_taxonomy.py` les manté iguals (parseja el TS).
+- **On s'aplica:** `normalize_skill_key` / `normalize_error_category` (paràmetre `domain`, per
+  defecte math: cap crida antiga canvia), `persist-session.py`, `accumulate-session.py`,
+  l'eina de registre (`toolsForDomain` li mostra al model les llistes del seu domini),
+  `deriveRecord`, `skillDebts`/`lessonSkillSlot`, `parseFeedback`, el panell (`normalizeSkills`
+  només llista les del domini; «Precisió per pas» només a mates).
+- **Una clau d'un altre domini** que arriba a un perfil (torn mal encaminat, dades velles) no
+  inventa una habilitat: `reasoning`→`writing`, `facts`→`vocabulary`… (`MATH_TO_LANGUAGE_SKILL`).
+  A mates, el mapa vell language→math es manté (registres d'abans de la 0.6).
+- **Auditar:** `python3 scripts/flowed-check.py taxonomy <perfil>` (exit 1 si hi ha res d'un
+  altre domini).
+- **Perfils nous:** `new-user.sh --domain language` (plantilles a `data-examples/language/`) i
+  `flowed-profile.py --domain language`. Abans tots sortien de les plantilles de mates.
+- **Pendent (nom, no comportament):** els comptadors diaris es diuen `reasoning/problems/facts`
+  també a language (Writing/Reading/Vocabulary); i Speaking no té insígnia diària.
+
+## G.22 Passos amb indicació, marca i comandes amagades (2026-10-08, 0.6)
+
+- **`goal` per pas** (`curriculum/bank/*/steps/*__steps.json`): què s'ha de fer o quina
+  propietat s'aplica, mai el resultat. `server/src/steps.ts::stepPrompt` el mostra a «Pas N de M»
+  (targeta, avanç, reintent, represa; la targeta v1 llista els passos). Els ítems sense `goal`
+  surten com abans. `mathbank.py`: `STEP_GOALS`/`fill_goals` (generadors) i el validador exigeix
+  `goal` sense càlcul dins. Els problemes de text: ≥3 passos i el primer no dóna la resposta
+  (`tests/test_step_goals.py`).
+- **Marca:** `brand` = «FlowEd» als dos dominis, `domain_label` = Language/Math; `http.ts` injecta
+  títol, `.brand` i `window.__FLOWED_BRAND`.
+- **Comandes amagades:** `hidden_commands` del manifest (math: `math-vocab` = Facts) →
+  `window.__FLOWED_HIDDEN` → `web/app.js` amaga el botó. Per tornar-lo: treure'l de la llista.
+- **Targeta Translate** (`bank.ts`): afegeix la frase si la instrucció no la porta.
+- **Auditoria:** `flowed-check.py reconcile` compara `.records` amb les BDs derivades.

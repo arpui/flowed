@@ -38,6 +38,39 @@ more. This release is the fork's whole WP0–WP5.2 arc landed as a product.
   Python fallback).
 - `lib-paths.sh` resolves `FLOWED_HOME` AFTER loading `.env`.
 
+### Fixed (taxonomy per domain, 2026-10-08)
+
+- A language profile no longer files its work under math. Skills and error
+  categories are the domain's own (`hooks/db_schema.py`, `server/src/taxonomy.ts`):
+  `grammar` was stored as `computation` (Càlcul in the Stats), `vocabulary` as
+  `facts`, and an unknown label as `calculation` (`calculation_I_went`). The
+  record tool, the derived record, the Lesson's neglected-skill slot, the
+  persistence hooks and the Stats panel follow the profile's domain.
+- Language web shell: FlowEd brand/title/icon from the manifest, `Go` (not
+  «Surprise me!»), no Vocabulary button (it lives inside Go), Reading above A1
+  only, as in 0.5. The first-use «comptador desapareix» hint is gone.
+- New: `scripts/flowed-check.py taxonomy`, `new-user.sh --domain language`,
+  `flowed-profile.py --domain language`, `scripts/flowed-dev.sh` (test profiles
+  on railab against the remote model).
+
+### Changed (web + steps, 2026-10-08)
+
+- **Marca:** l'app és «FlowEd» als dos dominis i el domini hi va al costat
+  («FlowEd · Language» / «FlowEd · Math»): `brand` + `domain_label` al manifest.
+- **Facts amagat a math** (`hidden_commands` del manifest; el codi es manté).
+  Depèn del model i s'ha de provar molt abans de tornar-lo a mostrar.
+- **Passos amb indicació:** cada pas d'un ítem `steps` té `goal` (què fer / quina
+  propietat aplicar, sense donar el resultat) i el «Pas N de M» el mostra. Els dos
+  problemes de `m7.problems_generic` es refan perquè cap pas ho resolgui tot.
+  `mathbank.py validate` exigeix `goal`; `STEP_GOALS` el posa als generadors.
+- **Feedback de mates correcte:** si la resposta és equivalent però en una altra forma (68/60 per 1 2/15) ho diu, i sempre afegeix «Com es fa» (el `why` de l'ítem). Els nombres mixtos s'expliquen amb `17/15 = 1 + 2/15` (`mixed_gloss`, també als 11 ítems existents). `hooks/bank.py` torna `given`.
+- **End a language:** la web amagava l'ordre de `/math-…` però no la de `/fluent-…`, i el learner veia «Execute /fluent-end now: …». Ara tots dos prefixos són un xip (🏁 per End).
+- **`reconcile` més precís:** compara l'última sessió (registres vs session-log) en lloc dels totals; un ítem de SM-2 sense entrada és ⚠ si és antic i ❌ només si és d'avui/ahir; les respostes qualificades només en prosa surten com a avís. `tests/test_bank_no_repeat.py`: pick+answer en bucle no repeteix cap ítem (nivell i extra).
+- **Targeta Translate:** mostra sempre la frase a traduir (`x.good_luck_babe.002`
+  deia només «Say it in English.»).
+- **`flowed-check.py reconcile`:** registres ↔ progress/mastery/mistakes/session-log/SM-2. `tests/test_persistence_both_domains.py` passa el pipeline real (registres → persist-session → update-db → 6 BDs → reconcile + taxonomy) a language i a math, i el mateix **durant la sessió, sense End** (accumulate-session a cada resposta, idempotent, i Capa B no canvia cap total).
+- **session-log:** `update-db.py` treu la sessió de plantilla (`{YYYY-MM-DD}`) que `new-user.sh` hi deixava; abans un perfil nou comptava 1 sessió de més.
+
 ### Changed
 
 - The command logic is domain-neutral: the entry seam canonicalizes `fluent-*`
