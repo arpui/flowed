@@ -77,7 +77,7 @@ Suites first (cheap, no model):
 ```bash
 python3 -m unittest discover -s tests        # 728 OK (math + domain loader)
 (cd server && bun --test test/*.test.ts)     # 14 harnessos OK
-(cd server && bun x tsc --noEmit)            # 0 errors
+(cd server && bun x tsc --noEmit)            # 0 errors (http.ts i web-render arreglats 2026-10-08)
 ```
 
 Live, per domain (needs the remote model for the open practices; the bank
@@ -98,6 +98,40 @@ FLOWED_HOME=$HOME/.flowmath bash scripts/flowed-web.sh --stop --port 4205
 Verified today: the `language` scenario passes 4/4 (fluent commands load, a
 `grammar` record lands, the curriculum resolves to the language course,
 `fluent-review` opens the lesson through the canonical keys).
+
+### Tot d'una: `scripts/flowed-verify.sh` (2026-10-08)
+
+Suites + e2e en directe (language a `test-lang`:4205, algebra a `test-m7`:4201)
+contra el model remot, amb `FLOWED_HOME=~/.flowmath` i `FLOWED_DEEP_MANAGED=0`.
+Es nega a córrer contra `~/.flowed`/`~/.fluent` o un perfil que no sigui de prova.
+Informe a `results/verify-<data>/summary.md` + un `.log` per pas i les
+transcripcions dels e2e. `TUTORBENCH=1` hi afegeix el tutor bench.
+
+Per a un agent (Claude Code a railab): skill `flowed-verify` — executa el
+script, classifica cada fallada (codi / model / entorn) amb evidència i deixa
+`results/verify-<data>/ANALISI.md` amb el veredicte.
+
+### Canvis del 2026-10-08 (després de la verificació)
+
+- **Mates sense pràctiques obertes.** `config/domain.json` → `open_practices`:
+  language `["speaking","writing","reading"]`, math `[]`. A mates, un model
+  general inventa enunciats que no quadren i no pot comprovar un càlcul. La web
+  amaga els botons (el servidor injecta `window.__FLOWED_OPEN`), el servidor
+  respon sense model si arriba una comanda tancada (`closedPracticeTurn`) i
+  l'objectiu diari no les demana. Reactivar-les (model entrenat per a mates) =
+  afegir-les a la llista del manifest; el codi hi és.
+- **«No fa la pregunta següent»** (6 de 26 respostes al tutor bench): a les
+  pràctiques obertes, si la resposta puntua i després de la nota no hi ha res a
+  fer (cap encapçalament, cap «?», cap «escriu/torna-ho a provar»), `turnGuard`
+  demana reescriure només l'exercici i es conserva el feedback
+  (`hasNextAfterScore`, `openPracticeAnswered`).
+- **Prova de problemes per passos (m7):** competència `m7.problems_generic`
+  `[extra]` (secció «D. Problemes (prova)»), 2 problemes amb enunciat a
+  `curriculum/bank/math-m7/steps/m7.problems_generic__steps.json`, corregits per
+  passos sense model. El validador de `mathbank.py` accepta `expression` als
+  ítems de passos amb enunciat.
+- Proves: `server/test/open-practices.test.ts`; tutor bench i verify salten les
+  pràctiques que el domini no fa.
 
 ## 5. Git: què hi ha unpushed, i dnde el push cal go
 

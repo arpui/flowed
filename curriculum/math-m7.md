@@ -143,3 +143,16 @@ Check:
 - Compute: 7x + 7y → 7(x + y)
 - Compute: 10x + 15 → 5(2x + 3)
 - Compute: x^2 + 9x → x(x + 9)
+
+## D. Problemes (prova)
+
+### m7.problems_generic — Problemes genèrics amb enunciat, per passos [extra]
+Can do: Read a short story problem that may mix operations, write the operations one per line and reach the result.
+Depth: light
+Forms: Llegeix l'enunciat sencer; tria l'operació de cada part («baixen» = restar, «pugen» = sumar, «cadascun» = multiplicar); escriu una operació per línia i acaba amb el resultat.
+Tags: #wrong_operation, #calculation, #procedure, problema, enunciat, operació, resultat
+Signals: problema, enunciat, quant, quants, en total, queden, cadascun
+Check:
+- Steps: 4 × (7 + 3) → 4 × 10 ; 40
+- Steps: 38 - 12 + 9 → 35 - 15 ; 20
+- Steps: 5 × 6 + 5 × 4 → 30 + 20 ; 50

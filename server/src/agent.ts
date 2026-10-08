@@ -29,6 +29,9 @@ import {
   lessonTarget,
   lessonSkillSlot,
   skillBadge,
+  practiceAllowed,
+  openPracticeOf,
+  hasNextAfterScore,
   skillDebts,
   exerciseFingerprints,
   pruneHistory,
@@ -532,6 +535,10 @@ export class Agent {
     // two false records went to the database. The reply to the button sets it
     // again when it presents an exercise the fingerprints recognise.
     this.lastAsked.delete(sessionId);
+    // An open practice the domain does not run (config/domain.json
+    // `open_practices`; math has none since 2026-10-08): a plain server
+    // reply, no model. The web hides these buttons; this covers a stale page.
+    if (!this.practiceOpen(cmdKey)) return this.closedPracticeTurn(sessionId, commandName);
     // Second and later commands of a session do not need the state block again:
     // it is already in the history, and re-running the directive would re-inject
     // several KB of JSON per command.
@@ -1966,6 +1973,8 @@ export class Agent {
         due: lesson.due,
         replyText: text,
         oneAtATime: this.currentCommand.get(sessionId) === "math-vocab",
+        openPracticeAnswered: this.recordsFromText(sessionId) && this.answerInFront.get(sessionId) === true,
+        nextAfterScore: hasNextAfterScore(text),
         buttonTurn: this.answerInFront.get(sessionId) === false,
         assigned: inLesson ? this.assignedItem.get(sessionId) ?? null : null,
         competence: inLesson ? null : compAtStart,
@@ -2291,6 +2300,41 @@ export class Agent {
     }
   }
 
+  private manifestCache: unknown = undefined;
+  private manifest(): unknown {
+    if (this.manifestCache === undefined) {
+      try {
+        this.manifestCache = JSON.parse(fs.readFileSync(path.join(this.root, "config", "domain.json"), "utf8"));
+      } catch {
+        this.manifestCache = null;
+      }
+    }
+    return this.manifestCache;
+  }
+
+  /** Whether this profile's domain runs that open practice (manifest
+   *  `open_practices`). Any other command is always open. */
+  private practiceOpen(command: string): boolean {
+    return practiceAllowed(this.manifest(), this.domainForSession(), command);
+  }
+
+  private async closedPracticeTurn(sessionId: string, commandName: string): Promise<TurnOutcome> {
+    const agent = "learner";
+    this.db.touchSession(sessionId);
+    this.persistUserTurn(sessionId, `Execute /${commandName} now.`, agent, true);
+    this.currentCommand.delete(sessionId);
+    const { model } = await resolveModel(agent, this.models);
+    const msg = this.createAssistantMessage(sessionId, agent, model);
+    const view = () => this.db.getMessageView(msg);
+    this.db.insertPart(msg.id, sessionId, {
+      type: "text",
+      text: `Aquesta pràctica no està activa en aquest curs. Fes servir 🎲 Go, 🔁 Review o 📚 Facts.`,
+    });
+    this.emit({ type: "message.part.updated", properties: { part: view().parts.at(-1) } });
+    this.emit({ type: "session.idle", properties: { sessionID: sessionId } });
+    return { info: view().info, parts: view().parts, debug: this.debugStatus(sessionId) };
+  }
+
   /** WP5.2 — the profile's domain: explicit `domain` field first, level scale
    *  second (A1..C2 → language, m1..m7 → math), manifest default last. The
    *  Python twin is hooks/domain.py; config/domain.json is the manifest. */
@@ -2359,8 +2403,9 @@ export class Agent {
       session: count,
       skill: lastSkill,
       lesson: this.lessonState(),
-      reasoning: skillBadge(daily.reasoning),
-      problems: skillBadge(daily.problems),
+      // A closed open practice owes nothing today: no badge (total 0 hides it).
+      reasoning: this.practiceOpen("math-writing") ? skillBadge(daily.reasoning) : { total: 0, done: 0, pending: 0 },
+      problems: this.practiceOpen("math-reading") ? skillBadge(daily.problems) : { total: 0, done: 0, pending: 0 },
       facts: skillBadge(daily.facts),
       // The button ring (TRACKED_MODE_CMDS in web/app.js) is a purely
       // client-side variable, set only when the learner clicks a mode button —

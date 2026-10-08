@@ -69,39 +69,83 @@ E2E = _e2e()
 # The learner. kind: good (fair expected), error (catches expected, `fix` must
 # appear in the correction), free (only sufficiency: the right answer depends on
 # what the tutor asked).
-PRACTICES = {
-    "math-speaking": {
-        "next": re.compile(r"question\s*\d+", re.I),
-        "answers": [
-            ("good", "I'm fine, thanks. I am at home with my family today.", None),
-            ("error", "Yesterday I go to the park with my friends.", "went"),
-            ("free", "Fine, thanks", None),
-            ("error", "My sister have two cats and one dog.", "has"),
-            ("good", "I like pizza and I play football on Saturdays.", None),
-        ],
+# The learner, per DOMAIN (0.6: one core, two domains). The command sent is the
+# domain's own name (`fluent-*` for language, `math-*` for math), as the web
+# sends it — a language profile pressing `math-speaking` opens Math Talk, and
+# the first 0.6 run measured language chit-chat against it (2026-10-08).
+# kind: good (fair expected), error (catches expected, `fix` must appear in the
+# correction), free (only sufficiency: the right answer depends on the task).
+CONTINUE_CA = r"problema\s*\d+|pregunta\s*\d+|tasca|escriu|a sota|\"?yes\"? o \"?no\"?|\?\s*$"
+PRACTICES_BY_DOMAIN = {
+    "language": {
+        "fluent-speaking": {
+            "next": re.compile(r"question\s*\d+", re.I),
+            "answers": [
+                ("good", "I'm fine, thanks. I am at home with my family today.", None),
+                ("error", "Yesterday I go to the park with my friends.", "went"),
+                ("free", "Fine, thanks", None),
+                ("error", "My sister have two cats and one dog.", "has"),
+                ("good", "I like pizza and I play football on Saturdays.", None),
+            ],
+        },
+        "fluent-writing": {
+            "next": re.compile(r"writing exercise|keep going|rewrite|new task|next task|\?\s*$", re.I),
+            "answers": [
+                ("error", "My name is Anna. I has a small dog. He are very funny and we play in the garden.", "has"),
+                ("good", "My name is Tom. I live in a small town with my parents. I like music and I play the guitar.", None),
+            ],
+        },
+        "fluent-reading": {
+            "next": re.compile(r"question\s*\d+|reading text|true or false|\?\s*$", re.I | re.M),
+            "answers": [("free", "It is about a family.", None), ("free", "Yes.", None), ("free", "I don't know.", None)],
+        },
     },
-    "math-writing": {
-        "next": re.compile(r"writing exercise|keep going|rewrite|new task|next task|\?\s*$", re.I),
-        "answers": [
-            ("error", "My name is Anna. I has a small dog. He are very funny and we play in the garden.", "has"),
-            ("good", "My name is Tom. I live in a small town with my parents. I like music and I play the guitar.", None),
-        ],
-    },
-    "math-reading": {
-        "next": re.compile(r"question\s*\d+|reading text|true or false|\?\s*$", re.I | re.M),
-        "answers": [("free", "It is about a family.", None), ("free", "Yes.", None), ("free", "I don't know.", None)],
+    "math": {
+        "math-speaking": {
+            "next": re.compile(CONTINUE_CA + r"|question\s*\d+", re.I | re.M),
+            "answers": [
+                ("good", "Per fer 25 × 4 penso que quatre vegades 25 són 100, perquè 4 quarts fan una unitat.", None),
+                ("error", "Per sumar 1/2 + 1/3 sumo els numeradors i els denominadors: 2/5.", "5/6"),
+                ("free", "No ho sé.", None),
+                ("error", "Per multiplicar per 10 afegeixo un zero, també amb decimals: 2,5 × 10 = 2,50.", "25"),
+                ("good", "Primer faig el parèntesi i després la multiplicació, perquè té prioritat sobre la suma.", None),
+            ],
+        },
+        "math-writing": {
+            "next": re.compile(CONTINUE_CA, re.I | re.M),
+            "answers": [
+                ("error", "3(x + 2) = 3x + 2, perquè multiplico el 3 per la x i deixo el 2.", "3x + 6"),
+                ("good", "Per resoldre 2x + 3 = 11 resto 3 als dos costats: 2x = 8. Després divideixo per 2: x = 4. "
+                         "Comprovo: 2·4 + 3 = 11.", None),
+            ],
+        },
+        "math-reading": {
+            "next": re.compile(CONTINUE_CA, re.I | re.M),
+            "answers": [("free", "24 × 2,5 = 60. Resultat: 60 kg.", None), ("free", "no", None),
+                        ("free", "No ho sé.", None)],
+        },
     },
 }
+# Every practice of every domain, by its command name (the judge looks a row up here).
+ALL_PRACTICES = {k: v for d in PRACTICES_BY_DOMAIN.values() for k, v in d.items()}
+PRACTICES = ALL_PRACTICES
+RECORD_TOOLS = {"math_record_answer", "fluent_record_answer"}
+
+# The tutor's own yes/no offer ("Vols que aquestes claus entrin a la cua de
+# repàs? Escriu \"yes\" o \"no\".") — what the learner types next answers
+# THAT, not an exercise: nothing to grade or record (2026-10-08, math-reading:
+# "No ho sé" landed on the offer and was counted as an unsaved answer).
+YESNO_OFFER = re.compile(r'"?yes"?\s*(?:o|or|/)\s*"?no"?', re.I)
 LLM_ERR = re.compile(r"LLM HTTP|TemplateError|Unable to connect|⚠️", re.I)
 SCORE_RE = re.compile(r"score[^0-9\n]{0,20}(\d{1,2})\s*/\s*10", re.I)
 ANY_SCORE = re.compile(r"\b(\d{1,2})\s*/\s*10\b")
-RETRY = re.compile(r"try again|once more|one more time|type \*{0,2}.?ready|when you('| a)re ready|your turn|\bwrite \d|\*\*question:?\*\*|type a, b|type your answer", re.I)
+RETRY = re.compile(r"prova-ho (?:una altra vegada|de nou)|torna-ho a provar|un altre cop|try again|once more|one more time|type \*{0,2}.?ready|when you('| a)re ready|your turn|\bwrite \d|\*\*question:?\*\*|type a, b|type your answer", re.I)
 NON_LATIN = re.compile(r"[\u0400-\u04ff\u0590-\u06ff\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
 
 
 def record_of(outcome) -> dict | None:
     for p in (outcome or {}).get("parts") or []:
-        if p.get("type") == "tool" and p.get("tool") == "math_record_answer":
+        if p.get("type") == "tool" and p.get("tool") in RECORD_TOOLS:
             return ((p.get("state") or {}).get("input")) or {}
     return None
 
@@ -123,7 +167,7 @@ def judge(practice: str, step: str, text: str, err: str, tool_score, rights: str
            "continues": ends_with_next(text, spec["next"]),
            "clean": not E2E.BRACE.search(text) and not E2E.MENU_RE.search(text) and not NON_LATIN.search(text)
                     and (step == "start" or not E2E.GREETING_RE.search(text))}
-    if step != "start":
+    if step not in ("start", "offer"):
         row["score"] = tool_score if isinstance(tool_score, (int, float)) else shown
         row["graded"] = row["score"] is not None
         row["shown"] = shown is not None
@@ -162,7 +206,10 @@ def run_once(cli, prof: Path, practice: str, spec: dict, transcript: list[str]) 
     transcript.append(f"## {practice}\n\n**[button]** ({secs}s)\n\n{text or err}\n")
     rows.append({"practice": practice, "step": "start", "secs": secs, "text": text or err, "sid": sid,
                  **judge(practice, "start", text, err, None, "", None)})
+    prev = text
     for kind, answer, fix in spec["answers"]:
+        if YESNO_OFFER.search((prev or "")[-300:]):
+            kind, fix = "offer", None
         before = records_count(prof, sid)
         out, secs, err = turn(cli.say, sid, answer)
         text = E2E.tutor_text(out)
@@ -171,11 +218,13 @@ def run_once(cli, prof: Path, practice: str, spec: dict, transcript: list[str]) 
         row = {"practice": practice, "step": kind, "answer": answer, "secs": secs, "text": text or err, "sid": sid,
                "tool_score": rec.get("score"),
                **judge(practice, kind, text, err, rec.get("score"), rights, fix)}
-        for _ in range(20):  # the server may write the record just after replying
-            if records_count(prof, sid) > before:
-                break
-            time.sleep(0.5)
-        row["saved"] = records_count(prof, sid) > before
+        if kind != "offer":
+            for _ in range(20):  # the server may write the record just after replying
+                if records_count(prof, sid) > before:
+                    break
+                time.sleep(0.5)
+            row["saved"] = records_count(prof, sid) > before
+        prev = text
         rows.append(row)
         transcript.append(f"**Learner:** {answer}\n\n**Tutor** ({secs}s, score {row.get('score')}):\n\n{text or err}\n")
     return rows
@@ -235,7 +284,7 @@ def timing(rows: list[dict]) -> dict:
         return out
     t = {"all": block(rows), "button": block([r for r in rows if r["step"] == "start"]),
          "answer": block([r for r in rows if r["step"] != "start"])}
-    for p in PRACTICES:
+    for p in dict.fromkeys(r["practice"] for r in rows):
         t[p.split("-")[-1]] = block([r for r in rows if r["practice"] == p])
     return t
 
@@ -250,7 +299,7 @@ def summary(rows: list[dict]) -> dict:
     s["secs_median"] = round(statistics.median(secs), 1) if secs else None
     s["timing"] = timing(rows)
     s["per_practice"] = {p: {k: rate([r for r in rows if r["practice"] == p], k) for k in GATES + QUALITY}
-                         for p in PRACTICES}
+                         for p in dict.fromkeys(r["practice"] for r in rows)}
     s["sufficient"] = all(n == 0 or ok / n >= 0.9 for ok, n in (s[k] for k in GATES))
     s["failures"] = [{"practice": r["practice"], "step": r["step"], "failed": [k for k in GATES if k in r and not r[k]],
                       "tail": (r.get("text") or "")[-200:]}
@@ -299,9 +348,26 @@ def cmd_run(a) -> int:
     except Exception as e:  # noqa: BLE001
         print(f"error: no server on port {a.port}: {e}\n  scripts/flowed-web.sh --app --port {a.port} {prof.name}", file=sys.stderr)
         return 2
+    try:
+        sys.path.insert(0, str(REPO / "hooks"))
+        import domain as dom_mod  # noqa: PLC0415  (same rule as the server: explicit field, then level scale)
+        domain = dom_mod.domain_for_profile(json.loads((prof / "learner-profile.json").read_text(encoding="utf-8")))
+    except Exception:  # noqa: BLE001
+        domain = "math"
+    practices = dict(PRACTICES_BY_DOMAIN.get(domain) or PRACTICES_BY_DOMAIN["math"])
+    try:  # only the open practices the domain runs (config/domain.json, 2026-10-08)
+        allowed = json.loads((REPO / "config" / "domain.json").read_text(encoding="utf-8"))["domains"][domain].get("open_practices")
+        if isinstance(allowed, list):
+            practices = {k: v for k, v in practices.items() if k.split("-")[-1] in allowed}
+    except (OSError, ValueError, KeyError):
+        pass
+    if not practices:
+        print(f"  domini {domain}: cap pràctica oberta activa (config/domain.json) — res a provar")
+        return 0
+    print(f"  domini {domain}: {', '.join(practices)}", flush=True)
     rows, transcript = [], []
     for i in range(a.repeat):
-        for practice, spec in PRACTICES.items():
+        for practice, spec in practices.items():
             if a.only and practice.split("-")[-1] not in a.only:
                 continue
             print(f"  [{i + 1}/{a.repeat}] {practice} …", flush=True)
@@ -312,7 +378,7 @@ def cmd_run(a) -> int:
     stamp = datetime.now().strftime("%Y%m%d-%H%M")
     base = OUT / f"{a.name}-{stamp}"
     base.with_suffix(".json").write_text(json.dumps(
-        {"name": a.name, "when": stamp, "host": a.host or os.uname().nodename, "port": a.port, "profile": prof.name, "repeat": a.repeat,
+        {"name": a.name, "domain": domain, "when": stamp, "host": a.host or os.uname().nodename, "port": a.port, "profile": prof.name, "repeat": a.repeat,
          "server": health.get("version"), "summary": s, "rows": rows}, indent=1, ensure_ascii=False))
     base.with_suffix(".md").write_text(f"# {a.name} — {stamp}\n\n" + "\n---\n\n".join(transcript), encoding="utf-8")
     print(f"\n{a.name}: {'SUFICIENT' if s['sufficient'] else 'NO SUFICIENT'}")

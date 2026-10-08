@@ -11,6 +11,7 @@
       "grader": "language",
       "taxonomy_extra": ["vocabulary", "spelling", "grammar"],
       "tts": true,
+      "open_practices": ["speaking", "writing", "reading"],
       "web_labels": {
         "buttons": "📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End",
         "subject": null
@@ -26,6 +27,8 @@
       "grader": "mathgrade",
       "taxonomy_extra": ["sign", "incomplete", "procedure", "wrong_operation", "calculation"],
       "tts": false,
+      "_open_practices_comment": "2026-10-08 (Albert): no open practices with a general model in math — it invents problems that do not add up and cannot check a calculation. Re-enable here (speaking/writing/reading) only with a math-trained model; the code paths stay.",
+      "open_practices": [],
       "web_labels": {
         "buttons": "🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End",
         "subject": "Matemàtiques"

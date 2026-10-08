@@ -54,7 +54,7 @@ class SafePlacement(unittest.TestCase):
         self.assertEqual("category-not-in-curriculum", how)
 
     def test_a_word_outside_every_list_is_retired(self):
-        _, _, safe = self.place("vocabulary_brush", pattern("vocabulary", "brus", "brush"), "brush")
+        _, _, safe = self.place("vocabulary_umbrella", pattern("vocabulary", "umbrela", "umbrella"), "umbrella")
         self.assertFalse(safe)
 
 

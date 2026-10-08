@@ -448,7 +448,7 @@ function renderPace(p) {
     p.problems, "Problemes d'avui");
   renderSkillBadge(reasoningBtn, reasoningWasPending, (v) => (reasoningWasPending = v),
     p.reasoning, "Raonament d'avui");
-  if (problemsBtn) problemsBtn.hidden = !problemsUnlocked(p.lesson && p.lesson.level);
+  if (problemsBtn) problemsBtn.hidden = !practiceOpen("math-reading") || !problemsUnlocked(p.lesson && p.lesson.level);
 }
 
 // The badge on 🔁 Review. Amber while there is work, a green tick for a moment
@@ -2026,6 +2026,16 @@ if (window.__FLOWED_DOMAIN === "language") {
     }
   });
 }
+// Open practices the profile's domain runs (manifest `open_practices`,
+// injected by the server; null = no manifest, everything stays). Math has none
+// since 2026-10-08: its three buttons go.
+function practiceOpen(cmd) {
+  const m = /^math-(speaking|writing|reading)$/.exec(cmd || "");
+  return !m || !Array.isArray(window.__FLOWED_OPEN) || window.__FLOWED_OPEN.includes(m[1]);
+}
+document.querySelectorAll("#commands button[data-cmd]").forEach((b) => {
+  if (!practiceOpen(b.dataset.cmd)) b.hidden = true;
+});
 document.querySelectorAll("#commands button").forEach((b) =>
   b.addEventListener("click", () => {
     // 📊 Progress opens the visual dashboard directly (no agent turn).

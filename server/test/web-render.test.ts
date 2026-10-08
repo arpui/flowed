@@ -297,7 +297,7 @@ check("ordinary text is untouched",
     renderPath({ ...P, checkpoint: "promoted", promotion: { achieved: "A2", date: "2026-10-01", carried: 2 } }).includes("assolit el 2026-10-01"));
   check("path: ready checkpoint", renderPath({ ...P, checkpoint: "ready" }).includes("Ja pots fer la prova"));
   check("path: mini bar for the header", (renderPathMini(P) as { html: string }).html.includes("31%") && renderPathMini({ available: false }) === null);
-  check("path: item bars", pathBarPct(P.sections[0].items[0]) === 25 && pathBarPct(P.sections[0].items[1]) === 100 && pathBarPct(P.sections[0].items[2]) === 0);
+  check("path: item bars", pathBarPct(P.sections[0]!.items[0]!) === 25 && pathBarPct(P.sections[0]!.items[1]!) === 100 && pathBarPct(P.sections[0]!.items[2]!) === 0);
   check("path: a full n/need but not consolidated never shows 100%",
     pathBarPct({ state: "practicing", n: 30, need: 20 }) === 99);
   const notice = renderCourseNotice({ type: "course_completed", level: "A1", pct: 87.5, next_level: "A2", weak: ["there_is_are"] });

@@ -238,3 +238,63 @@ Check:
 - Meaning: the colour of the sky on a sunny day → blue
 - Meaning: the opposite of sad → happy
 - Complete: An elephant is very ___, but a mouse is small. → big
+
+### a1.vocab_food_snacks — Food and snacks [core]
+Can do: Name everyday food and snacks I eat or ask for.
+Depth: light
+Weight: 1
+Words: bread, cheese, egg, chicken, milk, rice, pepper, ice cream, sandwich, chips, fries, salad, cake, cupcake, cookie
+Check:
+- Meaning: a food from a chicken that you can boil or fry → egg
+- Meaning: a cold sweet food that you eat with a cone in summer → ice cream
+- Complete: My birthday ___ has twelve candles on it. (pastís) → cake
+
+### a1.vocab_fruit_vegetables — Fruit and vegetables [core]
+Can do: Name common fruit and vegetables.
+Depth: light
+Weight: 1
+Words: carrot, broccoli, corn, eggplant, peas, potato, tomato, avocado, cucumber, pineapple, grapes, watermelon, strawberry
+Check:
+- Meaning: a sweet tropical fruit with a crown of leaves on top → pineapple
+- Meaning: a big green fruit with red inside and black seeds → watermelon
+- Complete: Green ___ are small, round and sweet. (pèsols) → peas
+
+### a1.vocab_clothes — Clothes and accessories [core]
+Can do: Name the clothes and accessories I wear.
+Depth: light
+Weight: 1
+Words: trousers, skirt, dress, trainers, socks, pullover, scarf, cap, earring, ring, necklace, watch
+Check:
+- Meaning: you wear it on your head and it has a flat part at the front → cap
+- Meaning: a piece of clothing for a girl, from the waist down, that is not trousers → skirt
+- Complete: I wear ___ on my feet inside my shoes. (mitjons) → socks
+
+### a1.vocab_appearance — Appearance and character [core]
+Can do: Say what someone looks like and what they are like.
+Depth: light
+Weight: 1
+Words: hair, eyes, curly, straight, blond, striped, checked, spotty, flowery, colorful, lazy, tidy, untidy, weak, strong
+Check:
+- Meaning: the opposite of weak → strong
+- Meaning: a room where everything is clean and in the right place → tidy
+- Complete: My sister has long ___ hair without any curls. (llis) → straight
+
+### a1.vocab_daily_routine — Daily routine [core]
+Can do: Say what I do from the moment I wake up until I go to school.
+Depth: light
+Weight: 1
+Words: get up, have breakfast, brush, comb, get dressed, homework, shower, listen, jump, climb
+Check:
+- Meaning: wash your body under water in the bathroom → shower
+- Meaning: do an exercise from school when you are at home → homework
+- Complete: Every night I ___ my teeth before bed. (raspallar) → brush
+
+### a1.vocab_ordinals — Ordinal numbers [core]
+Can do: Say the order of things and the date: first, second, third.
+Depth: light
+Weight: 1
+Words: first, second, third, fourth, fifth, sixth, seventh, eighth, ninth, tenth, eleventh, twelfth, twentieth
+Check:
+- Meaning: number one in the order, before the second → first
+- Meaning: the position after the seventh → eighth
+- Complete: My birthday is in May, the ___ month. (cinquè) → fifth

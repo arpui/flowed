@@ -1,0 +1,86 @@
+[
+ {
+  "id": "m7.problems_generic.001",
+  "competence": "m7.problems_generic",
+  "type": "steps",
+  "instruction": "Llegeix el problema i resol-lo pas a pas: una operació per línia (sense unitats).",
+  "problem": "La Laia compra 4 entrades de cinema a 7 € cadascuna i 4 paquets de crispetes a 3 € cadascun. Quant paga en total?",
+  "method": "distributive",
+  "steps": [
+   {
+    "n": 1,
+    "expect": "4 × (7 + 3)",
+    "value": "40",
+    "accept": [
+     "4 × 7 + 4 × 3"
+    ],
+    "error_class": "wrong_operation",
+    "why": "Són 4 entrades i 4 paquets: pots ajuntar el preu d'una entrada i unes crispetes (7 + 3) i multiplicar per 4."
+   },
+   {
+    "n": 2,
+    "expect": "4 × 10",
+    "value": "40",
+    "accept": [
+     "28 + 12"
+    ],
+    "error_class": "calculation",
+    "why": "7 + 3 = 10 (o bé 4 × 7 = 28 i 4 × 3 = 12)."
+   },
+   {
+    "n": 3,
+    "expect": "40",
+    "value": "40",
+    "accept": [],
+    "error_class": "calculation",
+    "why": "4 × 10 = 40: paga 40 €."
+   }
+  ],
+  "answer": "40",
+  "why": "4 × (7 + 3) = 4 × 10 = 40 €.",
+  "status": "validated",
+  "source": "claude · 2026-10-08 · prova problemes genèrics",
+  "expression": "4 × (7 + 3)"
+ },
+ {
+  "id": "m7.problems_generic.002",
+  "competence": "m7.problems_generic",
+  "type": "steps",
+  "instruction": "Llegeix el problema i resol-lo pas a pas: una operació per línia (sense unitats).",
+  "problem": "Un autobús surt amb 38 passatgers. A la primera parada en baixen 12 i en pugen 9. A la segona parada en baixen 15. Quants passatgers queden a l'autobús?",
+  "method": "sequence",
+  "steps": [
+   {
+    "n": 1,
+    "expect": "38 - 12 + 9",
+    "value": "35",
+    "accept": [
+     "38 - 12 + 9 = 35"
+    ],
+    "error_class": "wrong_operation",
+    "why": "A la primera parada: baixar és restar (− 12) i pujar és sumar (+ 9)."
+   },
+   {
+    "n": 2,
+    "expect": "35 - 15",
+    "value": "20",
+    "accept": [],
+    "error_class": "wrong_operation",
+    "why": "A la segona parada en baixen 15: restem."
+   },
+   {
+    "n": 3,
+    "expect": "20",
+    "value": "20",
+    "accept": [],
+    "error_class": "calculation",
+    "why": "35 − 15 = 20 passatgers."
+   }
+  ],
+  "answer": "20",
+  "why": "38 − 12 + 9 = 35; 35 − 15 = 20.",
+  "status": "validated",
+  "source": "claude · 2026-10-08 · prova problemes genèrics",
+  "expression": "38 - 12 + 9 - 15"
+ }
+]

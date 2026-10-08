@@ -1129,8 +1129,10 @@ def _validate_steps_item(item: dict) -> list[str]:
     except mathgrade.ParseError as e:
         errs.append(f"answer does not parse: {e}")
         aval = None
+    # A steps item with a story statement (m7.problems_generic, 2026-10-08)
+    # carries its expression apart, like the WP3.2 word problems.
     try:
-        pval = mathgrade.parse_expr(item["problem"]).value
+        pval = mathgrade.parse_expr(item.get("expression") or item["problem"]).value
     except mathgrade.ParseError as e:
         errs.append(f"problem does not parse: {e}")
         pval = None

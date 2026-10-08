@@ -352,7 +352,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             ".css": "text/css",
             ".svg": "image/svg+xml",
           }[ext] ?? "application/octet-stream";
-        let body = fs.readFileSync(file);
+        let body: Buffer | string = fs.readFileSync(file);
         // WP5.2: the shell carries the profile's domain so the web can pick
         // its button bar (same rule as hooks/domain.py: explicit field, else
         // level scale).
@@ -370,7 +370,20 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             /* no profile — math default */
           }
           const s = String(body);
-          body = s.replace("</head>", `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};</script></head>`);
+          // The domain's open practices (manifest `open_practices`): the web
+          // hides the buttons of the ones it does not run.
+          let open: string[] | null = null;
+          try {
+            const man = JSON.parse(fs.readFileSync(path.join(opts.root, "config", "domain.json"), "utf8"));
+            const list = man?.domains?.[dom]?.open_practices;
+            if (Array.isArray(list)) open = list.map(String);
+          } catch {
+            /* no manifest: every practice stays visible */
+          }
+          body = s.replace(
+            "</head>",
+            `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};window.__FLOWED_OPEN=${JSON.stringify(open)};</script></head>`
+          );
         }
         return new Response(body, {
           headers: { "content-type": ct, "cache-control": "no-cache" },

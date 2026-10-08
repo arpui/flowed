@@ -1062,6 +1062,10 @@ export interface TurnGuardState {
   /** Free practice that goes one card at a time (Vocabulary): every graded
    *  reply must ask the next one. The Lesson has its own rule, with a counter. */
   oneAtATime?: boolean;
+  /** Speaking/Writing/Reading: the learner answered and the reply graded it. */
+  openPracticeAnswered?: boolean;
+  /** Something to do comes after the score line (see hasNextAfterScore). */
+  nextAfterScore?: boolean;
 }
 
 /** What to tell the tutor to make it write the turn again, or null if the turn
@@ -1512,6 +1516,17 @@ export function turnGuard(st: TurnGuardState): string | null {
     return (
       `Your reply corrects the answer but asks nothing, so the learner is left with a blank ` +
       `screen. Write the turn again: the same feedback, and then the next card in the same message.`
+    );
+  }
+
+  // The same blank screen in the open practices (tutor-bench 2026-10-08: 6 of
+  // 26 graded answers ended at the score — "Try the next one." and no next one;
+  // Albert, 2026-09-27: "NO pregunta més!!"). Only when nothing at all comes
+  // after the score line: a retry, a question or a new task all count.
+  if (st.openPracticeAnswered && st.graded && !st.closing && st.asked.length === 0 && !st.nextAfterScore) {
+    return (
+      `Your reply corrects the answer but asks nothing, so the learner is left with a blank ` +
+      `screen. Write the turn again: the same feedback, and then the next question or task in the same message.`
     );
   }
 
@@ -2096,4 +2111,41 @@ export function feedbackFromRecord(args: Record<string, unknown> | null | undefi
     .map(([w, r]) => `- ❌ "${w}" → **"${r}"**`);
   const head = lines.length ? `**Corrections:**\n${lines.join("\n")}` : "✅ Correct!";
   return alignMarkersToScore(`${head}\n\n**Score: ${Math.round(score)}/10** 🟢`);
+}
+
+
+// ---- open practices per domain (2026-10-08) -------------------------------
+
+/** The open practice a command is ("speaking" | "writing" | "reading"), or
+ *  null for every other command. Takes the canonical (math-*) or the raw
+ *  domain name. */
+export function openPracticeOf(command: string): string | null {
+  const m = /^(?:math|fluent)-(speaking|writing|reading)$/.exec(String(command ?? ""));
+  return m ? m[1]! : null;
+}
+
+/** Whether the manifest (config/domain.json) lets this domain run that open
+ *  practice. A domain without the field keeps all three (the behaviour before
+ *  the field existed); a non-open command is always allowed. */
+export function practiceAllowed(manifest: unknown, domain: string, command: string): boolean {
+  const practice = openPracticeOf(command);
+  if (!practice) return true;
+  const spec = ((manifest as { domains?: Record<string, { open_practices?: unknown }> })?.domains ?? {})[domain];
+  const list = spec?.open_practices;
+  return !Array.isArray(list) || list.includes(practice);
+}
+
+
+/** Whether the reply gives the learner something to do after its score line:
+ *  a heading (the next question/task), a line ending in "?", or an explicit
+ *  prompt to write/answer/try again. Open practices only (turnGuard). */
+export function hasNextAfterScore(text: string): boolean {
+  const body = String(text ?? "");
+  const m = [...body.matchAll(/\*{0,2}Score:?\*{0,2}\s*\d{1,2}\s*\/\s*10\**/gi)].pop();
+  if (!m || m.index === undefined) return true; // no score line: not this guard's business
+  const after = body.slice(m.index + m[0].length).trim();
+  if (!after) return false;
+  if (/^#{1,6}\s/m.test(after)) return true;
+  if (/\?\s*\**\s*$/m.test(after)) return true;
+  return /\b(?:type|write|answer|try again|your turn|escriu|respon|torna-ho a provar|prova-ho)\b/i.test(after);
 }
