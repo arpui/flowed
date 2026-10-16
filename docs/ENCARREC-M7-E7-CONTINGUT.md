@@ -24,3 +24,10 @@ Carpeta nova `curriculum/flash/math-m7/`. **Una llista per generador d'E5** (§4
 - [ ] Una llista per generador de m7 + repàs de taules, amb `competence`.
 - [ ] `flash_share: 60` a `math-m7.md`.
 - [ ] Res més canvia. Tests en verd (llevat de l'esperada).
+
+## 5. Poliment (de les captures d'E5)
+
+- Text: "Quina és **el** pendent" → "Quin és **el pendent** de la recta?" (en català, *pendent* és masculí). Revisa la resta d'enunciats nous de m7 per si hi ha errors semblants.
+- Figura `parallels`: més gran (fins a l'alçada màxima de figura), arcs dels dos angles amb radis diferents i etiquetes separades perquè no s'encavalquin quan són a la mateixa intersecció.
+- Figura `number_line`: més gran (marques i números llegibles al mòbil, ample complet de la targeta).
+- Captures noves d'aquestes figures a 390 px al scratchpad.
