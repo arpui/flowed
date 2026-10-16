@@ -111,6 +111,26 @@ class MathListIds(unittest.TestCase):
                 {"id": "f6", "prompt": "Quina és l'àrea?", "answer": ["6"], "answer_kind": "unit", "unit": "cm²", "figure": {"type": "triangle", "sides": [3, 4, 5], "labels": True}},
                 {"id": "f7", "prompt": "x", "answer": ["1"], "figure": {"type": "triangle", "sides": [1, 2, 3]}},
                 {"id": "f8", "prompt": "x", "answer": ["3"], "figure": {"type": "circle", "mark": "radius", "rot": 400}},
+                # m7 (docs/ENCARREC-M7-E5-FLASH.md §2, §3): factorization, algebraic, sexagesimal, the new figures
+                {"id": "e5-fz1", "prompt": "Descompon 12", "answer": ["2^2·3"], "answer_kind": "factorization"},
+                {"id": "e5-fz2", "prompt": "Descompon 12", "answer": ["2^2·4"], "answer_kind": "factorization"},
+                {"id": "e5-al1", "prompt": "x", "answer": ["3x²"], "answer_kind": "algebraic"},
+                {"id": "e5-al2", "prompt": "x", "answer": ["3x^7"], "answer_kind": "algebraic"},
+                {"id": "e5-sx1", "prompt": "x", "answer": ["7 h 45 min"], "answer_kind": "sexagesimal"},
+                {"id": "e5-sx2", "prompt": "x", "answer": ["7 h 75 min"], "answer_kind": "sexagesimal"},
+                {"id": "e5-sx3", "prompt": "x", "answer": ["18° 55'"], "answer_kind": "sexagesimal", "mode": "angle"},
+                {"id": "e5-sx4", "prompt": "x", "answer": ["18° 55'"], "answer_kind": "sexagesimal", "mode": "time"},
+                {"id": "e5-pa1", "prompt": "Quant mesura l'angle ?", "answer": ["70"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}},
+                {"id": "e5-pa2", "prompt": "Quant mesura l'angle ?", "answer": ["110"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}},
+                {"id": "e5-pa3", "prompt": "Quant mesura l'angle ?", "answer": ["70"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}, "answer_kind": "number"},
+                {"id": "e5-rt1", "prompt": "Calcula el costat que falta (?)", "answer": ["5"], "answer_kind": "unit", "unit": "cm", "figure": {"type": "right_triangle", "a": 3, "b": 4, "c": 5, "ask": "c", "unit": "cm"}},
+                {"id": "e5-rt2", "prompt": "x", "answer": ["6"], "figure": {"type": "right_triangle", "a": 3, "b": 4, "c": 6, "ask": "c"}},
+                {"id": "e5-nl1", "prompt": "Quin nombre és?", "answer": ["−3"], "figure": {"type": "number_line", "min": -5, "max": 5, "point": -3}},
+                {"id": "e5-nl2", "prompt": "Quin nombre és?", "answer": ["3"], "figure": {"type": "number_line", "min": -5, "max": 5, "point": -3}},
+                {"id": "e5-gr1", "prompt": "Quina és la pendent de la recta?", "answer": ["2"], "figure": {"type": "grid", "points": [], "min": -6, "max": 6, "line": {"m": 2, "n": -3}}},
+                {"id": "e5-gr2", "prompt": "Quina és la pendent de la recta?", "answer": ["3"], "figure": {"type": "grid", "points": [], "min": -6, "max": 6, "line": {"m": 2, "n": -3}}},
+                {"id": "e5-gr3", "prompt": "x", "answer": ["(−3, 4)"], "answer_kind": "pair", "figure": {"type": "grid", "points": [[-3, 4]], "min": -6, "max": 6}},
+                {"id": "e5-gr4", "prompt": "x", "answer": ["(−3, 4)"], "answer_kind": "pair", "figure": {"type": "grid", "points": [[-3, 8]], "min": -6, "max": 6}},
             ]}
             files["92-nope.json"] = {"id": "math-t9.flash.nope", "level": "t9", "title": {"en": "nope"}, "generate": {"kind": "nope", "count": 4}}
             write_math(tmp, "math-t9", files)

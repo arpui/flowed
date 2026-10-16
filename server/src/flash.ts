@@ -40,6 +40,7 @@ export interface FlashWordView {
   unit?: string; // math, unit kind: shown outside the box
   options?: string[]; // math, choice kind: the buttons
   form?: "value" | "simplest"; // math, fraction kind
+  mode?: SexaMode; // math, sexagesimal kind: the notation of the answer (time or angle)
   figure?: Figure; // math: drawn as SVG above the prompt (docs/ENCARREC-M5-E3-FIGURES.md)
 }
 
@@ -139,6 +140,7 @@ function mathView(w: MathWord): FlashWordView {
   if (kind === "choice") v.options = w.options ?? [];
   if (kind === "fraction") v.form = w.form ?? "value";
   if (w.figure) v.figure = w.figure;
+  if (w.mode) v.mode = w.mode;
   return v;
 }
 
@@ -151,8 +153,8 @@ function mathView(w: MathWord): FlashWordView {
 // hooks/curriculum.py flash_lists mirrors these rules: the same ids, the same drops.
 
 export type MathOp = "+" | "−" | "×" | ":";
-export type AnswerKind = "number" | "fraction" | "unit" | "choice" | "pair";
-const ANSWER_KINDS: readonly string[] = ["number", "fraction", "unit", "choice", "pair"];
+export type AnswerKind = "number" | "fraction" | "unit" | "choice" | "pair" | "factorization" | "algebraic" | "sexagesimal";
+const ANSWER_KINDS: readonly string[] = ["number", "fraction", "unit", "choice", "pair", "factorization", "algebraic", "sexagesimal"];
 
 const MATH_OP = new Map<string, MathOp>([
   ["+", "+"], ["−", "−"], ["-", "−"], ["×", "×"], ["x", "×"], ["*", "×"], [":", ":"], ["/", ":"],
@@ -169,6 +171,7 @@ export interface MathWord {
   options?: string[]; // choice: the buttons
   form?: "value" | "simplest"; // fraction: equivalents count, or only the irreducible form
   figure?: Figure; // a figure above the prompt (checked by checkFigure)
+  mode?: SexaMode; // sexagesimal: time or angle
 }
 
 /** The operator as the lists write it (`x`, `*`, `-`, `/` are synonyms), or null. */
@@ -183,7 +186,7 @@ function wholeNumber(v: unknown): number | null {
 
 /** The number an answer says (spaces out, comma or dot as decimal point), or null. */
 export function numericValue(s: unknown): number | null {
-  const t = String(s ?? "").replace(/\s+/g, "").replace(/,/g, ".");
+  const t = String(s ?? "").replace(/\s+/g, "").replace(/−/g, "-").replace(/,/g, ".");
   return /^-?[0-9]+(\.[0-9]+)?$/.test(t) ? Number(t) : null;
 }
 
@@ -256,7 +259,7 @@ const FRAC_INT = /^(-?)(\d+)$/;
 /** A fraction written n/d, as a mixed number (1 1/2), a whole number or a decimal (0,25). Null when it is
  *  none of these, or the denominator is 0. */
 export function parseFraction(s: unknown): Fraction | null {
-  const t = String(s ?? "").trim();
+  const t = String(s ?? "").trim().replace(/−/g, "-");
   let m: RegExpExecArray | null;
   if ((m = FRAC_MIXED.exec(t))) {
     const den = Number(m[4]);
@@ -287,7 +290,7 @@ export function gcd(a: number, b: number): number {
 /** The irreducible form as text: an integer when the value is whole, else n/d or a mixed number whose
  *  fraction part is reduced and proper. Decimals do not count. */
 export function isSimplestText(s: unknown): boolean {
-  const t = String(s ?? "").trim();
+  const t = String(s ?? "").trim().replace(/−/g, "-");
   const f = parseFraction(t);
   if (!f) return false;
   if (f.num % f.den === 0) return /^-?\d+$/.test(t);
@@ -306,6 +309,351 @@ function fracText(num: number, den: number): string {
   return num % den === 0 ? String(num / den) : `${num}/${den}`;
 }
 
+// ---- answer kinds of m7 (docs/ENCARREC-M7-E5-FLASH.md §2) -------------------------
+// factorization: the prime factors with multiplicity (2^3·3^2·5, 2·2·2·3·3·5; ·, *, x, × or a space between factors).
+// algebraic: the rules of hooks/mathgrade.py parse_poly (_normalize_alg, _poly_eval): sums of monomials, integer or
+// fraction coefficients, single-letter variables, powers ^n, ² ³ ⁴ (exponent 1..6), implicit product, · * /
+// (division by a nonzero number only). Equal when the expanded forms are equal. Number notation is the common subset:
+// no underscores, no exponent notation (1e5).
+// sexagesimal: a time (h, min, s; h:mm, h:mm:ss) or an angle (°, ', ''; º and typographic quotes too), compared in
+// seconds. Minutes and seconds must be below 60 (1 h 75 min is not normalized).
+
+export type SexaMode = "time" | "angle";
+
+const SUPERSCRIPT_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+
+/** Whether n is a prime number (n ≥ 2). */
+function isPrime(n: number): boolean {
+  if (!Number.isInteger(n) || n < 2) return false;
+  for (let d = 2; d * d <= n; d++) if (n % d === 0) return false;
+  return true;
+}
+
+/** The prime factors of a factorization as a map prime → count, or a problem (a factor that is not prime, or
+ *  a text that is not a factorization). `1` is no factor. */
+export function factorization(s: unknown): { factors: Map<number, number> } | { problem: string } {
+  const t = String(s ?? "").trim();
+  if (!t) return { problem: "buit" };
+  const factors = new Map<number, number>();
+  for (const tok of t.split(/\s*[·*x×]\s*|\s+/).filter((x) => x.length > 0)) {
+    const m = /^(\d+)(?:\^(\d+)|([⁰¹²³⁴⁵⁶⁷⁸⁹]+))?$/.exec(tok);
+    if (!m) return { problem: `${tok} no és un factor` };
+    const p = Number(m[1]);
+    if (!isPrime(p)) return { problem: `${p} no és primer` };
+    let e = 1;
+    if (m[2] !== undefined) e = Number(m[2]);
+    else if (m[3] !== undefined) e = [...m[3]].reduce((acc, c) => acc * 10 + SUPERSCRIPT_DIGITS.indexOf(c), 0);
+    if (e < 1) return { problem: `${tok}: l'exponent ha de ser ≥ 1` };
+    factors.set(p, (factors.get(p) ?? 0) + e);
+  }
+  return { factors };
+}
+
+/** The canonical text of a factorization: [[2, 3], [3, 2], [5, 1]] → "2^3·3^2·5". */
+export function factorText(f: Array<[number, number]>): string {
+  return f.map(([p, e]) => (e > 1 ? `${p}^${e}` : `${p}`)).join("·");
+}
+
+/** The prime factors of n with multiplicity, as [prime, count] pairs in order. */
+export function primeFactorList(n: number): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  let m = n;
+  for (let p = 2; p * p <= m; p++) {
+    let e = 0;
+    while (m % p === 0) {
+      m /= p;
+      e++;
+    }
+    if (e > 0) out.push([p, e]);
+  }
+  if (m > 1) out.push([m, 1]);
+  return out;
+}
+
+/** Two factorizations with the same primes and counts. */
+export function sameFactors(a: Map<number, number>, b: Map<number, number>): boolean {
+  if (a.size !== b.size) return false;
+  for (const [p, e] of a) if (b.get(p) !== e) return false;
+  return true;
+}
+
+class AlgebraError extends Error {}
+
+/** A reduced rational with a positive denominator (bigint, so the expansion is exact). */
+interface Rat {
+  n: bigint;
+  d: bigint;
+}
+
+function bigGcd(a: bigint, b: bigint): bigint {
+  let x = a < 0n ? -a : a;
+  let y = b < 0n ? -b : b;
+  while (y) [x, y] = [y, x % y];
+  return x;
+}
+
+function rat(n: bigint, d: bigint = 1n): Rat {
+  if (d === 0n) throw new AlgebraError("division by zero");
+  const sign = d < 0n ? -1n : 1n;
+  const g = bigGcd(n, d) || 1n;
+  return { n: (sign * n) / g, d: (sign * d) / g };
+}
+
+const ratAdd = (x: Rat, y: Rat): Rat => rat(x.n * y.d + y.n * x.d, x.d * y.d);
+const ratMul = (x: Rat, y: Rat): Rat => rat(x.n * y.n, x.d * y.d);
+const ratText = (x: Rat): string => (x.d === 1n ? String(x.n) : `${x.n}/${x.d}`);
+
+/** A monomial: letters in alphabetical order with exponents ≥ 1 ([] is the constant 1). */
+type Mono = Array<[string, number]>;
+/** A polynomial: monomial key → term. The key is the letters and exponents ("x2y1"); "" is the constant. */
+export type Poly = Map<string, { mono: Mono; c: Rat }>;
+
+const monoKey = (m: Mono): string => m.map(([v, e]) => `${v}${e}`).join("");
+
+function monoMul(a: Mono, b: Mono): Mono {
+  const d = new Map<string, number>();
+  for (const [v, e] of [...a, ...b]) d.set(v, (d.get(v) ?? 0) + e);
+  return [...d.entries()].sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0));
+}
+
+function polyConst(c: Rat): Poly {
+  return c.n === 0n ? new Map() : new Map([["", { mono: [], c }]]);
+}
+
+function polyVar(v: string): Poly {
+  return new Map([[monoKey([[v, 1]]), { mono: [[v, 1]], c: rat(1n) }]]);
+}
+
+function polyAdd(a: Poly, b: Poly, sign: 1n | -1n = 1n): Poly {
+  const out: Poly = new Map(a);
+  for (const [k, t] of b) {
+    const cur = out.get(k);
+    const c = ratAdd(cur ? cur.c : rat(0n), rat(sign * t.c.n, t.c.d));
+    if (c.n === 0n) out.delete(k);
+    else out.set(k, { mono: t.mono, c });
+  }
+  return out;
+}
+
+function polyMul(a: Poly, b: Poly): Poly {
+  const out: Poly = new Map();
+  for (const x of a.values()) {
+    for (const y of b.values()) {
+      const mono = monoMul(x.mono, y.mono);
+      const k = monoKey(mono);
+      const cur = out.get(k);
+      const c = ratAdd(cur ? cur.c : rat(0n), ratMul(x.c, y.c));
+      if (c.n === 0n) out.delete(k);
+      else out.set(k, { mono, c });
+    }
+  }
+  return out;
+}
+
+function polyScale(p: Poly, k: Rat): Poly {
+  const out: Poly = new Map();
+  for (const [key, t] of p) {
+    const c = ratMul(t.c, k);
+    if (c.n !== 0n) out.set(key, { mono: t.mono, c });
+  }
+  return out;
+}
+
+/** The value of a polynomial that is a nonzero constant, else null (a division or exponent needs one). */
+function nonzeroConstant(p: Poly): Rat | null {
+  if (p.size !== 1) return null;
+  return p.get("")?.c ?? null;
+}
+
+/** The parse_poly normalization (hooks/mathgrade.py _normalize_alg): operator signs, superscripts, ^ as **, decimal
+ *  comma, implicit product. A thousands separator is refused. */
+function normalizeAlg(text: unknown): string {
+  let s = String(text ?? "").trim();
+  s = s.replace(/[×·∗⋅]/g, "*").replace(/[÷⁄]/g, "/").replace(/[−–—]/g, "-");
+  s = s.replace(/²/g, "^2").replace(/³/g, "^3").replace(/⁴/g, "^4");
+  s = s.replace(/\^/g, "**");
+  s = s.replace(/(?<=\d),(?=\d)/g, ".");
+  if (/\d{1,3}(?:\.\d{3}){2,}/.test(s)) throw new AlgebraError("thousand separators");
+  s = s.replace(/(\d)\s*(?=[a-zA-Z(])/g, "$1*");
+  s = s.replace(/([a-zA-Z)])\s*(?=\()/g, "$1*");
+  s = s.replace(/([a-zA-Z)])\s*(?=[a-zA-Z(])/g, "$1*");
+  return s.replace(/\s+/g, " ").trim();
+}
+
+type Tok = { t: "num"; v: Rat } | { t: "name"; v: string } | { t: "op"; v: string };
+
+function decimalRat(text: string): Rat {
+  const [whole = "", frac = ""] = text.split(".");
+  return rat(BigInt((whole || "0") + frac), 10n ** BigInt(frac.length));
+}
+
+function tokenizeAlg(s: string): Tok[] {
+  const out: Tok[] = [];
+  let i = 0;
+  while (i < s.length) {
+    const ch = s[i] as string;
+    if (ch === " ") {
+      i++;
+      continue;
+    }
+    const num = /^(\d+\.?\d*|\.\d+)/.exec(s.slice(i));
+    if (num) {
+      out.push({ t: "num", v: decimalRat(num[1] as string) });
+      i += num[0].length;
+    } else if (/^[a-zA-Z]$/.test(ch)) {
+      out.push({ t: "name", v: ch });
+      i++;
+    } else if (s.startsWith("**", i)) {
+      out.push({ t: "op", v: "**" });
+      i += 2;
+    } else if ("+-*/()".includes(ch)) {
+      out.push({ t: "op", v: ch });
+      i++;
+    } else {
+      throw new AlgebraError(`character ${ch}`);
+    }
+  }
+  return out;
+}
+
+/** The expanded polynomial of an algebraic answer (parse_poly's rules), or null when it is not one. */
+export function parsePoly(text: unknown): Poly | null {
+  try {
+    const s = normalizeAlg(text);
+    if (!s) throw new AlgebraError("empty");
+    const toks = tokenizeAlg(s);
+    let pos = 0;
+    const isOp = (v: string): boolean => {
+      const t = toks[pos];
+      return t !== undefined && t.t === "op" && t.v === v;
+    };
+    const expr = (): Poly => {
+      let p = term();
+      while (isOp("+") || isOp("-")) {
+        const op = (toks[pos++] as { v: string }).v;
+        p = polyAdd(p, term(), op === "+" ? 1n : -1n);
+      }
+      return p;
+    };
+    const term = (): Poly => {
+      let p = factor();
+      while (isOp("*") || isOp("/")) {
+        const op = (toks[pos++] as { v: string }).v;
+        const q = factor();
+        if (op === "*") p = polyMul(p, q);
+        else {
+          const c = nonzeroConstant(q);
+          if (c === null) throw new AlgebraError("divisor");
+          p = polyScale(p, rat(c.d, c.n));
+        }
+      }
+      return p;
+    };
+    const factor = (): Poly => {
+      if (isOp("+") || isOp("-")) {
+        const neg = (toks[pos++] as { v: string }).v === "-";
+        const f = factor();
+        return neg ? polyScale(f, rat(-1n)) : f;
+      }
+      return power();
+    };
+    const power = (): Poly => {
+      const base = primary();
+      if (!isOp("**")) return base;
+      pos++;
+      const e = nonzeroConstant(factor());
+      if (e === null || e.d !== 1n || e.n < 1n || e.n > 6n) throw new AlgebraError("exponent");
+      return polyPow(base, Number(e.n));
+    };
+    const primary = (): Poly => {
+      const t = toks[pos++];
+      if (!t) throw new AlgebraError("end");
+      if (t.t === "num") return polyConst(t.v);
+      if (t.t === "name") return polyVar(t.v);
+      if (t.v !== "(") throw new AlgebraError("token");
+      const p = expr();
+      if (!isOp(")")) throw new AlgebraError("parenthesis");
+      pos++;
+      return p;
+    };
+    const result = expr();
+    if (pos !== toks.length) throw new AlgebraError("trailing");
+    return result;
+  } catch (e) {
+    if (e instanceof AlgebraError) return null;
+    throw e;
+  }
+}
+
+function polyPow(base: Poly, n: number): Poly {
+  let out = polyConst(rat(1n));
+  for (let i = 0; i < n; i++) out = polyMul(out, base);
+  return out;
+}
+
+/** The canonical form of a polynomial: equal polynomials give equal keys. */
+export function polyKey(p: Poly): string {
+  return [...p.entries()]
+    .map(([k, t]) => `${k}:${ratText(t.c)}`)
+    .sort()
+    .join("|");
+}
+
+/** Highest total degree of a polynomial (0 for a constant or 0). */
+export function polyDegree(p: Poly): number {
+  let d = 0;
+  for (const t of p.values()) d = Math.max(d, t.mono.reduce((s, [, e]) => s + e, 0));
+  return d;
+}
+
+/** Terms as parse_poly's report: monomial (x^2y, "" for the constant) → coefficient text. */
+export function polyTerms(p: Poly): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const t of p.values()) {
+    out[t.mono.map(([v, e]) => (e === 1 ? v : `${v}^${e}`)).join("")] = ratText(t.c);
+  }
+  return out;
+}
+
+/** The mode of a sexagesimal word: the one it names, else by its notation (° or ' means an angle). */
+export function sexaMode(v: unknown, target: string): SexaMode {
+  if (v === "time" || v === "angle") return v;
+  return /[°']/.test(target) ? "angle" : "time";
+}
+
+/** A time or an angle written as the lists write it, as seconds. normalized is false when minutes or seconds
+ *  are 60 or more. Null when the text is neither. */
+export function parseSexa(s: unknown, mode: SexaMode): { seconds: number; normalized: boolean } | null {
+  const t = String(s ?? "")
+    .trim()
+    .replace(/º/g, "°")
+    .replace(/’’|′′|″|”|“/g, "''")
+    .replace(/[′’‘]/g, "'")
+    .replace(/\s+/g, " ");
+  let m: RegExpExecArray | null;
+  let a = 0;
+  let b = 0;
+  let c = 0;
+  if (mode === "time") {
+    if ((m = /^(\d+):(\d+)(?::(\d+))?$/.exec(t))) {
+      a = Number(m[1]);
+      b = Number(m[2]);
+      c = m[3] === undefined ? 0 : Number(m[3]);
+    } else if ((m = /^(?:(\d+) ?h)?(?: ?(\d+) ?min)?(?: ?(\d+) ?s)?$/i.exec(t)) && m.slice(1).some((x) => x !== undefined)) {
+      a = Number(m[1] ?? 0);
+      b = Number(m[2] ?? 0);
+      c = Number(m[3] ?? 0);
+    } else return null;
+  } else {
+    m = /^(\d+) ?°(?: ?(\d+) ?'(?: ?(\d+) ?'')?)?$/.exec(t);
+    if (!m) return null;
+    a = Number(m[1]);
+    b = Number(m[2] ?? 0);
+    c = Number(m[3] ?? 0);
+  }
+  return { seconds: a * 3600 + b * 60 + c, normalized: b < 60 && c < 60 };
+}
+
 // ---- figures (docs/ENCARREC-M5-E3-FIGURES.md §2–§4) ------------------------------
 // A math word may carry a `figure`: the client draws it as inline SVG above the prompt, and nothing
 // outside the list is needed. The server checks it (a bad one drops its word, as a bad item does) and
@@ -320,13 +668,16 @@ export type Figure =
   | { type: "rect"; w: number; h: number; labels: boolean; unit?: string }
   | { type: "circle"; mark: CircleMark; rot: number }
   | { type: "bars"; labels: string[]; values: number[]; title?: string }
-  | { type: "grid"; points: Array<[number, number]>; size: number };
+  | { type: "grid"; points: Array<[number, number]>; size?: number; min: number; max: number; line?: { m: number; n: number } }
+  | { type: "parallels"; angle: number; known: number; ask: number }
+  | { type: "right_triangle"; a: number; b: number; c: number; ask: "a" | "b" | "c"; unit?: string }
+  | { type: "number_line"; min: number; max: number; point: number; label?: string };
 
 export const CIRCLE_MARKS: readonly CircleMark[] = ["radius", "diameter", "chord", "arc", "center"];
 export const CIRCLE_NAME: Record<CircleMark, string> = { radius: "radi", diameter: "diàmetre", chord: "corda", arc: "arc", center: "centre" };
 export const ANGLE_NAMES: readonly string[] = ["agut", "recte", "obtús", "pla", "complet"];
 export const TRIANGLE_NAMES: readonly string[] = ["equilàter", "isòsceles", "escalè"];
-const FIGURE_TYPES: readonly string[] = ["angle", "triangle", "polygon", "rect", "circle", "bars", "grid"];
+const FIGURE_TYPES: readonly string[] = ["angle", "triangle", "polygon", "rect", "circle", "bars", "grid", "parallels", "right_triangle", "number_line"];
 const MAX_SIDE = 999;
 
 /** An integer in lo..hi (7 and 7.0 both), or null. */
@@ -371,7 +722,7 @@ export function angleName(deg: number): string | null {
 
 /** An ordered pair written (3, 4), 3,4, 3 4 or (3 ; 4). Null when it is not one. Parentheses come in pairs. */
 export function parsePair(s: unknown): [number, number] | null {
-  const t = String(s ?? "").trim();
+  const t = String(s ?? "").trim().replace(/−/g, "-");
   if (t.startsWith("(") !== t.endsWith(")")) return null;
   const m = /^\s*(-?[0-9]+)\s*(?:[,;]\s*|\s+)(-?[0-9]+)\s*$/.exec(t.startsWith("(") ? t.slice(1, -1) : t);
   return m ? [Number(m[1]), Number(m[2])] : null;
@@ -432,22 +783,77 @@ export function checkFigure(raw: unknown): { figure: Figure } | { problem: strin
       const title = typeof f.title === "string" && f.title.trim() ? f.title.trim() : null;
       return { figure: { type: "bars", labels: names, values, ...(title === null ? {} : { title }) } };
     }
-    default: {
-      // grid
-      const size = f.size === undefined ? 10 : intIn(f.size, 1, 10);
-      if (size === null) return bad("grid: size ha de ser un enter de 1 a 10");
-      if (!Array.isArray(f.points) || f.points.length < 1 || f.points.length > 12) return bad("grid: de 1 a 12 punts");
+    case "parallels": {
+      // E5 §3: the angle of the known place (20..160) and the places 1..8 of the known and the asked angle
+      const angle = intIn(f.angle, 20, 160);
+      const known = intIn(f.known, 1, 8);
+      const ask = intIn(f.ask, 1, 8);
+      if (angle === null || known === null || ask === null || known === ask) {
+        return bad("parallels: angle de 20 a 160, known i ask diferents de 1 a 8");
+      }
+      return { figure: { type: "parallels", angle, known, ask } };
+    }
+    case "right_triangle": {
+      const a = intIn(f.a, 1, MAX_SIDE);
+      const b = intIn(f.b, 1, MAX_SIDE);
+      const c = intIn(f.c, 1, MAX_SIDE);
+      if (a === null || b === null || c === null) return bad("right_triangle: a, b i c han de ser enters de 1 a 999");
+      if (a * a + b * b !== c * c) return bad(`right_triangle: ${a}, ${b}, ${c} no són un triangle rectangle`);
+      if (f.ask !== "a" && f.ask !== "b" && f.ask !== "c") return bad("right_triangle: ask ha de ser a, b o c");
+      return { figure: { type: "right_triangle", a, b, c, ask: f.ask, ...unitPart } };
+    }
+    case "number_line": {
+      const min = intIn(f.min, -100, 100);
+      const max = intIn(f.max, -100, 100);
+      if (min === null || max === null || max <= min || max - min > 40) return bad("number_line: min < max, com a molt 40 unitats d'obertura");
+      const point = intIn(f.point, min, max);
+      if (point === null) return bad("number_line: point ha d'estar entre min i max");
+      const label = typeof f.label === "string" && f.label.trim() ? f.label.trim().slice(0, 12) : null;
+      return { figure: { type: "number_line", min, max, point, ...(label === null ? {} : { label }) } };
+    }
+    case "grid": {
+      // E5 §3: the square from min to max (min ≤ 0 ≤ max, axes at 0; by default 0..10). A line y = m·x + n.
+      const size = f.size === undefined ? null : intIn(f.size, 1, 10);
+      if (f.size !== undefined && size === null) return bad("grid: size ha de ser un enter de 1 a 10");
+      const min = f.min === undefined ? 0 : intIn(f.min, -10, 0);
+      const max = f.max === undefined ? (size ?? 10) : intIn(f.max, 1, 10);
+      if (min === null || max === null) return bad("grid: min de -10 a 0, max de 1 a 10");
+      let line: { m: number; n: number } | undefined;
+      if (f.line !== undefined) {
+        const l = asRecord(f.line);
+        const m = intIn(l.m, -9, 9);
+        const n = intIn(l.n, min, max);
+        if (m === null || n === null) return bad("grid: line ha de tenir m de -9 a 9 i n dins la graella");
+        line = { m, n };
+      }
+      if (!Array.isArray(f.points) || f.points.length > 12 || (f.points.length < 1 && line === undefined)) {
+        return bad("grid: de 1 a 12 punts (o una recta)");
+      }
       const points: Array<[number, number]> = [];
       for (const p of f.points) {
         if (!Array.isArray(p) || p.length !== 2) return bad("grid: cada punt és [x, y]");
-        const x = intIn(p[0], 0, size);
-        const y = intIn(p[1], 0, size);
-        if (x === null || y === null) return bad(`grid: el punt ha d'estar entre 0 i ${size}`);
+        const x = intIn(p[0], min, max);
+        const y = intIn(p[1], min, max);
+        if (x === null || y === null) return bad(`grid: el punt ha d'estar entre ${min} i ${max}`);
         points.push([x, y]);
       }
-      return { figure: { type: "grid", points, size } };
+      // size is the old name of max for a grid from 0 (kept for it); a grid from below 0 has min and max only,
+      // so the figure it gives is a figure its input would take again
+      return { figure: { type: "grid", points, ...(min === 0 ? { size: max } : {}), min, max, ...(line === undefined ? {} : { line }) } };
     }
+    default:
+      return bad("tipus de figura no suportat");
   }
+}
+
+/** The places of a `parallels` figure where the angle equals the secant's own angle: 1 and 4 at the upper parallel,
+ *  5 and 8 at the lower one (upper left and lower right). The others are its supplement. */
+const PARALLEL_SAME: readonly number[] = [1, 4, 5, 8];
+
+/** The degrees at place `ask`, when the place `known` has `angle` (corresponding angles are equal). */
+export function parallelValue(angle: number, known: number, ask: number): number {
+  const alpha = PARALLEL_SAME.includes(known) ? angle : 180 - angle;
+  return PARALLEL_SAME.includes(ask) ? alpha : 180 - alpha;
 }
 
 /** Where a figure settles the answer, the answer must agree with it (E3 §4). Null when it agrees or the
@@ -481,6 +887,31 @@ export function figureAnswerProblem(fig: Figure, prompt: string, kind: AnswerKin
         : null;
       if (per !== null && per !== n) return `el perímetre és ${per}`;
     }
+    if (fig.type === "parallels") {
+      const want = parallelValue(fig.angle, fig.known, fig.ask);
+      return want === n ? null : `l'angle val ${want}°`;
+    }
+    if (fig.type === "right_triangle") {
+      // the question says what it asks: a perimeter, an area, or else the side marked with ?
+      let want: number;
+      let why: string;
+      if (/per[ií]metre/i.test(prompt)) {
+        want = fig.a + fig.b + fig.c;
+        why = "el perímetre és";
+      } else if (/[àa]rea/i.test(prompt)) {
+        want = (fig.a * fig.b) / 2;
+        why = "l'àrea és";
+      } else {
+        want = fig[fig.ask];
+        why = `el costat ${fig.ask} mesura`;
+      }
+      return want === n ? null : `${why} ${want}`;
+    }
+    if (fig.type === "number_line" && kind === "number") return n === fig.point ? null : `el punt és ${fig.point}`;
+    if (fig.type === "grid" && fig.line !== undefined && kind === "number") {
+      if (/pendent/i.test(prompt)) return n === fig.line.m ? null : `la pendent és ${fig.line.m}`;
+      if (/ordenada/i.test(prompt)) return n === fig.line.n ? null : `l'ordenada a l'origen és ${fig.line.n}`;
+    }
   }
   return null;
 }
@@ -498,6 +929,7 @@ interface GenItem {
   form?: "value" | "simplest";
   figure?: Figure;
   key?: string; // two items with the same key are the same exercise (mult: a×b and b×a)
+  mode?: SexaMode; // sexagesimal
 }
 type Generator = (r: Rng, p: Params) => GenItem | null;
 
@@ -910,8 +1342,541 @@ function paramDigits(p: Params): [number, number] {
   return ok ? [v[0] as number, v[1] as number] : [1, 1];
 }
 
+// ---- m7 generators (docs/ENCARREC-M7-E5-FLASH.md §4): the same rules as the m5 ones --------
+// Each answer is worked out from the numbers drawn, never read back from the card. A figure is built the way
+// checkFigure builds it, so the card and its checked figure are the same object.
+
+const MINUS_SIGN = "−";
+const signedText = (n: number): string => (n < 0 ? `${MINUS_SIGN}${-n}` : String(n));
+const signedPlus = (n: number): string => (n < 0 ? `${MINUS_SIGN}${-n}` : `+${n}`);
+const SUPERSCRIPTS = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+const supText = (n: number): string => String(n).split("").map((d) => SUPERSCRIPTS[Number(d)]).join("");
+const pt = (x: number, y: number): [number, number] => [x, y];
+
+/** The figure a generator draws, as checkFigure keeps it (the same object the server would check). */
+function checkedFigure(raw: JsonRecord): Figure {
+  const c = checkFigure(raw);
+  if (!("figure" in c)) throw new Error(`figura de generador no vàlida: ${c.problem}`);
+  return c.figure;
+}
+
+/** A whole number in ±1..max (never 0). */
+function nonZero(r: Rng, max: number): number {
+  const v = int(r, 1, max);
+  return r() < 0.5 ? -v : v;
+}
+
+/** A fraction num/den (den > 0) reduced, as text: 3/4, −7/12, or a whole number. */
+function fracTextE5(num: number, den: number): string {
+  const g = gcd(num, den) || 1;
+  const n = num / g;
+  const d = den / g;
+  if (d === 1) return signedText(n);
+  return `${n < 0 ? MINUS_SIGN : ""}${Math.abs(n)}/${d}`;
+}
+
+/** One or two letters, in alphabetical order, with exponents 1..maxExp. */
+function monoPick(r: Rng, maxExp: number): Array<[string, number]> {
+  const letters = subset(r, ["x", "y", "a", "b"], int(r, 1, 2)).sort();
+  return letters.map((v): [string, number] => [v, int(r, 1, maxExp)]);
+}
+
+/** The letters of a monomial as text: x²y. */
+function letterText(m: Array<[string, number]>): string {
+  return m.map(([v, e]) => (e > 1 ? `${v}${supText(e)}` : v)).join("");
+}
+
+/** A monomial with a coefficient as text: 3x², −x, −5ab. */
+function termText(coef: number, m: Array<[string, number]>): string {
+  const lit = letterText(m);
+  if (coef === 1) return lit;
+  if (coef === -1) return `${MINUS_SIGN}${lit}`;
+  return `${coef < 0 ? MINUS_SIGN : ""}${Math.abs(coef)}${lit}`;
+}
+
+/** The product of two monomials, letters merged and alphabetical. */
+function monoMerge(a: Array<[string, number]>, b: Array<[string, number]>): Array<[string, number]> {
+  const d = new Map<string, number>();
+  for (const [v, e] of [...a, ...b]) d.set(v, (d.get(v) ?? 0) + e);
+  return [...d.entries()].sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0));
+}
+
+/** A sexagesimal total in minutes as text: 2 h 35 min, 3 h, 45 min; angles 75° 40', 18°. */
+function sexaText(totalMin: number, mode: SexaMode): string {
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (mode === "time") return h && m ? `${h} h ${m} min` : h ? `${h} h` : `${m} min`;
+  return m ? `${h}° ${m}'` : `${h}°`;
+}
+
+const LADDER_AREA: Array<[string, number]> = [["km²", 6], ["hm²", 4], ["dam²", 2], ["m²", 0], ["dm²", -2], ["cm²", -4], ["mm²", -6]];
+const LADDER_VOLUME: Array<[string, number]> = [["m³", 3], ["dm³", 0], ["cm³", -3]];
+const LADDER_CAPACITY: Array<[string, number]> = [["m³", 3], ["l", 0], ["ml", -3]];
+/** A phrase with a number k (2..9), its expression and three plausible wrong ones (all different). */
+const TRANSLATIONS: Array<(k: number) => [string, string, string[]]> = [
+  (k) => [`El doble d'un nombre més ${k}`, `2x + ${k}`, [`2(x + ${k})`, `x + ${k}`, `2x − ${k}`]],
+  (k) => [`El triple d'un nombre menys ${k}`, `3x − ${k}`, [`3(x − ${k})`, `x − ${k}`, `${k} − 3x`]],
+  (k) => [`La meitat d'un nombre augmentada en ${k}`, `x/2 + ${k}`, [`x/4 + ${k}`, `(x + ${k})/2`, `2x + ${k}`]],
+  (k) => [`El quadrat d'un nombre menys ${k}`, `x² − ${k}`, [`(x − ${k})²`, `x² + ${k}`, `2x − ${k}`]],
+  (k) => [`La suma d'un nombre i el seu doble, més ${k}`, `3x + ${k}`, [`3(x + ${k})`, `3x − ${k}`, `x + ${k}`]],
+  (k) => [`Un nombre disminuït en ${k} i multiplicat per 2`, `2(x − ${k})`, [`2x − ${k}`, `x − ${2 * k}`, `x/2 − ${k}`]],
+  (k) => [`Un nombre dividit per ${k}`, `x/${k}`, [`${k}/x`, `x − ${k}`, `${k}x`]],
+  (k) => [`Un nombre més ${k} vegades el mateix nombre`, `${k + 1}x`, [`${k}x`, `x + ${k}`, `x${supText(k)}`]],
+];
+const DIRECT_CASES = [
+  "Kg de pomes i preu pagat",
+  "Hores de feina i diners guanyats (mateix salari)",
+  "Litres de benzina i quilòmetres recorreguts",
+  "Nombre de llibres comprats i cost total",
+];
+const INVERSE_CASES = [
+  "Nombre d'obrers i dies per acabar una obra",
+  "Velocitat i temps per fer el mateix trajecte",
+  "Nombre de persones i dies que duren les provisions",
+  "Nombre de grifs i temps per omplir una piscina",
+];
+const NOTABLE: Array<[string, string]> = [
+  ["Punt on es tallen les mediatrius", "circumcentre"],
+  ["Punt on es tallen les bisectrius", "incentre"],
+  ["Punt on es tallen les medianes", "baricentre"],
+  ["Punt on es tallen les altures", "ortocentre"],
+  ["Centre de la circumferència que passa pels tres vèrtexs", "circumcentre"],
+  ["Centre de la circumferència inscrita en el triangle", "incentre"],
+  ["Punt de gravetat del triangle", "baricentre"],
+  ["Punt on es tallen les altures del triangle, o les seves prolongacions", "ortocentre"],
+];
+const NOTABLE_NAMES = ["circumcentre", "incentre", "baricentre", "ortocentre"];
+const POLYGON_NAMES: Record<number, string> = { 3: "triangle", 4: "quadrilàter", 5: "pentàgon", 6: "hexàgon", 7: "heptàgon", 8: "octàgon", 9: "eneàgon", 10: "decàgon" };
+const VARIABLES: Array<[string, string]> = [
+  ["Nombre de germans", "quantitativa discreta"],
+  ["Color preferit", "qualitativa"],
+  ["Alçada", "quantitativa contínua"],
+  ["Nombre de llibres a la biblioteca", "quantitativa discreta"],
+  ["Temperatura de l'aigua", "quantitativa contínua"],
+  ["Estat civil", "qualitativa"],
+  ["Pes d'un paquet", "quantitativa contínua"],
+  ["Marca de cotxe", "qualitativa"],
+  ["Nombre de gols d'un partit", "quantitativa discreta"],
+  ["Temps de viatge", "quantitativa contínua"],
+];
+const VARIABLE_KINDS = ["qualitativa", "quantitativa discreta", "quantitativa contínua"];
+// [card, favourable outcomes, outcomes] (equally likely), worked out by hand and checked by the tests
+const LAPLACE: Array<[string, number, number]> = [
+  ["Dos daus: probabilitat que la suma sigui 7", 6, 36],
+  ["Dos daus: probabilitat que la suma sigui 2", 1, 36],
+  ["Dos daus: probabilitat que la suma sigui més gran que 10", 3, 36],
+  ["Dos daus: probabilitat que els dos nombres siguin iguals", 6, 36],
+  ["Dues monedes: probabilitat de dues cares", 1, 4],
+  ["Dues monedes: probabilitat d'una cara i una creu", 2, 4],
+  ["Un dau: probabilitat de treure un nombre primer", 3, 6],
+  ["Un dau: probabilitat de treure un múltiple de 3", 2, 6],
+  ["Una moneda i un dau: probabilitat de cara i nombre parell", 3, 12],
+];
+const PYTHAGOREAN: Array<[number, number, number]> = [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]];
+const DECIMAL_TYPES = ["exacte", "periòdic pur", "periòdic mixt"];
+
+const E5_GENERATORS: Array<[string, Generator]> = [
+  ["int_signs", (r) => {
+    const t = int(r, 0, 2);
+    if (t === 0) {
+      const a = nonZero(r, 12);
+      const b = nonZero(r, 12);
+      return { prompt: `(${signedPlus(a)}) · (${signedPlus(b)})`, target: [signedText(a * b)] };
+    }
+    if (t === 1) {
+      const b = nonZero(r, 12);
+      const q = nonZero(r, 12);
+      return { prompt: `(${signedPlus(b * q)}) : (${signedPlus(b)})`, target: [signedText(q)] };
+    }
+    const a = int(r, -20, 20);
+    const b = nonZero(r, 20);
+    const plus = r() < 0.5;
+    return { prompt: `${signedText(a)} ${plus ? "+" : "−"} ${b > 0 ? b : `(${signedText(b)})`}`, target: [signedText(plus ? a + b : a - b)] };
+  }],
+  ["abs_opp", (r) => {
+    const a = nonZero(r, 20);
+    if (r() < 0.5) return { prompt: `|${signedText(a)}| = ?`, target: [String(Math.abs(a))] };
+    return { prompt: `Oposat de ${signedText(a)}`, target: [signedText(-a)] };
+  }],
+  ["int_combined", (r) => {
+    const t = int(r, 0, 2);
+    if (t === 0) {
+      const a = int(r, -9, 9);
+      const b = int(r, 2, 6);
+      const c = nonZero(r, 4);
+      return { prompt: `${signedText(a)} + ${b} · (${signedPlus(c)})²`, target: [signedText(a + b * c * c)] };
+    }
+    if (t === 1) {
+      const a = int(r, 1, 12);
+      const b = nonZero(r, 9);
+      const c = nonZero(r, 9);
+      return { prompt: `[${a} − (${signedPlus(b)})] · (${signedPlus(c)})`, target: [signedText((a - b) * c)] };
+    }
+    const a = nonZero(r, 9);
+    const b = nonZero(r, 9);
+    const c = nonZero(r, 9);
+    return { prompt: `(${signedPlus(a)}) · (${signedPlus(b)}) − (${signedPlus(c)})`, target: [signedText(a * b - c)] };
+  }],
+  ["prime_factors", (r) => {
+    const n = int(r, 24, 2000);
+    const f = primeFactorList(n);
+    if (f.reduce((s, [, e]) => s + e, 0) < 3) return null;
+    return { prompt: `Descompon ${n} en factors primers`, target: [factorText(f)], answer_kind: "factorization" };
+  }],
+  ["gcd_lcm", (r) => {
+    const a = int(r, 4, 99);
+    const b = int(r, 4, 99);
+    if (a === b) return null;
+    const lo = Math.min(a, b);
+    const hi = Math.max(a, b);
+    const g = gcd(a, b);
+    if (r() < 0.5) return { prompt: `MCD(${a}, ${b})`, target: [String(g)], key: `mcd ${lo} ${hi}` };
+    return { prompt: `mcm(${a}, ${b})`, target: [String((a * b) / g)], key: `mcm ${lo} ${hi}` };
+  }],
+  ["frac_simplify", (r) => {
+    const den = int(r, 3, 12);
+    const num = int(r, 1, den - 1);
+    if (gcd(num, den) !== 1) return null;
+    const g = int(r, 2, 12);
+    return { prompt: `Simplifica ${num * g}/${den * g}`, target: [`${num}/${den}`], answer_kind: "fraction", form: "simplest" };
+  }],
+  ["frac_combined", (r) => {
+    const f = (): [number, number] => {
+      const d = int(r, 2, 6);
+      return [int(r, 1, d - 1), d];
+    };
+    if (r() < 0.5) {
+      const [a, b] = f();
+      const [c, d] = f();
+      const [e, g] = f();
+      return { prompt: `(${a}/${b} + ${c}/${d}) · ${e}/${g}`, target: [fracTextE5((a * d + c * b) * e, b * d * g)], answer_kind: "fraction" };
+    }
+    const [a, b] = f();
+    const [c, d] = f();
+    return { prompt: `(${a}/${b})² − ${c}/${d}`, target: [fracTextE5(a * a * d - c * b * b, b * b * d)], answer_kind: "fraction" };
+  }],
+  ["decimal_type", (r) => {
+    const den = pick(r, [2, 3, 4, 5, 6, 8, 9, 11, 12, 15, 16, 20, 25]);
+    const num = int(r, 1, den - 1);
+    const g = gcd(num, den);
+    const d = den / g;
+    let rem = num / g;
+    const digits: number[] = [];
+    for (let i = 0; i < 6 && rem !== 0; i++) {
+      rem *= 10;
+      digits.push(Math.floor(rem / d));
+      rem %= d;
+    }
+    const shown = rem === 0 ? digits.join("") : `${digits.slice(0, 4).join("")}…`;
+    let rest = d;
+    while (rest % 2 === 0) rest /= 2;
+    while (rest % 5 === 0) rest /= 5;
+    const kind = rest === 1 ? "exacte" : d % 2 === 0 || d % 5 === 0 ? "periòdic mixt" : "periòdic pur";
+    return { prompt: `Quin tipus de decimal és 0,${shown}?`, target: [kind], answer_kind: "choice", options: DECIMAL_TYPES.slice() };
+  }],
+  ["generatrix", (r) => {
+    const k = int(r, 1, 3);
+    const num = int(r, 1, 999);
+    if (num % 10 === 0) return null; // the last decimal is not a zero: the fraction is not whole
+    return { prompt: `${decComma(num, k)} = ?`, target: [fracTextE5(num, 10 ** k)], answer_kind: "fraction", form: "simplest" };
+  }],
+  ["power_props", (r) => {
+    const b = int(r, 2, 9);
+    const m = int(r, 2, 6);
+    const n = int(r, 2, 6);
+    switch (int(r, 0, 3)) {
+      case 0: return { prompt: `${b}${supText(m)} · ${b}${supText(n)} = ${b}^?`, target: [String(m + n)] };
+      case 1: return { prompt: `(${b}${supText(m)})${supText(n)} = ${b}^?`, target: [String(m * n)] };
+      case 2:
+        if (m === n) return null;
+        return { prompt: `${b}${supText(Math.max(m, n))} : ${b}${supText(Math.min(m, n))} = ${b}^?`, target: [String(Math.abs(m - n))] };
+      default: {
+        const a = int(r, 2, 9);
+        const c = int(r, 2, 9);
+        return { prompt: `${a}${supText(m)} · ${c}${supText(m)} = ?^${m}`, target: [String(a * c)] };
+      }
+    }
+  }],
+  ["int_sqrt", (r) => {
+    const n = int(r, 10, 200);
+    const root = Math.floor(Math.sqrt(n)); // exact for n this small
+    return { prompt: `Arrel quadrada sencera de ${n} i residu (escriu (arrel, residu))`, target: [`(${root}, ${n - root * root})`], answer_kind: "pair" };
+  }],
+  ["translate_expr", (r) => {
+    const [phrase, right, wrong] = pick(r, TRANSLATIONS)(int(r, 2, 9));
+    return { prompt: phrase, target: [right], answer_kind: "choice", options: subset(r, [right, ...wrong], 4) };
+  }],
+  ["value_expr", (r) => {
+    const a = int(r, 2, 9);
+    const b = int(r, 1, 9);
+    const plus = r() < 0.5;
+    const v = nonZero(r, 9);
+    return { prompt: `${a}x ${plus ? "+" : "−"} ${b} per a x = ${signedText(v)}`, target: [signedText(a * v + (plus ? b : -b))] };
+  }],
+  ["monomial_parts", (r) => {
+    const c = nonZero(r, 12);
+    if (Math.abs(c) < 2) return null; // a coefficient of 1 is not shown: no card for it
+    const m = monoPick(r, 4);
+    const txt = termText(c, m);
+    if (r() < 0.5) return { prompt: `Grau de ${txt}`, target: [String(m.reduce((s, [, e]) => s + e, 0))] };
+    return { prompt: `Coeficient de ${txt}`, target: [signedText(c)] };
+  }],
+  ["monomial_ops", (r) => {
+    const t = int(r, 0, 2);
+    if (t === 0) {
+      const m = monoPick(r, 2);
+      const lit = letterText(m);
+      const a = int(r, 2, 9);
+      const b = int(r, 2, 9);
+      const c = int(r, 1, 9);
+      const s = a + b - c;
+      if (s === 0) return null;
+      return { prompt: `${a}${lit} + ${b}${lit} − ${c === 1 ? "" : c}${lit}`, target: [termText(s, m)], answer_kind: "algebraic" };
+    }
+    if (t === 1) {
+      const m1 = monoPick(r, 2);
+      const m2 = monoPick(r, 2);
+      const k = int(r, 2, 6);
+      const q = int(r, 2, 6);
+      return { prompt: `(${k}${letterText(m1)}) · (${q}${letterText(m2)})`, target: [termText(k * q, monoMerge(m1, m2))], answer_kind: "algebraic" };
+    }
+    const m = monoPick(r, 2);
+    const a = int(r, 2, 9);
+    const b = int(r, 2, 9);
+    if (a === b) return null;
+    return { prompt: `${a}${letterText(m)} − ${b}${letterText(m)}`, target: [termText(a - b, m)], answer_kind: "algebraic" };
+  }],
+  ["linear_eq", (r) => {
+    // a(x − p) = c·x + q, with the solution x0: q = (a − c)·x0 − a·p
+    const a = int(r, 2, 5);
+    const c = int(r, 1, 4);
+    if (c === a) return null;
+    const p = int(r, -5, 5);
+    const x0 = int(r, -6, 6);
+    const q = (a - c) * x0 - a * p;
+    const left = p === 0 ? `${a}x` : `${a}(x ${p > 0 ? "−" : "+"} ${Math.abs(p)})`;
+    const cx = c === 1 ? "x" : `${c}x`;
+    const right = q === 0 ? cx : `${cx} ${q > 0 ? "+" : "−"} ${Math.abs(q)}`;
+    return { prompt: `${left} = ${right}. Quant val x?`, target: [signedText(x0)] };
+  }],
+  ["proportion_type", (r) => {
+    const direct = r() < 0.5;
+    const text = pick(r, direct ? DIRECT_CASES : INVERSE_CASES);
+    return { prompt: `${text}. Quina proporcionalitat hi ha?`, target: [direct ? "directa" : "inversa"], answer_kind: "choice", options: ["directa", "inversa"] };
+  }],
+  ["rule_of_three", (r) => {
+    if (r() < 0.5) {
+      const a = int(r, 2, 9);
+      const b = int(r, 2, 12);
+      const m = int(r, 2, 9);
+      return { prompt: `Si ${a} llibres costen ${b} €, quant costen ${a * m} llibres?`, target: [String(b * m)] };
+    }
+    const a = int(r, 2, 12);
+    const b = int(r, 2, 12);
+    const divisors = Array.from({ length: 11 }, (_, i) => i + 2).filter((c) => c !== a && (a * b) % c === 0);
+    if (!divisors.length) return null;
+    const c = pick(r, divisors); // c obrers: the days are a·b/c, whole
+    return { prompt: `Si ${a} obrers fan una feina en ${b} dies, quants dies trigaran ${c} obrers?`, target: [String((a * b) / c)] };
+  }],
+  ["chained_percent", (r) => {
+    const base = int(r, 1, 8) * 50;
+    const up = pick(r, [5, 10, 15, 20, 25]);
+    const down = pick(r, [5, 10, 15, 20, 25]);
+    const numer = base * (100 + up) * (100 - down); // the value is numer / 10^4, exact
+    return { prompt: `${base} €, puja un ${up} % i baixa un ${down} %. Quant val al final?`, target: [decComma(numer, 4)] };
+  }],
+  ["quadrant_point", (r) => {
+    const x = int(r, -6, 6);
+    const y = int(r, -6, 6);
+    return {
+      prompt: "Quines coordenades té el punt?",
+      target: [`(${signedText(x)}, ${signedText(y)})`],
+      answer_kind: "pair",
+      figure: checkedFigure({ type: "grid", points: [pt(x, y)], min: -6, max: 6 }),
+    };
+  }],
+  ["linear_func", (r) => {
+    const a = nonZero(r, 5);
+    const b = nonZero(r, 9);
+    const x = int(r, -4, 4);
+    const lin = `${a === 1 ? "" : a === -1 ? MINUS_SIGN : signedText(a)}x`;
+    const bt = b > 0 ? ` + ${b}` : ` − ${-b}`;
+    return { prompt: `y = ${lin}${bt}. Quant val y per a x = ${signedText(x)}?`, target: [signedText(a * x + b)] };
+  }],
+  ["line_read", (r) => {
+    const m = nonZero(r, 4);
+    const n = int(r, -5, 5);
+    const figure = checkedFigure({ type: "grid", points: [], min: -6, max: 6, line: { m, n } });
+    if (r() < 0.5) return { prompt: "Quina és la pendent de la recta?", target: [signedText(m)], figure };
+    return { prompt: "Quina és l'ordenada a l'origen de la recta?", target: [signedText(n)], figure };
+  }],
+  ["pythagoras", (r) => {
+    const [x, y, z] = pick(r, PYTHAGOREAN);
+    const k = int(r, 1, 2);
+    const legs: [number, number] = r() < 0.5 ? [x * k, y * k] : [y * k, x * k];
+    const c = z * k;
+    const ask = pick(r, ["a", "b", "c"] as const);
+    const want = ask === "a" ? legs[0] : ask === "b" ? legs[1] : c;
+    return {
+      prompt: "Calcula el costat que falta (?)",
+      target: [String(want)],
+      answer_kind: "unit",
+      unit: "cm",
+      figure: checkedFigure({ type: "right_triangle", a: legs[0], b: legs[1], c, ask, unit: "cm" }),
+    };
+  }],
+  ["parallel_angles", (r) => {
+    const known = int(r, 1, 8);
+    const ask = int(r, 1, 8);
+    if (ask === known) return null;
+    const angle = int(r, 20, 160);
+    return {
+      prompt: "Quant mesura l'angle ?",
+      target: [String(parallelValue(angle, known, ask))],
+      figure: checkedFigure({ type: "parallels", angle, known, ask }),
+    };
+  }],
+  ["polygon_angle_sum", (r) => {
+    const n = int(r, 3, 10);
+    const name = POLYGON_NAMES[n];
+    const prompt = r() < 0.5 ? `Suma dels angles interiors d'un ${name}` : `Quants graus sumen els angles interiors d'un ${name}?`;
+    return { prompt, target: [String((n - 2) * 180)] };
+  }],
+  ["notable_points", (r) => {
+    const [card, name] = pick(r, NOTABLE);
+    return { prompt: card, target: [name], answer_kind: "choice", options: NOTABLE_NAMES.slice() };
+  }],
+  ["composite_area", (r) => {
+    if (r() < 0.5) {
+      const big = int(r, 3, 10);
+      const small = int(r, 1, big - 1);
+      return { prompt: `Corona circular de radis ${big} cm i ${small} cm (π = 3,14)`, target: [decComma(314 * (big * big - small * small), 2)], answer_kind: "unit", unit: "cm²" };
+    }
+    // sector: 3.14 · r² · θ / 360 = 314 · r² · θ / 36000, which must end: its denominator only 2s and 5s
+    const th = pick(r, [60, 90, 120, 180]);
+    const rad = int(r, 2, 10);
+    const numer = 314 * rad * rad * th;
+    const g = gcd(numer, 36000);
+    const n2 = numer / g;
+    const d2 = 36000 / g;
+    let rest = d2;
+    let twos = 0;
+    let fives = 0;
+    while (rest % 2 === 0) {
+      rest /= 2;
+      twos++;
+    }
+    while (rest % 5 === 0) {
+      rest /= 5;
+      fives++;
+    }
+    if (rest !== 1) return null;
+    const places = Math.max(twos, fives);
+    return { prompt: `Sector de ${th}° de radi ${rad} cm (π = 3,14)`, target: [decComma(n2 * (10 ** places / d2), places)], answer_kind: "unit", unit: "cm²" };
+  }],
+  ["unit_area_volume", (r) => {
+    const ladder = pick(r, [LADDER_AREA, LADDER_VOLUME, LADDER_CAPACITY]);
+    const i = int(r, 0, ladder.length - 1);
+    let j = int(r, 0, ladder.length - 2);
+    if (j >= i) j += 1;
+    const [ua, ea] = ladder[i] as [string, number];
+    const [ub, eb] = ladder[j] as [string, number];
+    const k = int(r, 0, 2);
+    const m = k === 0 ? int(r, 1, 99) : int(r, 11, 999);
+    if (k > 0 && m % 10 === 0) return null;
+    const e = ea - eb - k; // m·10^-k in ua is m·10^e in ub
+    if (e < -3 || e > 6) return null;
+    const target = e >= 0 ? decComma(m * 10 ** e, 0) : decComma(m, -e);
+    return { prompt: `${decComma(m, k)} ${ua} = ? ${ub}`, target: [target], answer_kind: "unit", unit: ub };
+  }],
+  ["speed_convert", (r) => {
+    if (r() < 0.5) {
+      const k = int(r, 1, 10);
+      return { prompt: `${18 * k} km/h = ? m/s`, target: [String(5 * k)], answer_kind: "unit", unit: "m/s" };
+    }
+    const d = int(r, 1, 20);
+    const v = int(r, 1, 20);
+    return { prompt: `Densitat ${d} g/cm³ i volum ${v} cm³. Massa = ? g`, target: [String(d * v)], answer_kind: "unit", unit: "g" };
+  }],
+  ["sexagesimal_ops", (r) => {
+    const mode: SexaMode = r() < 0.5 ? "time" : "angle";
+    const t1 = mode === "time" ? int(r, 60, 900) : int(r, 600, 4000);
+    const op = int(r, 0, 3);
+    if (op === 0) {
+      const k = int(r, 2, 5);
+      return { prompt: `${sexaText(t1, mode)} × ${k}`, target: [sexaText(t1 * k, mode)], answer_kind: "sexagesimal", mode };
+    }
+    if (op === 1) {
+      const t2 = int(r, 1, t1 - 1);
+      return { prompt: `${sexaText(t1, mode)} − ${sexaText(t2, mode)}`, target: [sexaText(t1 - t2, mode)], answer_kind: "sexagesimal", mode };
+    }
+    if (op === 2) {
+      const t2 = int(r, 10, 300);
+      return { prompt: `${sexaText(t1, mode)} + ${sexaText(t2, mode)}`, target: [sexaText(t1 + t2, mode)], answer_kind: "sexagesimal", mode };
+    }
+    const k = int(r, 2, 5);
+    if (t1 % k !== 0) return null; // the division is exact
+    return { prompt: `${sexaText(t1, mode)} : ${k}`, target: [sexaText(t1 / k, mode)], answer_kind: "sexagesimal", mode };
+  }],
+  ["variable_type", (r) => {
+    const [name, kind] = pick(r, VARIABLES);
+    return { prompt: `Quin tipus de variable és «${name}»?`, target: [kind], answer_kind: "choice", options: VARIABLE_KINDS.slice() };
+  }],
+  ["freq_relative", (r) => {
+    const total = int(r, 4, 40);
+    const n = int(r, 1, total - 1);
+    return { prompt: `${total} alumnes, ${n} tenen gos. Freqüència relativa?`, target: [fracTextE5(n, total)], answer_kind: "fraction" };
+  }],
+  ["median", (r) => {
+    const count = int(r, 5, 8);
+    const vals: number[] = [];
+    for (let i = 0; i < count; i++) vals.push(int(r, 1, 30));
+    const s = [...vals].sort((x, y) => x - y);
+    if (count % 2 === 1) return { prompt: `Mediana de ${vals.join(", ")}`, target: [String(s[(count - 1) / 2])] };
+    const sum = (s[count / 2 - 1] as number) + (s[count / 2] as number);
+    if (sum % 2 !== 0) return null; // the median would be a half
+    return { prompt: `Mediana de ${vals.join(", ")}`, target: [String(sum / 2)] };
+  }],
+  ["weighted_mean", (r) => {
+    const count = int(r, 2, 3);
+    const vals: number[] = [];
+    const ws: number[] = [];
+    for (let i = 0; i < count; i++) {
+      vals.push(int(r, 4, 10));
+      ws.push(int(r, 1, 3));
+    }
+    const W = ws.reduce((x, y) => x + y, 0);
+    const S = vals.reduce((x, _, i) => x + (vals[i] as number) * (ws[i] as number), 0);
+    let rest = W;
+    let twos = 0;
+    let fives = 0;
+    while (rest % 2 === 0) {
+      rest /= 2;
+      twos++;
+    }
+    while (rest % 5 === 0) {
+      rest /= 5;
+      fives++;
+    }
+    if (rest !== 1) return null; // the mean must be a decimal of a few places
+    const places = Math.max(twos, fives);
+    const parts = vals.map((v, i) => `${v} (pes ${ws[i]})`);
+    const text = parts.length === 2 ? `${parts[0]} i ${parts[1]}` : `${parts[0]}, ${parts[1]} i ${parts[2]}`;
+    return { prompt: `Notes ${text}. Mitjana ponderada?`, target: [decComma(S * (10 ** places / W), places)] };
+  }],
+  ["laplace", (r) => {
+    const [card, fav, all] = pick(r, LAPLACE);
+    return { prompt: card, target: [fracTextE5(fav, all)], answer_kind: "fraction" };
+  }],
+];
+for (const [kind, gen] of E5_GENERATORS) GENERATORS.set(kind, gen);
+
 /** The generator kinds a `generate` block may name (besides `op`). */
 export const GEN_KINDS: readonly string[] = [...GENERATORS.keys()];
+
+/** The most cards some kinds can make (their vocabulary is finite): a list asks for `count` and gets at most this.
+ *  Mirror in hooks/curriculum.py (MATH_GEN_ROOM). Every other kind makes GEN_COUNT_MAX. */
+export const GEN_ROOM: Readonly<Record<string, number>> = { proportion_type: 8, notable_points: 8, variable_type: 10, laplace: 9, polygon_angle_sum: 16 };
 
 /** The count of a generated list: an integer from 1 to 50, default 12 when it is not a whole number. */
 export function genCount(v: unknown): number {
@@ -969,6 +1934,12 @@ function itemProblem(item: JsonRecord): string | null {
   }
   if (kind === "unit" && (typeof item.unit !== "string" || !item.unit.trim())) return "unit sense text";
   if (kind === "pair" && parsePair(answer[0]) === null) return `${answer[0]} no són unes coordenades (x, y)`;
+  if (kind === "factorization" && "problem" in factorization(answer[0])) return `${answer[0]} no és una descomposició en primers`;
+  if (kind === "algebraic" && parsePoly(answer[0]) === null) return `${answer[0]} no és una expressió algebraica`;
+  if (kind === "sexagesimal") {
+    const sx = parseSexa(answer[0], sexaMode(item.mode, answer[0] ?? ""));
+    if (sx === null || !sx.normalized) return `${answer[0]} no és un temps o un angle normalitzat`;
+  }
   if (kind === "number" || kind === "unit") {
     const sop = simpleOp(item.prompt);
     if (sop) {
@@ -993,6 +1964,7 @@ function itemWord(item: JsonRecord, id: string): MathWord {
   if (kind === "unit") w.unit = String(item.unit).trim();
   if (kind === "choice") w.options = strings(item.options);
   if (kind === "fraction") w.form = item.form === "simplest" ? "simplest" : "value";
+  if (kind === "sexagesimal") w.mode = sexaMode(item.mode, w.target[0] ?? "");
   if (item.figure !== undefined) {
     const f = checkFigure(item.figure);
     if ("figure" in f) w.figure = f.figure;

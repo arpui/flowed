@@ -69,7 +69,7 @@
 
   // Math: el resultat com a número. Espais fora, coma o punt decimal: 72, 72,0 i 72.0 són iguals.
   function numeric(s) {
-    const t = String(s ?? "").replace(/\s+/g, "").replace(/,/g, ".");
+    const t = String(s ?? "").replace(/\s+/g, "").replace(/−/g, "-").replace(/,/g, ".");
     return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null;
   }
 
@@ -94,7 +94,7 @@
   }
 
   // Pista segons el tipus: fracció → el denominador (?/8); choice → cap (ja hi ha l'opció desactivada).
-  function hintFor(kind, target, lang) {
+  function hintFor(kind, target, lang, mode) {
     if (kind === "fraction") {
       const m = /\/(\d+)$/.exec(String(target));
       return m ? `?/${m[1]}` : "?";
@@ -104,12 +104,24 @@
       return p ? `(${p[0]}, ?)` : "?";
     }
     if (kind === "choice") return "";
+    if (kind === "factorization") {
+      const fz = factorization(target);
+      return "factors" in fz ? `${fz.factors.size} primers diferents` : "";
+    }
+    if (kind === "algebraic") {
+      const pl = parsePoly(target);
+      return pl ? `grau ${polyDegree(pl)}` : "";
+    }
+    if (kind === "sexagesimal") {
+      const sx = parseSexa(target, mode || "time");
+      return sx ? `${Math.floor(sx.seconds / 3600)}${mode === "angle" ? "°" : " h"} ?` : "";
+    }
     return hint(target, lang);
   }
 
   // Fracció: n/d, mixta (1 1/2), enter o decimal (0,25). Null si no ho és o el denominador és 0.
   function parseFraction(s) {
-    const t = String(s ?? "").trim();
+    const t = String(s ?? "").trim().replace(/−/g, "-");
     let m = /^(-?)(\d+)\s+(\d+)\s*\/\s*(\d+)$/.exec(t);
     if (m) {
       const d = Number(m[4]);
@@ -137,7 +149,7 @@
   // Irreductible tal com s'escriu: enter si el valor és enter; n/d o mixta amb la part fraccionària reduïda.
   // Els decimals no compten.
   function isSimplest(s) {
-    const t = String(s ?? "").trim();
+    const t = String(s ?? "").trim().replace(/−/g, "-");
     const f = parseFraction(t);
     if (!f) return false;
     if (f.num % f.den === 0) return /^-?\d+$/.test(t);
@@ -184,7 +196,7 @@
   // pair: un punt (x, y) escrit (3, 4), 3,4, 3 4 o (3 ; 4). L'ordre compta: (4,3) és un altre punt.
   // Null si no són unes coordenades; els parèntesis han d'anar parells.
   function parsePair(s) {
-    const t = String(s ?? "").trim();
+    const t = String(s ?? "").trim().replace(/−/g, "-");
     if (t.startsWith("(") !== t.endsWith(")")) return null;
     const m = /^\s*(-?\d+)\s*(?:[,;]\s*|\s+)(-?\d+)\s*$/.exec(t.startsWith("(") ? t.slice(1, -1) : t);
     return m ? [Number(m[1]), Number(m[2])] : null;
@@ -203,6 +215,320 @@
     return { ok: false, exact: true, form: null };
   }
 
+  // ---- tipus de resposta de m7 (docs/ENCARREC-M7-E5-FLASH.md §2) ---------------
+  // Mateixes regles que server/src/flash.ts (factorization, parsePoly, parseSexa) i hooks/mathgrade.py (parse_poly).
+  const SUPER = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+  const stripSpaces = (s) => String(s ?? "").replace(/\s+/g, "");
+
+  function isPrime(n) {
+    if (!Number.isInteger(n) || n < 2) return false;
+    for (let d = 2; d * d <= n; d++) if (n % d === 0) return false;
+    return true;
+  }
+
+  // Factors primers amb repetició: Map primer → nombre de vegades, o { problem }.
+  function factorization(s) {
+    const t = String(s ?? "").trim();
+    if (!t) return { problem: "buit" };
+    const factors = new Map();
+    for (const tok of t.split(/\s*[·*x×]\s*|\s+/).filter((x) => x.length > 0)) {
+      const m = /^(\d+)(?:\^(\d+)|([⁰¹²³⁴⁵⁶⁷⁸⁹]+))?$/.exec(tok);
+      if (!m) return { problem: `${tok} no és un factor` };
+      const p = Number(m[1]);
+      if (!isPrime(p)) return { problem: `${p} no és primer` };
+      let e = 1;
+      if (m[2] !== undefined) e = Number(m[2]);
+      else if (m[3] !== undefined) e = [...m[3]].reduce((acc, c) => acc * 10 + SUPER.indexOf(c), 0);
+      if (e < 1) return { problem: `${tok}: l'exponent ha de ser ≥ 1` };
+      factors.set(p, (factors.get(p) || 0) + e);
+    }
+    return { factors };
+  }
+
+  function sameFactors(a, b) {
+    if (a.size !== b.size) return false;
+    for (const [p, e] of a) if (b.get(p) !== e) return false;
+    return true;
+  }
+
+  // Polinomis: nombres racionals exactes (BigInt). Un monomi és [[lletra, exponent], …] ordenat.
+  const ALG_FAIL = {}; // llançat quan la resposta no és un polinomi
+  const bgcd = (a, b) => {
+    let x = a < 0n ? -a : a;
+    let y = b < 0n ? -b : b;
+    while (y) [x, y] = [y, x % y];
+    return x;
+  };
+  const rat = (n, d = 1n) => {
+    if (d === 0n) throw ALG_FAIL;
+    const sign = d < 0n ? -1n : 1n;
+    const g = bgcd(n, d) || 1n;
+    return { n: (sign * n) / g, d: (sign * d) / g };
+  };
+  const ratAdd = (x, y) => rat(x.n * y.d + y.n * x.d, x.d * y.d);
+  const ratMul = (x, y) => rat(x.n * y.n, x.d * y.d);
+  const ratText = (x) => (x.d === 1n ? String(x.n) : `${x.n}/${x.d}`);
+  const monoKey = (m) => m.map(([v, e]) => `${v}${e}`).join("");
+  function monoMul(a, b) {
+    const d = new Map();
+    for (const [v, e] of [...a, ...b]) d.set(v, (d.get(v) || 0) + e);
+    return [...d.entries()].sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0));
+  }
+  const polyConst = (c) => (c.n === 0n ? new Map() : new Map([["", { mono: [], c }]]));
+  const polyVar = (v) => new Map([[monoKey([[v, 1]]), { mono: [[v, 1]], c: rat(1n) }]]);
+  function polyAdd(a, b, sign = 1n) {
+    const out = new Map(a);
+    for (const [k, t] of b) {
+      const cur = out.get(k);
+      const c = ratAdd(cur ? cur.c : rat(0n), rat(sign * t.c.n, t.c.d));
+      if (c.n === 0n) out.delete(k);
+      else out.set(k, { mono: t.mono, c });
+    }
+    return out;
+  }
+  function polyMul(a, b) {
+    const out = new Map();
+    for (const x of a.values()) {
+      for (const y of b.values()) {
+        const mono = monoMul(x.mono, y.mono);
+        const k = monoKey(mono);
+        const cur = out.get(k);
+        const c = ratAdd(cur ? cur.c : rat(0n), ratMul(x.c, y.c));
+        if (c.n === 0n) out.delete(k);
+        else out.set(k, { mono, c });
+      }
+    }
+    return out;
+  }
+  function polyScale(p, k) {
+    const out = new Map();
+    for (const [key, t] of p) {
+      const c = ratMul(t.c, k);
+      if (c.n !== 0n) out.set(key, { mono: t.mono, c });
+    }
+    return out;
+  }
+  function polyPow(base, n) {
+    let out = polyConst(rat(1n));
+    for (let i = 0; i < n; i++) out = polyMul(out, base);
+    return out;
+  }
+  // El valor d'un polinomi que és una constant no nul·la, o null (una divisió o un exponent el necessiten).
+  function nonzeroConstant(p) {
+    if (p.size !== 1) return null;
+    const t = p.get("");
+    return t ? t.c : null;
+  }
+
+  // La normalització de _normalize_alg (hooks/mathgrade.py): signes d'operació, superíndexs, ^ com a **, coma decimal,
+  // producte implícit. Un separador de milers es rebutja.
+  function normalizeAlg(text) {
+    let s = String(text ?? "").trim();
+    s = s.replace(/[×·∗⋅]/g, "*").replace(/[÷⁄]/g, "/").replace(/[−–—]/g, "-");
+    s = s.replace(/²/g, "^2").replace(/³/g, "^3").replace(/⁴/g, "^4");
+    s = s.replace(/\^/g, "**");
+    s = s.replace(/(?<=\d),(?=\d)/g, ".");
+    if (/\d{1,3}(?:\.\d{3}){2,}/.test(s)) throw ALG_FAIL;
+    s = s.replace(/(\d)\s*(?=[a-zA-Z(])/g, "$1*");
+    s = s.replace(/([a-zA-Z)])\s*(?=\()/g, "$1*");
+    s = s.replace(/([a-zA-Z)])\s*(?=[a-zA-Z(])/g, "$1*");
+    return s.replace(/\s+/g, " ").trim();
+  }
+
+  function decimalRat(text) {
+    const [whole = "", frac = ""] = text.split(".");
+    return rat(BigInt((whole || "0") + frac), 10n ** BigInt(frac.length));
+  }
+
+  function tokenizeAlg(s) {
+    const out = [];
+    let i = 0;
+    while (i < s.length) {
+      const ch = s[i];
+      if (ch === " ") {
+        i++;
+        continue;
+      }
+      const num = /^(\d+\.?\d*|\.\d+)/.exec(s.slice(i));
+      if (num) {
+        out.push({ t: "num", v: decimalRat(num[1]) });
+        i += num[0].length;
+      } else if (/^[a-zA-Z]$/.test(ch)) {
+        out.push({ t: "name", v: ch });
+        i++;
+      } else if (s.startsWith("**", i)) {
+        out.push({ t: "op", v: "**" });
+        i += 2;
+      } else if ("+-*/()".includes(ch)) {
+        out.push({ t: "op", v: ch });
+        i++;
+      } else {
+        throw ALG_FAIL;
+      }
+    }
+    return out;
+  }
+
+  // El polinomi expandit d'una resposta algebraica (les regles de parse_poly), o null si no ho és.
+  // Mapa: clau del monomi ("x2y1"; "" és la constant) → { mono, c }.
+  function parsePoly(text) {
+    try {
+      const s = normalizeAlg(text);
+      if (!s) throw ALG_FAIL;
+      const toks = tokenizeAlg(s);
+      let pos = 0;
+      const isOp = (v) => pos < toks.length && toks[pos].t === "op" && toks[pos].v === v;
+      const expr = () => {
+        let p = term();
+        while (isOp("+") || isOp("-")) {
+          const op = toks[pos++].v;
+          p = polyAdd(p, term(), op === "+" ? 1n : -1n);
+        }
+        return p;
+      };
+      const term = () => {
+        let p = factor();
+        while (isOp("*") || isOp("/")) {
+          const op = toks[pos++].v;
+          const q = factor();
+          if (op === "*") p = polyMul(p, q);
+          else {
+            const c = nonzeroConstant(q);
+            if (c === null) throw ALG_FAIL;
+            p = polyScale(p, rat(c.d, c.n));
+          }
+        }
+        return p;
+      };
+      const factor = () => {
+        if (isOp("+") || isOp("-")) {
+          const neg = toks[pos++].v === "-";
+          const f = factor();
+          return neg ? polyScale(f, rat(-1n)) : f;
+        }
+        return power();
+      };
+      const power = () => {
+        const base = primary();
+        if (!isOp("**")) return base;
+        pos++;
+        const e = nonzeroConstant(factor());
+        if (e === null || e.d !== 1n || e.n < 1n || e.n > 6n) throw ALG_FAIL;
+        return polyPow(base, Number(e.n));
+      };
+      const primary = () => {
+        const t = toks[pos++];
+        if (!t) throw ALG_FAIL;
+        if (t.t === "num") return polyConst(t.v);
+        if (t.t === "name") return polyVar(t.v);
+        if (t.v !== "(") throw ALG_FAIL;
+        const p = expr();
+        if (!isOp(")")) throw ALG_FAIL;
+        pos++;
+        return p;
+      };
+      const result = expr();
+      if (pos !== toks.length) throw ALG_FAIL;
+      return result;
+    } catch (e) {
+      if (e === ALG_FAIL) return null;
+      throw e;
+    }
+  }
+
+  // Forma canònica: dos polinomis iguals tenen la mateixa clau.
+  function polyKey(p) {
+    return [...p.entries()]
+      .map(([k, t]) => `${k}:${ratText(t.c)}`)
+      .sort()
+      .join("|");
+  }
+
+  function polyDegree(p) {
+    let d = 0;
+    for (const t of p.values()) d = Math.max(d, t.mono.reduce((s, [, e]) => s + e, 0));
+    return d;
+  }
+
+  // Temps o angle com a segons. normalized és fals quan els minuts o els segons són 60 o més. Null si no és cap dels dos.
+  function parseSexa(s, mode) {
+    const t = String(s ?? "")
+      .trim()
+      .replace(/º/g, "°")
+      .replace(/’’|′′|″|”|“/g, "''")
+      .replace(/[′’‘]/g, "'")
+      .replace(/\s+/g, " ");
+    let m;
+    let a = 0;
+    let b = 0;
+    let c = 0;
+    if (mode === "time") {
+      if ((m = /^(\d+):(\d+)(?::(\d+))?$/.exec(t))) {
+        a = Number(m[1]);
+        b = Number(m[2]);
+        c = m[3] === undefined ? 0 : Number(m[3]);
+      } else if ((m = /^(?:(\d+) ?h)?(?: ?(\d+) ?min)?(?: ?(\d+) ?s)?$/i.exec(t)) && m.slice(1).some((x) => x !== undefined)) {
+        a = Number(m[1] || 0);
+        b = Number(m[2] || 0);
+        c = Number(m[3] || 0);
+      } else return null;
+    } else {
+      m = /^(\d+) ?°(?: ?(\d+) ?'(?: ?(\d+) ?'')?)?$/.exec(t);
+      if (!m) return null;
+      a = Number(m[1]);
+      b = Number(m[2] || 0);
+      c = Number(m[3] || 0);
+    }
+    return { seconds: a * 3600 + b * 60 + c, normalized: b < 60 && c < 60 };
+  }
+
+  // Pistes: el primer error no en dona cap. Factors → quants primers diferents; algebraica → el grau; temps → les hores.
+  // ---- comprovacions (com check/checkFraction: { ok, exact, form, note }) ----
+  function checkFactorization(answer, accepted) {
+    const a = factorization(answer);
+    if (!("factors" in a)) return { ok: false, exact: true, form: null, note: a.problem };
+    for (const raw of accepted) {
+      const b = factorization(raw);
+      if ("factors" in b && sameFactors(a.factors, b.factors)) {
+        return { ok: true, exact: stripSpaces(answer) === stripSpaces(raw), form: raw };
+      }
+    }
+    return { ok: false, exact: true, form: null };
+  }
+
+  function checkAlgebraic(answer, accepted) {
+    const a = parsePoly(answer);
+    if (a === null) return { ok: false, exact: true, form: null };
+    const key = polyKey(a);
+    for (const raw of accepted) {
+      const b = parsePoly(raw);
+      if (b !== null && polyKey(b) === key) return { ok: true, exact: stripSpaces(answer) === stripSpaces(raw), form: raw };
+    }
+    return { ok: false, exact: true, form: null };
+  }
+
+  function checkSexagesimal(answer, target, mode) {
+    const a = parseSexa(answer, mode);
+    if (a === null) return { ok: false, exact: true, form: null };
+    if (!a.normalized) {
+      return { ok: false, exact: true, form: null, note: "Normalitza: els minuts i els segons han de ser menors que 60." };
+    }
+    const b = parseSexa(target, mode);
+    if (b !== null && b.seconds === a.seconds) {
+      return { ok: true, exact: stripSpaces(answer) === stripSpaces(target), form: target };
+    }
+    return { ok: false, exact: true, form: null };
+  }
+
+  // Angle de la posició `ask` d'una figura `parallels` (E5 §3): 1 i 4 al paral·lela de dalt, 5 i 8 a la de baix
+  // són l'angle de la secant; la resta són el seu suplement.
+  function parallelValue(angle, known, ask) {
+    const same = (p) => p === 1 || p === 4 || p === 5 || p === 8;
+    const alpha = same(known) ? angle : 180 - angle;
+    return same(ask) ? alpha : 180 - alpha;
+  }
+
+
   // ---- figures (docs/ENCARREC-M5-E3-FIGURES.md §2) ----------------------------
   // Dibuix SVG en línia per a la figura d'una targeta. Les dades ja les ha validat el servidor.
   // El dibuix no mostra la resposta: un angle no porta graus (tret que label), i una marca de cercle no té nom.
@@ -210,6 +536,9 @@
   function escXml(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
   }
+
+  // Un enter amb el signe menys de tipografia: −3.
+  const sg = (v) => (v < 0 ? `−${-v}` : String(v));
 
   const f1 = (n) => Number(n.toFixed(1));
   const xy = (p) => `${f1(p[0])},${f1(p[1])}`;
@@ -360,27 +689,147 @@
         return { vb: "0 0 300 240", body, label: `Diagrama de barres${f.title ? `: ${f.title}` : ""}, amb les barres ${names}` };
       }
       case "grid": {
-        const S = f.size;
+        // Un quadrat de mn a mx (per defecte 0..10: els eixos passen pel 0). Amb `line`, la recta y = m·x + n.
+        const mn = f.min ?? 0;
+        const mx = f.max ?? f.size ?? 10;
+        const S = mx - mn;
         const u = 200 / S;
-        const X = (i) => 40 + i * u;
-        const Y = (j) => 220 - j * u;
+        const X = (v) => 40 + (v - mn) * u;
+        const Y = (v) => 220 - (v - mn) * u;
         let body = "";
-        for (let i = 0; i <= S; i++) {
-          body += `<line class="fig-grid" x1="${f1(X(i))}" y1="${f1(Y(0))}" x2="${f1(X(i))}" y2="${f1(Y(S))}"/>`;
-          body += `<line class="fig-grid" x1="${f1(X(0))}" y1="${f1(Y(i))}" x2="${f1(X(S))}" y2="${f1(Y(i))}"/>`;
-          body += svgText(X(i), Y(0) + 12, String(i), "middle", "fig-tick");
-          if (i > 0) body += svgText(X(0) - 10, Y(i), String(i), "end", "fig-tick");
+        for (let v = mn; v <= mx; v++) {
+          body += `<line class="fig-grid" x1="${f1(X(v))}" y1="${f1(Y(mn))}" x2="${f1(X(v))}" y2="${f1(Y(mx))}"/>`;
+          body += `<line class="fig-grid" x1="${f1(X(mn))}" y1="${f1(Y(v))}" x2="${f1(X(mx))}" y2="${f1(Y(v))}"/>`;
+          if (mn < 0) {
+            // amb un interval que baixa de 0 els números van a la vora del quadrat: no es troben als eixos
+            body += svgText(X(v), Y(mn) + 12, sg(v), "middle", "fig-tick");
+            body += svgText(X(mn) - 6, Y(v), sg(v), "end", "fig-tick");
+          } else {
+            body += svgText(X(v), Y(0) + 12, sg(v), "middle", "fig-tick");
+            if (v !== 0) body += svgText(X(0) - 10, Y(v), sg(v), "end", "fig-tick");
+          }
         }
-        body += `<line class="fig-line" x1="${f1(X(0))}" y1="${f1(Y(0))}" x2="${f1(X(S) + 6)}" y2="${f1(Y(0))}"/>`;
-        body += `<line class="fig-line" x1="${f1(X(0))}" y1="${f1(Y(0))}" x2="${f1(X(0))}" y2="${f1(Y(S) - 6)}"/>`;
-        body += svgText(X(S) + 12, Y(0), "x", "start") + svgText(X(0) + 8, Y(S) - 4, "y", "start");
+        body += `<line class="fig-line" x1="${f1(X(mn))}" y1="${f1(Y(0))}" x2="${f1(X(mx) + 6)}" y2="${f1(Y(0))}"/>`;
+        body += `<line class="fig-line" x1="${f1(X(0))}" y1="${f1(Y(mn))}" x2="${f1(X(0))}" y2="${f1(Y(mx) - 6)}"/>`;
+        body += svgText(X(mx) + 12, Y(0), "x", "start") + svgText(X(0) + 8, Y(mx) - 4, "y", "start");
+        if (f.line) {
+          const { m, n } = f.line;
+          if (m === 0) {
+            body += `<line class="fig-mark" x1="${f1(X(mn))}" y1="${f1(Y(n))}" x2="${f1(X(mx))}" y2="${f1(Y(n))}"/>`;
+          } else {
+            // el tram de la recta dins el quadrat
+            const xa = (mn - n) / m;
+            const xb = (mx - n) / m;
+            const lo = Math.max(mn, Math.min(xa, xb));
+            const hi = Math.min(mx, Math.max(xa, xb));
+            if (lo <= hi) {
+              body += `<line class="fig-mark" x1="${f1(X(lo))}" y1="${f1(Y(m * lo + n))}" x2="${f1(X(hi))}" y2="${f1(Y(m * hi + n))}"/>`;
+            }
+          }
+        }
         for (const [px, py] of f.points) body += `<circle class="fig-dot" cx="${f1(X(px))}" cy="${f1(Y(py))}" r="5"/>`;
         const n = f.points.length;
+        const parts = [];
+        if (n === 1) parts.push("un punt marcat");
+        else if (n > 1) parts.push(`${n} punts marcats`);
+        if (f.line) parts.push("una recta");
         return {
           vb: "0 0 300 250",
           body,
-          label: `Quadrícula de coordenades de 0 a ${S}, amb ${n === 1 ? "un punt marcat" : `${n} punts marcats`}`,
+          label: `Quadrícula de coordenades de ${sg(mn)} a ${sg(mx)}${parts.length ? `, amb ${parts.join(" i ")}` : ""}`,
         };
+      }
+      case "parallels": {
+        // Dues paral·leles i una secant. Les posicions 1–8 (1–4 a la de dalt, 5–8 a la de baix; 1 UL, 2 UR, 3 DL, 4 DR).
+        const alpha = [1, 4, 5, 8].includes(f.known) ? f.angle : 180 - f.angle; // l'angle de la secant
+        const rad = (alpha * Math.PI) / 180;
+        const cx = 160;
+        const yT = 75;
+        const yB = 165;
+        const dx = ((yB - yT) * Math.cos(rad)) / Math.sin(rad);
+        const P = [cx - dx / 2, yT];
+        const Q = [cx + dx / 2, yB];
+        const D = [Math.cos(rad), Math.sin(rad)];
+        const R = [1, 0];
+        const L = [-1, 0];
+        const mD = [-D[0], -D[1]];
+        const ext = 16;
+        let body = `<line class="fig-line" x1="10" y1="${yT}" x2="310" y2="${yT}"/>`;
+        body += `<line class="fig-line" x1="10" y1="${yB}" x2="310" y2="${yB}"/>`;
+        body += `<line class="fig-line" x1="${f1(P[0] - D[0] * ext)}" y1="${f1(P[1] - D[1] * ext)}" x2="${f1(Q[0] + D[0] * ext)}" y2="${f1(Q[1] + D[1] * ext)}"/>`;
+        // la posició k: el punt de la secant i els dos raigs de l'angle (UL, UR, DL, DR)
+        const place = (k) => ({ X: k > 4 ? Q : P, rays: [[L, mD], [R, mD], [L, D], [R, D]][(k - 1) % 4] });
+        const bisector = (u1, u2) => {
+          const s = [u1[0] + u2[0], u1[1] + u2[1]];
+          const len = Math.hypot(s[0], s[1]);
+          return [s[0] / len, s[1] / len];
+        };
+        const arc = (k) => {
+          const { X, rays } = place(k);
+          const [u1, u2] = rays;
+          const a = [X[0] + u1[0] * 16, X[1] + u1[1] * 16];
+          const b = [X[0] + u2[0] * 16, X[1] + u2[1] * 16];
+          const cross = u1[0] * u2[1] - u1[1] * u2[0];
+          return `<path class="fig-mark" d="M ${xy(a)} A 16 16 0 0 ${cross > 0 ? 1 : 0} ${xy(b)}"/>`;
+        };
+        const label = (k, text) => {
+          const { X, rays } = place(k);
+          const b = bisector(rays[0], rays[1]);
+          return svgText(X[0] + b[0] * 28, X[1] + b[1] * 28, text);
+        };
+        body += arc(f.known) + label(f.known, `${f.angle}°`) + arc(f.ask) + label(f.ask, "?");
+        return {
+          vb: "0 0 320 240",
+          body,
+          label: `Dues rectes paral·leles tallades per una secant, amb un angle de ${f.angle} graus marcat`,
+        };
+      }
+      case "right_triangle": {
+        // Angle recte a baix a l'esquerra: a és el catet de baix, b el de l'esquerra, c la hipotenusa.
+        const us = f.unit ? ` ${f.unit}` : "";
+        const p = fitPoints(
+          [
+            [0, 0],
+            [f.a, 0],
+            [0, f.b],
+          ],
+          FIG_BOX,
+        );
+        const ctr = centreOf(p);
+        const unitVec = (from, to) => {
+          const dx = to[0] - from[0];
+          const dy = to[1] - from[1];
+          const len = Math.hypot(dx, dy) || 1;
+          return [dx / len, dy / len];
+        };
+        const ua = unitVec(p[0], p[1]);
+        const ub = unitVec(p[0], p[2]);
+        const s = 12;
+        const q1 = [p[0][0] + ua[0] * s, p[0][1] + ua[1] * s];
+        const q2 = [q1[0] + ub[0] * s, q1[1] + ub[1] * s];
+        const q3 = [p[0][0] + ub[0] * s, p[0][1] + ub[1] * s];
+        const side = (which, v) => (f.ask === which ? "?" : `${v}${us}`);
+        let body = `<polygon class="fig-line" points="${p.map(xy).join(" ")}"/>`;
+        body += `<path class="fig-line" d="M ${xy(q1)} L ${xy(q2)} L ${xy(q3)}"/>`;
+        body += edgeLabel(p[0], p[1], side("a", f.a), ctr) + edgeLabel(p[1], p[2], side("c", f.c), ctr) + edgeLabel(p[2], p[0], side("b", f.b), ctr);
+        return { vb: "0 0 300 220", body, label: "Triangle rectangle, amb un costat per calcular" };
+      }
+      case "number_line": {
+        // Recta numèrica amb un punt marcat; una marca cada 1, 2 o 5 unitats segons l'obertura.
+        const L = 30;
+        const R = 270;
+        const y = 112;
+        const span = f.max - f.min;
+        const step = span <= 12 ? 1 : span <= 24 ? 2 : 5;
+        const X = (v) => L + ((v - f.min) / span) * (R - L);
+        let body = `<line class="fig-line" x1="${L - 10}" y1="${y}" x2="${R + 10}" y2="${y}"/>`;
+        for (let v = f.min; v <= f.max; v += step) {
+          body += `<line class="fig-line" x1="${f1(X(v))}" y1="${y - 5}" x2="${f1(X(v))}" y2="${y + 5}"/>`;
+          body += svgText(X(v), y + 20, sg(v), "middle", "fig-tick");
+        }
+        body += `<circle class="fig-dot" cx="${f1(X(f.point))}" cy="${y}" r="6"/>`;
+        if (f.label) body += svgText(R + 10, y + 42, f.label, "end");
+        return { vb: "0 0 300 170", body, label: `Recta numèrica de ${sg(f.min)} a ${sg(f.max)}` };
       }
       default:
         return null;
@@ -589,6 +1038,15 @@
     checkChoice,
     parsePair,
     checkPair,
+    factorization,
+    checkFactorization,
+    parsePoly,
+    polyKey,
+    polyDegree,
+    checkAlgebraic,
+    parseSexa,
+    checkSexagesimal,
+    parallelValue,
     figureSvg,
     hintFor,
     emptyState,
@@ -619,6 +1077,8 @@
   const isMath = (l) => !!l && l.kind === "math";
   const noun = (l) => (isMath(l) ? "operació" : "paraula");
   const TIMEOUT_PAUSE_MS = 2000; // temps esgotat: passa sola a la següent
+  // Respostes que s'escriuen de més d'una manera: si no és la forma habitual, es mostra.
+  const FORM_KINDS = ["fraction", "pair", "factorization", "algebraic", "sexagesimal"];
 
   let screen = null; // #flash-screen
   let data = null; // resposta de /api/flash/lists
@@ -865,6 +1325,7 @@
       math,
       kind,
       rule: w.form || "value", // fraction: value | simplest
+      mode: math && w.answer_kind === "sexagesimal" ? w.mode || (/[°']/.test(w.target[0] || "") ? "angle" : "time") : null,
       unit: math && w.unit ? w.unit : "", // unit kind: shown outside the box
       options: kind === "choice" ? (w.options || []).slice() : [],
       off: [], // choice: the buttons that were wrong
@@ -924,13 +1385,20 @@
     view = "card";
     const choice = card.kind === "choice";
     const dirLabel = card.math
-      ? choice ? "Tria" : card.kind === "pair" ? "Escriu les coordenades" : "Calcula"
+      ? choice ? "Tria" : card.kind === "pair" ? "Escriu les coordenades"
+        : card.kind === "factorization" ? "Escriu els factors primers"
+        : card.kind === "algebraic" ? "Escriu l'expressió reduïda"
+        : card.kind === "sexagesimal" ? (card.mode === "angle" ? "Escriu l'angle" : "Escriu el temps")
+        : "Calcula"
       : card.dir === "nt"
         ? `Escriu-ho en ${data.target}`
         : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
     const input = card.kind === "fraction"
       ? ' aria-label="Fracció"'
       : card.kind === "pair" ? ' aria-label="Coordenades"'
+      : card.kind === "factorization" ? ' aria-label="Descomposició en factors"'
+      : card.kind === "algebraic" ? ' aria-label="Expressió"'
+      : card.kind === "sexagesimal" ? ' aria-label="Temps o angle"'
       : card.math ? ' inputmode="numeric" aria-label="Resultat"' : ' aria-label="Traducció"';
     const buttons = choice
       ? `<div class="flash-choices" id="flash-choices" role="group" aria-label="Opcions">${card.options
@@ -1005,8 +1473,8 @@
     paintChoices();
     if (btn) btn.hidden = choice && !card.done;
     if (!card.done) {
-      fb.textContent = card.misses === 0 ? "" : card.misses === 1 ? "No és aquesta. Torna-ho a provar." : "Encara no. Mira la pista.";
-      hint.textContent = card.misses >= 2 ? C.hintFor(card.kind, card.accepted[0], card.lang) : "";
+      fb.textContent = card.note || (card.misses === 0 ? "" : card.misses === 1 ? "No és aquesta. Torna-ho a provar." : "Encara no. Mira la pista.");
+      hint.textContent = card.misses >= 2 ? C.hintFor(card.kind, card.accepted[0], card.lang, card.mode) : "";
       btn.textContent = "Comprova";
       if (choice) focusChoice();
       return;
@@ -1020,7 +1488,7 @@
     if (card.timedOut) text = `⏱ Temps! La resposta és «${answerText}».`;
     else if (card.how === "revealed") text = `La resposta és «${answerText}».`;
     else if (card.exact) text = "✓ Correcte";
-    else if (card.kind === "fraction" || card.kind === "pair") text = `✓ Correcte · la forma habitual és «${card.form}»`;
+    else if (FORM_KINDS.includes(card.kind)) text = `✓ Correcte · la forma habitual és «${card.form}»`;
     else text = `✓ Correcte · l'ortografia és «${card.form}»`;
     if (others.length) text += ` També: ${others.join(", ")}.`;
     if (card.how === "revealed") {
@@ -1039,12 +1507,16 @@
     else if (card.kind === "fraction") res = C.checkFraction(text, card.accepted, card.rule);
     else if (card.kind === "unit") res = C.checkNumber(C.stripUnit(text, card.unit), card.accepted);
     else if (card.kind === "pair") res = C.checkPair(text, card.accepted);
+    else if (card.kind === "factorization") res = C.checkFactorization(text, card.accepted);
+    else if (card.kind === "algebraic") res = C.checkAlgebraic(text, card.accepted);
+    else if (card.kind === "sexagesimal") res = C.checkSexagesimal(text, card.accepted[0], card.mode);
     else res = C.checkNumber(text, card.accepted);
     if (res.ok) {
       resolve(C.outcome({ ok: true, misses: card.misses }), res);
       return;
     }
     card.misses += 1;
+    card.note = res.note || null; // a note of the check (p. ex. normalitza), shown until the next try
     const how = C.outcome({ ok: false, misses: card.misses });
     if (how) {
       resolve(how, null);

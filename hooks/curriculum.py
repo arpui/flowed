@@ -565,7 +565,7 @@ def _whole(v) -> int | None:
 
 
 def math_numeric(s) -> float | None:
-    t = re.sub(r"\s+", "", "" if s is None else str(s)).replace(",", ".")
+    t = re.sub(r"\s+", "", "" if s is None else str(s)).replace("−", "-").replace(",", ".")
     return float(t) if _MATH_NUMBER.fullmatch(t) else None
 
 
@@ -662,8 +662,19 @@ MATH_GEN_KINDS = frozenset({
     "time_convert", "area_simple", "mean", "probability", "equation", "sequence",
     "angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point",
     "mult",
+    # m7 (docs/ENCARREC-M7-E5-FLASH.md §4)
+    "int_signs", "abs_opp", "int_combined", "prime_factors", "gcd_lcm",
+    "frac_simplify", "frac_combined", "decimal_type", "generatrix", "power_props",
+    "int_sqrt", "translate_expr", "value_expr", "monomial_parts", "monomial_ops",
+    "linear_eq", "proportion_type", "rule_of_three", "chained_percent", "quadrant_point",
+    "linear_func", "line_read", "pythagoras", "parallel_angles", "polygon_angle_sum",
+    "notable_points", "composite_area", "unit_area_volume", "speed_convert", "sexagesimal_ops",
+    "variable_type", "freq_relative", "median", "weighted_mean", "laplace",
 })
-MATH_ANSWER_KINDS = ("number", "fraction", "unit", "choice", "pair")
+MATH_ANSWER_KINDS = ("number", "fraction", "unit", "choice", "pair", "factorization", "algebraic", "sexagesimal")
+# The most cards some kinds can make (their vocabulary is finite): a list asks for count and gets at most this.
+# Mirror of GEN_ROOM in server/src/flash.ts.
+MATH_GEN_ROOM = {"proportion_type": 8, "notable_points": 8, "variable_type": 10, "laplace": 9, "polygon_angle_sum": 16}
 _FRAC_PLAIN = re.compile(r"(-?)([0-9]+)\s*/\s*([0-9]+)")
 _FRAC_MIXED = re.compile(r"(-?)([0-9]+)\s+([0-9]+)\s*/\s*([0-9]+)")
 _FRAC_DEC = re.compile(r"(-?)([0-9]+)[,.]([0-9]+)")
@@ -678,7 +689,7 @@ def _flash_count(v) -> int:
 
 def _flash_parse_fraction(s) -> tuple[int, int] | None:
     """(numerator, denominator) of n/d, a mixed number, a whole number or a decimal; None if not one or d = 0."""
-    t = s.strip() if isinstance(s, str) else ""
+    t = s.strip().replace("−", "-") if isinstance(s, str) else ""
     m = _FRAC_MIXED.fullmatch(t)
     if m:
         den = int(m[4])
@@ -700,7 +711,7 @@ def _flash_parse_fraction(s) -> tuple[int, int] | None:
 
 def _flash_is_simplest(s) -> bool:
     """The irreducible form as text (an integer when whole; n/d or a proper mixed number reduced; not decimals)."""
-    t = s.strip() if isinstance(s, str) else ""
+    t = s.strip().replace("−", "-") if isinstance(s, str) else ""
     f = _flash_parse_fraction(t)
     if f is None:
         return False
@@ -718,7 +729,7 @@ def _flash_is_simplest(s) -> bool:
 
 # Figures and pairs (docs/ENCARREC-M5-E3-FIGURES.md §2–§4): mirror of checkFigure, figureAnswerProblem
 # and parsePair in server/src/flash.ts. Only the outcome matters here (keep or drop an item).
-_FIGURE_TYPES = ("angle", "triangle", "polygon", "rect", "circle", "bars", "grid")
+_FIGURE_TYPES = ("angle", "triangle", "polygon", "rect", "circle", "bars", "grid", "parallels", "right_triangle", "number_line")
 _CIRCLE_NAME = {"radius": "radi", "diameter": "diàmetre", "chord": "corda", "arc": "arc", "center": "centre"}
 _ANGLE_NAMES = ("agut", "recte", "obtús", "pla", "complet")
 _TRIANGLE_NAMES = ("equilàter", "isòsceles", "escalè")
@@ -727,7 +738,7 @@ _PAIR_INNER = re.compile(r"\s*(-?[0-9]+)\s*(?:[,;]\s*|\s+)(-?[0-9]+)\s*")
 
 def math_parse_pair(s):
     """(x, y) from (3, 4), 3,4, 3 4 or (3 ; 4); None when it is not one or the parentheses do not pair."""
-    t = s.strip() if isinstance(s, str) else ""
+    t = s.strip().replace("−", "-") if isinstance(s, str) else ""
     if t.startswith("(") != t.endswith(")"):
         return None
     m = _PAIR_INNER.fullmatch(t[1:-1] if t.startswith("(") else t)
@@ -785,20 +796,56 @@ def _figure(raw) -> dict | None:
             return None
         nums = [_fig_int(v, 0, 999) for v in values]
         return None if any(v is None for v in nums) else {"type": t, "labels": names, "values": nums}
-    # grid
+    if t == "parallels":
+        angle, known, ask = _fig_int(raw.get("angle"), 20, 160), _fig_int(raw.get("known"), 1, 8), _fig_int(raw.get("ask"), 1, 8)
+        if angle is None or known is None or ask is None or known == ask:
+            return None
+        return {"type": t, "angle": angle, "known": known, "ask": ask}
+    if t == "right_triangle":
+        a, b, c = _fig_int(raw.get("a"), 1, 999), _fig_int(raw.get("b"), 1, 999), _fig_int(raw.get("c"), 1, 999)
+        if a is None or b is None or c is None or a * a + b * b != c * c or raw.get("ask") not in ("a", "b", "c"):
+            return None
+        return {"type": t, "a": a, "b": b, "c": c, "ask": raw["ask"]}
+    if t == "number_line":
+        lo, hi = _fig_int(raw.get("min"), -100, 100), _fig_int(raw.get("max"), -100, 100)
+        if lo is None or hi is None or hi <= lo or hi - lo > 40:
+            return None
+        point = _fig_int(raw.get("point"), lo, hi)
+        return None if point is None else {"type": t, "min": lo, "max": hi, "point": point}
+    return _figure_grid(raw)
+
+
+def _figure_grid(raw: dict) -> dict | None:
+    """A grid as checkFigure keeps it: min ≤ 0 ≤ max (0..10 by default), its points in it, an optional line y = m·x + n."""
     size = 10 if "size" not in raw else _fig_int(raw["size"], 1, 10)
-    pts = raw.get("points")
-    if size is None or not isinstance(pts, list) or not 1 <= len(pts) <= 12:
+    if "size" in raw and size is None:
+        return None
+    lo = 0 if "min" not in raw else _fig_int(raw["min"], -10, 0)
+    hi = (size if size is not None else 10) if "max" not in raw else _fig_int(raw["max"], 1, 10)
+    if lo is None or hi is None:
+        return None
+    line = None
+    if "line" in raw:
+        ln = raw["line"] if isinstance(raw["line"], dict) else {}
+        m, n = _fig_int(ln.get("m"), -9, 9), _fig_int(ln.get("n"), lo, hi)
+        if m is None or n is None:
+            return None
+        line = {"m": m, "n": n}
+    pts = raw.get("points", [])
+    if not isinstance(pts, list) or len(pts) > 12 or (not pts and line is None):
         return None
     out = []
     for p in pts:
         if not isinstance(p, list) or len(p) != 2:
             return None
-        x, y = _fig_int(p[0], 0, size), _fig_int(p[1], 0, size)
+        x, y = _fig_int(p[0], lo, hi), _fig_int(p[1], lo, hi)
         if x is None or y is None:
             return None
         out.append((x, y))
-    return {"type": t, "points": out, "size": size}
+    fig = {"type": "grid", "points": out, "size": hi - lo, "min": lo, "max": hi}
+    if line is not None:
+        fig["line"] = line
+    return fig
 
 
 def _figure_fits(fig: dict, prompt: str, kind: str, answer: list[str]) -> bool:
@@ -829,7 +876,99 @@ def _figure_fits(fig: dict, prompt: str, kind: str, answer: list[str]) -> bool:
                 per = None
             if per is not None and per != n:
                 return False
+    # the figures of m7 (E5 §3): the answer agrees with the drawn value where the figure settles it
+    if t == "parallels" and n is not None and kind in ("number", "unit"):
+        return n == _parallel_value(fig["angle"], fig["known"], fig["ask"])
+    if t == "right_triangle" and n is not None and kind in ("number", "unit"):
+        if re.search(r"per[ií]metre", prompt, re.IGNORECASE):
+            want = fig["a"] + fig["b"] + fig["c"]
+        elif re.search(r"[àa]rea", prompt, re.IGNORECASE):
+            want = fig["a"] * fig["b"] / 2
+        else:
+            want = fig[fig["ask"]]
+        return n == want
+    if t == "number_line" and n is not None and kind == "number":
+        return n == fig["point"]
+    if t == "grid" and "line" in fig and n is not None and kind == "number":
+        if re.search(r"pendent", prompt, re.IGNORECASE):
+            return n == fig["line"]["m"]
+        if re.search(r"ordenada", prompt, re.IGNORECASE):
+            return n == fig["line"]["n"]
     return True
+
+
+def _parallel_value(angle: int, known: int, ask: int) -> int:
+    """The degrees at place `ask` of a parallels figure (E5 §3): places 1, 4, 5, 8 are the angle of the secant."""
+    same = (1, 4, 5, 8)
+    alpha = angle if known in same else 180 - angle
+    return alpha if ask in same else 180 - alpha
+
+
+# ---- m7 answer kinds (docs/ENCARREC-M7-E5-FLASH.md §2): the checks of server/src/flash.ts ---------
+_SUPER_DIGITS = "⁰¹²³⁴⁵⁶⁷⁸⁹"
+_SEXA_COLON = re.compile(r"(\d+):(\d+)(?::(\d+))?")
+_SEXA_UNITS = re.compile(r"(?:(\d+) ?h)?(?: ?(\d+) ?min)?(?: ?(\d+) ?s)?", re.IGNORECASE)
+_SEXA_ANGLE = re.compile(r"(\d+) ?°(?: ?(\d+) ?'(?: ?(\d+) ?'')?)?")
+
+
+def _flash_is_prime(n: int) -> bool:
+    return n >= 2 and all(n % d for d in range(2, int(n ** 0.5) + 1))
+
+
+def _flash_factorization(s) -> dict | None:
+    """Prime → count of a factorization (2^3·3^2·5, 2·2·2, x or spaces between factors); None if not one."""
+    t = s.strip() if isinstance(s, str) else ""
+    if not t:
+        return None
+    out: dict[int, int] = {}
+    for tok in [x for x in re.split(r"\s*[·*x×]\s*|\s+", t) if x]:
+        m = re.fullmatch(r"([0-9]+)(?:\^([0-9]+)|([⁰¹²³⁴⁵⁶⁷⁸⁹]+))?", tok)
+        if not m or not _flash_is_prime(int(m[1])):
+            return None
+        if m[2] is not None:
+            e = int(m[2])
+        elif m[3] is not None:
+            e = int("".join(str(_SUPER_DIGITS.index(c)) for c in m[3]))
+        else:
+            e = 1
+        if e < 1:
+            return None
+        out[int(m[1])] = out.get(int(m[1]), 0) + e
+    return out
+
+
+def _flash_sexa(s, mode: str) -> tuple[int, bool] | None:
+    """(seconds, normalized) of a time or an angle, as server/src/flash.ts parseSexa reads it; None if neither."""
+    t = re.sub(r"\s+", " ", re.sub(r"[′’‘]", "'", re.sub(r"’’|′′|″|”|“", "''", str(s or "").strip().replace("º", "°"))))
+    if mode == "time":
+        m = _SEXA_COLON.fullmatch(t)
+        if m:
+            a, b, c = int(m[1]), int(m[2]), int(m[3] or 0)
+        else:
+            m = _SEXA_UNITS.fullmatch(t)
+            if not m or all(g is None for g in m.groups()):
+                return None
+            a, b, c = int(m[1] or 0), int(m[2] or 0), int(m[3] or 0)
+    else:
+        m = _SEXA_ANGLE.fullmatch(t)
+        if not m:
+            return None
+        a, b, c = int(m[1]), int(m[2] or 0), int(m[3] or 0)
+    return a * 3600 + b * 60 + c, b < 60 and c < 60
+
+
+def _flash_poly_ok(text) -> bool:
+    """An algebraic answer that hooks/mathgrade.py parse_poly reads (the rules of server/src/flash.ts parsePoly)."""
+    hooks = str(Path(__file__).resolve().parent)
+    if hooks not in sys.path:
+        sys.path.append(hooks)
+    import mathgrade
+
+    try:
+        mathgrade.parse_poly(text)
+        return True
+    except Exception:
+        return False
 
 
 def _flash_item_ok(item: dict) -> bool:
@@ -863,6 +1002,15 @@ def _flash_item_ok(item: dict) -> bool:
             r = math_op_result(sop[0], sop[1], sop[2])
             if r is None or math_numeric(answer[0]) != r:
                 return False
+    if kind == "factorization" and _flash_factorization(answer[0]) is None:
+        return False
+    if kind == "algebraic" and not _flash_poly_ok(answer[0]):
+        return False
+    if kind == "sexagesimal":
+        mode = item.get("mode") if item.get("mode") in ("time", "angle") else ("angle" if re.search(r"[°']", answer[0]) else "time")
+        sx = _flash_sexa(answer[0], mode)
+        if sx is None or not sx[1]:
+            return False
     if "figure" in item:
         fig = _figure(item["figure"])
         if fig is None or not _figure_fits(fig, item["prompt"], kind, answer):
@@ -878,7 +1026,8 @@ def _flash_math_ids(raw: dict) -> list[str]:
         if kind is None or kind == "op":
             return [w["id"] for w in math_words(raw)]
         if isinstance(kind, str) and kind in MATH_GEN_KINDS:
-            return [f"g{i}" for i in range(1, _flash_count(gen.get("count")) + 1)]
+            n = min(_flash_count(gen.get("count")), MATH_GEN_ROOM.get(kind, 50))
+            return [f"g{i}" for i in range(1, n + 1)]
         return []
     ids, seen = [], set()
     for it in (raw.get("items") if isinstance(raw.get("items"), list) else []):
