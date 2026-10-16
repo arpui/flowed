@@ -15,6 +15,10 @@
     { "id": "son", "target": ["son"], "native": { "ca": ["fill"], "es": ["hijo"] } },
     { "id": "daughter", "target": ["daughter"], "native": { "ca": ["filla"], "es": ["hija"] } },
     { "id": "wife", "target": ["wife"], "native": { "ca": ["dona", "esposa", "muller"], "es": ["esposa", "mujer"] } },
-    { "id": "husband", "target": ["husband"], "native": { "ca": ["marit", "espòs"], "es": ["marido", "esposo"] } }
+    { "id": "husband", "target": ["husband"], "native": { "ca": ["marit", "espòs"], "es": ["marido", "esposo"] } },
+    { "id": "parents", "target": ["parents"], "native": { "ca": ["pares"], "es": ["padres"] } },
+    { "id": "children", "target": ["children", "kids"], "native": { "ca": ["fills", "nens"], "es": ["hijos", "niños"] } },
+    { "id": "cousin", "target": ["cousin"], "native": { "ca": ["cosí", "cosina"], "es": ["primo", "prima"] } },
+    { "id": "baby", "target": ["baby"], "native": { "ca": ["nadó", "bebè"], "es": ["bebé"] } }
   ]
 }

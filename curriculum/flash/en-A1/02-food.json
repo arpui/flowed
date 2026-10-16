@@ -15,6 +15,14 @@
     { "id": "rice", "target": ["rice"], "native": { "ca": ["arròs"], "es": ["arroz"] } },
     { "id": "juice", "target": ["juice"], "native": { "ca": ["suc"], "es": ["zumo", "jugo"] } },
     { "id": "breakfast", "target": ["breakfast"], "native": { "ca": ["esmorzar"], "es": ["desayuno"] } },
-    { "id": "dinner", "target": ["dinner"], "native": { "ca": ["sopar"], "es": ["cena"] } }
+    { "id": "dinner", "target": ["dinner"], "native": { "ca": ["sopar"], "es": ["cena"] } },
+    { "id": "lunch", "target": ["lunch"], "native": { "ca": ["dinar"], "es": ["almuerzo", "comida"] } },
+    { "id": "coffee", "target": ["coffee"], "native": { "ca": ["cafè"], "es": ["café"] } },
+    { "id": "tea", "target": ["tea"], "native": { "ca": ["te"], "es": ["té"] } },
+    { "id": "meat", "target": ["meat"], "native": { "ca": ["carn"], "es": ["carne"] } },
+    { "id": "fruit", "target": ["fruit"], "native": { "ca": ["fruita"], "es": ["fruta"] } },
+    { "id": "vegetables", "target": ["vegetables", "veggies"], "native": { "ca": ["verdures"], "es": ["verduras"] } },
+    { "id": "sugar", "target": ["sugar"], "native": { "ca": ["sucre"], "es": ["azúcar"] } },
+    { "id": "salt", "target": ["salt"], "native": { "ca": ["sal"], "es": ["sal"] } }
   ]
 }

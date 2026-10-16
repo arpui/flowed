@@ -14,6 +14,16 @@
     { "id": "play", "target": ["to play", "play"], "native": { "ca": ["jugar"], "es": ["jugar"] } },
     { "id": "see", "target": ["to see", "see"], "native": { "ca": ["veure"], "es": ["ver"] } },
     { "id": "go", "target": ["to go", "go"], "native": { "ca": ["anar"], "es": ["ir"] } },
-    { "id": "come", "target": ["to come", "come"], "native": { "ca": ["venir"], "es": ["venir"] } }
+    { "id": "come", "target": ["to come", "come"], "native": { "ca": ["venir"], "es": ["venir"] } },
+    { "id": "be", "target": ["to be", "be"], "native": { "ca": ["ser", "estar"], "es": ["ser", "estar"] } },
+    { "id": "have", "target": ["to have", "have"], "native": { "ca": ["tenir", "haver"], "es": ["tener", "haber"] } },
+    { "id": "do", "target": ["to do", "do", "to make", "make"], "native": { "ca": ["fer"], "es": ["hacer"] } },
+    { "id": "speak", "target": ["to speak", "speak", "to talk", "talk"], "native": { "ca": ["parlar"], "es": ["hablar"] } },
+    { "id": "listen", "target": ["to listen", "listen"], "native": { "ca": ["escoltar"], "es": ["escuchar"] } },
+    { "id": "work", "target": ["to work", "work"], "native": { "ca": ["treballar"], "es": ["trabajar"] } },
+    { "id": "live", "target": ["to live", "live"], "native": { "ca": ["viure"], "es": ["vivir"] } },
+    { "id": "like", "target": ["to like", "like"], "native": { "ca": ["agradar"], "es": ["gustar"] } },
+    { "id": "want", "target": ["to want", "want"], "native": { "ca": ["voler"], "es": ["querer"] } },
+    { "id": "buy", "target": ["to buy", "buy"], "native": { "ca": ["comprar"], "es": ["comprar"] } }
   ]
 }

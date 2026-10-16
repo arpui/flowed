@@ -1,0 +1,20 @@
+{
+  "id": "en-A1.flash.jobs",
+  "level": "A1",
+  "competence": "a1.vocab_jobs",
+  "title": { "ca": "Feines i professions", "es": "Trabajos y profesiones", "en": "Jobs and professions" },
+  "words": [
+    { "id": "teacher", "target": ["teacher"], "native": { "ca": ["professor", "mestre"], "es": ["profesor", "maestro"] } },
+    { "id": "student", "target": ["student"], "native": { "ca": ["estudiant", "alumne"], "es": ["estudiante", "alumno"] } },
+    { "id": "doctor", "target": ["doctor"], "native": { "ca": ["metge", "doctor"], "es": ["médico", "doctor"] } },
+    { "id": "nurse", "target": ["nurse"], "native": { "ca": ["infermer", "infermera"], "es": ["enfermero", "enfermera"] } },
+    { "id": "police", "target": ["police officer", "policeman", "police"], "native": { "ca": ["policia"], "es": ["policía"] } },
+    { "id": "waiter", "target": ["waiter", "waitress"], "native": { "ca": ["cambrer", "cambrera"], "es": ["camarero", "camarera"] } },
+    { "id": "driver", "target": ["driver"], "native": { "ca": ["conductor", "xofer"], "es": ["conductor", "chofer"] } },
+    { "id": "cook", "target": ["cook", "chef"], "native": { "ca": ["cuiner", "xef"], "es": ["cocinero", "chef"] } },
+    { "id": "office", "target": ["office"], "native": { "ca": ["oficina"], "es": ["oficina"] } },
+    { "id": "job", "target": ["job", "work"], "native": { "ca": ["feina", "treball"], "es": ["trabajo", "empleo"] } },
+    { "id": "money", "target": ["money"], "native": { "ca": ["diners"], "es": ["dinero"] } },
+    { "id": "computer", "target": ["computer"], "native": { "ca": ["ordinador"], "es": ["ordenador", "computadora"] } }
+  ]
+}

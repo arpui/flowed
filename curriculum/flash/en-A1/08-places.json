@@ -1,0 +1,20 @@
+{
+  "id": "en-A1.flash.places",
+  "level": "A1",
+  "competence": "a1.vocab_places_transport",
+  "title": { "ca": "Ciutat i transport", "es": "Ciudad y transporte", "en": "City and transport" },
+  "words": [
+    { "id": "street", "target": ["street", "road"], "native": { "ca": ["carrer"], "es": ["calle"] } },
+    { "id": "school", "target": ["school"], "native": { "ca": ["escola", "col·legi"], "es": ["escuela", "colegio"] } },
+    { "id": "hospital", "target": ["hospital"], "native": { "ca": ["hospital"], "es": ["hospital"] } },
+    { "id": "shop", "target": ["shop", "store"], "native": { "ca": ["botiga"], "es": ["tienda"] } },
+    { "id": "supermarket", "target": ["supermarket"], "native": { "ca": ["supermercat"], "es": ["supermercado"] } },
+    { "id": "restaurant", "target": ["restaurant"], "native": { "ca": ["restaurant"], "es": ["restaurante"] } },
+    { "id": "station", "target": ["station"], "native": { "ca": ["estació"], "es": ["estación"] } },
+    { "id": "airport", "target": ["airport"], "native": { "ca": ["aeroport"], "es": ["aeropuerto"] } },
+    { "id": "car", "target": ["car"], "native": { "ca": ["cotxe"], "es": ["coche", "auto"] } },
+    { "id": "bus", "target": ["bus"], "native": { "ca": ["autobús", "bus"], "es": ["autobús", "bus"] } },
+    { "id": "train", "target": ["train"], "native": { "ca": ["tren"], "es": ["tren"] } },
+    { "id": "ticket", "target": ["ticket"], "native": { "ca": ["bitllet", "entrada"], "es": ["billete", "boleto", "entrada"] } }
+  ]
+}

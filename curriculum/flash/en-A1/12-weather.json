@@ -1,0 +1,20 @@
+{
+  "id": "en-A1.flash.weather",
+  "level": "A1",
+  "competence": "a1.vocab_weather_nature",
+  "title": { "ca": "Clima i natura", "es": "Clima y naturaleza", "en": "Weather and nature" },
+  "words": [
+    { "id": "sun", "target": ["sun", "sunny"], "native": { "ca": ["sol", "assolellat"], "es": ["sol", "soleado"] } },
+    { "id": "rain", "target": ["rain", "rainy"], "native": { "ca": ["pluja", "plujós"], "es": ["lluvia", "lluvioso"] } },
+    { "id": "snow", "target": ["snow", "snowy"], "native": { "ca": ["neu", "nevat"], "es": ["nieve", "nevado"] } },
+    { "id": "wind", "target": ["wind", "windy"], "native": { "ca": ["vent", "ventós"], "es": ["viento", "ventoso"] } },
+    { "id": "cloud", "target": ["cloud", "cloudy"], "native": { "ca": ["núvol", "ennuvolat"], "es": ["nube", "nublado"] } },
+    { "id": "sky", "target": ["sky"], "native": { "ca": ["cel"], "es": ["cielo"] } },
+    { "id": "tree", "target": ["tree"], "native": { "ca": ["arbre"], "es": ["árbol"] } },
+    { "id": "flower", "target": ["flower"], "native": { "ca": ["flor"], "es": ["flor"] } },
+    { "id": "sea", "target": ["sea", "ocean"], "native": { "ca": ["mar", "oceà"], "es": ["mar", "océano"] } },
+    { "id": "beach", "target": ["beach"], "native": { "ca": ["platja"], "es": ["playa"] } },
+    { "id": "mountain", "target": ["mountain"], "native": { "ca": ["muntanya"], "es": ["montaña"] } },
+    { "id": "river", "target": ["river"], "native": { "ca": ["riu"], "es": ["río"] } }
+  ]
+}
