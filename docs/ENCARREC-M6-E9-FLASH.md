@@ -30,3 +30,7 @@ Carpeta `curriculum/flash/math-m6/`: `00-taules-repas.json` (`mult` [1,1], 24) i
 Mateixos que E5 (generadors) i E7 (contingut). Tots els tests; única fallada esperada: les 4 llistes buides d'anglès.
 
 - [ ] 12 generadors nous de m6. [ ] Llistes de m6 amb `competence`. [ ] `flash_share: 60`. [ ] Res més canvia.
+
+## 4. Afegit: poliment de `parallels` (de les captures d'E7)
+
+Amb angles petits (20°) la secant queda gairebé horitzontal, els arcs són minúsculs i l'etiqueta queda tapada. Al generador `parallel_angles`, limita l'angle conegut a **35°..145°** (múltiples de 5) i a la validació de la figura accepta igualment 20..160 per als ítems escrits a mà. Nova captura de la graella de casos (35° i 145°, posicions al mateix vèrtex i creuades) al scratchpad.
