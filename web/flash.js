@@ -75,7 +75,11 @@
 
   // Com check(), però per valor (les operacions no tenen article ni accents).
   function checkNumber(answer, accepted) {
-    const a = numeric(answer);
+    let a = numeric(answer);
+    const bare = String(answer ?? "").replace(/\s+/g, "");
+    if (a === null && /^-?\d{1,3}(\.\d{3})+$/.test(bare) && accepted.some((x) => /^\d{5,}$/.test(String(x).trim()))) {
+      a = Number(bare.replace(/\./g, "")); // 4.735.200 → 4735200 (thousands dots, more than four digits)
+    }
     if (a === null) return { ok: false, exact: true, form: null };
     for (const raw of accepted) {
       if (numeric(raw) === a) return { ok: true, exact: true, form: raw };
@@ -87,6 +91,90 @@
   function hint(form, lang) {
     const s = stripArticle(normalize(form), lang);
     return [...s].map((c, i) => (c === " " ? "/" : i === 0 ? c : "_")).join(" ");
+  }
+
+  // Pista segons el tipus: fracció → el denominador (?/8); choice → cap (ja hi ha l'opció desactivada).
+  function hintFor(kind, target, lang) {
+    if (kind === "fraction") {
+      const m = /\/(\d+)$/.exec(String(target));
+      return m ? `?/${m[1]}` : "?";
+    }
+    if (kind === "choice") return "";
+    return hint(target, lang);
+  }
+
+  // Fracció: n/d, mixta (1 1/2), enter o decimal (0,25). Null si no ho és o el denominador és 0.
+  function parseFraction(s) {
+    const t = String(s ?? "").trim();
+    let m = /^(-?)(\d+)\s+(\d+)\s*\/\s*(\d+)$/.exec(t);
+    if (m) {
+      const d = Number(m[4]);
+      return d === 0 ? null : { num: (m[1] ? -1 : 1) * (Number(m[2]) * d + Number(m[3])), den: d };
+    }
+    m = /^(-?)(\d+)\s*\/\s*(\d+)$/.exec(t);
+    if (m) {
+      const d = Number(m[3]);
+      return d === 0 ? null : { num: (m[1] ? -1 : 1) * Number(m[2]), den: d };
+    }
+    m = /^(-?)(\d+)[,.](\d+)$/.exec(t);
+    if (m) return { num: (m[1] ? -1 : 1) * Number(m[2] + m[3]), den: 10 ** m[3].length };
+    m = /^(-?)(\d+)$/.exec(t);
+    if (m) return { num: (m[1] ? -1 : 1) * Number(m[2]), den: 1 };
+    return null;
+  }
+
+  function gcd(a, b) {
+    let x = Math.abs(a);
+    let y = Math.abs(b);
+    while (y) [x, y] = [y, x % y];
+    return x;
+  }
+
+  // Irreductible tal com s'escriu: enter si el valor és enter; n/d o mixta amb la part fraccionària reduïda.
+  // Els decimals no compten.
+  function isSimplest(s) {
+    const t = String(s ?? "").trim();
+    const f = parseFraction(t);
+    if (!f) return false;
+    if (f.num % f.den === 0) return /^-?\d+$/.test(t);
+    if (/^(-?)(\d+)[,.](\d+)$/.test(t)) return false;
+    const m = /^(-?)(\d+)\s+(\d+)\s*\/\s*(\d+)$/.exec(t);
+    if (m) return Number(m[3]) > 0 && Number(m[3]) < Number(m[4]) && gcd(Number(m[3]), Number(m[4])) === 1;
+    return gcd(f.num, f.den) === 1;
+  }
+
+  // Fracció: el valor ha de ser el de una de les acceptades. 'simplest' exigeix la forma irreductible.
+  // exact: escrita igual que l'acceptada (sense espais); si no, el client mostra la forma habitual.
+  function checkFraction(answer, accepted, rule) {
+    const a = parseFraction(answer);
+    if (!a) return { ok: false, exact: true, form: null };
+    let hit = null;
+    for (const raw of accepted) {
+      const t = parseFraction(raw);
+      if (t && a.num * t.den === t.num * a.den) {
+        hit = raw;
+        break;
+      }
+    }
+    if (hit === null) return { ok: false, exact: true, form: null };
+    if (rule === "simplest" && !isSimplest(answer)) return { ok: false, exact: true, form: hit };
+    const exact = String(answer).replace(/\s+/g, "") === String(hit).replace(/\s+/g, "");
+    return { ok: true, exact, form: hit };
+  }
+
+  // Unitat: la caixa només porta el número. Si l'alumne l'escriu enganxada (3500 m), es treu.
+  function stripUnit(s, unit) {
+    const t = String(s ?? "").trim();
+    if (!unit) return t;
+    for (const u of [unit, unit.replace("²", "2"), unit.replace("³", "3")]) {
+      if (t.toLowerCase().endsWith(u.toLowerCase())) return t.slice(0, t.length - u.length).trim();
+    }
+    return t;
+  }
+
+  // choice: l'opció triada ha de ser la correcta (text exacte).
+  function checkChoice(picked, accepted) {
+    return accepted.includes(picked) ? { ok: true, exact: true, form: picked } : { ok: false, exact: true, form: null };
   }
 
   // how: 'first' (encert a la 1a), 'retry' (encert a la 2a o 3a),
@@ -104,6 +192,7 @@
   function outcome(a) {
     if (a.timedOut) return "revealed";
     if (a.ok) return a.misses === 0 ? "first" : "retry";
+    if (a.exhausted) return "revealed"; // choice: només en queda una d'activa
     return a.misses >= 3 ? "revealed" : null;
   }
 
@@ -277,6 +366,12 @@
     addReturn,
     roundLabel,
     checkNumber,
+    parseFraction,
+    isSimplest,
+    checkFraction,
+    stripUnit,
+    checkChoice,
+    hintFor,
     emptyState,
     recordResult,
     listStatus,
@@ -541,12 +636,18 @@
     const dir = math ? "nt" : round.dir === "mix" ? (Math.random() < 0.5 ? "nt" : "tn") : round.dir;
     const w = item.word;
     const nt = dir === "nt";
+    const kind = math ? w.answer_kind || "number" : "text"; // number | fraction | unit | choice, or text (language)
     return {
       word: w,
       returned: item.returned,
       dot: item.dot,
       dir,
       math,
+      kind,
+      rule: w.form || "value", // fraction: value | simplest
+      unit: math && w.unit ? w.unit : "", // unit kind: shown outside the box
+      options: kind === "choice" ? (w.options || []).slice() : [],
+      off: [], // choice: the buttons that were wrong
       prompt: (math ? w.prompt : nt ? w.native[0] : w.target[0]) || "—",
       accepted: nt ? w.target : w.native,
       lang: math ? null : nt ? TARGET_CODE : data.nativeCode,
@@ -601,11 +702,20 @@
 
   function renderCard() {
     view = "card";
+    const choice = card.kind === "choice";
     const dirLabel = card.math
-      ? "Calcula"
+      ? choice ? "Tria la resposta" : "Calcula"
       : card.dir === "nt"
         ? `Escriu-ho en ${data.target}`
         : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
+    const input = card.kind === "fraction"
+      ? ' aria-label="Fracció"'
+      : card.math ? ' inputmode="numeric" aria-label="Resultat"' : ' aria-label="Traducció"';
+    const buttons = choice
+      ? `<div class="flash-choices" id="flash-choices" role="group" aria-label="Opcions">${card.options
+          .map((o, i) => `<button type="button" class="flash-choice" data-choice="${i}"><kbd>${i + 1}</kbd><span>${escText(o)}</span></button>`)
+          .join("")}</div>`
+      : "";
     screen.innerHTML = `
       <div class="flash-panel flash-play">
         <div class="flash-top">
@@ -623,15 +733,38 @@
           <div class="flash-hint" id="flash-hint"></div>
           <div class="flash-feedback" id="flash-feedback" aria-live="polite"></div>
         </div>
+        ${buttons}
         <form class="flash-form" id="flash-form" autocomplete="off">
-          <input id="flash-input" type="text"${card.math ? ' inputmode="numeric" aria-label="Resultat"' : ' aria-label="Traducció"'} autocomplete="off" autocapitalize="off" spellcheck="false">
-          <button type="submit" class="primary" id="flash-ok">Comprova</button>
+          <input id="flash-input" type="text"${input}${choice ? " hidden" : ""} autocomplete="off" autocapitalize="off" spellcheck="false">
+          <span class="flash-unit" id="flash-unit"${card.unit ? "" : " hidden"}>${escText(card.unit)}</span>
+          <button type="submit" class="primary" id="flash-ok"${choice ? " hidden" : ""}>Comprova</button>
         </form>
       </div>`;
     paintProgress();
     paintCard(null);
     startTimer();
-    q("#flash-input").focus();
+    if (choice) focusChoice();
+    else q("#flash-input").focus();
+  }
+
+  // choice: els botons segueixen l'estat de la targeta (errors desactivats; en acabar, la correcta marcada).
+  function paintChoices() {
+    const box = q("#flash-choices");
+    if (!box || !card) return;
+    box.querySelectorAll("[data-choice]").forEach((b) => {
+      const i = Number(b.dataset.choice);
+      const off = card.off.includes(i);
+      b.disabled = off || card.done;
+      b.classList.toggle("wrong", off);
+      b.classList.toggle("right", card.done && card.options[i] === card.accepted[0]);
+    });
+  }
+
+  function focusChoice() {
+    const box = q("#flash-choices");
+    if (!box || card.done) return;
+    const next = box.querySelector("[data-choice]:not(:disabled)");
+    if (next) next.focus();
   }
 
   // Pinta la targeta segons el seu estat (errors, pista, resultat).
@@ -646,32 +779,44 @@
     const fb = q("#flash-feedback");
     const hint = q("#flash-hint");
     const btn = q("#flash-ok");
+    const choice = card.kind === "choice";
+    paintChoices();
+    if (btn) btn.hidden = choice && !card.done;
     if (!card.done) {
       fb.textContent = card.misses === 0 ? "" : card.misses === 1 ? "No és aquesta. Torna-ho a provar." : "Encara no. Mira la pista.";
-      hint.textContent = card.misses >= 2 ? C.hint(card.accepted[0], card.lang) : "";
+      hint.textContent = card.misses >= 2 ? C.hintFor(card.kind, card.accepted[0], card.lang) : "";
       btn.textContent = "Comprova";
+      if (choice) focusChoice();
       return;
     }
     stage.classList.add(card.how === "revealed" ? "reveal" : "ok");
     hint.textContent = "";
     const shown = card.how === "revealed" ? card.accepted[0] : card.form;
     const others = card.accepted.filter((x) => x !== shown);
+    const answerText = card.accepted[0] + (card.unit ? ` ${card.unit}` : "");
     let text;
-    if (card.timedOut) text = `⏱ Temps! La resposta és «${card.accepted[0]}».`;
-    else if (card.how === "revealed") text = `La resposta és «${card.accepted[0]}».`;
-    else text = "✓ Correcte" + (card.exact ? "" : ` · l'ortografia és «${card.form}»`);
+    if (card.timedOut) text = `⏱ Temps! La resposta és «${answerText}».`;
+    else if (card.how === "revealed") text = `La resposta és «${answerText}».`;
+    else if (card.exact) text = "✓ Correcte";
+    else if (card.kind === "fraction") text = `✓ Correcte · la forma habitual és «${card.form}»`;
+    else text = `✓ Correcte · l'ortografia és «${card.form}»`;
     if (others.length) text += ` També: ${others.join(", ")}.`;
     if (card.how === "revealed") {
       text += (card.returned ? "" : " Torna al final de la ronda.") + (card.timedOut ? "" : " Enter per continuar.");
     }
     fb.textContent = text;
     btn.textContent = "Següent";
+    if (choice) btn.focus();
   }
 
   // Una resposta de l'alumne: encert, error (1r, 2n) o 3r error (resposta mostrada).
   function attempt(text) {
-    if (!card || card.done || !String(text).trim()) return;
-    const res = card.math ? C.checkNumber(text, card.accepted) : C.check(text, card.accepted, card.lang);
+    if (!card || card.done || card.kind === "choice" || !String(text).trim()) return;
+    let res;
+    if (!card.math) res = C.check(text, card.accepted, card.lang);
+    else if (card.kind === "fraction") res = C.checkFraction(text, card.accepted, card.rule);
+    else if (card.kind === "unit") res = C.checkNumber(C.stripUnit(text, card.unit), card.accepted);
+    else res = C.checkNumber(text, card.accepted);
     if (res.ok) {
       resolve(C.outcome({ ok: true, misses: card.misses }), res);
       return;
@@ -686,6 +831,26 @@
     if (input) {
       input.value = "";
       input.focus();
+    }
+    paintCard("shake");
+  }
+
+  // Una opció de choice: encert, o error (el botó triat queda desactivat). Quan només en queda una
+  // d'activa, la resposta es revela.
+  function choose(i) {
+    if (!card || card.done || card.kind !== "choice" || card.off.includes(i) || i < 0 || i >= card.options.length) return;
+    const res = C.checkChoice(card.options[i], card.accepted);
+    if (res.ok) {
+      resolve(C.outcome({ ok: true, misses: card.misses }), res);
+      return;
+    }
+    card.misses += 1;
+    card.off.push(i);
+    const exhausted = card.options.length - card.off.length <= 1;
+    const how = C.outcome({ ok: false, misses: card.misses, exhausted });
+    if (how) {
+      resolve(how, null);
+      return;
     }
     paintCard("shake");
   }
@@ -833,8 +998,9 @@
   }
 
   function onClick(e) {
-    const t = e.target.closest ? e.target.closest("[data-act],[data-dir],[data-timer],[data-list]") : null;
+    const t = e.target.closest ? e.target.closest("[data-act],[data-dir],[data-timer],[data-list],[data-choice]") : null;
     if (!t) return;
+    if (t.dataset.choice !== undefined) return choose(Number(t.dataset.choice));
     if (t.dataset.dir) {
       prefs.dir = t.dataset.dir;
       savePrefs();
@@ -870,9 +1036,16 @@
   }
 
   function onKey(e) {
-    if (e.key !== "Escape") return;
-    if (view === "menu") closeFlash();
-    else renderMenu();
+    if (e.key === "Escape") {
+      if (view === "menu") closeFlash();
+      else renderMenu();
+      return;
+    }
+    // choice: les tecles 1..n trien l'opció
+    if (view === "card" && card && card.kind === "choice" && !card.done && /^[1-9]$/.test(e.key)) {
+      e.preventDefault();
+      choose(Number(e.key) - 1);
+    }
   }
 
   // Tanca Flash (guardant l'estat). Si s'ha acabat almenys una ronda, deixa una línia al xat.

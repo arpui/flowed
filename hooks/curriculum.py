@@ -654,6 +654,121 @@ def math_words(raw: dict) -> list[dict]:
     return out
 
 
+# Generated math lists (docs/ENCARREC-M5-E1-FLASH.md §3): the server makes the words, the Python side
+# only counts them. Kinds and count rule mirror server/src/flash.ts (GEN_KINDS, genCount).
+MATH_GEN_KINDS = frozenset({
+    "round", "digit_value", "compare_numbers", "frac_of", "frac_equiv", "frac_same_den", "frac_dec",
+    "dec_times_int", "percent_of", "divisible", "combined", "unit_convert", "complex_to_simple",
+    "time_convert", "area_simple", "mean", "probability", "equation", "sequence",
+})
+MATH_ANSWER_KINDS = ("number", "fraction", "unit", "choice")
+_FRAC_PLAIN = re.compile(r"(-?)([0-9]+)\s*/\s*([0-9]+)")
+_FRAC_MIXED = re.compile(r"(-?)([0-9]+)\s+([0-9]+)\s*/\s*([0-9]+)")
+_FRAC_DEC = re.compile(r"(-?)([0-9]+)[,.]([0-9]+)")
+_FRAC_INT = re.compile(r"(-?)([0-9]+)")
+
+
+def _flash_count(v) -> int:
+    """A generated list's count: an integer from 1 to 50, 12 when it is not a whole number."""
+    n = _whole(v)
+    return 12 if n is None else min(50, max(1, n))
+
+
+def _flash_parse_fraction(s) -> tuple[int, int] | None:
+    """(numerator, denominator) of n/d, a mixed number, a whole number or a decimal; None if not one or d = 0."""
+    t = s.strip() if isinstance(s, str) else ""
+    m = _FRAC_MIXED.fullmatch(t)
+    if m:
+        den = int(m[4])
+        if den == 0:
+            return None
+        return (-1 if m[1] else 1) * (int(m[2]) * den + int(m[3])), den
+    m = _FRAC_PLAIN.fullmatch(t)
+    if m:
+        den = int(m[3])
+        return None if den == 0 else ((-1 if m[1] else 1) * int(m[2]), den)
+    m = _FRAC_DEC.fullmatch(t)
+    if m:
+        return (-1 if m[1] else 1) * int(m[2] + m[3]), 10 ** len(m[3])
+    m = _FRAC_INT.fullmatch(t)
+    if m:
+        return (-1 if m[1] else 1) * int(m[2]), 1
+    return None
+
+
+def _flash_is_simplest(s) -> bool:
+    """The irreducible form as text (an integer when whole; n/d or a proper mixed number reduced; not decimals)."""
+    t = s.strip() if isinstance(s, str) else ""
+    f = _flash_parse_fraction(t)
+    if f is None:
+        return False
+    num, den = f
+    if num % den == 0:
+        return re.fullmatch(r"-?[0-9]+", t) is not None
+    if _FRAC_DEC.fullmatch(t):
+        return False
+    m = _FRAC_MIXED.fullmatch(t)
+    if m:
+        r, d = int(m[3]), int(m[4])
+        return 0 < r < d and math.gcd(r, d) == 1
+    return math.gcd(num, den) == 1
+
+
+def _flash_item_ok(item: dict) -> bool:
+    """An explicit item is kept when it passes the checks of server/src/flash.ts itemProblem."""
+    if not isinstance(item.get("id"), str) or not item["id"].strip():
+        return False
+    if not isinstance(item.get("prompt"), str) or not item["prompt"].strip():
+        return False
+    answer = _math_strings(item.get("answer"))
+    if not answer:
+        return False
+    kind = item.get("answer_kind", "number")
+    if not isinstance(kind, str) or kind not in MATH_ANSWER_KINDS:
+        return False
+    if kind == "choice":
+        options = _math_strings(item.get("options"))
+        if len(options) < 2 or answer[0] not in options:
+            return False
+    if kind == "fraction":
+        if _flash_parse_fraction(answer[0]) is None:
+            return False
+        if item.get("form") == "simplest" and not _flash_is_simplest(answer[0]):
+            return False
+    if kind == "unit" and (not isinstance(item.get("unit"), str) or not item["unit"].strip()):
+        return False
+    if kind in ("number", "unit"):
+        sop = math_simple_op(item["prompt"])
+        if sop:
+            r = math_op_result(sop[0], sop[1], sop[2])
+            if r is None or math_numeric(answer[0]) != r:
+                return False
+    return True
+
+
+def _flash_math_ids(raw: dict) -> list[str]:
+    """The word ids of a math list, as the server gives them."""
+    if "generate" in raw:
+        gen = raw["generate"] if isinstance(raw["generate"], dict) else {}
+        kind = gen.get("kind")
+        if kind is None or kind == "op":
+            return [w["id"] for w in math_words(raw)]
+        if isinstance(kind, str) and kind in MATH_GEN_KINDS:
+            return [f"g{i}" for i in range(1, _flash_count(gen.get("count")) + 1)]
+        return []
+    ids, seen = [], set()
+    for it in (raw.get("items") if isinstance(raw.get("items"), list) else []):
+        item = it if isinstance(it, dict) else {}
+        if not _flash_item_ok(item):
+            continue
+        wid = item["id"].strip()
+        if wid in seen:
+            continue
+        seen.add(wid)
+        ids.append(wid)
+    return ids
+
+
 def flash_lists(root: str | os.PathLike, stem: str | None) -> list[dict]:
     """The level's Flash lists: curriculum/flash/<stem>/*.json, as {id, words: [word ids]}.
     A math list (`generate` or `items`) counts its generated or valid ids; one with both is skipped."""
@@ -668,7 +783,7 @@ def flash_lists(root: str | os.PathLike, stem: str | None) -> list[dict]:
         if "generate" in raw and "items" in raw:
             continue
         if "generate" in raw or "items" in raw:
-            words = [w["id"] for w in math_words(raw)]
+            words = _flash_math_ids(raw)
         elif isinstance(raw.get("words"), list):
             words = [str(w["id"]) for w in raw["words"] if isinstance(w, dict) and w.get("id")]
         else:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Flash for math (docs/ENCARREC-FLASH-MATH.md §2, §5): the Python side counts the same
-words as the server (server/src/flash.ts), and a math level with no level file has no
-Flash requirement."""
+"""Flash for math (docs/ENCARREC-FLASH-MATH.md §2, §5; docs/ENCARREC-M5-E1-FLASH.md §3–§4): the
+Python side counts the same words as the server (server/src/flash.ts), and a math level with no
+level file has no Flash requirement."""
 import json
 import shutil
 import subprocess
@@ -18,12 +18,11 @@ import curriculum as cu  # noqa: E402
 MATH_STEMS = sorted(p.name for p in (REPO_ROOT / "curriculum" / "flash").glob("math-*") if p.is_dir())
 
 
-def server_math_lists() -> list[dict]:
-    """The lists as server/src/flash.ts serves them (id and word ids), read by node."""
+def node_json(expr: str):
+    """Evaluates `expr` (with `m` = server/src/flash.ts as a module) in node and returns its JSON."""
     script = (
         f"const m = await import({json.dumps(str(REPO_ROOT / 'server' / 'src' / 'flash.ts'))});"
-        "const lists = m.loadFlashLists(" + json.dumps(str(REPO_ROOT)) + ", 'curriculum/flash/math-*', 'ca');"
-        "console.log(JSON.stringify(lists.map((l) => ({ id: l.id, words: l.words.map((w) => w.id) }))));"
+        f"console.log(JSON.stringify({expr}));"
     )
     proc = subprocess.run(
         ["node", "--experimental-strip-types", "--input-type=module", "-e", script],
@@ -32,6 +31,14 @@ def server_math_lists() -> list[dict]:
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr)
     return json.loads(proc.stdout)
+
+
+def server_math_lists(root: Path = REPO_ROOT) -> list[dict]:
+    """The lists as server/src/flash.ts serves them (id and word ids), read by node."""
+    return node_json(
+        f"m.loadFlashLists({json.dumps(str(root))}, 'curriculum/flash/math-*', 'ca')"
+        ".map((l) => ({ id: l.id, words: l.words.map((w) => w.id) }))"
+    )
 
 
 def python_math_lists(root: Path) -> list[dict]:
@@ -53,6 +60,44 @@ class MathListIds(unittest.TestCase):
     def test_python_ids_match_the_server_for_every_math_list(self):
         self.assertTrue(MATH_STEMS, "no math-* folder under curriculum/flash")
         self.assertEqual(python_math_lists(REPO_ROOT), server_math_lists())
+
+    @unittest.skipUnless(shutil.which("node"), "node is needed to read the server's lists")
+    def test_python_ids_match_the_server_for_generated_and_typed_lists(self):
+        """Every generator kind (count default, 1, 50 and an out-of-range count), an op list, and explicit
+        items of each answer kind, with the drops, in a throwaway curriculum."""
+        tmp = Path(tempfile.mkdtemp(prefix="flash-e1-"))
+        try:
+            kinds = node_json("m.GEN_KINDS")
+            self.assertEqual(sorted(kinds), sorted(cu.MATH_GEN_KINDS))
+            files = {}
+            for i, kind in enumerate(kinds):
+                gen = {"kind": kind}
+                if i % 4 == 1:
+                    gen["count"] = 1
+                elif i % 4 == 2:
+                    gen["count"] = 50
+                elif i % 4 == 3:
+                    gen["count"] = 99
+                files[f"{i + 1:02d}-{kind}.json"] = {"id": f"math-t9.flash.{kind}", "level": "t9", "title": {"en": kind}, "generate": gen}
+            files["90-op.json"] = {"id": "math-t9.flash.op", "level": "t9", "title": {"en": "op"}, "generate": {"op": "x", "a": [7], "b": {"from": 1, "to": 10}}}
+            files["91-items.json"] = {"id": "math-t9.flash.items", "level": "t9", "title": {"en": "items"}, "items": [
+                {"id": "c1", "prompt": "3 ? 5", "answer": ["<"], "answer_kind": "choice", "options": ["<", ">", "="]},
+                {"id": "c2", "prompt": "3 ? 5", "answer": ["x"], "answer_kind": "choice", "options": ["<", ">"]},
+                {"id": "f1", "prompt": "3/8 + 2/8", "answer": ["5/8"], "answer_kind": "fraction"},
+                {"id": "f2", "prompt": "1/2", "answer": ["2/4"], "answer_kind": "fraction", "form": "simplest"},
+                {"id": "f3", "prompt": "1/2", "answer": ["1 1/2"], "answer_kind": "fraction", "form": "simplest"},
+                {"id": "u1", "prompt": "2 km = ? m", "answer": ["2000"], "answer_kind": "unit", "unit": "m"},
+                {"id": "u2", "prompt": "2 km = ? m", "answer": ["2000"], "answer_kind": "unit"},
+                {"id": "k1", "prompt": "x", "answer": ["1"], "answer_kind": "dibuix"},
+                {"id": "s1", "prompt": "23 × 4", "answer": ["91"]},
+                {"id": "s2", "prompt": "23 × 4", "answer": ["92"]},
+                {"id": "n1", "prompt": "Quants?", "answer": ["3"], "answer_kind": None},
+            ]}
+            files["92-nope.json"] = {"id": "math-t9.flash.nope", "level": "t9", "title": {"en": "nope"}, "generate": {"kind": "nope", "count": 4}}
+            write_math(tmp, "math-t9", files)
+            self.assertEqual(python_math_lists(tmp), server_math_lists(tmp))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def test_m5_has_eight_tables_and_the_explicit_list(self):
         lists = {l["id"]: l["words"] for l in cu.flash_lists(REPO_ROOT, "math-m5")}
@@ -106,6 +151,49 @@ class MathRules(unittest.TestCase):
         self.assertIsNone(cu.math_op("%"))
         self.assertEqual(cu.math_simple_op("23 × 4"), (23, "×", 4))
         self.assertIsNone(cu.math_simple_op("Quants són dos?"))
+
+
+class GeneratedLists(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="flash-gen-"))
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_a_generated_list_counts_g1_to_gn(self):
+        write_math(self.tmp, "math-x1", {
+            "01-round.json": {"id": "r", "generate": {"kind": "round"}},
+            "02-frac.json": {"id": "f", "generate": {"kind": "frac_of", "count": 7}},
+            "03-big.json": {"id": "b", "generate": {"kind": "mean", "count": 500}},
+        })
+        lists = {l["id"]: l["words"] for l in cu.flash_lists(self.tmp, "math-x1")}
+        self.assertEqual(lists["r"], [f"g{i}" for i in range(1, 13)])
+        self.assertEqual(lists["f"], [f"g{i}" for i in range(1, 8)])
+        self.assertEqual(lists["b"], [f"g{i}" for i in range(1, 51)])
+
+    def test_an_unknown_kind_counts_nothing(self):
+        write_math(self.tmp, "math-x1", {"01-nope.json": {"id": "n", "generate": {"kind": "nope", "count": 4}}})
+        self.assertEqual(cu.flash_lists(self.tmp, "math-x1")[0]["words"], [])
+
+    def test_typed_items_drop_what_the_server_drops(self):
+        items = [
+            {"id": "a", "prompt": "Quina?", "answer": ["b"], "answer_kind": "choice", "options": ["a", "b"]},
+            {"id": "b", "prompt": "Quina?", "answer": ["z"], "answer_kind": "choice", "options": ["a", "b"]},
+            {"id": "c", "prompt": "1/2", "answer": ["2/4"], "answer_kind": "fraction", "form": "simplest"},
+            {"id": "d", "prompt": "1/2", "answer": ["2/4"], "answer_kind": "fraction"},
+            {"id": "e", "prompt": "2 km = ? m", "answer": ["2000"], "answer_kind": "unit"},
+            {"id": "f", "prompt": "2 km = ? m", "answer": ["2000"], "answer_kind": "unit", "unit": "m"},
+            {"id": "g", "prompt": "Quants?", "answer": ["3"], "answer_kind": "dibuix"},
+        ]
+        write_math(self.tmp, "math-x1", {"01-items.json": {"id": "i", "items": items}})
+        self.assertEqual(cu.flash_lists(self.tmp, "math-x1")[0]["words"], ["a", "d", "f"])
+
+    def test_the_generated_count_is_clamped_and_defaults_to_twelve(self):
+        self.assertEqual(cu._flash_count(None), 12)
+        self.assertEqual(cu._flash_count(0), 1)
+        self.assertEqual(cu._flash_count(51), 50)
+        self.assertEqual(cu._flash_count(12.5), 12)
+        self.assertEqual(cu._flash_count(True), 12)
 
 
 class MathGate(unittest.TestCase):

@@ -1032,6 +1032,25 @@ nav#commands button[hidden] { display: none; }
   color: var(--flash-ink);
 }
 .flash-form button { padding: 12px 16px; border-radius: 12px; cursor: pointer; }
+.flash-form button[hidden], .flash-unit[hidden], .flash-choices[hidden] { display: none; }
+.flash-unit { align-self: center; font-size: 1.1rem; opacity: 0.85; white-space: nowrap; }
+.flash-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; width: 100%; }
+.flash-choice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(244, 241, 234, 0.4);
+  background: var(--flash-bg);
+  color: var(--flash-ink);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.flash-choice kbd { font: inherit; font-size: 0.8rem; opacity: 0.6; border: 1px solid currentColor; border-radius: 6px; padding: 0 6px; }
+.flash-choice:disabled { cursor: default; opacity: 0.55; }
+.flash-choice.wrong { text-decoration: line-through; border-color: var(--flash-err); }
+.flash-choice.right { border-color: var(--flash-ok); background: var(--flash-good); }
 
 .flash-stats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .flash-stats li {
