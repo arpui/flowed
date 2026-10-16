@@ -164,7 +164,7 @@ def parse_curriculum(text: str) -> dict:
             meta[k.strip()] = v.strip()
             i += 1
         i += 1
-    for k in ("version", "pass_mark", "carry_mark", "checkpoint_items", "ready_share"):
+    for k in ("version", "pass_mark", "carry_mark", "checkpoint_items", "ready_share", "flash_share"):
         if k in meta:
             meta[k] = int(meta[k])
     comps: list[dict] = []
@@ -238,6 +238,7 @@ EXTRA_FILE = "extra.md"
 def load_curriculum(path: str | os.PathLike, data_dir: str | os.PathLike | None = None) -> dict:
     """The level's curriculum; with `data_dir`, plus that learner's own extras."""
     cur = parse_curriculum(Path(path).read_text(encoding="utf-8"))
+    cur["meta"]["stem"] = Path(path).stem  # the level's file name: where its Flash lists live
     if data_dir:
         add_profile_extras(cur, data_dir)
     return cur
@@ -295,6 +296,8 @@ def validate_curriculum(cur: dict) -> list[str]:
     m = cur["meta"]
     if not 0 <= m.get("ready_share", 0) <= 100:
         out.append("ready_share ha de ser un percentatge (0-100)")
+    if not 0 <= m.get("flash_share", 0) <= 100:
+        out.append("flash_share ha de ser un percentatge (0-100)")
     if not (0 < m.get("carry_mark", 0) < m.get("pass_mark", 0) <= 100):
         out.append("carry_mark ha de ser menor que pass_mark (≤ 100)")
     core = sum(1 for c in cur["competencies"] if c["core"])
@@ -526,17 +529,76 @@ def review_pool(rows: list[dict]) -> list[str]:
     return [r["id"] for r in pool]
 
 
+# ---- Flash (vocabulary lists, server-side progress) ---------------------------
+# A Flash list is closed when every one of its words is in box 2 (known) in
+# data/flash-db.json. The level asks for `flash_share` % of its lists closed
+# (level file front matter; absent or 0 = no requirement). Flash has its own
+# store: nothing here writes to the learner's databases or learner-path.json.
+
+FLASH_DB = "flash-db.json"
+FLASH_KNOWN_BOX = 2
+
+
+def flash_lists(root: str | os.PathLike, stem: str | None) -> list[dict]:
+    """The level's Flash lists: curriculum/flash/<stem>/*.json, as {id, words: [word ids]}."""
+    if not stem:
+        return []
+    out = []
+    d = Path(root) / "curriculum" / "flash" / stem
+    for f in sorted(d.glob("*.json")) if d.is_dir() else []:
+        raw = _read_json(f, None)
+        if not isinstance(raw, dict) or not isinstance(raw.get("words"), list):
+            continue
+        words = [str(w["id"]) for w in raw["words"] if isinstance(w, dict) and w.get("id")]
+        out.append({"id": str(raw.get("id") or f.stem), "words": words})
+    return out
+
+
+def flash_progress(root: str | os.PathLike | None, cur: dict, data_dir: str | os.PathLike | None,
+                   stem: str | None = None) -> dict:
+    """How many of the level's Flash lists are closed, and whether that meets `flash_share`.
+
+    A list with no words is never closed. A word added to a closed list reopens it, since
+    the word has no box yet. `met` is true when there is no requirement (share 0 or no lists)."""
+    share = int(cur["meta"].get("flash_share") or 0)
+    lists = flash_lists(root or Path(__file__).resolve().parent.parent, stem or cur["meta"].get("stem"))
+    db = _read_json(Path(data_dir) / FLASH_DB, {}) if data_dir else {}
+    db_lists = db.get("lists") if isinstance(db, dict) and isinstance(db.get("lists"), dict) else {}
+    closed = 0
+    for fl in lists:
+        entry = db_lists.get(fl["id"])
+        words = entry.get("words") if isinstance(entry, dict) and isinstance(entry.get("words"), dict) else {}
+        if fl["words"] and all(_flash_box(words.get(w)) >= FLASH_KNOWN_BOX for w in fl["words"]):
+            closed += 1
+    total = len(lists)
+    needed = math.ceil(total * share / 100)
+    return {"closed": closed, "total": total, "share": share, "needed": needed,
+            "met": share == 0 or total == 0 or closed >= needed}
+
+
+def _flash_box(rec) -> int:
+    box = rec.get("box") if isinstance(rec, dict) else None
+    return box if isinstance(box, int) and not isinstance(box, bool) else -1
+
+
 # ---- checkpoint --------------------------------------------------------------
 
-def checkpoint_ready(rows: list[dict], cfg: dict = CFG, cur: dict | None = None) -> bool:
+def checkpoint_ready(rows: list[dict], cfg: dict = CFG, cur: dict | None = None,
+                     root: str | os.PathLike | None = None, data_dir: str | os.PathLike | None = None) -> bool:
     """Every core competence at least `practicing`, and `ready_share` of them consolidated.
 
-    `ready_share` is the level file's (`ready_share:` in the front matter, a percentage), else CFG's."""
+    `ready_share` is the level file's (`ready_share:` in the front matter, a percentage), else CFG's.
+    With `root` and `data_dir` it also needs the level's Flash requirement (`flash_progress`).
+    Without them there is no Flash requirement."""
     core = [r for r in rows if r["core"]]
     if not core or not all(STATES.index(r["state"]) >= 2 for r in core):
         return False
     share = cur["meta"]["ready_share"] / 100 if cur and "ready_share" in cur["meta"] else cfg["ready_share"]
-    return sum(1 for r in core if _done(r)) / len(core) >= share
+    if not sum(1 for r in core if _done(r)) / len(core) >= share:
+        return False
+    if root is not None and data_dir is not None and cur:
+        return flash_progress(root, cur, data_dir)["met"]
+    return True
 
 
 def checkpoint_plan(cur: dict, rows: list[dict]) -> list[str]:
@@ -799,8 +861,13 @@ def checkpoint_start(data_dir, cur: dict, today: str, force: bool = False, cfg: 
     wait = checkpoint_wait_until(path, cfg)
     if not force and wait and today < wait:
         return {"ok": False, "text": f"You can try the level test again on {wait}. Until then, we practise the weak points."}
-    if not force and not checkpoint_ready(rows, cfg, cur):
-        return {"ok": False, "text": "The level test opens when you have worked on every main topic and consolidated enough of them."}
+    base = root or Path(__file__).resolve().parent.parent
+    if not force and not checkpoint_ready(rows, cfg, cur, root=base, data_dir=data_dir):
+        text = "The level test opens when you have worked on every main topic and consolidated enough of them."
+        if checkpoint_ready(rows, cfg, cur):  # only Flash is missing
+            fp = flash_progress(base, cur, data_dir, stem)
+            text = text[:-1] + f" and closed enough Flash lists (you have {fp['closed']}, need {fp['needed']} of {fp['total']})."
+        return {"ok": False, "text": text}
     used = {(c["cid"], c["prompt"]) for cp in path["checkpoints"] for c in cp.get("detail", [])}
     banks: dict[str, list[dict]] = {}
     for c in cur["competencies"]:
@@ -1503,6 +1570,8 @@ def path_view(cur: dict, path: dict, as_of: str, cfg: dict = CFG, data_dir=None,
     pr = progress(rows)
     m = cur["meta"]
     by_id = {c["id"]: c for c in cur["competencies"]}
+    base = Path(root or Path(__file__).resolve().parent.parent)
+    flash = flash_progress(base, cur, data_dir, stem) if data_dir and int(m.get("flash_share") or 0) else None
     left = (bank_mod.bank_left(Path(root or Path(__file__).resolve().parent.parent), stem, data_dir)
             if data_dir and stem else {})
     promo = path["promotions"][-1] if path.get("promotions") else None
@@ -1528,7 +1597,8 @@ def path_view(cur: dict, path: dict, as_of: str, cfg: dict = CFG, data_dir=None,
         "pct": round(pr["pct"], 1), "core_done": pr["core_done"], "core_total": pr["core_total"],
         "in_progress": pr["in_progress"], "unseen": pr["unseen"], "mastered": pr["core_mastered"],
         "promotion": ({"achieved": promo["achieved"], "date": promo["date"], "carried": len(promo["carried"])} if promo else None),
-        "checkpoint": ("promoted" if promo else "ready" if checkpoint_ready(rows, cfg, cur) else "pending"),
+        "checkpoint": ("promoted" if promo else "ready" if checkpoint_ready(rows, cfg, cur, root=base, data_dir=data_dir) else "pending"),
+        "flash": flash,
         "checkpoint_pending": len(pending),
         "now": [{"id": c, "name": by_id[c]["name"]} for c in now],
         "review": [{"id": c, "name": by_id[c]["name"]} for c in due],
@@ -1567,7 +1637,8 @@ def path_view(cur: dict, path: dict, as_of: str, cfg: dict = CFG, data_dir=None,
     return view
 
 
-def render_report(cur: dict, path: dict, as_of: str, admin: bool = False, cfg: dict = CFG) -> str:
+def render_report(cur: dict, path: dict, as_of: str, admin: bool = False, cfg: dict = CFG,
+                  root: str | os.PathLike | None = None, data_dir: str | os.PathLike | None = None) -> str:
     rows = summarize(cur, path, as_of, cfg)
     pr = progress(rows)
     m = cur["meta"]
@@ -1584,9 +1655,13 @@ def render_report(cur: dict, path: dict, as_of: str, admin: bool = False, cfg: d
         out.append(f"Nivell {p['achieved']} assolit el {p['date']}{extra}")
     else:
         pending = [r for r in rows if r["core"] and STATES.index(r["state"]) < 2]
-        if checkpoint_ready(rows, cfg, cur):
+        if checkpoint_ready(rows, cfg, cur, root=root, data_dir=data_dir):
             last = last_checkpoint_day(path)
             out.append("Checkpoint: llest" + (f" (últim: {last})" if last else ""))
+        elif root and data_dir and checkpoint_ready(rows, cfg, cur) \
+                and not flash_progress(root, cur, data_dir)["met"]:
+            fp = flash_progress(root, cur, data_dir)
+            out.append(f"Checkpoint: encara no (Flash: {fp['closed']}/{fp['needed']} llistes tancades)")
         else:
             out.append(f"Checkpoint: encara no (falten {len(pending)} competències per arribar a «en pràctica»)")
     if path.get("promotions") and path.get("carried"):
@@ -2012,7 +2087,8 @@ def main(argv: list[str] | None = None) -> int:
             print("  ✗", p)
         return 1 if problems else 0
     path = rebuild_path(a.data, cur) if getattr(a, "rebuild", False) else load_path(a.data, cur)
-    print(render_report(cur, path, a.today, admin=a.admin))
+    root = Path(__file__).resolve().parent.parent
+    print(render_report(cur, path, a.today, admin=a.admin, root=root, data_dir=a.data))
     return 0
 
 

@@ -1,6 +1,7 @@
 {
   "id": "en-A1.flash.family",
   "level": "A1",
+  "competence": "a1.vocab_family",
   "title": { "ca": "La família", "es": "La familia", "en": "Family" },
   "words": [
     { "id": "mother", "target": ["mother", "mum", "mom"], "native": { "ca": ["mare"], "es": ["madre"] } },

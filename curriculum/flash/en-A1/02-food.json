@@ -1,6 +1,7 @@
 {
   "id": "en-A1.flash.food",
   "level": "A1",
+  "competence": "a1.vocab_food_snacks",
   "title": { "ca": "Menjar i beure", "es": "Comida y bebida", "en": "Food and drink" },
   "words": [
     { "id": "bread", "target": ["bread"], "native": { "ca": ["pa"], "es": ["pan"] } },

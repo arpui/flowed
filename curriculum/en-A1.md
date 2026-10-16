@@ -7,6 +7,7 @@ pass_mark: 80
 carry_mark: 65
 checkpoint_items: 24
 ready_share: 50
+flash_share: 80
 ---
 
 # English A1 — currículum

@@ -555,6 +555,28 @@ function renderSkillBadge(btn, wasPending, setWasPending, view, label) {
   }
 }
 
+// ⚡ Flash: one finished round a day (not a review), the same reminder as
+// Facts. The count is the server's (data/flash-db.json, rounds_by_day). flash.js
+// asks for a refresh when Flash closes.
+const flashBtn = document.querySelector('#commands button[data-cmd="math-flash"]');
+let flashWasPending = false;
+
+async function refreshFlashBadge() {
+  if (!flashBtn || flashBtn.hidden) return;
+  try {
+    const res = await api("/flash/state");
+    if (!res || !res.enabled) return;
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const day = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const done = Number((res.state?.rounds_by_day || {})[day]) || 0;
+    renderSkillBadge(flashBtn, flashWasPending, (v) => (flashWasPending = v),
+      { total: 1, pending: done >= 1 ? 0 : 1 }, "Flash d'avui");
+  } catch {
+    /* the reminder is never worth an error */
+  }
+}
+
 // Small bar in the header: opens the panel. Hidden when the profile's level
 // has no curriculum.
 const pathMiniEl = $("#path-mini");
@@ -1329,6 +1351,7 @@ async function init() {
   await ensureSession();
   const empty = await renderHistory();
   refreshPace(); // a reload mid-session must not lose the count
+  refreshFlashBadge();
   lastActivity = Date.now(); // short safety-poll window in case a turn is already running
   openSSE();
   inputEl.focus();
@@ -1408,9 +1431,24 @@ function pathCheckpointText(p) {
   }
   if (p.checkpoint === "ready") return `✅ Ja pots fer la prova de nivell ${esc(p.level)}`;
   const n = Number(p.checkpoint_pending) || 0;
+  if (n === 0 && p.flash && !p.flash.met) {
+    return `Prova de nivell: falta tancar llistes Flash (${esc(p.flash.closed)} de ${esc(p.flash.needed)})`;
+  }
   return n > 0
     ? `Prova de nivell: encara hi ha ${n} competències bàsiques per començar a practicar`
     : "Prova de nivell: falta consolidar el que has començat";
+}
+
+// ⚡ Flash on the path: closed word lists against what the level asks (flash_share).
+// Nothing is shown for a level without the requirement (the server sends null).
+function pathFlashRow(f) {
+  if (!f || !(f.share > 0)) return "";
+  const pct = f.total ? Math.round((100 * f.closed) / f.total) : 0;
+  return `<div class="path-item path-flash">
+    <span class="path-name">⚡ Flash: ${esc(f.closed)}/${esc(f.total)} llistes tancades</span>
+    <span class="path-state">cal ${esc(f.needed)} per al test</span>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+  </div>`;
 }
 
 // The course is over: the level is certified and a new course starts. Said once.
@@ -1495,6 +1533,7 @@ function renderPath(p) {
     ${now}${review}
     <p class="path-line path-check">${pathCheckpointText(p)}</p>
     ${pathCheckpointOffer(p) ? `<p><button class="primary" data-start-checkpoint>🧪 ${esc(pathCheckpointOffer(p).label)}</button></p>` : ""}
+    ${pathFlashRow(p.flash)}
     ${groups}
     ${renderPathAdmin(p.admin)}
   </section>`;

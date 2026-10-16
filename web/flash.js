@@ -1,4 +1,5 @@
-// Flash v0.1 — vocabulari ràpid, sense model (docs/ENCARREC-FLASH-v0.md i v0.1).
+// Flash v0.1 + v1 — vocabulari ràpid, sense model (docs/ENCARREC-FLASH-v0.md, v0.1 i v1).
+// El progrés viu al servidor (data/flash-db.json, /api/flash/state); el navegador en guarda una còpia.
 // Pantalla pròpia sota la capçalera de FlowEd: surt una paraula, l'alumne escriu
 // la traducció i el client corregeix a l'instant. Dues parts: el nucli pur
 // (correcció, caixes Leitner, rondes, temps) exposat a globalThis.FlashCore, que
@@ -221,6 +222,25 @@
     return a.slice(0, size);
   }
 
+  // Hi ha progrés a l'estat (alguna paraula vista o alguna ronda)?
+  function hasProgress(state) {
+    const lists = (state && state.lists) || {};
+    return Object.values(lists).some((l) => Object.keys((l && l.words) || {}).length > 0);
+  }
+
+  // Rondes fetes avui (no de repàs): el ⚡ de la barra en vol una.
+  function roundsOn(state, day) {
+    return Number(((state && state.rounds_by_day) || {})[day]) || 0;
+  }
+
+  // Una ronda més acabada el dia `day` (torna un estat nou).
+  function countRound(state, day) {
+    const next = clone(state);
+    next.rounds_by_day = next.rounds_by_day || {};
+    next.rounds_by_day[day] = (Number(next.rounds_by_day[day]) || 0) + 1;
+    return next;
+  }
+
   globalThis.FlashCore = {
     BOX_MAX,
     ROUND_MAX,
@@ -247,6 +267,9 @@
     closeIfDone,
     buildRound,
     repassaRound,
+    hasProgress,
+    roundsOn,
+    countRound,
   };
 })();
 
@@ -304,12 +327,71 @@
     return C.emptyState();
   }
 
+  // El progrés és al servidor (data/flash-db.json). El navegador en guarda una
+  // còpia, i una marca si l'última pujada ha fallat (aleshores és més nova que el servidor).
+  function pendingKey() {
+    return `${stateKey}|pending`;
+  }
+
+  function readPending() {
+    try {
+      return localStorage.getItem(pendingKey()) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function writePending(on) {
+    try {
+      if (on) localStorage.setItem(pendingKey(), "1");
+      else localStorage.removeItem(pendingKey());
+    } catch {
+      /* sense emmagatzematge: el servidor s'actualitza igualment en el desat següent */
+    }
+  }
+
+  // Cada desat envia l'estat sencer (PUT, escriptura atòmica al servidor). Les pujades
+  // van en fila perquè no es creuin; si una falla, el desat següent ho torna a provar.
+  let pushChain = Promise.resolve();
+  function pushState() {
+    if (!data || !data.enabled) return;
+    pushChain = pushChain
+      .then(() => api("/flash/state", { method: "PUT", body: state }))
+      .then(
+        () => writePending(false),
+        (err) => {
+          writePending(true);
+          console.warn("flash: el servidor no ha desat el progrés, es tornarà a provar", err);
+        },
+      );
+  }
+
   function saveState() {
     try {
       localStorage.setItem(stateKey, JSON.stringify(state));
     } catch {
       /* la pàgina funciona igual */
     }
+    pushState();
+  }
+
+  // Al obrir: el servidor manda. Si és buit i el navegador té progrés (el de v0/v0.1),
+  // es puja una sola vegada. Si la darrera pujada ha fallat, el navegador és el més nou.
+  async function loadServerState(local) {
+    let remote = null;
+    try {
+      remote = await api("/flash/state");
+    } catch (err) {
+      console.warn("flash: sense servidor, es treballa amb la còpia del navegador", err);
+    }
+    if (!remote || !remote.ok || !remote.enabled) {
+      return local; // sense servidor: la còpia local, i el desat següent ho pujarà
+    }
+    if (readPending() || (!C.hasProgress(remote.state) && C.hasProgress(local))) {
+      pushState();
+      return local;
+    }
+    return remote.state;
   }
 
   // ---- utilitats -----------------------------------------------------------
@@ -648,7 +730,11 @@
     const half = C.halfway(r.list, state);
     const idx = data.lists.indexOf(r.list);
     const nextOpen = data.lists.slice(idx + 1).find(isOpen) || null;
-    if (!r.repassa) selected = pickSelection(r.list.id);
+    if (!r.repassa) {
+      selected = pickSelection(r.list.id);
+      state = C.countRound(state, today()); // compta per al ⚡ d'avui
+      saveState();
+    }
     const avg = r.timed ? `${((r.timeSum / r.timed) / 1000).toFixed(1).replace(".", ",")} s` : "—";
     // Compta la ronda per a la traça del xat (una línia en tancar Flash).
     session = session || { rounds: 0, first: 0, presented: 0, titles: [], known: 0, total: 0 };
@@ -761,6 +847,7 @@
 
   // Tanca Flash (guardant l'estat). Si s'ha acabat almenys una ronda, deixa una línia al xat.
   function closeFlash() {
+    const wasOpen = isFlashOpen();
     clearAdvance();
     stopClock();
     round = null;
@@ -769,6 +856,7 @@
     session = null;
     if (screen) screen.hidden = true;
     setActive(false);
+    if (wasOpen && typeof refreshFlashBadge === "function") refreshFlashBadge(); // app.js: el ⚡ d'avui
   }
 
   function isFlashOpen() {
@@ -792,6 +880,7 @@
     }
     stateKey = `flowed.flash.v1|${window.__FLOWED_DOMAIN || "language"}|${data.target}|${data.nativeCode}`;
     state = loadState(stateKey);
+    state = await loadServerState(state);
     selected = pickSelection(null);
     renderMenu();
   }

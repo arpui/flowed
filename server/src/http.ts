@@ -9,7 +9,7 @@ import type { Agent } from "./agent";
 import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
 import { skillKeysFor } from "./tools";
-import { flashConfig, flashListsResponse } from "./flash";
+import { flashConfig, flashListsResponse, flashStateResponse, saveFlashState } from "./flash";
 
 export interface HttpConfig {
   root: string;
@@ -421,6 +421,15 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       // Flash: the vocabulary drill's word lists, in the learner's native language.
       if (p === "/api/flash/lists") {
         return json(flashListsResponse(opts.root, opts.dataDir()));
+      }
+      // Flash progress (data/flash-db.json): read whole, written whole (atomic).
+      if (p === "/api/flash/state") {
+        if (req.method === "GET") return json(flashStateResponse(opts.root, opts.dataDir()));
+        if (req.method === "PUT") {
+          const saved = saveFlashState(opts.root, opts.dataDir(), await readBody(req));
+          return json(saved.body, saved.status);
+        }
+        return json({ ok: false, error: "mètode no permès" }, 405);
       }
 
       // agents list (UI requires the "learner" agent to exist)

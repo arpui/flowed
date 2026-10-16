@@ -6,7 +6,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
-import { flashConfig, flashListsResponse, loadFlashLists, nativeCode, profileDomain } from "../src/flash.ts";
+import {
+  emptyFlashState,
+  flashConfig,
+  flashListsResponse,
+  flashStateResponse,
+  loadFlashLists,
+  nativeCode,
+  profileDomain,
+  sanitizeFlashState,
+  saveFlashState,
+} from "../src/flash.ts";
 
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown) {
@@ -258,6 +268,82 @@ try {
   fs.rmSync(dataDir, { recursive: true, force: true });
 }
 
+// ---- v1: progress on the server (data/flash-db.json) ------------------------
+console.log("progress store (v1)");
+check("hasProgress: empty state has none, a seen word has some", !C.hasProgress(C.emptyState()) && C.hasProgress(C.recordResult(C.emptyState(), LIST.id, "w1", "first", 0, "d1")));
+check("roundsOn: missing day is 0", C.roundsOn({ version: 1, lists: {}, rounds_by_day: {} }, "2026-10-16") === 0);
+{
+  const s1 = C.countRound(C.emptyState(), "2026-10-16");
+  const s2 = C.countRound(s1, "2026-10-16");
+  check("countRound: adds one per round on that day, without mutating", C.roundsOn(s2, "2026-10-16") === 2 && C.roundsOn(s1, "2026-10-16") === 1 && C.roundsOn(C.emptyState(), "2026-10-16") === 0);
+}
+
+const KNOWN = new Set(["en-A1.flash.family", "en-A1.flash.food", "en-A1.flash.home", "en-A1.flash.animals", "en-A1.flash.verbs"]);
+{
+  const body = {
+    version: 1,
+    lists: {
+      "en-A1.flash.family": {
+        words: {
+          mother: { box: 2, seen: 3, first_try: 2, misses: 1, last: "2026-10-16" },
+          tooHigh: { box: 3, seen: 1, first_try: 0, misses: 0, last: "2026-10-16" },
+          negative: { box: 1, seen: -1, first_try: 0, misses: 0, last: "2026-10-16" },
+          badDate: { box: 1, seen: 1, first_try: 0, misses: 0, last: "16/10/2026" },
+          fraction: { box: 1.5, seen: 1, first_try: 0, misses: 0, last: null },
+        },
+        closed_at: "2026-10-16",
+      },
+      "not.a.list": { words: { x: { box: 2, seen: 1, first_try: 1, misses: 0, last: null } }, closed_at: null },
+    },
+    rounds_by_day: { "2026-10-16": 2, "16-10-2026": 1, "2026-10-17": -3 },
+  };
+  const s = sanitizeFlashState(body, KNOWN);
+  check("sanitize: keeps a good word, drops box out of range, bad fields and bad dates", JSON.stringify(Object.keys(s.lists["en-A1.flash.family"]?.words ?? {})) === '["mother"]', s.lists);
+  check("sanitize: drops unknown list ids", !("not.a.list" in s.lists));
+  const badDate = sanitizeFlashState({ version: 1, lists: { "en-A1.flash.family": { words: {}, closed_at: "soon" } } }, KNOWN);
+  check("sanitize: keeps a valid closed_at, drops a bad one", s.lists["en-A1.flash.family"]?.closed_at === "2026-10-16" && badDate.lists["en-A1.flash.family"]?.closed_at === null);
+  check("sanitize: rounds keep only valid days with counts ≥ 0", JSON.stringify(s.rounds_by_day) === '{"2026-10-16":2}', s.rounds_by_day);
+  check("sanitize: wrong version or not an object gives the empty state", JSON.stringify(sanitizeFlashState({ version: 2, lists: {} }, KNOWN)) === JSON.stringify(emptyFlashState()) && JSON.stringify(sanitizeFlashState("x", KNOWN)) === JSON.stringify(emptyFlashState()));
+}
+
+console.log("GET and PUT /api/flash/state");
+const v1Dir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-v1-"));
+try {
+  const writeProfile = (learner: Record<string, unknown>) =>
+    fs.writeFileSync(path.join(v1Dir, "learner-profile.json"), JSON.stringify({ learner }));
+  const dbFile = path.join(v1Dir, "flash-db.json");
+
+  writeProfile({ native_language: "Catalan", target_language: "English", current_level: "A1" });
+  const empty = flashStateResponse(root, v1Dir) as any;
+  check("GET with no file: enabled, empty state", empty.enabled === true && JSON.stringify(empty.state) === JSON.stringify(emptyFlashState()));
+  check("GET with no file: nothing written", !fs.existsSync(dbFile));
+
+  const good = { version: 1, lists: { "en-A1.flash.family": { words: { mother: { box: 2, seen: 2, first_try: 2, misses: 0, last: "2026-10-16" } }, closed_at: null } }, rounds_by_day: { "2026-10-16": 1 } };
+  const put = saveFlashState(root, v1Dir, good);
+  check("PUT valid state: 200, file written, body echoes the saved state", put.status === 200 && (put.body as any).state.lists["en-A1.flash.family"].words.mother.box === 2);
+  check("PUT: no temporary file left behind", !fs.existsSync(`${dbFile}.tmp`) && fs.existsSync(dbFile));
+  check("PUT: the file on disk is the sanitized state", JSON.parse(fs.readFileSync(dbFile, "utf8")).rounds_by_day["2026-10-16"] === 1);
+  const back = flashStateResponse(root, v1Dir) as any;
+  check("GET after PUT: the same progress", JSON.stringify(back.state.lists) === JSON.stringify(good.lists));
+
+  const bad = saveFlashState(root, v1Dir, { version: 1, lists: { "en-A1.flash.family": { words: { mother: { box: 9, seen: 1, first_try: 0, misses: 0, last: null } } } } });
+  check("PUT with a bad box: the word is dropped, the rest still saved", bad.status === 200 && Object.keys((bad.body as any).state.lists["en-A1.flash.family"].words).length === 0);
+  const beforeRefused = fs.readFileSync(dbFile, "utf8");
+  const refused = saveFlashState(root, v1Dir, { version: 2, lists: {} });
+  check("PUT with another version: 400, file untouched", refused.status === 400 && fs.readFileSync(dbFile, "utf8") === beforeRefused);
+  const notObject = saveFlashState(root, v1Dir, ["x"]);
+  check("PUT with a non-object body: 400", notObject.status === 400);
+
+  writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m3" });
+  const mathGet = flashStateResponse(root, v1Dir) as any;
+  check("math profile: GET says disabled, empty state", mathGet.enabled === false && JSON.stringify(mathGet.state) === JSON.stringify(emptyFlashState()));
+  const before = fs.readFileSync(dbFile, "utf8");
+  const mathPut = saveFlashState(root, v1Dir, good);
+  check("math profile: PUT refused (404), nothing overwritten", mathPut.status === 404 && fs.readFileSync(dbFile, "utf8") === before);
+} finally {
+  fs.rmSync(v1Dir, { recursive: true, force: true });
+}
+
 // ---- wiring ----------------------------------------------------------------
 console.log("wiring");
 const http = read("server", "src", "http.ts");
@@ -275,7 +361,16 @@ check("app.js: Flash toggles the drill, no agent turn", app.includes('b.dataset.
 check("app.js: any other bar button closes Flash first", app.includes("closeFlash();"));
 check("style.css: Flash sits under the header (top: var(--header-h)), no inset/z above it", /\.flash-screen \{[^}]*top: var\(--header-h/.test(css) && !/\.flash-screen \{[^}]*inset: 0/.test(css));
 check("style.css: --header-h has a :root default", /:root \{[\s\S]*--header-h:/.test(css));
-check("flash.js: the chat trace never goes through send() or the server", !/\bsend\(/.test(flashJs) && !/fetch\(/.test(flashJs));
+// The chat trace is the only thing that must stay off the agent and the server (v0.1 §6).
+const traceSrc = flashJs.slice(flashJs.indexOf("function appendTrace"), flashJs.indexOf("// ---- entrada"));
+check("flash.js: the chat trace never goes through send() or the server", traceSrc.length > 0 && !/\bsend\(/.test(traceSrc) && !/\bapi\(|fetch\(/.test(traceSrc));
+check("http.ts serves GET and PUT /api/flash/state", http.includes('p === "/api/flash/state"') && http.includes("saveFlashState(opts.root"));
+check("flash.js saves progress with PUT /flash/state and reads it on open", flashJs.includes('api("/flash/state", { method: "PUT"') && flashJs.includes('api("/flash/state")'));
+check("flash.js: a finished round (not a review) is counted for the day", /if \(!r\.repassa\) \{[\s\S]*countRound\(state, today\(\)\)/.test(flashJs));
+check("app.js: ⚡ reminder reuses renderSkillBadge with a target of 1, refreshed on load and on close",
+  app.includes("async function refreshFlashBadge()") && app.includes('{ total: 1, pending: done >= 1 ? 0 : 1 }') && app.includes("refreshFlashBadge();\n  lastActivity") && flashJs.includes("refreshFlashBadge()"));
+check("index.html: the Flash button carries the skill-badge class and a badge", /data-cmd="math-flash" class="skill-badge"[^>]*>[^<]*<span>Flash<\/span><span class="badge" hidden>/.test(index));
+check("app.js: the path shows a Flash row from the server's flash block", app.includes("function pathFlashRow(f)") && app.includes("${pathFlashRow(p.flash)}"));
 
 if (failures) {
   console.log(`\n${failures} FAILED`);

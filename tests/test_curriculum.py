@@ -920,10 +920,19 @@ class LadderScenarioTest(unittest.TestCase):
             rows = cu.summarize(cur, path, date.today().isoformat())
             self.assertTrue(cu.checkpoint_ready(rows, cu.CFG, cur), profile)
 
+    def _all_flash_closed(self, d):
+        """The A1 level asks for Flash lists too (flash_share): this learner has closed them all."""
+        lists = {}
+        for fl in cu.flash_lists(REPO_ROOT, "en-A1"):
+            lists[fl["id"]] = {"words": {w: {"box": 2, "seen": 2, "first_try": 2, "misses": 0, "last": "2026-01-01"}
+                                         for w in fl["words"]}, "closed_at": "2026-01-01"}
+        (d / cu.FLASH_DB).write_text(json.dumps({"version": 1, "lists": lists, "rounds_by_day": {}}))
+
     def test_the_test_taken_from_the_history_certifies_and_moves_to_a2(self):
         import re
         from datetime import date
         d, cur, _ = self._history("steady")
+        self._all_flash_closed(d)
         today = date.today().isoformat()
         out = cu.checkpoint_start(d, cur, today)["text"]
         bank = {k["prompt"]: k for c in cur["competencies"] for k in c["checks"]}
@@ -938,6 +947,7 @@ class LadderScenarioTest(unittest.TestCase):
     def test_a_test_answered_all_wrong_does_not_close_the_course(self):
         from datetime import date
         d, cur, _ = self._history("steady")
+        self._all_flash_closed(d)
         today = date.today().isoformat()
         out = cu.checkpoint_start(d, cur, today)["text"]
         while "## Level test \u2014 question" in out:
