@@ -387,6 +387,8 @@ class RebuildTest(unittest.TestCase):
         (d / "learner-profile.json").write_text(json.dumps(prof), encoding="utf-8")
         self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "math-m5.md")
         cu._write_json(cu.certificates_file(d), [{"language": "Math", "level": "M5"}])
+        self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "math-m6.md")
+        cu._write_json(cu.certificates_file(d), [{"language": "Math", "level": "M5"}, {"language": "Math", "level": "M6"}])
         self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "math-m7.md")
         prof = {"learner": {"target_language": "English", "current_level": "A2", "target_level": "A2"}}
         (d / "learner-profile.json").write_text(json.dumps(prof), encoding="utf-8")
