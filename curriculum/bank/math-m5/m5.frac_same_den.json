@@ -1,0 +1,166 @@
+[
+  {
+    "id": "m5.frac_same_den.001",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "2/4 + 1/4",
+    "answer": "3/4",
+    "also_accept": [],
+    "options": [],
+    "why": "Els denominadors són iguals (4): el denominador no canvia; només operes amb els numeradors: 2 + 1 = 3, és a dir 3/4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.002",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "1/6 + 5/6",
+    "answer": "6/6",
+    "also_accept": [
+      "1"
+    ],
+    "options": [],
+    "why": "Els denominadors són iguals (6): el denominador no canvia; només operes amb els numeradors: 1 + 5 = 6, és a dir 6/6. Simplifica dividint numerador i denominador per 6: 1.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.003",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "2/4 - 1/4",
+    "answer": "1/4",
+    "also_accept": [],
+    "options": [],
+    "why": "Els denominadors són iguals (4): el denominador no canvia; només operes amb els numeradors: 2 - 1 = 1, és a dir 1/4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.004",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "3/4 + 3/4",
+    "answer": "6/4",
+    "also_accept": [
+      "1 1/2"
+    ],
+    "options": [],
+    "why": "Els denominadors són iguals (4): el denominador no canvia; només operes amb els numeradors: 3 + 3 = 6, és a dir 6/4. Simplifica dividint numerador i denominador per 2: 1 1/2. Com a nombre mixt: 3/2 = 1 + 1/2, que s'escriu 1 1/2 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.005",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "2/3 - 1/3",
+    "answer": "1/3",
+    "also_accept": [],
+    "options": [],
+    "why": "Els denominadors són iguals (3): el denominador no canvia; només operes amb els numeradors: 2 - 1 = 1, és a dir 1/3.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.006",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "4/10 - 1/10",
+    "answer": "3/10",
+    "also_accept": [],
+    "options": [],
+    "why": "Els denominadors són iguals (10): el denominador no canvia; només operes amb els numeradors: 4 - 1 = 3, és a dir 3/10.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.007",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "3/9 + 4/9",
+    "answer": "7/9",
+    "also_accept": [],
+    "options": [],
+    "why": "Els denominadors són iguals (9): el denominador no canvia; només operes amb els numeradors: 3 + 4 = 7, és a dir 7/9.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.008",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "4/8 + 1/8",
+    "answer": "5/8",
+    "also_accept": [],
+    "options": [],
+    "why": "Els denominadors són iguals (8): el denominador no canvia; només operes amb els numeradors: 4 + 1 = 5, és a dir 5/8.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.009",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "7/8 - 5/8",
+    "answer": "2/8",
+    "also_accept": [
+      "1/4"
+    ],
+    "options": [],
+    "why": "Els denominadors són iguals (8): el denominador no canvia; només operes amb els numeradors: 7 - 5 = 2, és a dir 2/8. Simplifica dividint numerador i denominador per 2: 1/4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.010",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "3/4 - 2/4",
+    "answer": "1/4",
+    "also_accept": [],
+    "options": [],
+    "why": "Els denominadors són iguals (4): el denominador no canvia; només operes amb els numeradors: 3 - 2 = 1, és a dir 1/4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.011",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "1/4 + 2/4",
+    "answer": "3/4",
+    "also_accept": [],
+    "options": [],
+    "why": "Els denominadors són iguals (4): el denominador no canvia; només operes amb els numeradors: 1 + 2 = 3, és a dir 3/4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.frac_same_den.012",
+    "competence": "m5.frac_same_den",
+    "type": "compute",
+    "instruction": "Calcula i simplifica si es pot.",
+    "problem": "3/4 - 1/4",
+    "answer": "2/4",
+    "also_accept": [
+      "1/2"
+    ],
+    "options": [],
+    "why": "Els denominadors són iguals (4): el denominador no canvia; només operes amb els numeradors: 3 - 1 = 2, és a dir 2/4. Simplifica dividint numerador i denominador per 2: 1/2.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  }
+]

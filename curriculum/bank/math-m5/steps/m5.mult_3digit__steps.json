@@ -1,0 +1,590 @@
+[
+  {
+    "id": "m5.mult_3digit.013",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "754 × 25",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "754 × 20",
+        "value": "15080",
+        "accept": [
+          "754 * 20",
+          "754 × 20 = 15080"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 25 en 20 + 5 i multiplica 754 × 20.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "754 × 5",
+        "value": "3770",
+        "accept": [
+          "754 * 5",
+          "754 × 5 = 3770"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 754 × 5.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "15080 + 3770",
+        "value": "18850",
+        "accept": [
+          "15080 + 3770 = 18850"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "18850",
+    "why": "25 = 20 + 5: 754 × 20 = 15080 i 754 × 5 = 3770; 15080 + 3770 = 18850.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.014",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "125 × 46",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "125 × 40",
+        "value": "5000",
+        "accept": [
+          "125 * 40",
+          "125 × 40 = 5000"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 46 en 40 + 6 i multiplica 125 × 40.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "125 × 6",
+        "value": "750",
+        "accept": [
+          "125 * 6",
+          "125 × 6 = 750"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 125 × 6.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "5000 + 750",
+        "value": "5750",
+        "accept": [
+          "5000 + 750 = 5750"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "5750",
+    "why": "46 = 40 + 6: 125 × 40 = 5000 i 125 × 6 = 750; 5000 + 750 = 5750.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.015",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "350 × 39",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "350 × 30",
+        "value": "10500",
+        "accept": [
+          "350 * 30",
+          "350 × 30 = 10500"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 39 en 30 + 9 i multiplica 350 × 30.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "350 × 9",
+        "value": "3150",
+        "accept": [
+          "350 * 9",
+          "350 × 9 = 3150"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 350 × 9.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "10500 + 3150",
+        "value": "13650",
+        "accept": [
+          "10500 + 3150 = 13650"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "13650",
+    "why": "39 = 30 + 9: 350 × 30 = 10500 i 350 × 9 = 3150; 10500 + 3150 = 13650.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.016",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "242 × 24",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "242 × 20",
+        "value": "4840",
+        "accept": [
+          "242 * 20",
+          "242 × 20 = 4840"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 24 en 20 + 4 i multiplica 242 × 20.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "242 × 4",
+        "value": "968",
+        "accept": [
+          "242 * 4",
+          "242 × 4 = 968"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 242 × 4.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "4840 + 968",
+        "value": "5808",
+        "accept": [
+          "4840 + 968 = 5808"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "5808",
+    "why": "24 = 20 + 4: 242 × 20 = 4840 i 242 × 4 = 968; 4840 + 968 = 5808.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.017",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "189 × 86",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "189 × 80",
+        "value": "15120",
+        "accept": [
+          "189 * 80",
+          "189 × 80 = 15120"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 86 en 80 + 6 i multiplica 189 × 80.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "189 × 6",
+        "value": "1134",
+        "accept": [
+          "189 * 6",
+          "189 × 6 = 1134"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 189 × 6.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "15120 + 1134",
+        "value": "16254",
+        "accept": [
+          "15120 + 1134 = 16254"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "16254",
+    "why": "86 = 80 + 6: 189 × 80 = 15120 i 189 × 6 = 1134; 15120 + 1134 = 16254.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.018",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "532 × 15",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "532 × 10",
+        "value": "5320",
+        "accept": [
+          "532 * 10",
+          "532 × 10 = 5320"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 15 en 10 + 5 i multiplica 532 × 10.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "532 × 5",
+        "value": "2660",
+        "accept": [
+          "532 * 5",
+          "532 × 5 = 2660"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 532 × 5.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "5320 + 2660",
+        "value": "7980",
+        "accept": [
+          "5320 + 2660 = 7980"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "7980",
+    "why": "15 = 10 + 5: 532 × 10 = 5320 i 532 × 5 = 2660; 5320 + 2660 = 7980.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.019",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "130 × 22",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "130 × 20",
+        "value": "2600",
+        "accept": [
+          "130 * 20",
+          "130 × 20 = 2600"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 22 en 20 + 2 i multiplica 130 × 20.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "130 × 2",
+        "value": "260",
+        "accept": [
+          "130 * 2",
+          "130 × 2 = 260"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 130 × 2.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "2600 + 260",
+        "value": "2860",
+        "accept": [
+          "2600 + 260 = 2860"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "2860",
+    "why": "22 = 20 + 2: 130 × 20 = 2600 i 130 × 2 = 260; 2600 + 260 = 2860.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.020",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "617 × 88",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "617 × 80",
+        "value": "49360",
+        "accept": [
+          "617 * 80",
+          "617 × 80 = 49360"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 88 en 80 + 8 i multiplica 617 × 80.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "617 × 8",
+        "value": "4936",
+        "accept": [
+          "617 * 8",
+          "617 × 8 = 4936"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 617 × 8.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "49360 + 4936",
+        "value": "54296",
+        "accept": [
+          "49360 + 4936 = 54296"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "54296",
+    "why": "88 = 80 + 8: 617 × 80 = 49360 i 617 × 8 = 4936; 49360 + 4936 = 54296.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.021",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "127 × 82",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "127 × 80",
+        "value": "10160",
+        "accept": [
+          "127 * 80",
+          "127 × 80 = 10160"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 82 en 80 + 2 i multiplica 127 × 80.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "127 × 2",
+        "value": "254",
+        "accept": [
+          "127 * 2",
+          "127 × 2 = 254"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 127 × 2.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "10160 + 254",
+        "value": "10414",
+        "accept": [
+          "10160 + 254 = 10414"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "10414",
+    "why": "82 = 80 + 2: 127 × 80 = 10160 i 127 × 2 = 254; 10160 + 254 = 10414.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.022",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "303 × 94",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "303 × 90",
+        "value": "27270",
+        "accept": [
+          "303 * 90",
+          "303 × 90 = 27270"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 94 en 90 + 4 i multiplica 303 × 90.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "303 × 4",
+        "value": "1212",
+        "accept": [
+          "303 * 4",
+          "303 × 4 = 1212"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 303 × 4.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "27270 + 1212",
+        "value": "28482",
+        "accept": [
+          "27270 + 1212 = 28482"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "28482",
+    "why": "94 = 90 + 4: 303 × 90 = 27270 i 303 × 4 = 1212; 27270 + 1212 = 28482.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.023",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "529 × 39",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "529 × 30",
+        "value": "15870",
+        "accept": [
+          "529 * 30",
+          "529 × 30 = 15870"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 39 en 30 + 9 i multiplica 529 × 30.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "529 × 9",
+        "value": "4761",
+        "accept": [
+          "529 * 9",
+          "529 × 9 = 4761"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 529 × 9.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "15870 + 4761",
+        "value": "20631",
+        "accept": [
+          "15870 + 4761 = 20631"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "20631",
+    "why": "39 = 30 + 9: 529 × 30 = 15870 i 529 × 9 = 4761; 15870 + 4761 = 20631.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.mult_3digit.024",
+    "competence": "m5.mult_3digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "559 × 86",
+    "method": "partial_products",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "559 × 80",
+        "value": "44720",
+        "accept": [
+          "559 * 80",
+          "559 × 80 = 44720"
+        ],
+        "error_class": "procedure",
+        "why": "Separa 86 en 80 + 6 i multiplica 559 × 80.",
+        "goal": "Descompon el segon factor en desenes + unitats i multiplica el primer factor per les desenes"
+      },
+      {
+        "n": 2,
+        "expect": "559 × 6",
+        "value": "3354",
+        "accept": [
+          "559 * 6",
+          "559 × 6 = 3354"
+        ],
+        "error_class": "calculation",
+        "why": "Ara les unitats: 559 × 6.",
+        "goal": "Multiplica el primer factor per les unitats"
+      },
+      {
+        "n": 3,
+        "expect": "44720 + 3354",
+        "value": "48074",
+        "accept": [
+          "44720 + 3354 = 48074"
+        ],
+        "error_class": "carrying",
+        "why": "Suma els dos productes parcials.",
+        "goal": "Suma els dos productes parcials"
+      }
+    ],
+    "answer": "48074",
+    "why": "86 = 80 + 6: 559 × 80 = 44720 i 559 × 6 = 3354; 44720 + 3354 = 48074.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  }
+]
