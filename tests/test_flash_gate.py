@@ -7,6 +7,7 @@ changes: these tests also pin that the existing rules do not move.
 """
 import importlib.util
 import json
+import math
 import sys
 import tempfile
 import unittest
@@ -20,6 +21,9 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 import curriculum as cu  # noqa: E402
 
 A1 = cu.load_curriculum(REPO_ROOT / "curriculum" / "en-A1.md")
+# The real A1 lists: counts come from the files, so adding a list does not break the suite.
+REAL_TOTAL = len(cu.flash_lists(REPO_ROOT, "en-A1"))
+REAL_NEEDED = math.ceil(REAL_TOTAL * 80 / 100)
 A2 = cu.load_curriculum(REPO_ROOT / "curriculum" / "en-A2.md")
 CORE = [c["id"] for c in A1["competencies"] if c["core"]]
 OLD = dict(cu.CFG, window=6, min_answers=5, min_span_days=4, stalled_answers=20)
@@ -144,7 +148,7 @@ class FlashProgressTest(unittest.TestCase):
 
     def test_the_real_a1_lists(self):
         fp = cu.flash_progress(REPO_ROOT, A1, self.data)
-        self.assertEqual((fp["total"], fp["needed"], fp["met"]), (5, 4, False))
+        self.assertEqual((fp["total"], fp["needed"], fp["met"]), (REAL_TOTAL, REAL_NEEDED, False))
 
 
 class CheckpointReadyTest(unittest.TestCase):
@@ -189,7 +193,7 @@ class PathViewTest(unittest.TestCase):
         data = Path(tempfile.mkdtemp())
         path = cu.new_path(A1)
         v = cu.path_view(A1, path, "2026-10-16", data_dir=data, stem="en-A1", root=REPO_ROOT)
-        self.assertEqual(v["flash"], {"closed": 0, "total": 5, "share": 80, "needed": 4, "met": False})
+        self.assertEqual(v["flash"], {"closed": 0, "total": REAL_TOTAL, "share": 80, "needed": REAL_NEEDED, "met": False})
         v2 = cu.path_view(A2, cu.new_path(A2), "2026-10-16", data_dir=data, stem="en-A2", root=REPO_ROOT)
         self.assertIsNone(v2["flash"])
 
@@ -208,7 +212,7 @@ class ReportTest(unittest.TestCase):
                 cu.record_answer(path, cid, True, (date(2026, 9, 1) + timedelta(days=k)).isoformat())
         data = Path(tempfile.mkdtemp())
         text = cu.render_report(A1N, path, "2026-10-16", cfg=OLD, root=REPO_ROOT, data_dir=data)
-        self.assertIn("Checkpoint: encara no (Flash: 0/4 llistes tancades)", text)
+        self.assertIn(f"Checkpoint: encara no (Flash: 0/{REAL_NEEDED} llistes tancades)", text)
         self.assertNotIn("falten", text)
         # Without the data dir the requirement is not looked at: the old wording stays.
         plain = cu.render_report(A1N, path, "2026-10-16", cfg=OLD)
@@ -253,7 +257,7 @@ class LevelTestMessageTest(unittest.TestCase):
         d, cur = self._steady_history()
         out = cu.checkpoint_start(d, cur, date.today().isoformat(), stem="en-A1", root=REPO_ROOT)
         self.assertFalse(out["ok"])
-        self.assertIn("closed enough Flash lists (you have 0, need 4 of 5)", out["text"])
+        self.assertIn(f"closed enough Flash lists (you have 0, need {REAL_NEEDED} of {REAL_TOTAL})", out["text"])
 
     def test_the_test_opens_once_the_lists_are_closed(self):
         d, cur = self._steady_history()

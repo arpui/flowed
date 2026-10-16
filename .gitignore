@@ -78,3 +78,6 @@ _to_delete/
 *.tmp
 *.orig
 /tmp/
+
+# Claude Code worktrees (local working copies, never part of the repo)
+.claude/worktrees/

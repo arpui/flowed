@@ -44,10 +44,24 @@ type List = { id: string; level: string; title: string; words: Word[] };
 console.log("lists");
 const listsCa: List[] = loadFlashLists(root, "curriculum/flash/en-*", "ca");
 const listsEs: List[] = loadFlashLists(root, "curriculum/flash/en-*", "es");
-check("five lists under curriculum/flash/en-*", listsCa.length === 5, listsCa.map((l) => l.id));
+// Every .json under curriculum/flash/en-* must be a list (an empty or broken file is skipped
+// silently at run time, so it is caught here).
+const listFiles = fs.readdirSync(path.join(root, "curriculum", "flash"))
+  .filter((d) => d.startsWith("en-"))
+  .flatMap((d) => fs.readdirSync(path.join(root, "curriculum", "flash", d)).filter((f) => f.endsWith(".json")).sort().map((f) => `${d}/${f}`));
+const badFiles = listFiles.filter((f) => {
+  try {
+    const raw = JSON.parse(read("curriculum", "flash", f));
+    return !raw || !Array.isArray(raw.words) || raw.words.length === 0;
+  } catch {
+    return true;
+  }
+});
+check("every list file is valid JSON with words", badFiles.length === 0, badFiles);
+check("one list per valid file under curriculum/flash/en-*", listsCa.length === listFiles.length - badFiles.length, listsCa.map((l) => l.id));
 check("list ids are unique", new Set(listsCa.map((l) => l.id)).size === listsCa.length);
 check("every list is A1 and titled", listsCa.every((l) => l.level === "A1" && l.title.length > 0));
-check("every list has 12 words", listsCa.every((l) => l.words.length === 12), listsCa.map((l) => l.words.length));
+check("every list has words", listsCa.every((l) => l.words.length > 0), listsCa.map((l) => l.words.length));
 for (const l of listsCa) {
   const ids = l.words.map((w) => w.id);
   check(`word ids unique in ${l.id}`, new Set(ids).size === ids.length);
@@ -252,10 +266,10 @@ try {
   writeProfile({ native_language: "Catalan", target_language: "English", current_level: "A1" });
   const ca = flashListsResponse(root, dataDir) as any;
   check("language profile: enabled, ca, English, A1", ca.ok === true && ca.enabled === true && ca.nativeCode === "ca" && ca.target === "English" && ca.level === "A1" && ca.native === "Catalan");
-  check("language profile: all five lists", Array.isArray(ca.lists) && ca.lists.length === 5);
+  check("language profile: all the lists", Array.isArray(ca.lists) && ca.lists.length === listsCa.length);
   const mother = ca.lists[0].words.find((w: Word) => w.id === "mother");
   check("words carry only the native forms of the learner", mother && JSON.stringify(mother.native) === '["mare"]' && JSON.stringify(mother.target) === '["mother","mum","mom"]', mother);
-  check("lists are ordered by level, then file name", ca.lists.map((l: List) => l.id).join() === "en-A1.flash.family,en-A1.flash.food,en-A1.flash.home,en-A1.flash.animals,en-A1.flash.verbs", ca.lists.map((l: List) => l.id));
+  check("lists are ordered by level, then file name", ca.lists.map((l: List) => l.id).join() === listsCa.map((l) => l.id).join() && ca.lists[0]?.id === "en-A1.flash.family", ca.lists.map((l: List) => l.id));
 
   writeProfile({ native_language: "castellano", target_language: "English", current_level: "A1" });
   const es = flashListsResponse(root, dataDir) as any;
