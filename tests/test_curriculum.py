@@ -376,6 +376,26 @@ class RebuildTest(unittest.TestCase):
         (d / "learner-profile.json").write_text(json.dumps(prof), encoding="utf-8")
         self.assertIsNone(cu.find_curriculum(REPO_ROOT, d))
 
+    def test_the_declared_current_level_is_where_the_course_starts(self):
+        # 2026-10-16 (Albert): the profile says where she is and where she goes; the levels
+        # below the current one count as done, with or without a certificate.
+        d = Path(tempfile.mkdtemp())
+        prof = {"learner": {"target_language": "Math", "current_level": "m7", "target_level": "m7"}}
+        (d / "learner-profile.json").write_text(json.dumps(prof), encoding="utf-8")
+        self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "math-m7.md")
+        prof["learner"].update(current_level="m5", target_level="m7")
+        (d / "learner-profile.json").write_text(json.dumps(prof), encoding="utf-8")
+        self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "math-m5.md")
+        cu._write_json(cu.certificates_file(d), [{"language": "Math", "level": "M5"}])
+        self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "math-m7.md")
+        prof = {"learner": {"target_language": "English", "current_level": "A2", "target_level": "A2"}}
+        (d / "learner-profile.json").write_text(json.dumps(prof), encoding="utf-8")
+        self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "en-A2.md")
+        # a current level above the target is ignored (no floor)
+        prof["learner"].update(current_level="B2", target_level="A2")
+        (d / "learner-profile.json").write_text(json.dumps(prof), encoding="utf-8")
+        self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "en-A1.md")
+
     def test_auto_rebuild_without_a_curriculum_does_nothing(self):
         d = Path(tempfile.mkdtemp())
         self.assertEqual(cu.main(["rebuild", "--auto", "--quiet", "--data", str(d)]), 0)

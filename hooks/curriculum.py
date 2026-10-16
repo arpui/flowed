@@ -1554,10 +1554,10 @@ def _learner(data_dir) -> dict:
 
 def find_curriculum(root: str | os.PathLike, data_dir: str | os.PathLike | None = None) -> Path | None:
     """The curriculum of this learner's CURRENT course: $FLOWED_CURRICULUM, else — among the
-    curricula of the profile's target_language up to its target_level — the lowest level that has
-    not been certified yet (the declared current level is not trusted: it is certified by a
-    checkpoint). When every level up to the target is certified, the last one (goal reached).
-    None when there is no curriculum."""
+    curricula of the profile's target_language from its current_level up to its target_level —
+    the lowest level that has not been certified yet. Levels below the declared current level
+    count as done; within the range, a level is still certified by a checkpoint. When every
+    level in the range is certified, the last one (goal reached). None when there is no curriculum."""
     env = os.environ.get("FLOWED_CURRICULUM")
     if env:
         p = Path(env).expanduser()
@@ -1570,13 +1570,19 @@ def find_curriculum(root: str | os.PathLike, data_dir: str | os.PathLike | None 
     target = _lvl(learner.get("target_level") or "")
     if not lang or target == 99:
         return None
+    # The profile says where the learner starts: levels below the declared current level are
+    # taken as done (2026-10-16, Albert). No/unknown current level, or one above the target:
+    # no floor, the lowest uncertified level as before.
+    floor = _lvl(learner.get("current_level") or "")
+    if floor == 99 or floor > target:
+        floor = -1
     files = []
     for f in ladder(root, lang):
         try:
             lv = parse_curriculum(f.read_text(encoding="utf-8"))["meta"].get("level", "")
         except OSError:
             continue
-        if _lvl(lv) <= target:
+        if floor <= _lvl(lv) <= target:
             files.append((str(lv).upper(), f))
     if not files:
         return None
