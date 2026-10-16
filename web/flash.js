@@ -1,4 +1,4 @@
-// Flash v0.1 + v1 — vocabulari ràpid, sense model (docs/ENCARREC-FLASH-v0.md, v0.1 i v1).
+// Flash v0.1 + v1 + math — vocabulari ràpid i càlcul, sense model (docs/ENCARREC-FLASH-v0.md, v0.1, v1 i MATH).
 // El progrés viu al servidor (data/flash-db.json, /api/flash/state); el navegador en guarda una còpia.
 // Pantalla pròpia sota la capçalera de FlowEd: surt una paraula, l'alumne escriu
 // la traducció i el client corregeix a l'instant. Dues parts: el nucli pur
@@ -65,6 +65,22 @@
     }
     if (folded !== null) return { ok: true, exact: false, form: folded };
     return { ok: false, exact: false, form: null };
+  }
+
+  // Math: el resultat com a número. Espais fora, coma o punt decimal: 72, 72,0 i 72.0 són iguals.
+  function numeric(s) {
+    const t = String(s ?? "").replace(/\s+/g, "").replace(/,/g, ".");
+    return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null;
+  }
+
+  // Com check(), però per valor (les operacions no tenen article ni accents).
+  function checkNumber(answer, accepted) {
+    const a = numeric(answer);
+    if (a === null) return { ok: false, exact: true, form: null };
+    for (const raw of accepted) {
+      if (numeric(raw) === a) return { ok: true, exact: true, form: raw };
+    }
+    return { ok: false, exact: true, form: null };
   }
 
   // Pista del tercer pas: primera lletra i guions ("m _ _ _ _ _"; "/" és un espai).
@@ -260,6 +276,7 @@
     migratePrefs,
     addReturn,
     roundLabel,
+    checkNumber,
     emptyState,
     recordResult,
     listStatus,
@@ -284,6 +301,9 @@
   const PREFS_KEY = "flowed.flash.prefs";
   const DIR_LABEL = { nt: "Natiu → idioma", tn: "Idioma → natiu", mix: "Barrejat" };
   const TIME_LABEL = { off: "Desactivat", 10: "10 s", 20: "20 s", 30: "30 s" };
+  // Llistes de math (kind "math"): operació → resultat, sense direcció ni article.
+  const isMath = (l) => !!l && l.kind === "math";
+  const noun = (l) => (isMath(l) ? "operació" : "paraula");
   const TIMEOUT_PAUSE_MS = 2000; // temps esgotat: passa sola a la següent
 
   let screen = null; // #flash-screen
@@ -480,6 +500,7 @@
     clearAdvance();
     stopClock();
     const lists = data.lists;
+    const math = lists.length > 0 && lists.every(isMath);
     const sel = lists.find((l) => l.id === selected);
     const selClosed = sel ? C.listStatus(sel, state).closed : false;
     const rows = lists
@@ -498,13 +519,13 @@
     screen.innerHTML = `
       <div class="flash-panel">
         <div class="flash-head">
-          <h2>⚡ Flash <span class="flash-sub">${escText(data.target)} · ${escText(data.level)}</span></h2>
+          <h2>⚡ Flash <span class="flash-sub">${escText(math ? "Matemàtiques" : data.target)} · ${escText(data.level)}</span></h2>
         </div>
         <div class="flash-body">
-          <p class="flash-label">Direcció</p>
-          <div class="flash-seg" role="group" aria-label="Direcció">${dirButton("nt")}${dirButton("tn")}${dirButton("mix")}</div>
-          <p class="flash-label">Temps per paraula</p>
-          <div class="flash-seg" role="group" aria-label="Temps per paraula">${timeButton(false)}${C.TIMER_OPTIONS.map(timeButton).join("")}</div>
+          ${math ? "" : `<p class="flash-label">Direcció</p>
+          <div class="flash-seg" role="group" aria-label="Direcció">${dirButton("nt")}${dirButton("tn")}${dirButton("mix")}</div>`}
+          <p class="flash-label">Temps per ${noun(lists[0] || {})}</p>
+          <div class="flash-seg" role="group" aria-label="Temps per ${noun(lists[0] || {})}">${timeButton(false)}${C.TIMER_OPTIONS.map(timeButton).join("")}</div>
           <p class="flash-label">Llistes</p>
           <div class="flash-lists">${rows || '<p class="flash-note">Encara no hi ha llistes.</p>'}</div>
           <div class="flash-actions">
@@ -516,7 +537,8 @@
 
   // ---- ronda ---------------------------------------------------------------
   function makeCard(item) {
-    const dir = round.dir === "mix" ? (Math.random() < 0.5 ? "nt" : "tn") : round.dir;
+    const math = isMath(round.list);
+    const dir = math ? "nt" : round.dir === "mix" ? (Math.random() < 0.5 ? "nt" : "tn") : round.dir;
     const w = item.word;
     const nt = dir === "nt";
     return {
@@ -524,9 +546,10 @@
       returned: item.returned,
       dot: item.dot,
       dir,
-      prompt: (nt ? w.native[0] : w.target[0]) || "—",
+      math,
+      prompt: (math ? w.prompt : nt ? w.native[0] : w.target[0]) || "—",
       accepted: nt ? w.target : w.native,
-      lang: nt ? TARGET_CODE : data.nativeCode,
+      lang: math ? null : nt ? TARGET_CODE : data.nativeCode,
       limit: round.timer || 0, // segons; 0 = sense límit
       start: Date.now(),
       misses: 0,
@@ -571,13 +594,18 @@
     const dots = q("#flash-dots");
     if (!prog || !dots || !round) return;
     const { n, m } = C.roundLabel(round.dots);
-    prog.textContent = `Paraula ${n} de ${m}${round.repassa ? " · repàs" : ""}`;
+    const unit = isMath(round.list) ? "Operació" : "Paraula";
+    prog.textContent = `${unit} ${n} de ${m}${round.repassa ? " · repàs" : ""}`;
     dots.innerHTML = round.dots.map((d) => `<span class="flash-dot ${d}"></span>`).join("");
   }
 
   function renderCard() {
     view = "card";
-    const dirLabel = card.dir === "nt" ? `Escriu-ho en ${data.target}` : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
+    const dirLabel = card.math
+      ? "Calcula"
+      : card.dir === "nt"
+        ? `Escriu-ho en ${data.target}`
+        : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
     screen.innerHTML = `
       <div class="flash-panel flash-play">
         <div class="flash-top">
@@ -596,7 +624,7 @@
           <div class="flash-feedback" id="flash-feedback" aria-live="polite"></div>
         </div>
         <form class="flash-form" id="flash-form" autocomplete="off">
-          <input id="flash-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Traducció">
+          <input id="flash-input" type="text"${card.math ? ' inputmode="numeric" aria-label="Resultat"' : ' aria-label="Traducció"'} autocomplete="off" autocapitalize="off" spellcheck="false">
           <button type="submit" class="primary" id="flash-ok">Comprova</button>
         </form>
       </div>`;
@@ -643,7 +671,7 @@
   // Una resposta de l'alumne: encert, error (1r, 2n) o 3r error (resposta mostrada).
   function attempt(text) {
     if (!card || card.done || !String(text).trim()) return;
-    const res = C.check(text, card.accepted, card.lang);
+    const res = card.math ? C.checkNumber(text, card.accepted) : C.check(text, card.accepted, card.lang);
     if (res.ok) {
       resolve(C.outcome({ ok: true, misses: card.misses }), res);
       return;
@@ -737,7 +765,8 @@
     }
     const avg = r.timed ? `${((r.timeSum / r.timed) / 1000).toFixed(1).replace(".", ",")} s` : "—";
     // Compta la ronda per a la traça del xat (una línia en tancar Flash).
-    session = session || { rounds: 0, first: 0, presented: 0, titles: [], known: 0, total: 0 };
+    session = session || { rounds: 0, first: 0, presented: 0, titles: [], known: 0, total: 0, math: false };
+    session.math = isMath(r.list);
     session.rounds += 1;
     session.first += r.first;
     session.presented += r.presented;
@@ -757,9 +786,9 @@
             <li><span>Encerts a la primera</span><strong>${r.first}/${r.presented}</strong></li>
             <li><span>Errors</span><strong>${r.errors}</strong></li>
             <li><span>Millor ratxa</span><strong>${r.best}</strong></li>
-            ${r.timer ? `<li><span>Temps mitjà per paraula</span><strong>${avg}</strong></li>` : ""}
+            ${r.timer ? `<li><span>Temps mitjà per ${noun(r.list)}</span><strong>${avg}</strong></li>` : ""}
           </ul>
-          <p class="flash-note">Una paraula queda sabuda quan l'encertes a la primera en dues rondes.</p>
+          <p class="flash-note">Una ${noun(r.list)} queda sabuda quan l'encertes a la primera en dues rondes.</p>
           ${r.repassa ? '<p class="flash-note">Repàs: el progrés no canvia.</p>' : ""}
           <div class="flash-actions">
             <button type="button" class="primary" data-act="again">Una altra ronda</button>
@@ -773,6 +802,7 @@
   // Línia de la traça al xat: totes les rondes d'aquesta obertura de Flash.
   function traceText(s) {
     const who = s.titles.length === 1 ? s.titles[0] : `${s.titles.length} llistes`;
+    if (s.math) return `⚡ Flash · ${who} — ${s.first}/${s.presented} a la primera · operacions sabudes ${s.known}/${s.total}`;
     return `⚡ Flash · ${who} — ${s.first}/${s.presented} a la primera · sabudes ${s.known}/${s.total}`;
   }
 

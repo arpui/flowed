@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.taula-9",
+  "level": "m5",
+  "title": { "ca": "Taula del 9", "es": "Tabla del 9", "en": "9 times table" },
+  "generate": { "op": "×", "a": [9], "b": { "from": 1, "to": 10 } }
+}

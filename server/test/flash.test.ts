@@ -8,14 +8,21 @@ import path from "node:path";
 import vm from "node:vm";
 import {
   emptyFlashState,
+  expandGenerate,
   flashConfig,
   flashListsResponse,
   flashStateResponse,
   loadFlashLists,
+  mathListProblems,
+  mathWords,
   nativeCode,
+  normalizeOp,
+  numericValue,
+  opResult,
   profileDomain,
   sanitizeFlashState,
   saveFlashState,
+  simpleOp,
 } from "../src/flash.ts";
 
 let failures = 0;
@@ -37,28 +44,31 @@ vm.runInContext(read("web", "flash.js"), ctx);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const C = ctx.FlashCore as any;
 
-type Word = { id: string; target: string[]; native: string[] };
-type List = { id: string; level: string; title: string; words: Word[] };
+type Word = { id: string; target: string[]; native: string[]; prompt?: string };
+type List = { id: string; level: string; title: string; words: Word[]; kind?: string };
 
 // ---- the lists --------------------------------------------------------------
 console.log("lists");
 const listsCa: List[] = loadFlashLists(root, "curriculum/flash/en-*", "ca");
 const listsEs: List[] = loadFlashLists(root, "curriculum/flash/en-*", "es");
-// Every .json under curriculum/flash/en-* must be a list (an empty or broken file is skipped
-// silently at run time, so it is caught here).
+// Every .json under curriculum/flash/en-* and math-* must be a list (an empty or broken file is skipped
+// silently at run time, so it is caught here). A math file is checked with mathListProblems.
 const listFiles = fs.readdirSync(path.join(root, "curriculum", "flash"))
-  .filter((d) => d.startsWith("en-"))
+  .filter((d) => d.startsWith("en-") || d.startsWith("math-"))
   .flatMap((d) => fs.readdirSync(path.join(root, "curriculum", "flash", d)).filter((f) => f.endsWith(".json")).sort().map((f) => `${d}/${f}`));
+const enFiles = listFiles.filter((f) => f.startsWith("en-"));
+const mathFiles = listFiles.filter((f) => f.startsWith("math-"));
 const badFiles = listFiles.filter((f) => {
   try {
     const raw = JSON.parse(read("curriculum", "flash", f));
+    if (f.startsWith("math-")) return !raw || typeof raw !== "object" || mathListProblems(raw).length > 0;
     return !raw || !Array.isArray(raw.words) || raw.words.length === 0;
   } catch {
     return true;
   }
 });
 check("every list file is valid JSON with words", badFiles.length === 0, badFiles);
-check("one list per valid file under curriculum/flash/en-*", listsCa.length === listFiles.length - badFiles.length, listsCa.map((l) => l.id));
+check("one list per valid file under curriculum/flash/en-*", listsCa.length === enFiles.length - badFiles.filter((f) => f.startsWith("en-")).length, listsCa.map((l) => l.id));
 check("list ids are unique", new Set(listsCa.map((l) => l.id)).size === listsCa.length);
 check("every list is A1 and titled", listsCa.every((l) => l.level === "A1" && l.title.length > 0));
 check("every list has words", listsCa.every((l) => l.words.length > 0), listsCa.map((l) => l.words.length));
@@ -73,6 +83,73 @@ check("ca and es give the same words", listsCa.every((l, i) => l.words.every((w,
 const firstCa = listsCa[0]?.words[0];
 const firstEs = listsEs[0]?.words[0];
 check("native forms are resolved to one language, not both", firstCa?.native.join() === "mare" && firstEs?.native.join() === "madre");
+check("language lists carry no math fields", listsCa.every((l) => !("kind" in l) && l.words.every((w) => !("prompt" in w))));
+
+// ---- math lists (docs/ENCARREC-FLASH-MATH.md) ---------------------------------
+console.log("math lists");
+const listsMath: List[] = loadFlashLists(root, "curriculum/flash/math-*", "ca");
+for (const f of mathFiles) {
+  const problems = mathListProblems(JSON.parse(read("curriculum", "flash", f)));
+  check(`math file ${f} has no problems (no dropped item)`, problems.length === 0, problems);
+}
+check("one math list per file under curriculum/flash/math-*", listsMath.length === mathFiles.length, listsMath.map((l) => l.id));
+check("every math list is kind math, level m5, titled, with words", listsMath.every((l) => l.kind === "math" && l.level === "m5" && l.title.length > 0 && l.words.length > 0));
+check("every math word has a prompt, a native = [prompt] and a target", listsMath.every((l) => l.words.every((w) => w.prompt && w.native.join() === w.prompt && w.target.length > 0)));
+for (const l of listsMath) {
+  const ids = l.words.map((w) => w.id);
+  check(`math word ids unique in ${l.id}`, new Set(ids).size === ids.length);
+}
+{
+  const t7 = listsMath.find((l) => l.id === "math-m5.flash.taula-7");
+  const w = t7?.words.find((x) => x.id === "7x3");
+  check("taula del 7: ten words, 7 × 3 = 21", t7?.words.length === 10 && w?.prompt === "7 × 3" && w?.target.join() === "21", w);
+  check("taula del 7: the ids are <a><op><b>", t7?.words.map((x) => x.id).join() === "7x1,7x2,7x3,7x4,7x5,7x6,7x7,7x8,7x9,7x10");
+  const ex = listsMath.find((l) => l.id === "math-m5.flash.2x1-xifres");
+  check("2×1 digits: twelve explicit items, 23 × 4 = 92", ex?.words.length === 12 && ex.words[0]?.prompt === "23 × 4" && ex.words[0]?.target.join() === "92");
+}
+check("math lists have no language entries (the lists are per domain)", listsMath.every((l) => !l.id.startsWith("en-")) && listsCa.every((l) => !l.id.startsWith("math-")));
+
+console.log("math engine");
+check("normalizeOp: synonyms map to the four signs", normalizeOp("x") === "×" && normalizeOp("*") === "×" && normalizeOp("-") === "−" && normalizeOp("−") === "−" && normalizeOp("/") === ":" && normalizeOp(":") === ":" && normalizeOp("+") === "+");
+check("normalizeOp: unknown or non-text → null (no prototype keys)", normalizeOp("%") === null && normalizeOp("constructor") === null && normalizeOp(7) === null);
+check("opResult: exact division only, no zero divisor, no negatives", opResult(12, ":", 4) === 3 && opResult(10, ":", 4) === null && opResult(5, ":", 0) === null && opResult(3, "−", 5) === null && opResult(3, "−", 1) === 2);
+check("simpleOp: reads 23 × 4, 8 x 3 and 5 - 2; not a sentence", JSON.stringify(simpleOp("23 × 4")) === '{"a":23,"op":"×","b":4}' && simpleOp("8 x 3")?.op === "×" && simpleOp("5 - 2")?.op === "−" && simpleOp("Quants són 2?") === null);
+check("numericValue: 72, 72,0 and 72.0 are the same; spaces out; not a number → null", numericValue("72") === 72 && numericValue("72,0") === 72 && numericValue("72.0") === 72 && numericValue(" 7 2 ") === 72 && numericValue("") === null && numericValue("x") === null);
+check("expandGenerate: taula del 7 → 10 items, results 7..70", JSON.stringify(expandGenerate({ op: "×", a: [7], b: { from: 1, to: 10 } }).map((w) => w.target[0])) === "[\"7\",\"14\",\"21\",\"28\",\"35\",\"42\",\"49\",\"56\",\"63\",\"70\"]");
+check("expandGenerate: division with a rest is dropped", expandGenerate({ op: ":", a: [21], b: [2, 3, 7] }).map((w) => w.id).join() === "21d3,21d7", expandGenerate({ op: ":", a: [21], b: [2, 3, 7] }));
+check("expandGenerate: negative result is dropped", expandGenerate({ op: "−", a: [3], b: [5, 1] }).map((w) => w.id).join() === "3m1");
+check("expandGenerate: unknown op → nothing; a repeated id keeps one", expandGenerate({ op: "%", a: [1], b: [1] }).length === 0 && expandGenerate({ op: "+", a: [1, 1], b: [2] }).length === 1);
+check("expandGenerate: a range longer than 1000 is refused", expandGenerate({ op: "+", a: [1], b: { from: 0, to: 5000 } }).length === 0);
+{
+  const r = mathWords({ items: [
+    { id: "bad", prompt: "23 × 4", answer: ["91"] },
+    { id: "good", prompt: "23 × 4", answer: ["92"] },
+    { id: "open", prompt: "Quants caramels hi ha?", answer: ["12"] },
+    { id: "good", prompt: "5 + 5", answer: ["10"] },
+  ] });
+  check("items: a wrong result is dropped and reported; an open prompt is kept; a repeated id is reported", r.words.map((w) => w.id).join() === "good,open" && r.problems.length === 2, r);
+  check("items: the report names the item and the sum", !!r.problems[0]?.includes('"bad"') && !!r.problems[0]?.includes("92"), r.problems);
+  check("mathListProblems: generate and items together are a problem", mathListProblems({ generate: { op: "+", a: [1], b: [1] }, items: [] }).length === 1);
+  check("mathListProblems: neither generate nor items is a problem", mathListProblems({ title: {} }).length === 1);
+}
+{
+  // A tmp curriculum: a both-keys file is skipped, generate and items files load, a new file shows up with no code change.
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "flash-math-"));
+  try {
+    const dir = path.join(tmp, "curriculum", "flash", "math-t1");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "01-gen.json"), JSON.stringify({ id: "math-t1.flash.gen", level: "t1", title: { ca: "Gen", en: "Gen" }, generate: { op: "+", a: [1], b: [1, 2] } }));
+    fs.writeFileSync(path.join(dir, "02-both.json"), JSON.stringify({ id: "math-t1.flash.both", level: "t1", title: { en: "Both" }, generate: { op: "+", a: [1], b: [1] }, items: [] }));
+    fs.writeFileSync(path.join(dir, "03-items.json"), JSON.stringify({ id: "math-t1.flash.items", level: "t1", title: { en: "Items" }, items: [{ id: "s", prompt: "2 + 2", answer: ["4"] }] }));
+    const before = loadFlashLists(tmp, "curriculum/flash/math-*", "ca").map((l) => l.id).join();
+    check("loader: a file with both generate and items is skipped; the others load as math", before === "math-t1.flash.gen,math-t1.flash.items", before);
+    fs.writeFileSync(path.join(dir, "04-new.json"), JSON.stringify({ id: "math-t1.flash.new", level: "t1", title: { en: "New" }, generate: { op: "×", a: [3], b: [3] } }));
+    const after = loadFlashLists(tmp, "curriculum/flash/math-*", "ca");
+    check("loader: a new generated file appears with no code change", after.length === 3 && after[2]?.words[0]?.target.join() === "9", after.map((l) => l.id));
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
 
 // ---- native language -------------------------------------------------------
 console.log("nativeCode");
@@ -103,6 +180,12 @@ check("check: empty answer is wrong", C.check("   ", ["cat"], "en").ok === false
 check("hint: first letter and dashes", C.hint("mother", "en") === "m _ _ _ _ _", C.hint("mother", "en"));
 check("hint: article not counted", C.hint("to eat", "en") === "e _ _", C.hint("to eat", "en"));
 check("hint: spaces shown as /", C.hint("ice cream", "en") === "i _ _ / _ _ _ _ _", C.hint("ice cream", "en"));
+
+console.log("math correction");
+check("checkNumber: 21 accepts 21, spaces out, comma or dot", C.checkNumber("21", ["21"]).ok && C.checkNumber(" 2 1 ", ["21"]).ok && C.checkNumber("72,0", ["72"]).ok && C.checkNumber("72.0", ["72"]).ok);
+check("checkNumber: a different number, a word or nothing is wrong", !C.checkNumber("22", ["21"]).ok && !C.checkNumber("vint-i-u", ["21"]).ok && !C.checkNumber("   ", ["21"]).ok);
+check("checkNumber: the accepted form is the target, exact", C.checkNumber("72,0", ["72"]).form === "72" && C.checkNumber("72,0", ["72"]).exact === true);
+check("hint for a number: first digit and dashes", C.hint("21", null) === "2 _" && C.hint("72", null) === "7 _");
 
 // ---- Leitner ---------------------------------------------------------------
 console.log("leitner");
@@ -249,7 +332,7 @@ console.log("round dots and summary");
 console.log("manifest and profile");
 const manifest = JSON.parse(read("config", "domain.json"));
 check("language has flash on, en-* lists", JSON.stringify(flashConfig(manifest, "language")) === JSON.stringify({ enabled: true, dir: "curriculum/flash/en-*" }));
-check("math has no flash (hidden)", flashConfig(manifest, "math").enabled === false);
+check("math has flash on, over the math-* lists", JSON.stringify(flashConfig(manifest, "math")) === JSON.stringify({ enabled: true, dir: "curriculum/flash/math-*" }));
 check("unknown domain has no flash", flashConfig(manifest, "nope").enabled === false && flashConfig(null, "language").enabled === false);
 check("language still hides no commands (domain-shell rule)", !(manifest.domains.language.hidden_commands || []).length);
 check("profileDomain: CEFR level means language", profileDomain({ learner: { current_level: "A1" } }) === "language");
@@ -275,9 +358,11 @@ try {
   const es = flashListsResponse(root, dataDir) as any;
   check("castellano profile: nativeCode es, madre", es.nativeCode === "es" && es.lists[0].words.find((w: Word) => w.id === "mother").native.join() === "madre");
 
-  writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m3" });
+  check("language profile: no math lists", ca.lists.every((l: List & { kind?: string }) => l.kind === undefined && !l.id.startsWith("math-")));
+
+  writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m5" });
   const math = flashListsResponse(root, dataDir) as any;
-  check("math profile: disabled, no lists", math.enabled === false && math.lists.length === 0);
+  check("math profile: enabled, the math-* lists only", math.enabled === true && math.lists.length === listsMath.length && math.lists.every((l: List & { kind?: string }) => l.kind === "math"), math.lists.map((l: List) => l.id));
 } finally {
   fs.rmSync(dataDir, { recursive: true, force: true });
 }
@@ -348,12 +433,13 @@ try {
   const notObject = saveFlashState(root, v1Dir, ["x"]);
   check("PUT with a non-object body: 400", notObject.status === 400);
 
-  writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m3" });
+  writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m5" });
   const mathGet = flashStateResponse(root, v1Dir) as any;
-  check("math profile: GET says disabled, empty state", mathGet.enabled === false && JSON.stringify(mathGet.state) === JSON.stringify(emptyFlashState()));
-  const before = fs.readFileSync(dbFile, "utf8");
-  const mathPut = saveFlashState(root, v1Dir, good);
-  check("math profile: PUT refused (404), nothing overwritten", mathPut.status === 404 && fs.readFileSync(dbFile, "utf8") === before);
+  check("math profile: GET enabled, empty state", mathGet.enabled === true && JSON.stringify(mathGet.state) === JSON.stringify(emptyFlashState()));
+  const mathState = { version: 1, lists: { "math-m5.flash.taula-7": { words: { "7x3": { box: 2, seen: 2, first_try: 2, misses: 0, last: "2026-10-16" } }, closed_at: null } }, rounds_by_day: { "2026-10-16": 1 } };
+  const mathPut = saveFlashState(root, v1Dir, { ...mathState, lists: { ...mathState.lists, "en-A1.flash.family": good.lists["en-A1.flash.family"] } });
+  check("math profile: PUT keeps the math lists, drops the language ones", mathPut.status === 200 && JSON.stringify(Object.keys((mathPut.body as any).state.lists)) === '["math-m5.flash.taula-7"]', (mathPut.body as any).state?.lists);
+  check("math profile: the math progress is read back", JSON.stringify((flashStateResponse(root, v1Dir) as any).state.lists) === JSON.stringify(mathState.lists));
 } finally {
   fs.rmSync(v1Dir, { recursive: true, force: true });
 }
@@ -380,6 +466,7 @@ const traceSrc = flashJs.slice(flashJs.indexOf("function appendTrace"), flashJs.
 check("flash.js: the chat trace never goes through send() or the server", traceSrc.length > 0 && !/\bsend\(/.test(traceSrc) && !/\bapi\(|fetch\(/.test(traceSrc));
 check("http.ts serves GET and PUT /api/flash/state", http.includes('p === "/api/flash/state"') && http.includes("saveFlashState(opts.root"));
 check("flash.js saves progress with PUT /flash/state and reads it on open", flashJs.includes('api("/flash/state", { method: "PUT"') && flashJs.includes('api("/flash/state")'));
+check("flash.js: math cards are a number answer (numeric keyboard, Calcula, no direction)", flashJs.includes('inputmode="numeric" aria-label="Resultat"') && flashJs.includes('"Calcula"') && flashJs.includes("checkNumber(text, card.accepted)") && flashJs.includes("lists.every(isMath)"));
 check("flash.js: a finished round (not a review) is counted for the day", /if \(!r\.repassa\) \{[\s\S]*countRound\(state, today\(\)\)/.test(flashJs));
 check("app.js: ⚡ reminder reuses renderSkillBadge with a target of 1, refreshed on load and on close",
   app.includes("async function refreshFlashBadge()") && app.includes('{ total: 1, pending: done >= 1 ? 0 : 1 }') && app.includes("refreshFlashBadge();\n  lastActivity") && flashJs.includes("refreshFlashBadge()"));

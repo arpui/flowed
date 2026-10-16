@@ -35,6 +35,7 @@ export interface FlashWordView {
   id: string;
   target: string[];
   native: string[];
+  prompt?: string; // math only: the operation shown on the card (native = [prompt])
 }
 
 export interface FlashListView {
@@ -42,6 +43,7 @@ export interface FlashListView {
   level: string;
   title: string;
   words: FlashWordView[];
+  kind?: "math"; // absent for language lists
 }
 
 /** Expands a path whose segments may hold a `*` (e.g. `curriculum/flash/en-*`)
@@ -94,14 +96,19 @@ export function loadFlashLists(root: string, dirGlob: string, code: NativeCode):
         continue; // a broken list is skipped, the others still load
       }
       const title = asRecord(raw.title);
-      const words: FlashWordView[] = (Array.isArray(raw.words) ? raw.words : []).map((w) => {
-        const word = asRecord(w);
-        return {
-          id: String(word.id ?? ""),
-          target: strings(word.target),
-          native: strings(asRecord(word.native)[code]),
-        };
-      });
+      // A math list has `generate` or `items` (docs/ENCARREC-FLASH-MATH.md §2); both at once is ambiguous: skipped.
+      if ("generate" in raw && "items" in raw) continue;
+      const math = "generate" in raw || "items" in raw;
+      const words: FlashWordView[] = math
+        ? mathWords(raw).words.map((w) => ({ id: w.id, target: w.target, native: [w.prompt], prompt: w.prompt }))
+        : (Array.isArray(raw.words) ? raw.words : []).map((w) => {
+            const word = asRecord(w);
+            return {
+              id: String(word.id ?? ""),
+              target: strings(word.target),
+              native: strings(asRecord(word.native)[code]),
+            };
+          });
       out.push({
         file,
         list: {
@@ -109,12 +116,156 @@ export function loadFlashLists(root: string, dirGlob: string, code: NativeCode):
           level: String(raw.level ?? ""),
           title: String(title[code] ?? title.en ?? ""),
           words,
+          ...(math ? { kind: "math" as const } : {}),
         },
       });
     }
   }
   out.sort((a, b) => a.list.level.localeCompare(b.list.level) || a.file.localeCompare(b.file));
   return out.map((x) => x.list);
+}
+
+// ---- math lists (docs/ENCARREC-FLASH-MATH.md) ----------------------------------
+// `generate`: the server works out every operation and its result (no result is
+// written by hand). `items`: hand-written, each checked against its own sum, and
+// an item whose result is wrong is dropped. Both give the same words as a
+// language list: target = [result], native = [prompt], prompt = what the card shows.
+// hooks/curriculum.py flash_lists mirrors these rules: the same ids, the same drops.
+
+export type MathOp = "+" | "−" | "×" | ":";
+
+const MATH_OP = new Map<string, MathOp>([
+  ["+", "+"], ["−", "−"], ["-", "−"], ["×", "×"], ["x", "×"], ["*", "×"], [":", ":"], ["/", ":"],
+]);
+const MATH_OP_ID = new Map<MathOp, string>([["+", "p"], ["−", "m"], ["×", "x"], [":", "d"]]);
+const MATH_RANGE_MAX = 1000; // a {from, to} range never holds more than this
+
+export interface MathWord {
+  id: string;
+  prompt: string;
+  target: string[];
+}
+
+/** The operator as the lists write it (`x`, `*`, `-`, `/` are synonyms), or null. */
+export function normalizeOp(op: unknown): MathOp | null {
+  return typeof op === "string" ? MATH_OP.get(op.trim()) ?? null : null;
+}
+
+/** A whole number from a JSON value (7 and 7.0 both), or null. */
+function wholeNumber(v: unknown): number | null {
+  return Number.isInteger(v) ? (v as number) : null;
+}
+
+/** The number an answer says (spaces out, comma or dot as decimal point), or null. */
+export function numericValue(s: unknown): number | null {
+  const t = String(s ?? "").replace(/\s+/g, "").replace(/,/g, ".");
+  return /^-?[0-9]+(\.[0-9]+)?$/.test(t) ? Number(t) : null;
+}
+
+/** The result of `a op b` when it is a whole number ≥ 0 (no division with a rest, no negative), else null. */
+export function opResult(a: number, op: MathOp, b: number): number | null {
+  let r: number;
+  switch (op) {
+    case "+": r = a + b; break;
+    case "−": r = a - b; break;
+    case "×": r = a * b; break;
+    case ":":
+      if (b === 0 || a % b !== 0) return null;
+      r = a / b;
+      break;
+  }
+  return r < 0 ? null : r;
+}
+
+/** A simple operation written out (`23 × 4`, `81 : 9`, `5 - 2`), or null when the text is not one. */
+export function simpleOp(prompt: string): { a: number; op: MathOp; b: number } | null {
+  const m = /^\s*(-?[0-9]+)\s*([+\-−×x*:/])\s*(-?[0-9]+)\s*$/.exec(prompt);
+  if (!m) return null;
+  const op = normalizeOp(m[2]);
+  return op ? { a: Number(m[1]), op, b: Number(m[3]) } : null;
+}
+
+function rangeOf(v: unknown): number[] {
+  if (Array.isArray(v)) return v.map(wholeNumber).filter((n): n is number => n !== null);
+  const r = asRecord(v);
+  const lo = wholeNumber(r.from);
+  const hi = wholeNumber(r.to);
+  if (lo === null || hi === null || hi - lo > MATH_RANGE_MAX) return [];
+  const out: number[] = [];
+  for (let i = lo; i <= hi; i++) out.push(i);
+  return out;
+}
+
+/** Every a op b of a `generate` block, in order (a outer, b inner). Results that are not whole and ≥ 0
+ *  are dropped; a repeated id keeps the first. */
+export function expandGenerate(gen: unknown): MathWord[] {
+  const g = asRecord(gen);
+  const op = normalizeOp(g.op);
+  if (!op) return [];
+  const out: MathWord[] = [];
+  const seen = new Set<string>();
+  for (const a of rangeOf(g.a)) {
+    for (const b of rangeOf(g.b)) {
+      const r = opResult(a, op, b);
+      const id = `${a}${MATH_OP_ID.get(op)}${b}`;
+      if (r === null || seen.has(id)) continue;
+      seen.add(id);
+      out.push({ id, prompt: `${a} ${op} ${b}`, target: [String(r)] });
+    }
+  }
+  return out;
+}
+
+/** Why an explicit item is wrong, or null when it is fine. A simple operation's answer must be its result. */
+function itemProblem(item: JsonRecord): string | null {
+  if (typeof item.id !== "string" || !item.id.trim()) return "sense id";
+  if (typeof item.prompt !== "string" || !item.prompt.trim()) return "sense enunciat";
+  const answer = strings(item.answer);
+  if (!answer.length) return "sense resultat";
+  const sop = simpleOp(item.prompt);
+  if (sop) {
+    const r = opResult(sop.a, sop.op, sop.b);
+    if (r === null) return `${item.prompt} no dona un resultat enter ≥ 0`;
+    if (numericValue(answer[0]) !== r) return `${item.prompt} és ${r}, no ${answer[0]}`;
+  }
+  return null;
+}
+
+/** The words of a math list, and what was left out of it (for the test that checks the lists). */
+export function mathWords(raw: JsonRecord): { words: MathWord[]; problems: string[] } {
+  if ("generate" in raw) {
+    const words = expandGenerate(raw.generate);
+    const problems = normalizeOp(asRecord(raw.generate).op) ? [] : ["generate: op desconegut"];
+    if (!words.length) problems.push("generate: no genera cap operació");
+    return { words, problems };
+  }
+  const words: MathWord[] = [];
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  for (const it of Array.isArray(raw.items) ? raw.items : []) {
+    const item = asRecord(it);
+    const problem = itemProblem(item);
+    if (problem) {
+      problems.push(`ítem ${JSON.stringify(item.id ?? "?")}: ${problem}`);
+      continue;
+    }
+    const id = String(item.id).trim();
+    if (seen.has(id)) {
+      problems.push(`ítem ${JSON.stringify(id)}: id repetit`);
+      continue;
+    }
+    seen.add(id);
+    words.push({ id, prompt: String(item.prompt).trim(), target: strings(item.answer) });
+  }
+  return { words, problems };
+}
+
+/** Every problem of one math list file (empty when it is a valid math list). */
+export function mathListProblems(raw: JsonRecord): string[] {
+  if ("generate" in raw && "items" in raw) return ["té generate i items: en cal un de sol"];
+  if (!("generate" in raw) && !("items" in raw)) return ["no té ni generate ni items"];
+  const { words, problems } = mathWords(raw);
+  return words.length || problems.length ? problems : ["no té cap ítem"];
 }
 
 export interface FlashConfig {

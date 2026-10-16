@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.taula-6",
+  "level": "m5",
+  "title": { "ca": "Taula del 6", "es": "Tabla del 6", "en": "6 times table" },
+  "generate": { "op": "×", "a": [6], "b": { "from": 1, "to": 10 } }
+}

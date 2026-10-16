@@ -539,17 +539,140 @@ FLASH_DB = "flash-db.json"
 FLASH_KNOWN_BOX = 2
 
 
+# ---- Flash math lists (docs/ENCARREC-FLASH-MATH.md §2) -----------------------
+# Mirror of server/src/flash.ts (expandGenerate, simpleOp, opResult, mathWords):
+# the same ids and the same drops, so the level's count matches what the learner sees.
+
+MATH_OPS = {"+": "+", "−": "−", "-": "−", "×": "×", "x": "×", "*": "×", ":": ":", "/": ":"}
+MATH_OP_ID = {"+": "p", "−": "m", "×": "x", ":": "d"}
+MATH_RANGE_MAX = 1000  # a {from, to} range never holds more than this
+_MATH_SIMPLE = re.compile(r"\s*(-?[0-9]+)\s*([+\-−×x*:/])\s*(-?[0-9]+)\s*")
+_MATH_NUMBER = re.compile(r"-?[0-9]+(\.[0-9]+)?")
+
+
+def math_op(op) -> str | None:
+    return MATH_OPS.get(op.strip()) if isinstance(op, str) else None
+
+
+def _whole(v) -> int | None:
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, int):
+        return v
+    if isinstance(v, float) and v.is_integer():
+        return int(v)
+    return None
+
+
+def math_numeric(s) -> float | None:
+    t = re.sub(r"\s+", "", "" if s is None else str(s)).replace(",", ".")
+    return float(t) if _MATH_NUMBER.fullmatch(t) else None
+
+
+def math_op_result(a: int, op: str, b: int) -> int | None:
+    """a op b when it is a whole number >= 0, else None."""
+    if op == "+":
+        r = a + b
+    elif op == "−":
+        r = a - b
+    elif op == "×":
+        r = a * b
+    else:
+        if b == 0 or a % b != 0:
+            return None
+        r = a // b
+    return r if r >= 0 else None
+
+
+def math_simple_op(prompt) -> tuple[int, str, int] | None:
+    m = _MATH_SIMPLE.fullmatch(prompt) if isinstance(prompt, str) else None
+    op = math_op(m.group(2)) if m else None
+    return (int(m.group(1)), op, int(m.group(3))) if op else None
+
+
+def _math_range(v) -> list[int]:
+    if isinstance(v, list):
+        return [n for n in (_whole(x) for x in v) if n is not None]
+    if isinstance(v, dict):
+        lo, hi = _whole(v.get("from")), _whole(v.get("to"))
+        if lo is None or hi is None or hi - lo > MATH_RANGE_MAX:
+            return []
+        return list(range(lo, hi + 1))
+    return []
+
+
+def _math_strings(v) -> list[str]:
+    if not isinstance(v, list):
+        return []
+    return [str(x).strip() for x in v if x is not None and str(x).strip()]
+
+
+def _math_item_ok(item: dict) -> bool:
+    """An explicit item is kept when its id and prompt are text, it has an answer, and a
+    simple operation's answer is its result."""
+    if not isinstance(item.get("id"), str) or not item["id"].strip():
+        return False
+    if not isinstance(item.get("prompt"), str) or not item["prompt"].strip():
+        return False
+    answer = _math_strings(item.get("answer"))
+    if not answer:
+        return False
+    sop = math_simple_op(item["prompt"])
+    if sop:
+        r = math_op_result(sop[0], sop[1], sop[2])
+        if r is None or math_numeric(answer[0]) != r:
+            return False
+    return True
+
+
+def math_words(raw: dict) -> list[dict]:
+    """The words of a math list (`generate` or `items`): {id, prompt, target}."""
+    out, seen = [], set()
+    if "generate" in raw:
+        g = raw["generate"] if isinstance(raw["generate"], dict) else {}
+        op = math_op(g.get("op"))
+        if not op:
+            return []
+        for a in _math_range(g.get("a")):
+            for b in _math_range(g.get("b")):
+                r = math_op_result(a, op, b)
+                wid = f"{a}{MATH_OP_ID[op]}{b}"
+                if r is None or wid in seen:
+                    continue
+                seen.add(wid)
+                out.append({"id": wid, "prompt": f"{a} {op} {b}", "target": [str(r)]})
+        return out
+    for item in (raw.get("items") if isinstance(raw.get("items"), list) else []):
+        item = item if isinstance(item, dict) else {}
+        if not _math_item_ok(item):
+            continue
+        wid = item["id"].strip()
+        if wid in seen:
+            continue
+        seen.add(wid)
+        out.append({"id": wid, "prompt": item["prompt"].strip(), "target": _math_strings(item.get("answer"))})
+    return out
+
+
 def flash_lists(root: str | os.PathLike, stem: str | None) -> list[dict]:
-    """The level's Flash lists: curriculum/flash/<stem>/*.json, as {id, words: [word ids]}."""
+    """The level's Flash lists: curriculum/flash/<stem>/*.json, as {id, words: [word ids]}.
+    A math list (`generate` or `items`) counts its generated or valid ids; one with both is skipped."""
     if not stem:
         return []
     out = []
     d = Path(root) / "curriculum" / "flash" / stem
     for f in sorted(d.glob("*.json")) if d.is_dir() else []:
         raw = _read_json(f, None)
-        if not isinstance(raw, dict) or not isinstance(raw.get("words"), list):
+        if not isinstance(raw, dict):
             continue
-        words = [str(w["id"]) for w in raw["words"] if isinstance(w, dict) and w.get("id")]
+        if "generate" in raw and "items" in raw:
+            continue
+        if "generate" in raw or "items" in raw:
+            words = [w["id"] for w in math_words(raw)]
+        elif isinstance(raw.get("words"), list):
+            words = [str(w["id"]) for w in raw["words"] if isinstance(w, dict) and w.get("id")]
+        else:
+            continue
         out.append({"id": str(raw.get("id") or f.stem), "words": words})
     return out
 

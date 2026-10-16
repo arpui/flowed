@@ -38,6 +38,7 @@
       "hidden_commands": ["math-vocab"],
       "_open_practices_comment": "2026-10-08 (Albert): no open practices with a general model in math — it invents problems that do not add up and cannot check a calculation. Re-enable here (speaking/writing/reading) only with a math-trained model; the code paths stay.",
       "open_practices": [],
+      "flash": { "enabled": true, "dir": "curriculum/flash/math-*" },
       "web_labels": {
         "buttons": "🔁 Review · 📚 Facts · 📝 Raonament · 📖 Problemes · 🗣️ Math talk · 📊 Stats · 🏁 End",
         "subject": "Matemàtiques"

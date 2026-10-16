@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.taula-8",
+  "level": "m5",
+  "title": { "ca": "Taula del 8", "es": "Tabla del 8", "en": "8 times table" },
+  "generate": { "op": "×", "a": [8], "b": { "from": 1, "to": 10 } }
+}
