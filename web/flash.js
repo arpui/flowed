@@ -1,9 +1,9 @@
-// Flash v0 — vocabulari ràpid, sense model (docs/ENCARREC-FLASH-v0.md).
-// Pantalla pròpia: surt una paraula, l'alumne escriu la traducció i el client
-// corregeix a l'instant. Dues parts: el nucli pur (correcció, caixes Leitner,
-// rondes) exposat a globalThis.FlashCore, que server/test/flash.test.ts carrega
-// amb vm; i la interfície, que només corre quan hi ha un document i usa api()
-// d'app.js.
+// Flash v0.1 — vocabulari ràpid, sense model (docs/ENCARREC-FLASH-v0.md i v0.1).
+// Pantalla pròpia sota la capçalera de FlowEd: surt una paraula, l'alumne escriu
+// la traducció i el client corregeix a l'instant. Dues parts: el nucli pur
+// (correcció, caixes Leitner, rondes, temps) exposat a globalThis.FlashCore, que
+// server/test/flash.test.ts carrega amb vm; i la interfície, que només corre quan
+// hi ha un document i usa api() d'app.js.
 
 // ---- nucli pur -------------------------------------------------------------
 (function () {
@@ -18,6 +18,8 @@
   };
   const BOX_MAX = 2; // caixa 2 = sabuda
   const ROUND_MAX = 10;
+  const TIMER_OPTIONS = [10, 20, 30]; // segons per paraula; false = sense límit
+  const TIMER_DEFAULT = 20;
 
   // Minúscules, espais col·lapsats, sense puntuació final.
   function normalize(s) {
@@ -78,6 +80,65 @@
     return box;
   }
 
+  // Resultat d'una targeta a partir de l'intent: ok (encert), misses (errors
+  // fins ara, sense comptar l'encert), timedOut (temps esgotat). Torna 'first',
+  // 'retry', 'revealed' o null (encara es pot intentar). El temps esgotat és
+  // exactament una revelació.
+  function outcome(a) {
+    if (a.timedOut) return "revealed";
+    if (a.ok) return a.misses === 0 ? "first" : "retry";
+    return a.misses >= 3 ? "revealed" : null;
+  }
+
+  // Color de la fila de punts de la ronda, segons el resultat de la targeta.
+  function dotClass(how) {
+    if (how === "first") return "ok";
+    if (how === "retry") return "retry";
+    return "err";
+  }
+
+  // Temps restant (segons) d'una targeta: no baixa de 0 ni puja del límit.
+  function timeLeft(start, now, limitSec) {
+    return Math.min(limitSec, Math.max(0, limitSec - (now - start) / 1000));
+  }
+
+  // Amplada de la barra (0..100) segons el temps restant.
+  function barPct(left, limitSec) {
+    return Math.max(0, Math.min(100, (left / limitSec) * 100));
+  }
+
+  // To de la barra: verd, ambre als últims 5 s, vermell als últims 3 s.
+  function timerTone(left) {
+    if (left <= 3) return "err";
+    if (left <= 5) return "warn";
+    return "ok";
+  }
+
+  // Preferències de l'alumne. timer: false (sense límit) | 10 | 20 | 30.
+  // El valor antic `true` (cronòmetre general) passa a 20.
+  function migratePrefs(raw) {
+    const p = raw && typeof raw === "object" ? raw : {};
+    const dir = ["nt", "tn", "mix"].includes(p.dir) ? p.dir : "nt";
+    let timer = TIMER_DEFAULT;
+    if (p.timer === false) timer = false;
+    else if (p.timer === true) timer = 20;
+    else if (TIMER_OPTIONS.includes(Number(p.timer))) timer = Number(p.timer);
+    return { dir, timer };
+  }
+
+  // Punts de la ronda: 'pending' (buit), 'cur' (la targeta actual), 'ok' | 'retry' | 'err'.
+  // Una targeta revelada que torna al final afegeix un punt nou al final.
+  function addReturn(dots) {
+    return dots.concat(["pending"]);
+  }
+
+  // Text "Paraula N de M": N és la targeta actual (o les respostes fetes si no n'hi ha), M els punts.
+  function roundLabel(dots) {
+    const cur = dots.indexOf("cur");
+    const n = cur >= 0 ? cur + 1 : dots.filter((d) => d !== "pending").length;
+    return { n, m: dots.length };
+  }
+
   function clone(x) {
     return JSON.parse(JSON.stringify(x));
   }
@@ -108,6 +169,12 @@
     const entry = listEntry(state, list.id);
     const known = list.words.filter((w) => ((entry.words[w.id] || {}).box || 0) >= BOX_MAX).length;
     return { known, total: list.words.length, closed: entry.closed_at != null };
+  }
+
+  // Paraules a mig camí (caixa 1).
+  function halfway(list, state) {
+    const entry = listEntry(state, list.id);
+    return list.words.filter((w) => (entry.words[w.id] || {}).box === 1).length;
   }
 
   function listEntry(state, listId) {
@@ -157,15 +224,26 @@
   globalThis.FlashCore = {
     BOX_MAX,
     ROUND_MAX,
+    TIMER_OPTIONS,
+    TIMER_DEFAULT,
     normalize,
     fold,
     stripArticle,
     check,
     hint,
     nextBox,
+    outcome,
+    dotClass,
+    timeLeft,
+    barPct,
+    timerTone,
+    migratePrefs,
+    addReturn,
+    roundLabel,
     emptyState,
     recordResult,
     listStatus,
+    halfway,
     closeIfDone,
     buildRound,
     repassaRound,
@@ -182,6 +260,8 @@
   const NATIVE_NAME = { ca: "català", es: "castellà" };
   const PREFS_KEY = "flowed.flash.prefs";
   const DIR_LABEL = { nt: "Natiu → idioma", tn: "Idioma → natiu", mix: "Barrejat" };
+  const TIME_LABEL = { off: "Desactivat", 10: "10 s", 20: "20 s", 30: "30 s" };
+  const TIMEOUT_PAUSE_MS = 2000; // temps esgotat: passa sola a la següent
 
   let screen = null; // #flash-screen
   let data = null; // resposta de /api/flash/lists
@@ -192,18 +272,18 @@
   let view = "menu"; // menu | card | summary
   let round = null; // ronda en curs
   let card = null; // targeta en curs
+  let session = null; // rondes fetes des d'obrir Flash (per a la traça al xat)
   let advanceTimer = 0;
   let clockTimer = 0;
 
   // ---- persistència per visitant (tot dins try/catch) ----------------------
   function loadPrefs() {
     try {
-      const p = JSON.parse(localStorage.getItem(PREFS_KEY) || "null");
-      if (p && ["nt", "tn", "mix"].includes(p.dir)) return { dir: p.dir, timer: p.timer === true };
+      return C.migratePrefs(JSON.parse(localStorage.getItem(PREFS_KEY) || "null"));
     } catch {
       /* sense emmagatzematge: valors per defecte */
     }
-    return { dir: "nt", timer: false };
+    return C.migratePrefs(null);
   }
 
   function savePrefs() {
@@ -243,10 +323,6 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
 
-  function fmt(sec) {
-    return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
-  }
-
   const q = (sel) => (screen ? screen.querySelector(sel) : null);
 
   function clearAdvance() {
@@ -259,18 +335,25 @@
     clockTimer = 0;
   }
 
-  function startClock() {
+  // Comença el compte enrere de la targeta (només si hi ha límit).
+  function startTimer() {
     stopClock();
-    if (!prefs.timer) return;
-    clockTimer = setInterval(tick, 1000);
-    tick();
+    if (!card || !card.limit) return;
+    clockTimer = setInterval(tickTimer, 200);
+    tickTimer();
   }
 
-  function tick() {
-    const el = q("#flash-clock");
-    if (!el || !round) return;
-    el.hidden = false;
-    el.textContent = fmt(Math.floor((Date.now() - round.start) / 1000));
+  // Barra que s'escurça i segons. Els errors no reinicien el temps.
+  function tickTimer() {
+    if (!card || card.done || !card.limit) return stopClock();
+    const left = C.timeLeft(card.start, Date.now(), card.limit);
+    const box = q("#flash-timer");
+    if (box) box.className = `flash-timer ${C.timerTone(left)}`;
+    const bar = q("#flash-tbar");
+    if (bar) bar.style.width = `${C.barPct(left, card.limit)}%`;
+    const sec = q("#flash-tsec");
+    if (sec) sec.textContent = String(Math.ceil(left));
+    if (left <= 0) resolve(C.outcome({ ok: false, misses: card.misses, timedOut: true }), null, true);
   }
 
   // ---- menú ----------------------------------------------------------------
@@ -294,6 +377,18 @@
   function dirButton(key) {
     const on = prefs.dir === key;
     return `<button type="button" data-dir="${key}" aria-pressed="${on}">${escText(DIR_LABEL[key])}</button>`;
+  }
+
+  function timeButton(v) {
+    const key = v === false ? "off" : String(v);
+    return `<button type="button" data-timer="${key}" aria-pressed="${prefs.timer === v}">${escText(TIME_LABEL[key])}</button>`;
+  }
+
+  function setActive(on) {
+    const b = document.querySelector('#commands button[data-cmd="math-flash"]');
+    if (!b) return;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-pressed", String(on));
   }
 
   function renderMenu() {
@@ -322,12 +417,12 @@
       <div class="flash-panel">
         <div class="flash-head">
           <h2>⚡ Flash <span class="flash-sub">${escText(data.target)} · ${escText(data.level)}</span></h2>
-          <button type="button" class="ghost" data-act="close" title="Tanca">✕</button>
         </div>
         <div class="flash-body">
           <p class="flash-label">Direcció</p>
           <div class="flash-seg" role="group" aria-label="Direcció">${dirButton("nt")}${dirButton("tn")}${dirButton("mix")}</div>
-          <label class="flash-check-row"><input type="checkbox" data-act="timer"${prefs.timer ? " checked" : ""}> Cronòmetre</label>
+          <p class="flash-label">Temps per paraula</p>
+          <div class="flash-seg" role="group" aria-label="Temps per paraula">${timeButton(false)}${C.TIMER_OPTIONS.map(timeButton).join("")}</div>
           <p class="flash-label">Llistes</p>
           <div class="flash-lists">${rows || '<p class="flash-note">Encara no hi ha llistes.</p>'}</div>
           <div class="flash-actions">
@@ -345,12 +440,16 @@
     return {
       word: w,
       returned: item.returned,
+      dot: item.dot,
       dir,
       prompt: (nt ? w.native[0] : w.target[0]) || "—",
       accepted: nt ? w.target : w.native,
       lang: nt ? TARGET_CODE : data.nativeCode,
+      limit: round.timer || 0, // segons; 0 = sense límit
+      start: Date.now(),
       misses: 0,
       done: false,
+      timedOut: false,
       how: null,
       form: null,
       exact: true,
@@ -369,31 +468,48 @@
       list,
       repassa: review,
       dir: prefs.dir,
-      start: Date.now(),
-      queue: words.map((w) => ({ word: w, returned: false })),
+      timer: prefs.timer,
+      known0: C.listStatus(list, state).known,
+      dots: words.map(() => "pending"),
+      queue: words.map((w, i) => ({ word: w, returned: false, dot: i })),
       presented: 0,
       first: 0,
       errors: 0,
       streak: 0,
       best: 0,
+      timeSum: 0,
+      timed: 0,
     };
     advance();
   }
 
+  // Els punts de la ronda i "Paraula N de M".
+  function paintProgress() {
+    const prog = q("#flash-prog");
+    const dots = q("#flash-dots");
+    if (!prog || !dots || !round) return;
+    const { n, m } = C.roundLabel(round.dots);
+    prog.textContent = `Paraula ${n} de ${m}${round.repassa ? " · repàs" : ""}`;
+    dots.innerHTML = round.dots.map((d) => `<span class="flash-dot ${d}"></span>`).join("");
+  }
+
   function renderCard() {
     view = "card";
-    const st = C.listStatus(round.list, state);
     const dirLabel = card.dir === "nt" ? `Escriu-ho en ${data.target}` : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
     screen.innerHTML = `
       <div class="flash-panel flash-play">
         <div class="flash-top">
           <button type="button" class="ghost" data-act="menu">‹ Menú</button>
-          <span class="flash-prog">${st.known}/${st.total} sabudes${round.repassa ? " · repàs" : ""}</span>
-          <span class="flash-clock" id="flash-clock" hidden></span>
+          <span class="flash-prog" id="flash-prog"></span>
         </div>
+        <div class="flash-dots" id="flash-dots" aria-hidden="true"></div>
         <div class="flash-stage" id="flash-stage">
           <p class="flash-dir">${escText(dirLabel)}</p>
           <div class="flash-word">${escText(card.prompt)}</div>
+          <div class="flash-timer ok" id="flash-timer"${card.limit ? "" : " hidden"}>
+            <div class="flash-tbar"><i id="flash-tbar"></i></div>
+            <span class="flash-tsec" id="flash-tsec"></span>
+          </div>
           <div class="flash-hint" id="flash-hint"></div>
           <div class="flash-feedback" id="flash-feedback" aria-live="polite"></div>
         </div>
@@ -402,10 +518,9 @@
           <button type="submit" class="primary" id="flash-ok">Comprova</button>
         </form>
       </div>`;
-    const clock = q("#flash-clock");
-    if (clock) clock.hidden = !prefs.timer;
-    startClock();
+    paintProgress();
     paintCard(null);
+    startTimer();
     q("#flash-input").focus();
   }
 
@@ -431,12 +546,14 @@
     hint.textContent = "";
     const shown = card.how === "revealed" ? card.accepted[0] : card.form;
     const others = card.accepted.filter((x) => x !== shown);
-    let text =
-      card.how === "revealed"
-        ? `La resposta és «${card.accepted[0]}».`
-        : "✓ Correcte" + (card.exact ? "" : ` · l'ortografia és «${card.form}»`);
+    let text;
+    if (card.timedOut) text = `⏱ Temps! La resposta és «${card.accepted[0]}».`;
+    else if (card.how === "revealed") text = `La resposta és «${card.accepted[0]}».`;
+    else text = "✓ Correcte" + (card.exact ? "" : ` · l'ortografia és «${card.form}»`);
     if (others.length) text += ` També: ${others.join(", ")}.`;
-    if (card.how === "revealed") text += (card.returned ? "" : " Torna al final de la ronda.") + " Enter per continuar.";
+    if (card.how === "revealed") {
+      text += (card.returned ? "" : " Torna al final de la ronda.") + (card.timedOut ? "" : " Enter per continuar.");
+    }
     fb.textContent = text;
     btn.textContent = "Següent";
   }
@@ -446,12 +563,13 @@
     if (!card || card.done || !String(text).trim()) return;
     const res = C.check(text, card.accepted, card.lang);
     if (res.ok) {
-      resolve(card.misses === 0 ? "first" : "retry", res);
+      resolve(C.outcome({ ok: true, misses: card.misses }), res);
       return;
     }
     card.misses += 1;
-    if (card.misses >= 3) {
-      resolve("revealed", null);
+    const how = C.outcome({ ok: false, misses: card.misses });
+    if (how) {
+      resolve(how, null);
       return;
     }
     const input = q("#flash-input");
@@ -462,14 +580,22 @@
     paintCard("shake");
   }
 
-  function resolve(how, res) {
+  // Final d'una targeta. timedOut: el temps s'ha acabat (com una revelació, però passa sola).
+  function resolve(how, res, timedOut = false) {
     const r = round;
+    stopClock();
     card.done = true;
     card.how = how;
+    card.timedOut = timedOut;
     if (res) {
       card.form = res.form;
       card.exact = res.exact;
     }
+    if (!timedOut) {
+      r.timeSum += Date.now() - card.start;
+      r.timed += 1;
+    }
+    if (card.dot !== undefined) r.dots[card.dot] = C.dotClass(how);
     if (!card.returned) {
       r.presented += 1;
       if (how === "first") {
@@ -486,13 +612,19 @@
       }
     }
     r.errors += card.misses;
-    // La revelada torna una vegada al final de la ronda.
-    if (how === "revealed" && !card.returned) r.queue.push({ word: card.word, returned: true });
+    // La revelada torna una vegada al final de la ronda, amb un punt nou.
+    if (how === "revealed" && !card.returned) {
+      r.dots = C.addReturn(r.dots);
+      r.queue.push({ word: card.word, returned: true, dot: r.dots.length - 1 });
+    }
     paintCard(null);
+    paintProgress();
     if (how !== "revealed") {
       // Amb altres respostes vàlides es llegeixen una mica més.
       const more = card.accepted.some((x) => x !== card.form);
       advanceTimer = setTimeout(advance, more ? 1800 : 1100);
+    } else if (timedOut) {
+      advanceTimer = setTimeout(advance, TIMEOUT_PAUSE_MS);
     }
   }
 
@@ -500,34 +632,48 @@
     clearAdvance();
     if (!round) return renderMenu();
     if (!round.queue.length) return finishRound();
-    card = makeCard(round.queue.shift());
+    const item = round.queue.shift();
+    round.dots[item.dot] = "cur";
+    card = makeCard(item);
     renderCard();
   }
 
   function finishRound() {
     const r = round;
-    const elapsed = Math.round((Date.now() - r.start) / 1000);
     stopClock();
     clearAdvance();
     view = "summary";
-    const closedNow = C.listStatus(r.list, state).closed;
+    const st = C.listStatus(r.list, state);
+    const closedNow = st.closed;
+    const half = C.halfway(r.list, state);
     const idx = data.lists.indexOf(r.list);
     const nextOpen = data.lists.slice(idx + 1).find(isOpen) || null;
     if (!r.repassa) selected = pickSelection(r.list.id);
+    const avg = r.timed ? `${((r.timeSum / r.timed) / 1000).toFixed(1).replace(".", ",")} s` : "—";
+    // Compta la ronda per a la traça del xat (una línia en tancar Flash).
+    session = session || { rounds: 0, first: 0, presented: 0, titles: [], known: 0, total: 0 };
+    session.rounds += 1;
+    session.first += r.first;
+    session.presented += r.presented;
+    if (!session.titles.includes(r.list.title)) session.titles.push(r.list.title);
+    session.known = st.known;
+    session.total = st.total;
     screen.innerHTML = `
       <div class="flash-panel">
         <div class="flash-head">
           <h2>${closedNow && !r.repassa ? "Llista completa ✓" : "Ronda acabada"}</h2>
-          <button type="button" class="ghost" data-act="close" title="Tanca">✕</button>
         </div>
         <div class="flash-body">
           <p class="flash-sum-title">${escText(r.list.title)}</p>
           <ul class="flash-stats">
+            <li><span>Sabudes</span><strong>${r.known0} → ${st.known} de ${st.total}</strong></li>
+            <li><span>A mig camí</span><strong>${half}</strong></li>
             <li><span>Encerts a la primera</span><strong>${r.first}/${r.presented}</strong></li>
             <li><span>Errors</span><strong>${r.errors}</strong></li>
             <li><span>Millor ratxa</span><strong>${r.best}</strong></li>
-            ${prefs.timer ? `<li><span>Temps</span><strong>${fmt(elapsed)}</strong></li>` : ""}
+            ${r.timer ? `<li><span>Temps mitjà per paraula</span><strong>${avg}</strong></li>` : ""}
           </ul>
+          <p class="flash-note">Una paraula queda sabuda quan l'encertes a la primera en dues rondes.</p>
           ${r.repassa ? '<p class="flash-note">Repàs: el progrés no canvia.</p>' : ""}
           <div class="flash-actions">
             <button type="button" class="primary" data-act="again">Una altra ronda</button>
@@ -538,6 +684,23 @@
       </div>`;
   }
 
+  // Línia de la traça al xat: totes les rondes d'aquesta obertura de Flash.
+  function traceText(s) {
+    const who = s.titles.length === 1 ? s.titles[0] : `${s.titles.length} llistes`;
+    return `⚡ Flash · ${who} — ${s.first}/${s.presented} a la primera · sabudes ${s.known}/${s.total}`;
+  }
+
+  // Només visual i local: no va al servidor ni pel canal d'enviament, i no és un missatge del tutor.
+  function appendTrace(text) {
+    const box = document.querySelector("#messages");
+    if (!box) return;
+    const el = document.createElement("div");
+    el.className = "flash-trace";
+    el.textContent = text;
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+  }
+
   // ---- entrada -------------------------------------------------------------
   function ensureScreen() {
     if (screen) return;
@@ -546,20 +709,23 @@
     screen.className = "flash-screen";
     screen.hidden = true;
     screen.setAttribute("role", "dialog");
-    screen.setAttribute("aria-modal", "true");
     screen.setAttribute("aria-label", "Flash — vocabulari ràpid");
     document.body.appendChild(screen);
     screen.addEventListener("click", onClick);
     screen.addEventListener("submit", onSubmit);
-    screen.addEventListener("change", onChange);
     screen.addEventListener("keydown", onKey);
   }
 
   function onClick(e) {
-    const t = e.target.closest ? e.target.closest("[data-act],[data-dir],[data-list]") : null;
+    const t = e.target.closest ? e.target.closest("[data-act],[data-dir],[data-timer],[data-list]") : null;
     if (!t) return;
     if (t.dataset.dir) {
       prefs.dir = t.dataset.dir;
+      savePrefs();
+      return renderMenu();
+    }
+    if (t.dataset.timer) {
+      prefs.timer = t.dataset.timer === "off" ? false : Number(t.dataset.timer);
       savePrefs();
       return renderMenu();
     }
@@ -568,8 +734,6 @@
       return renderMenu();
     }
     switch (t.dataset.act) {
-      case "close":
-        return closeFlash();
       case "menu":
         return renderMenu();
       case "go":
@@ -578,13 +742,6 @@
         return startRound(round ? round.list.id : selected, false);
       case "start":
         return startRound(t.dataset.list, false);
-    }
-  }
-
-  function onChange(e) {
-    if (e.target.dataset && e.target.dataset.act === "timer") {
-      prefs.timer = e.target.checked;
-      savePrefs();
     }
   }
 
@@ -602,17 +759,26 @@
     else renderMenu();
   }
 
+  // Tanca Flash (guardant l'estat). Si s'ha acabat almenys una ronda, deixa una línia al xat.
   function closeFlash() {
     clearAdvance();
     stopClock();
     round = null;
     card = null;
+    if (session && session.rounds > 0) appendTrace(traceText(session));
+    session = null;
     if (screen) screen.hidden = true;
+    setActive(false);
+  }
+
+  function isFlashOpen() {
+    return !!screen && !screen.hidden;
   }
 
   async function openFlash() {
     ensureScreen();
     screen.hidden = false;
+    setActive(true);
     screen.innerHTML = '<div class="flash-panel"><p class="flash-note">Carregant…</p></div>';
     try {
       data = await api("/flash/lists");
@@ -621,7 +787,7 @@
       console.warn("flash:", err);
     }
     if (!data || !data.ok || !data.enabled) {
-      screen.innerHTML = `<div class="flash-panel"><div class="flash-head"><h2>⚡ Flash</h2><button type="button" class="ghost" data-act="close" title="Tanca">✕</button></div><p class="flash-note">Flash no està disponible per a aquest perfil.</p></div>`;
+      screen.innerHTML = `<div class="flash-panel"><div class="flash-head"><h2>⚡ Flash</h2></div><p class="flash-note">Flash no està disponible per a aquest perfil.</p></div>`;
       return;
     }
     stateKey = `flowed.flash.v1|${window.__FLOWED_DOMAIN || "language"}|${data.target}|${data.nativeCode}`;
@@ -630,5 +796,13 @@
     renderMenu();
   }
 
+  // ⚡ de la barra: obre o tanca Flash.
+  function toggleFlash() {
+    if (isFlashOpen()) closeFlash();
+    else openFlash();
+  }
+
   globalThis.openFlash = openFlash;
+  globalThis.closeFlash = closeFlash;
+  globalThis.toggleFlash = toggleFlash;
 })();

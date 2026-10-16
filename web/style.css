@@ -19,6 +19,9 @@
   --flash-ok: #7fd6a0;
   --flash-good: #3f8f6b;
   --flash-err: #f08a78;
+  --flash-amber: #f2c46d;
+  /* Alçada real de la capçalera: app.js la manté al día (ResizeObserver). */
+  --header-h: 60px;
 }
 
 * { box-sizing: border-box; }
@@ -866,15 +869,28 @@ nav#commands button[hidden] { display: none; }
 
 /* ---- Flash: vocabulari ràpid (web/flash.js) ---- */
 
+/* Sota la capçalera de FlowEd (que es queda visible), amb el mateix ample que body. */
 .flash-screen {
   position: fixed;
-  inset: 0;
-  z-index: 60;
+  top: var(--header-h, 60px);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-width: 760px;
+  margin: 0 auto;
+  z-index: 4;
   background: var(--flash-bg);
   color: var(--flash-ink);
   display: flex;
   justify-content: center;
   overflow-y: auto;
+}
+/* ⚡ de la barra mentre Flash és obert: com un botó premut, amb el color de Flash. */
+#commands button[data-cmd="math-flash"].active {
+  background: var(--flash-bg);
+  color: var(--flash-ink);
+  border-color: var(--flash-bg);
+  box-shadow: inset 0 0 0 2px var(--flash-ok);
 }
 .flash-screen[hidden] { display: none; }
 .flash-screen button { font: inherit; color: inherit; }
@@ -938,7 +954,42 @@ nav#commands button[hidden] { display: none; }
 .flash-count { font-size: 0.85rem; text-align: right; font-variant-numeric: tabular-nums; }
 
 .flash-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.9rem; }
-.flash-clock { font-variant-numeric: tabular-nums; opacity: 0.85; }
+.flash-prog { font-variant-numeric: tabular-nums; opacity: 0.85; }
+/* Un punt per targeta de la ronda: buit, actual (contorn), verd, ambre o vermell. */
+.flash-dots { display: flex; flex-wrap: wrap; gap: 6px; }
+.flash-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(244, 241, 234, 0.4);
+  background: transparent;
+}
+.flash-dot.cur { border-color: var(--flash-ink); }
+.flash-dot.ok { background: var(--flash-ok); border-color: var(--flash-ok); }
+.flash-dot.retry { background: var(--flash-amber); border-color: var(--flash-amber); }
+.flash-dot.err { background: var(--flash-err); border-color: var(--flash-err); }
+/* Temps per paraula: barra que s'escurça sota la paraula i segons en número petit. */
+.flash-timer { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 420px; }
+.flash-timer[hidden] { display: none; }
+.flash-tbar { flex: 1; height: 8px; border-radius: 4px; background: rgba(244, 241, 234, 0.2); overflow: hidden; }
+.flash-tbar i { display: block; height: 100%; width: 100%; background: var(--flash-ok); }
+.flash-timer.warn .flash-tbar i { background: var(--flash-amber); }
+.flash-timer.err .flash-tbar i { background: var(--flash-err); }
+.flash-tsec { min-width: 2ch; font-size: 0.85rem; text-align: right; font-variant-numeric: tabular-nums; opacity: 0.85; }
+.flash-timer.err .flash-tsec { color: var(--flash-err); opacity: 1; }
+/* Traça al xat: local, un xip discret (no és un missatge del tutor). */
+.flash-trace {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 6px auto 14px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
 .flash-stage {
   flex: 1;
   display: flex;

@@ -2054,11 +2054,13 @@ document.querySelectorAll("#commands button[data-cmd]").forEach((b) => {
 document.querySelectorAll('#commands button[data-cmd="math-flash"]').forEach((b) => (b.hidden = !window.__FLOWED_FLASH));
 document.querySelectorAll("#commands button").forEach((b) =>
   b.addEventListener("click", () => {
-    // ⚡ Flash is its own screen (web/flash.js): no agent turn.
+    // ⚡ Flash is its own screen (web/flash.js): no agent turn. Prémer-lo de nou
+    // el tanca; qualsevol altre botó de la barra tanca Flash i fa la seva acció.
     if (b.dataset.cmd === "math-flash") {
-      openFlash();
+      toggleFlash();
       return;
     }
+    closeFlash();
     // 📊 Progress opens the visual dashboard directly (no agent turn).
     if (b.dataset.cmd === "math-progress") {
       if (!busy) openProgress();

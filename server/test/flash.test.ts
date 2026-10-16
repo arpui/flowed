@@ -1,4 +1,4 @@
-// Flash v0 — the vocabulary drill without a model (docs/ENCARREC-FLASH-v0.md).
+// Flash v0 / v0.1 — the vocabulary drill without a model (docs/ENCARREC-FLASH-v0.md, -v0.1.md).
 // Run with:
 //   node --experimental-strip-types server/test/flash.test.ts
 
@@ -169,6 +169,58 @@ const ids = (ws: Word[]) => ws.map((w) => w.id);
   check("repassa: shuffles", ids(rep).join() !== ids(LIST.words.slice(0, 10)).join());
 }
 
+// ---- v0.1: prefs, timer, round dots, outcome, trace ------------------------
+console.log("prefs and timer");
+check("prefs: no stored value → nt, 20 s by default", JSON.stringify(C.migratePrefs(null)) === JSON.stringify({ dir: "nt", timer: 20 }));
+check("prefs: old timer true → 20", C.migratePrefs({ dir: "tn", timer: true }).timer === 20 && C.migratePrefs({ dir: "tn", timer: true }).dir === "tn");
+check("prefs: timer false stays off", C.migratePrefs({ timer: false }).timer === false);
+check("prefs: 10/20/30 kept", [10, 20, 30].every((n) => C.migratePrefs({ timer: n }).timer === n));
+check("prefs: unknown timer or dir → defaults", C.migratePrefs({ timer: 45, dir: "xx" }).timer === 20 && C.migratePrefs({ timer: 45, dir: "xx" }).dir === "nt");
+check("timer options are 10, 20, 30", JSON.stringify(C.TIMER_OPTIONS) === "[10,20,30]");
+check("timeLeft: full at start, zero after the limit, never negative", C.timeLeft(0, 0, 20) === 20 && C.timeLeft(0, 5000, 20) === 15 && C.timeLeft(0, 99000, 20) === 0);
+check("barPct: 100 at full, 0 at zero", C.barPct(20, 20) === 100 && C.barPct(0, 20) === 0 && C.barPct(10, 20) === 50);
+check("timerTone: green, amber in the last 5 s, red in the last 3 s", C.timerTone(12) === "ok" && C.timerTone(5) === "warn" && C.timerTone(4) === "warn" && C.timerTone(3) === "err" && C.timerTone(0) === "err");
+
+console.log("outcome");
+check("outcome: first try → first, later try → retry", C.outcome({ ok: true, misses: 0 }) === "first" && C.outcome({ ok: true, misses: 1 }) === "retry");
+check("outcome: one or two errors → still trying", C.outcome({ ok: false, misses: 1 }) === null && C.outcome({ ok: false, misses: 2 }) === null);
+check("outcome: third error → revealed", C.outcome({ ok: false, misses: 3 }) === "revealed");
+check("outcome: timeout gives the same result as a reveal, whatever the misses", [0, 1, 2, 3].every((m) => C.outcome({ ok: false, misses: m, timedOut: true }) === "revealed"));
+{
+  const s0 = C.emptyState();
+  const byTimeout = C.recordResult(s0, LIST.id, "w1", C.outcome({ ok: false, misses: 0, timedOut: true }), 0, "d1");
+  const byReveal = C.recordResult(s0, LIST.id, "w1", C.outcome({ ok: false, misses: 3 }), 0, "d1");
+  check("timeout and reveal leave the same box", byTimeout.lists[LIST.id].words.w1.box === byReveal.lists[LIST.id].words.w1.box);
+  check("dot colours: first ok, retry amber, revealed or timeout red", C.dotClass("first") === "ok" && C.dotClass("retry") === "retry" && C.dotClass("revealed") === "err");
+}
+
+console.log("round dots and summary");
+{
+  let dots: string[] = Array.from({ length: 10 }, () => "pending");
+  const first = C.roundLabel(dots);
+  check("round starts at Paraula 0 de 10 before the first card", first.n === 0 && first.m === 10, first);
+  dots[0] = "cur";
+  check("current card is the one marked", JSON.stringify(C.roundLabel(dots)) === '{"n":1,"m":10}');
+  dots[0] = "ok";
+  dots[1] = "cur";
+  check("answered cards keep their colour, next card is Paraula 2", JSON.stringify(C.roundLabel(dots)) === '{"n":2,"m":10}');
+  // A revealed card comes back at the end: one more dot, so the total counts it.
+  dots[1] = "err";
+  dots = C.addReturn(dots);
+  check("a returned card adds one dot at the end", dots.length === 11 && dots[10] === "pending", dots.length);
+  dots[10] = "cur";
+  check("the returned card is Paraula 11 de 11", JSON.stringify(C.roundLabel(dots)) === '{"n":11,"m":11}');
+}
+{
+  let s = C.emptyState();
+  s = C.recordResult(s, LIST.id, "w1", "first", 0, "d1");
+  s = C.recordResult(s, LIST.id, "w2", "first", 0, "d1");
+  s = C.recordResult(s, LIST.id, "w2", "first", 0, "d2");
+  s = C.recordResult(s, LIST.id, "w3", "revealed", 3, "d1");
+  check("halfway counts box 1 only (w1 box 1; w2 known; w3 box 0)", C.halfway(LIST, s) === 1, C.halfway(LIST, s));
+  check("known count for the summary: 0 → 1", C.listStatus(LIST, C.emptyState()).known === 0 && C.listStatus(LIST, s).known === 1);
+}
+
 // ---- manifest and profile --------------------------------------------------
 console.log("manifest and profile");
 const manifest = JSON.parse(read("config", "domain.json"));
@@ -211,13 +263,19 @@ console.log("wiring");
 const http = read("server", "src", "http.ts");
 const app = read("web", "app.js");
 const index = read("web", "index.html");
+const css = read("web", "style.css");
+const flashJs = read("web", "flash.js");
 check("http.ts injects window.__FLOWED_FLASH", http.includes("window.__FLOWED_FLASH=${flashOn}"));
 check("http.ts serves GET /api/flash/lists", http.includes('p === "/api/flash/lists"'));
 check("index.html has the Flash button after Review and loads flash.js",
   /data-cmd="math-review"[\s\S]*data-cmd="math-flash"/.test(index) && index.includes('src="/flash.js"'));
 check("app.js hides Flash unless __FLOWED_FLASH", app.includes("!window.__FLOWED_FLASH"));
 check("app.js: Flash after Review in the language bar", app.includes('"math-review", "math-flash"'));
-check("app.js: Flash opens the drill, no agent turn", app.includes('b.dataset.cmd === "math-flash"') && app.includes("openFlash();"));
+check("app.js: Flash toggles the drill, no agent turn", app.includes('b.dataset.cmd === "math-flash"') && app.includes("toggleFlash();"));
+check("app.js: any other bar button closes Flash first", app.includes("closeFlash();"));
+check("style.css: Flash sits under the header (top: var(--header-h)), no inset/z above it", /\.flash-screen \{[^}]*top: var\(--header-h/.test(css) && !/\.flash-screen \{[^}]*inset: 0/.test(css));
+check("style.css: --header-h has a :root default", /:root \{[\s\S]*--header-h:/.test(css));
+check("flash.js: the chat trace never goes through send() or the server", !/\bsend\(/.test(flashJs) && !/fetch\(/.test(flashJs));
 
 if (failures) {
   console.log(`\n${failures} FAILED`);
