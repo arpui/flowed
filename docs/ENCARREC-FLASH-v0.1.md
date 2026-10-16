@@ -54,3 +54,11 @@ Prova d'Albert (2026-10-16): visualment bé, però tres problemes.
 - [ ] Temps per paraula 10/20/30/off; en esgotar-se, fallada + resposta + passa sola en 2 s.
 - [ ] La capçalera FlowEd és visible a sobre de Flash; ⚡ actiu; un altre botó tanca Flash i fa la seva acció.
 - [ ] Res de `data/` ni de `fluent-vocab` tocat. Tests en verd.
+
+## 6. Afegit: traça al xat (continuïtat)
+
+Decisió (2026-10-16): Flash es queda a la zona del xat amb la capçalera visible (§3). A més, en **tancar Flash després d'haver acabat almenys una ronda**, s'afegeix al xat (`#messages`) una línia de resum, p. ex. `⚡ Flash · Família — 8/10 a la primera · sabudes 2/12` (una per sessió de Flash; si se n'han fet diverses rondes, el total).
+
+- És **només visual i local**: un element DOM amb classe pròpia (`flash-trace`), estil discret (mateix to que els xips de comanda). **No** s'envia a l'agent, no passa per `send()`, no es desa enlloc; si es recarrega la pàgina, desapareix.
+- No ha de confondre el codi que llegeix l'últim missatge del tutor / la targeta d'exercici (comprovar que `#current-q` i el seguiment de l'exercici l'ignoren).
+- Criteri: [ ] en sortir de Flash amb almenys una ronda feta apareix la línia al xat i no es genera cap petició al servidor.
