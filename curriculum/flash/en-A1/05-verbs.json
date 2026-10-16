@@ -1,0 +1,19 @@
+{
+  "id": "en-A1.flash.verbs",
+  "level": "A1",
+  "title": { "ca": "Verbs", "es": "Verbos", "en": "Verbs" },
+  "words": [
+    { "id": "eat", "target": ["to eat", "eat"], "native": { "ca": ["menjar"], "es": ["comer"] } },
+    { "id": "drink", "target": ["to drink", "drink"], "native": { "ca": ["beure"], "es": ["beber"] } },
+    { "id": "sleep", "target": ["to sleep", "sleep"], "native": { "ca": ["dormir"], "es": ["dormir"] } },
+    { "id": "read", "target": ["to read", "read"], "native": { "ca": ["llegir"], "es": ["leer"] } },
+    { "id": "write", "target": ["to write", "write"], "native": { "ca": ["escriure"], "es": ["escribir"] } },
+    { "id": "run", "target": ["to run", "run"], "native": { "ca": ["córrer"], "es": ["correr"] } },
+    { "id": "swim", "target": ["to swim", "swim"], "native": { "ca": ["nedar"], "es": ["nadar"] } },
+    { "id": "sing", "target": ["to sing", "sing"], "native": { "ca": ["cantar"], "es": ["cantar"] } },
+    { "id": "play", "target": ["to play", "play"], "native": { "ca": ["jugar"], "es": ["jugar"] } },
+    { "id": "see", "target": ["to see", "see"], "native": { "ca": ["veure"], "es": ["ver"] } },
+    { "id": "go", "target": ["to go", "go"], "native": { "ca": ["anar"], "es": ["ir"] } },
+    { "id": "come", "target": ["to come", "come"], "native": { "ca": ["venir"], "es": ["venir"] } }
+  ]
+}

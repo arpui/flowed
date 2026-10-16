@@ -1,0 +1,19 @@
+{
+  "id": "en-A1.flash.animals",
+  "level": "A1",
+  "title": { "ca": "Els animals", "es": "Los animales", "en": "Animals" },
+  "words": [
+    { "id": "dog", "target": ["dog"], "native": { "ca": ["gos"], "es": ["perro"] } },
+    { "id": "cat", "target": ["cat"], "native": { "ca": ["gat"], "es": ["gato"] } },
+    { "id": "bird", "target": ["bird"], "native": { "ca": ["ocell"], "es": ["pájaro"] } },
+    { "id": "fish", "target": ["fish"], "native": { "ca": ["peix"], "es": ["pez"] } },
+    { "id": "horse", "target": ["horse"], "native": { "ca": ["cavall"], "es": ["caballo"] } },
+    { "id": "cow", "target": ["cow"], "native": { "ca": ["vaca"], "es": ["vaca"] } },
+    { "id": "pig", "target": ["pig"], "native": { "ca": ["porc"], "es": ["cerdo"] } },
+    { "id": "sheep", "target": ["sheep"], "native": { "ca": ["ovella"], "es": ["oveja"] } },
+    { "id": "rabbit", "target": ["rabbit"], "native": { "ca": ["conill"], "es": ["conejo"] } },
+    { "id": "mouse", "target": ["mouse"], "native": { "ca": ["ratolí"], "es": ["ratón"] } },
+    { "id": "duck", "target": ["duck"], "native": { "ca": ["ànec"], "es": ["pato"] } },
+    { "id": "chicken", "target": ["chicken", "hen"], "native": { "ca": ["gallina"], "es": ["gallina"] } }
+  ]
+}

@@ -9,6 +9,7 @@ import type { Agent } from "./agent";
 import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
 import { skillKeysFor } from "./tools";
+import { flashConfig, flashListsResponse } from "./flash";
 
 export interface HttpConfig {
   root: string;
@@ -377,6 +378,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
           let open: string[] | null = null;
           let brand = "FlowEd", label = "Math", favicon = "🧮";
           let hidden: string[] = [];
+          let flashOn = false;
           try {
             const man = JSON.parse(fs.readFileSync(path.join(opts.root, "config", "domain.json"), "utf8"));
             const d = man?.domains?.[dom];
@@ -385,6 +387,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             if (d?.domain_label) label = String(d.domain_label);
             if (Array.isArray(d?.hidden_commands)) hidden = d.hidden_commands.map(String);
             if (d?.favicon) favicon = String(d.favicon);
+            flashOn = flashConfig(man, dom).enabled;
           } catch {
             /* no manifest: every practice stays visible, the shell keeps its brand */
           }
@@ -394,7 +397,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             .replace("🧮</text>", `${favicon}</text>`)
             .replace(
               "</head>",
-              `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};window.__FLOWED_OPEN=${JSON.stringify(open)};window.__FLOWED_BRAND=${JSON.stringify(brand + " · " + label)};window.__FLOWED_HIDDEN=${JSON.stringify(hidden)};</script></head>`
+              `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};window.__FLOWED_OPEN=${JSON.stringify(open)};window.__FLOWED_BRAND=${JSON.stringify(brand + " · " + label)};window.__FLOWED_HIDDEN=${JSON.stringify(hidden)};window.__FLOWED_FLASH=${flashOn};</script></head>`
             );
         }
         return new Response(body, {
@@ -413,6 +416,11 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       if (p === "/api/global/health") {
         return json({ ok: true, version: opts.version, service: "math-server",
                       build: opts.build ?? null, sampling: opts.sampling ?? null });
+      }
+
+      // Flash: the vocabulary drill's word lists, in the learner's native language.
+      if (p === "/api/flash/lists") {
+        return json(flashListsResponse(opts.root, opts.dataDir()));
       }
 
       // agents list (UI requires the "learner" agent to exist)

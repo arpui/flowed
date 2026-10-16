@@ -2004,6 +2004,7 @@ inputEl.addEventListener("input", () => {
 const LANG_LABELS = {
   "math-learn": ["🎲", "Go", "Go — grammar & vocabulary from your path"],
   "math-review": ["🎓", "Review", "Today's review"],
+  "math-flash": ["⚡", "Flash", "Flash — vocabulari ràpid"],
   "math-reading": ["📖", "Reading", "Reading — unlocks above A1"],
   "math-writing": ["📝", "Writing", "Writing — write your own sentences"],
   "math-speaking": ["🗣️", "Speaking", "Speaking"],
@@ -2011,7 +2012,7 @@ const LANG_LABELS = {
   "math-end": ["🏁", "End", "End this session and see the summary"],
 };
 // Order of the language bar (as in 0.5): Go, Review, Reading, Writing, Speaking, Test, Stats, End.
-const LANG_ORDER = ["math-learn", "math-review", "math-reading", "math-writing", "math-speaking", "math-checkpoint", "math-progress", "math-end"];
+const LANG_ORDER = ["math-learn", "math-review", "math-flash", "math-reading", "math-writing", "math-speaking", "math-checkpoint", "math-progress", "math-end"];
 if (window.__FLOWED_DOMAIN === "language") {
   const nav = document.querySelector("#commands");
   document.querySelectorAll("#commands button[data-cmd]").forEach((b) => {
@@ -2049,8 +2050,15 @@ function commandHidden(cmd) {
 document.querySelectorAll("#commands button[data-cmd]").forEach((b) => {
   if (!practiceOpen(b.dataset.cmd) || commandHidden(b.dataset.cmd)) b.hidden = true;
 });
+// Flash is on when the domain's manifest says so (`flash`, injected as __FLOWED_FLASH).
+document.querySelectorAll('#commands button[data-cmd="math-flash"]').forEach((b) => (b.hidden = !window.__FLOWED_FLASH));
 document.querySelectorAll("#commands button").forEach((b) =>
   b.addEventListener("click", () => {
+    // ⚡ Flash is its own screen (web/flash.js): no agent turn.
+    if (b.dataset.cmd === "math-flash") {
+      openFlash();
+      return;
+    }
     // 📊 Progress opens the visual dashboard directly (no agent turn).
     if (b.dataset.cmd === "math-progress") {
       if (!busy) openProgress();

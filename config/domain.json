@@ -15,6 +15,7 @@
       "domain_label": "Language",
       "favicon": "🌍",
       "open_practices": ["speaking", "writing", "reading"],
+      "flash": { "enabled": true, "dir": "curriculum/flash/en-*" },
       "web_labels": {
         "buttons": "📝 Writing · 📖 Reading · 🗣️ Speaking · 📊 Stats · 🏁 End",
         "subject": null
