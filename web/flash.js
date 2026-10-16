@@ -99,6 +99,10 @@
       const m = /\/(\d+)$/.exec(String(target));
       return m ? `?/${m[1]}` : "?";
     }
+    if (kind === "pair") {
+      const p = parsePair(target);
+      return p ? `(${p[0]}, ?)` : "?";
+    }
     if (kind === "choice") return "";
     return hint(target, lang);
   }
@@ -175,6 +179,205 @@
   // choice: l'opció triada ha de ser la correcta (text exacte).
   function checkChoice(picked, accepted) {
     return accepted.includes(picked) ? { ok: true, exact: true, form: picked } : { ok: false, exact: true, form: null };
+  }
+
+  // pair: un punt (x, y) escrit (3, 4), 3,4, 3 4 o (3 ; 4). L'ordre compta: (4,3) és un altre punt.
+  // Null si no són unes coordenades; els parèntesis han d'anar parells.
+  function parsePair(s) {
+    const t = String(s ?? "").trim();
+    if (t.startsWith("(") !== t.endsWith(")")) return null;
+    const m = /^\s*(-?\d+)\s*(?:[,;]\s*|\s+)(-?\d+)\s*$/.exec(t.startsWith("(") ? t.slice(1, -1) : t);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+  }
+
+  // pair: els valors han de ser els de l'acceptat. exact: escrit igual (sense espais) que la forma habitual.
+  function checkPair(answer, accepted) {
+    const a = parsePair(answer);
+    if (!a) return { ok: false, exact: true, form: null };
+    for (const raw of accepted) {
+      const t = parsePair(raw);
+      if (t && t[0] === a[0] && t[1] === a[1]) {
+        return { ok: true, exact: String(answer).replace(/\s+/g, "") === String(raw).replace(/\s+/g, ""), form: raw };
+      }
+    }
+    return { ok: false, exact: true, form: null };
+  }
+
+  // ---- figures (docs/ENCARREC-M5-E3-FIGURES.md §2) ----------------------------
+  // Dibuix SVG en línia per a la figura d'una targeta. Les dades ja les ha validat el servidor.
+  // El dibuix no mostra la resposta: un angle no porta graus (tret que label), i una marca de cercle no té nom.
+  // Colors: classes fig-* amb els tokens --flash-*; les línies usen currentColor.
+  function escXml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  }
+
+  const f1 = (n) => Number(n.toFixed(1));
+  const xy = (p) => `${f1(p[0])},${f1(p[1])}`;
+
+  function svgText(x, y, s, anchor = "middle", cls = "fig-text") {
+    return `<text class="${cls}" x="${f1(x)}" y="${f1(y)}" text-anchor="${anchor}" dominant-baseline="middle">${escXml(s)}</text>`;
+  }
+
+  // Punts en coordenades de matemàtiques (y amunt) ajustats a una caixa {x0,y0,x1,y1} de l'SVG (y avall), amb escala uniforme.
+  function fitPoints(pts, box) {
+    const xs = pts.map((p) => p[0]);
+    const ys = pts.map((p) => p[1]);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const s = Math.min((box.x1 - box.x0) / (maxX - minX || 1), (box.y1 - box.y0) / (maxY - minY || 1));
+    const offX = box.x0 + (box.x1 - box.x0 - (maxX - minX) * s) / 2;
+    const offY = box.y0 + (box.y1 - box.y0 - (maxY - minY) * s) / 2;
+    return pts.map((p) => [offX + (p[0] - minX) * s, offY + (maxY - p[1]) * s]);
+  }
+
+  function centreOf(pts) {
+    return [pts.reduce((a, p) => a + p[0], 0) / pts.length, pts.reduce((a, p) => a + p[1], 0) / pts.length];
+  }
+
+  // L'etiqueta d'un costat: al mig, empesa cap a fora de la figura.
+  function edgeLabel(a, b, text, centre) {
+    const mx = (a[0] + b[0]) / 2;
+    const my = (a[1] + b[1]) / 2;
+    const dx = mx - centre[0];
+    const dy = my - centre[1];
+    const len = Math.hypot(dx, dy) || 1;
+    return svgText(mx + (dx / len) * 22, my + (dy / len) * 22, text);
+  }
+
+  function figureDraw(f) {
+    const us = f.unit ? ` ${f.unit}` : "";
+    switch (f.type) {
+      case "angle": {
+        const V = [150, 112];
+        const R = 42; // arc
+        const L = 92; // rays
+        const rad = (f.deg * Math.PI) / 180;
+        const at = (t, r) => [V[0] + r * Math.cos(t), V[1] - r * Math.sin(t)];
+        const ray = (end) => `<line class="fig-line" x1="${f1(V[0])}" y1="${f1(V[1])}" x2="${f1(end[0])}" y2="${f1(end[1])}"/>`;
+        let body = ray(at(0, L));
+        if (f.deg === 360) {
+          body += `<circle class="fig-mark" cx="${f1(V[0])}" cy="${f1(V[1])}" r="${R}"/>`;
+        } else {
+          body += ray(at(rad, L));
+          body += `<path class="fig-mark" d="M ${xy(at(0, R))} A ${R} ${R} 0 ${f.deg > 180 ? 1 : 0} 0 ${xy(at(rad, R))}"/>`;
+        }
+        if (f.label) {
+          const mid = at(rad / 2, 66);
+          body += svgText(mid[0], mid[1], `${f.deg}°`);
+        }
+        return { vb: "0 0 300 224", body, label: f.label ? `Angle de ${f.deg} graus` : "Angle dibuixat" };
+      }
+      case "triangle": {
+        const [a, b, c] = f.sides;
+        const x2 = (c * c + a * a - b * b) / (2 * a);
+        const y2 = Math.sqrt(Math.max(0, c * c - x2 * x2));
+        const p = fitPoints([[0, 0], [a, 0], [x2, y2]], { x0: 30, y0: 22, x1: 270, y1: 198 });
+        const ctr = centreOf(p);
+        let body = `<polygon class="fig-line" points="${p.map(xy).join(" ")}"/>`;
+        if (f.labels) {
+          body += edgeLabel(p[0], p[1], `${a}${us}`, ctr) + edgeLabel(p[1], p[2], `${b}${us}`, ctr) + edgeLabel(p[2], p[0], `${c}${us}`, ctr);
+        }
+        return { vb: "0 0 300 220", body, label: f.labels ? `Triangle de costats ${f.sides.map((x) => `${x}${us}`).join(", ")}` : "Triangle" };
+      }
+      case "polygon": {
+        const n = f.sides.length;
+        const raw = [];
+        for (let k = 0; k < n; k++) {
+          const t = -Math.PI / 2 + (2 * Math.PI * k) / n;
+          raw.push([Math.cos(t), Math.sin(t)]);
+        }
+        const p = fitPoints(raw, { x0: 40, y0: 24, x1: 260, y1: 196 });
+        const ctr = centreOf(p);
+        let body = `<polygon class="fig-line" points="${p.map(xy).join(" ")}"/>`;
+        if (f.labels) f.sides.forEach((x, k) => (body += edgeLabel(p[k], p[(k + 1) % n], `${x}${us}`, ctr)));
+        return { vb: "0 0 300 220", body, label: `Polígon de ${n} costats` };
+      }
+      case "rect": {
+        const s = Math.min(200 / f.w, 150 / f.h);
+        const W = f.w * s;
+        const H = f.h * s;
+        const x0 = (300 - W) / 2;
+        const y0 = (220 - H) / 2;
+        let body = `<rect class="fig-line" x="${f1(x0)}" y="${f1(y0)}" width="${f1(W)}" height="${f1(H)}" fill="none"/>`;
+        if (f.labels) {
+          body += svgText(x0 + W / 2, y0 - 12, `${f.w}${us}`) + svgText(x0 + W + 12, y0 + H / 2, `${f.h}${us}`, "start");
+        }
+        return { vb: "0 0 300 220", body, label: f.labels ? `Rectangle de ${f.w}${us} per ${f.h}${us}` : "Rectangle" };
+      }
+      case "circle": {
+        const cx = 150;
+        const cy = 120;
+        const R = 88;
+        const at = (deg) => [cx + R * Math.cos((deg * Math.PI) / 180), cy - R * Math.sin((deg * Math.PI) / 180)];
+        const r0 = f.rot;
+        let mark;
+        if (f.mark === "radius") mark = `<line class="fig-mark" x1="${cx}" y1="${cy}" x2="${f1(at(r0)[0])}" y2="${f1(at(r0)[1])}"/>`;
+        else if (f.mark === "diameter") mark = `<line class="fig-mark" x1="${f1(at(r0)[0])}" y1="${f1(at(r0)[1])}" x2="${f1(at(r0 + 180)[0])}" y2="${f1(at(r0 + 180)[1])}"/>`;
+        else if (f.mark === "chord") mark = `<line class="fig-mark" x1="${f1(at(r0)[0])}" y1="${f1(at(r0)[1])}" x2="${f1(at(r0 + 100)[0])}" y2="${f1(at(r0 + 100)[1])}"/>`;
+        else if (f.mark === "arc") mark = `<path class="fig-mark" d="M ${xy(at(r0))} A ${R} ${R} 0 0 0 ${xy(at(r0 + 100))}"/>`;
+        else mark = `<circle class="fig-dot" cx="${cx}" cy="${cy}" r="5"/>`;
+        return { vb: "0 0 300 240", body: `<circle class="fig-line" cx="${cx}" cy="${cy}" r="${R}" fill="none"/>${mark}`, label: "Cercle amb un element marcat" };
+      }
+      case "bars": {
+        const left = 46;
+        const right = 290;
+        const top = 40;
+        const bottom = 196;
+        const n = f.labels.length;
+        const maxV = Math.max(1, ...f.values);
+        const step = Math.max(1, Math.ceil(maxV / 4));
+        const topVal = Math.ceil(maxV / step) * step;
+        const yOf = (v) => bottom - (v / topVal) * (bottom - top);
+        let body = f.title ? svgText(150, 14, f.title, "middle", "fig-title") : "";
+        for (let v = 0; v <= topVal; v += step) {
+          body += `<line class="fig-grid" x1="${left}" y1="${f1(yOf(v))}" x2="${right}" y2="${f1(yOf(v))}"/>`;
+          body += svgText(left - 6, yOf(v), String(v), "end", "fig-tick");
+        }
+        body += `<line class="fig-line" x1="${left}" y1="${top}" x2="${left}" y2="${bottom}"/>`;
+        body += `<line class="fig-line" x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}"/>`;
+        const slot = (right - left) / n;
+        f.values.forEach((v, i) => {
+          const x = left + i * slot + slot * 0.2;
+          body += `<rect class="fig-bar" x="${f1(x)}" y="${f1(yOf(v))}" width="${f1(slot * 0.6)}" height="${f1(bottom - yOf(v))}"/>`;
+          body += svgText(left + (i + 0.5) * slot, bottom + 14, f.labels[i], "middle", "fig-tick");
+        });
+        const names = f.labels.join(", ");
+        return { vb: "0 0 300 240", body, label: `Diagrama de barres${f.title ? `: ${f.title}` : ""}, amb les barres ${names}` };
+      }
+      case "grid": {
+        const S = f.size;
+        const u = 200 / S;
+        const X = (i) => 40 + i * u;
+        const Y = (j) => 220 - j * u;
+        let body = "";
+        for (let i = 0; i <= S; i++) {
+          body += `<line class="fig-grid" x1="${f1(X(i))}" y1="${f1(Y(0))}" x2="${f1(X(i))}" y2="${f1(Y(S))}"/>`;
+          body += `<line class="fig-grid" x1="${f1(X(0))}" y1="${f1(Y(i))}" x2="${f1(X(S))}" y2="${f1(Y(i))}"/>`;
+          body += svgText(X(i), Y(0) + 12, String(i), "middle", "fig-tick");
+          if (i > 0) body += svgText(X(0) - 10, Y(i), String(i), "end", "fig-tick");
+        }
+        body += `<line class="fig-line" x1="${f1(X(0))}" y1="${f1(Y(0))}" x2="${f1(X(S) + 6)}" y2="${f1(Y(0))}"/>`;
+        body += `<line class="fig-line" x1="${f1(X(0))}" y1="${f1(Y(0))}" x2="${f1(X(0))}" y2="${f1(Y(S) - 6)}"/>`;
+        body += svgText(X(S) + 12, Y(0), "x", "start") + svgText(X(0) + 8, Y(S) - 4, "y", "start");
+        for (const [px, py] of f.points) body += `<circle class="fig-dot" cx="${f1(X(px))}" cy="${f1(Y(py))}" r="5"/>`;
+        const n = f.points.length;
+        return {
+          vb: "0 0 300 250",
+          body,
+          label: `Quadrícula de coordenades de 0 a ${S}, amb ${n === 1 ? "un punt marcat" : `${n} punts marcats`}`,
+        };
+      }
+      default:
+        return null;
+    }
+  }
+
+  // El SVG d'una figura (o "" si no n'hi ha cap de conegut).
+  function figureSvg(f) {
+    const d = f ? figureDraw(f) : null;
+    return d ? `<svg class="flash-fig-svg" viewBox="${d.vb}" role="img" aria-label="${escXml(d.label)}" focusable="false">${d.body}</svg>` : "";
   }
 
   // how: 'first' (encert a la 1a), 'retry' (encert a la 2a o 3a),
@@ -371,6 +574,9 @@
     checkFraction,
     stripUnit,
     checkChoice,
+    parsePair,
+    checkPair,
+    figureSvg,
     hintFor,
     emptyState,
     recordResult,
@@ -636,9 +842,10 @@
     const dir = math ? "nt" : round.dir === "mix" ? (Math.random() < 0.5 ? "nt" : "tn") : round.dir;
     const w = item.word;
     const nt = dir === "nt";
-    const kind = math ? w.answer_kind || "number" : "text"; // number | fraction | unit | choice, or text (language)
+    const kind = math ? w.answer_kind || "number" : "text"; // number | fraction | unit | choice | pair, or text (language)
     return {
       word: w,
+      figure: math && w.figure ? w.figure : null, // drawn above the prompt
       returned: item.returned,
       dot: item.dot,
       dir,
@@ -704,12 +911,13 @@
     view = "card";
     const choice = card.kind === "choice";
     const dirLabel = card.math
-      ? choice ? "Tria la resposta" : "Calcula"
+      ? choice ? "Tria la resposta" : card.kind === "pair" ? "Escriu les coordenades" : "Calcula"
       : card.dir === "nt"
         ? `Escriu-ho en ${data.target}`
         : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
     const input = card.kind === "fraction"
       ? ' aria-label="Fracció"'
+      : card.kind === "pair" ? ' aria-label="Coordenades"'
       : card.math ? ' inputmode="numeric" aria-label="Resultat"' : ' aria-label="Traducció"';
     const buttons = choice
       ? `<div class="flash-choices" id="flash-choices" role="group" aria-label="Opcions">${card.options
@@ -725,6 +933,7 @@
         <div class="flash-dots" id="flash-dots" aria-hidden="true"></div>
         <div class="flash-stage" id="flash-stage">
           <p class="flash-dir">${escText(dirLabel)}</p>
+          ${card.figure ? `<div class="flash-fig">${C.figureSvg(card.figure)}</div>` : ""}
           <div class="flash-word">${escText(card.prompt)}</div>
           <div class="flash-timer ok" id="flash-timer"${card.limit ? "" : " hidden"}>
             <div class="flash-tbar"><i id="flash-tbar"></i></div>
@@ -798,7 +1007,7 @@
     if (card.timedOut) text = `⏱ Temps! La resposta és «${answerText}».`;
     else if (card.how === "revealed") text = `La resposta és «${answerText}».`;
     else if (card.exact) text = "✓ Correcte";
-    else if (card.kind === "fraction") text = `✓ Correcte · la forma habitual és «${card.form}»`;
+    else if (card.kind === "fraction" || card.kind === "pair") text = `✓ Correcte · la forma habitual és «${card.form}»`;
     else text = `✓ Correcte · l'ortografia és «${card.form}»`;
     if (others.length) text += ` També: ${others.join(", ")}.`;
     if (card.how === "revealed") {
@@ -816,6 +1025,7 @@
     if (!card.math) res = C.check(text, card.accepted, card.lang);
     else if (card.kind === "fraction") res = C.checkFraction(text, card.accepted, card.rule);
     else if (card.kind === "unit") res = C.checkNumber(C.stripUnit(text, card.unit), card.accepted);
+    else if (card.kind === "pair") res = C.checkPair(text, card.accepted);
     else res = C.checkNumber(text, card.accepted);
     if (res.ok) {
       resolve(C.outcome({ ok: true, misses: card.misses }), res);

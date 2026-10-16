@@ -8,8 +8,11 @@ import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
 import {
+  checkFigure,
   decComma,
   emptyFlashState,
+  parsePair,
+  type Figure,
   expandGenerate,
   flashConfig,
   flashListsResponse,
@@ -459,7 +462,8 @@ try {
 console.log("generators (E1)");
 {
   const expected = ["round", "digit_value", "compare_numbers", "frac_of", "frac_equiv", "frac_same_den", "frac_dec", "dec_times_int", "percent_of", "divisible", "combined", "unit_convert", "complex_to_simple", "time_convert", "area_simple", "mean", "probability", "equation", "sequence"];
-  check("the 19 generator kinds are the ones of §3", JSON.stringify([...GEN_KINDS].sort()) === JSON.stringify([...expected].sort()), GEN_KINDS);
+  const expectedE3 = [...expected, "angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point"];
+  check("the 19 generator kinds of §3 and the 7 figure kinds of E3", JSON.stringify([...GEN_KINDS].sort()) === JSON.stringify([...expectedE3].sort()), GEN_KINDS);
   check("count: default 12, clamped to 1..50, a non-integer gives 12", genCount(undefined) === 12 && genCount(0) === 1 && genCount(51) === 50 && genCount(7) === 7 && genCount(12.5) === 12 && genCount("9") === 12);
   check("unknown kinds and prototype names give no words", generatedWords("x", { kind: "nope", count: 5 }).length === 0 && generatedWords("x", { kind: "constructor", count: 5 }).length === 0);
   const same1 = JSON.stringify(generatedWords("math-m5.flash.round", { kind: "round", count: 30 }));
@@ -642,8 +646,8 @@ console.log("generators (E1)");
 
   for (const kind of GEN_KINDS) {
     const words = generatedWords(`math-m5.flash.${kind}`, { kind, count: 50 });
-    check(`${kind}: 50 words, ids g1…g50, prompts distinct`, words.length === 50 && words.every((w, i) => w.id === `g${i + 1}`) && new Set(words.map((w) => w.prompt)).size === 50, words.length);
-    const bad = words.map((w) => verify(kind, w)).filter((x): x is string => x !== null);
+    check(`${kind}: 50 words, ids g1…g50, cards distinct (prompt and figure)`, words.length === 50 && words.every((w, i) => w.id === `g${i + 1}`) && new Set(words.map((w) => w.prompt + JSON.stringify(w.figure ?? null))).size === 50, words.length);
+    const bad = (expected.includes(kind) ? words.map((w) => verify(kind, w)) : []).filter((x): x is string => x !== null); // E3 kinds: the figure block below
     check(`${kind}: every result checked with an independent reading`, bad.length === 0, bad.slice(0, 3));
     const dflt = generatedWords(`math-m5.flash.${kind}`, { kind });
     check(`${kind}: the default count is 12 and they are the first twelve`, dflt.length === 12 && JSON.stringify(dflt) === JSON.stringify(words.slice(0, 12)));
@@ -713,6 +717,179 @@ check("hint: fraction shows the denominator, choice shows none, number keeps the
 check("outcome: a choice with one option left is revealed at once", C.outcome({ ok: false, misses: 1, exhausted: true }) === "revealed" && C.outcome({ ok: false, misses: 1 }) === null);
 check("numbers: 4.735.200 is accepted for 4735200 (more than four digits), 4.735 is not for 4735", C.checkNumber("4.735.200", ["4735200"]).ok === true && C.checkNumber("4.735", ["4735"]).ok === false && C.checkNumber("4735200", ["4735200"]).ok === true);
 check("numbers: the comma still means a decimal point (0,25 for 0.25)", C.checkNumber("0,25", ["0,25"]).ok === true);
+
+
+// ---- E3: figures and pairs (docs/ENCARREC-M5-E3-FIGURES.md §2–§5) ----------
+console.log("figures and pairs (E3)");
+{
+  const goodFigures: unknown[] = [
+    { type: "angle", deg: 1 },
+    { type: "angle", deg: 360, label: true },
+    { type: "triangle", sides: [3, 4, 5], labels: true, unit: "cm" },
+    { type: "polygon", sides: [3, 3, 3], regular: true, labels: true },
+    { type: "polygon", sides: [2, 7, 11, 4], regular: false, labels: true },
+    { type: "rect", w: 8, h: 5, labels: true },
+    { type: "circle", mark: "center" },
+    { type: "circle", mark: "arc", rot: 359 },
+    { type: "bars", labels: ["a", "b"], values: [0, 9], title: "T" },
+    { type: "grid", points: [[0, 0], [10, 10]] },
+    { type: "grid", points: [[2, 1]], size: 4 },
+  ];
+  const badFigures: unknown[] = [
+    null, "angle", { type: "pie" }, { type: "angle", deg: 0 }, { type: "angle", deg: 361 }, { type: "angle", deg: 90.5 },
+    { type: "triangle", sides: [1, 2, 3] }, { type: "triangle", sides: [3, 4] }, { type: "triangle", sides: [3, 4, 0] },
+    { type: "polygon", sides: [4, 4] }, { type: "polygon", sides: Array(9).fill(2) }, { type: "polygon", sides: [3, 4, 5], regular: true },
+    { type: "rect", w: 0, h: 3 }, { type: "circle", mark: "diagonal" }, { type: "circle", mark: "radius", rot: 360 },
+    { type: "bars", labels: [], values: [] }, { type: "bars", labels: ["a", "b"], values: [1] }, { type: "bars", labels: ["a"], values: [-1] },
+    { type: "bars", labels: Array(9).fill("x"), values: Array(9).fill(1) },
+    { type: "grid", points: [[11, 0]] }, { type: "grid", points: [[1, 1]], size: 11 }, { type: "grid", points: [[1]] },
+  ];
+  check("checkFigure: the good figures are kept", goodFigures.every((f) => "figure" in checkFigure(f)), goodFigures.filter((f) => !("figure" in checkFigure(f))));
+  check("checkFigure: the bad figures are refused with a reason", badFigures.every((f) => "problem" in checkFigure(f) && typeof (checkFigure(f) as { problem: string }).problem === "string"), badFigures.filter((f) => !("problem" in checkFigure(f))));
+  const g = checkFigure({ type: "grid", points: [[1, 2]] });
+  const a = checkFigure({ type: "angle", deg: 90 });
+  const t = checkFigure({ type: "triangle", sides: [2, 2, 2] });
+  check("checkFigure: defaults filled in (grid size 10, angle label false, triangle labels false)", "figure" in g && g.figure.type === "grid" && g.figure.size === 10 && "figure" in a && a.figure.type === "angle" && a.figure.label === false && "figure" in t && t.figure.type === "triangle" && t.figure.labels === false, { g, a, t });
+
+  // pairs: the formats of §3, and the order
+  for (const [text, want] of [["(3, 4)", [3, 4]], ["3,4", [3, 4]], ["3 4", [3, 4]], ["(3 ; 4)", [3, 4]], [" ( 3 , 4 ) ", [3, 4]], ["(-1, 2)", [-1, 2]]] as const) {
+    check(`parsePair accepts ${JSON.stringify(text)}`, JSON.stringify(parsePair(text)) === JSON.stringify(want), parsePair(text));
+  }
+  for (const text of ["(3, 4", "3, 4)", "3;;4", "3", "(3,4,5)", "a,b", "3.5, 4", "((3,4))", "", "dos tres"]) {
+    check(`parsePair refuses ${JSON.stringify(text)}`, parsePair(text) === null, parsePair(text));
+  }
+  check("parsePair keeps the order: (4,3) is another point", JSON.stringify(parsePair("(4,3)")) === "[4,3]" && JSON.stringify(parsePair("(4,3)")) !== JSON.stringify(parsePair("(3,4)")));
+  check("client checkPair: (4,3) is wrong for (3, 4), 3,4 is right and not the habitual form", !C.checkPair("(4,3)", ["(3, 4)"]).ok && C.checkPair("3,4", ["(3, 4)"]).ok && C.checkPair("3,4", ["(3, 4)"]).exact === false && C.checkPair("(3,4)", ["(3, 4)"]).exact === true);
+  check("client checkPair: a bad text is wrong; hint shows the first coordinate", !C.checkPair("tres", ["(3, 4)"]).ok && C.hintFor("pair", "(3, 4)", null) === "(3, ?)");
+}
+
+console.log("figure generators (E3)");
+{
+  // A second, plain reading of each figure card (no code shared with the generators).
+  const eqPairs = (s: number[]) => (s[0] === s[1] ? 1 : 0) + (s[1] === s[2] ? 1 : 0) + (s[0] === s[2] ? 1 : 0);
+  const TRI_NAME: Record<number, string> = { 3: "equilàter", 1: "isòsceles", 0: "escalè" };
+  const CIRCLE_CA: Record<string, string> = { radius: "radi", diameter: "diàmetre", chord: "corda", arc: "arc", center: "centre" };
+  const verifyFigureCard = (kind: string, w: MathWord): string | null => {
+    const f = w.figure as Record<string, any> | undefined;
+    const t = w.target[0] ?? "";
+    switch (kind) {
+      case "angle_type": {
+        const d = f?.deg as number;
+        const want = d >= 1 && d < 90 ? "agut" : d === 90 ? "recte" : d > 90 && d < 180 ? "obtús" : d === 180 ? "pla" : d === 360 ? "complet" : null;
+        const opts = w.options ?? [];
+        return want === t && opts.includes(t) && f?.type === "angle" ? null : `angle ${d} → ${want}, ${t}`;
+      }
+      case "triangle_by_sides": {
+        const s = f?.sides as number[];
+        const [x = 0, y = 0, z = 0] = s;
+        const ok = x + y > z && x + z > y && y + z > x;
+        return ok && TRI_NAME[eqPairs(s)] === t && JSON.stringify(w.options) === '["equilàter","isòsceles","escalè"]' ? null : `triangle ${s} → ${t}`;
+      }
+      case "perimeter_figure": {
+        const per = f?.type === "rect" ? 2 * (f.w + f.h) : (f?.sides as number[]).reduce((x, y) => x + y, 0);
+        return String(per) === t && w.unit === "cm" && w.answer_kind === "unit" ? null : `perímetre ${per} ≠ ${t}`;
+      }
+      case "area_figure": {
+        if (f?.type === "rect") return String(f.w * f.h) === t && w.unit === "cm²" ? null : "àrea rect";
+        const [a, b, c] = [...(f?.sides as number[])].sort((x, y) => x - y) as [number, number, number];
+        return a * a + b * b === c * c && String((a * b) / 2) === t && w.unit === "cm²" ? null : "àrea triangle rectangle";
+      }
+      case "circle_element":
+        return CIRCLE_CA[f?.mark] === t && JSON.stringify(w.options) === '["radi","diàmetre","corda","arc","centre"]' ? null : `marca ${f?.mark} → ${t}`;
+      case "bars_read": {
+        const labels: string[] = f?.labels;
+        const values: number[] = f?.values;
+        let m: RegExpExecArray | null;
+        if ((m = /^Quants alumnes han triat el (.+)\?$/.exec(w.prompt))) return String(values[labels.indexOf(m[1]!)]) === t ? null : "lectura";
+        if (w.prompt === "Quin és el color més triat?") {
+          const max = Math.max(...values);
+          return values.filter((v) => v === max).length === 1 && labels[values.indexOf(max)] === t ? null : "moda";
+        }
+        const sum = values.reduce((x, y) => x + y, 0);
+        return sum % labels.length === 0 && String(sum / labels.length) === t ? null : "mitjana";
+      }
+      case "grid_point": {
+        const p = /^\((\d+), (\d+)\)$/.exec(t);
+        const q = f?.points[0] as number[];
+        return p && Number(p[1]) === q[0] && Number(p[2]) === q[1] && w.answer_kind === "pair" ? null : `punt ${q} → ${t}`;
+      }
+      default:
+        return "kind";
+    }
+  };
+  for (const kind of ["angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point"]) {
+    const words = generatedWords(`math-m5.flash.${kind}`, { kind, count: 50 });
+    const bad = words.map((w) => verifyFigureCard(kind, w)).filter((x): x is string => x !== null);
+    check(`${kind}: every figure card agrees with its figure and answer`, words.length === 50 && bad.length === 0, bad.slice(0, 3));
+    check(`${kind}: every card has a figure of its type`, words.every((w) => w.figure !== undefined));
+  }
+  const angles = generatedWords("math-m5.flash.angle_type", { kind: "angle_type", count: 50, params: { full: true } });
+  check("angle_type with full: the option complet is there and 360 is its answer", JSON.stringify(angles[0]?.options) === '["agut","recte","obtús","pla","complet"]' && angles.every((w) => w.options?.length === 5));
+  const noFull = generatedWords("math-m5.flash.angle_type", { kind: "angle_type", count: 50 });
+  check("angle_type without full: no complet, no reflex angle", noFull.every((w) => w.options?.length === 4 && (w.figure as any).deg <= 180));
+}
+
+console.log("explicit figure items (E3)");
+{
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "flash-e3-"));
+  try {
+    const dir = path.join(tmp, "curriculum", "flash", "math-t3");
+    fs.mkdirSync(dir, { recursive: true });
+    const angleOpts = ["agut", "recte", "obtús", "pla"];
+    fs.writeFileSync(path.join(dir, "01-items.json"), JSON.stringify({
+      id: "math-t3.flash.figures", level: "m5", title: { en: "Figures" },
+      items: [
+        { id: "ang-ok", prompt: "Quin tipus d'angle és?", answer: ["agut"], answer_kind: "choice", options: angleOpts, figure: { type: "angle", deg: 45 } },
+        { id: "ang-bad", prompt: "Quin tipus d'angle és?", answer: ["recte"], answer_kind: "choice", options: angleOpts, figure: { type: "angle", deg: 45 } },
+        { id: "fig-bad", prompt: "Quant fa?", answer: ["12"], answer_kind: "unit", unit: "cm", figure: { type: "polygon", sides: [1, 2] } },
+        { id: "per-ok", prompt: "Quin és el perímetre?", answer: ["12"], answer_kind: "unit", unit: "cm", figure: { type: "rect", w: 4, h: 2, labels: true, unit: "cm" } },
+        { id: "per-bad", prompt: "Quin és el perímetre?", answer: ["10"], answer_kind: "unit", unit: "cm", figure: { type: "rect", w: 4, h: 2, labels: true, unit: "cm" } },
+        { id: "area-bad", prompt: "Quina és l'àrea?", answer: ["9"], answer_kind: "unit", unit: "cm²", figure: { type: "rect", w: 3, h: 4 } },
+        { id: "pair-ok", prompt: "Quines coordenades té el punt?", answer: ["(2, 3)"], answer_kind: "pair", figure: { type: "grid", points: [[2, 3]] } },
+        { id: "pair-swap", prompt: "Quines coordenades té el punt?", answer: ["(3, 2)"], answer_kind: "pair", figure: { type: "grid", points: [[2, 3]] } },
+        { id: "pair-bad", prompt: "Quines coordenades?", answer: ["dos tres"], answer_kind: "pair" },
+        { id: "fig-none", prompt: "2 + 2", answer: ["4"] },
+      ],
+    }));
+    const lists = loadFlashLists(tmp, "curriculum/flash/math-*", "ca") as unknown as Array<{ words: Array<Record<string, any>> }>;
+    const words = lists[0]?.words ?? [];
+    check("explicit items: the right ones are kept, the wrong figure, coherence and pair cases dropped", words.map((w) => w.id).join() === "ang-ok,per-ok,pair-ok,fig-none", words.map((w) => w.id));
+    const ang = words.find((w) => w.id === "ang-ok");
+    check("a kept figure reaches the client, checked and clean", JSON.stringify(ang?.figure) === '{"type":"angle","deg":45,"label":false}', ang?.figure);
+    check("a pair word carries answer_kind pair", words.find((w) => w.id === "pair-ok")?.answer_kind === "pair");
+    const probs = mathWords(JSON.parse(fs.readFileSync(path.join(dir, "01-items.json"), "utf8"))).problems;
+    check("the report names the figure problems", probs.length === 6 && probs.some((p) => p.includes("figura")) && probs.some((p) => p.includes("coordenades")), probs);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+console.log("figure drawing (E3)");
+{
+  const samples: Figure[] = [
+    { type: "angle", deg: 135, label: false },
+    { type: "triangle", sides: [5, 7, 9], labels: true, unit: "cm" },
+    { type: "polygon", sides: [4, 4, 4, 4, 4, 4], regular: true, labels: true },
+    { type: "rect", w: 8, h: 5, labels: true, unit: "cm" },
+    { type: "circle", mark: "chord", rot: 30 },
+    { type: "bars", labels: ["vermell", "blau"], values: [9, 0], title: "Alumnes" },
+    { type: "grid", points: [[3, 4]], size: 10 },
+  ];
+  for (const f of samples) {
+    const svg = C.figureSvg(f) as string;
+    check(`${f.type}: an inline svg with role img and a Catalan aria-label, no hex colours`, /^<svg class="flash-fig-svg" viewBox="[^"]+" role="img" aria-label="[^"]+"/.test(svg) && !/#[0-9a-fA-F]{3,6}\b/.test(svg), svg.slice(0, 120));
+  }
+  check("no figure, no svg", C.figureSvg(undefined) === "" && C.figureSvg(null) === "");
+  const angleSvg = C.figureSvg({ type: "angle", deg: 135, label: false }) as string;
+  check("an angle without label shows no degrees (no ° and no number in the aria)", !angleSvg.includes("°") && !/aria-label="[^"]*\d/.test(angleSvg));
+  check("an angle with label shows the degrees", (C.figureSvg({ type: "angle", deg: 135, label: true }) as string).includes("135°"));
+  check("a circle's aria does not name the marked element", /aria-label="Cercle amb un element marcat"/.test(C.figureSvg({ type: "circle", mark: "radius", rot: 0 })));
+  check("labels are escaped inside the svg", (C.figureSvg({ type: "bars", labels: ["<b>x</b>"], values: [1] }) as string).includes("&lt;b&gt;x&lt;/b&gt;") && !(C.figureSvg({ type: "bars", labels: ["<b>x</b>"], values: [1] }) as string).includes("<b>"));
+  const flashSrc = read("web", "flash.js");
+  check("the card shows the figure above the prompt and the pair input has its own label", flashSrc.includes('<div class="flash-fig">${C.figureSvg(card.figure)}</div>') && flashSrc.indexOf("flash-fig\">") < flashSrc.indexOf('<div class="flash-word">') && flashSrc.includes('aria-label="Coordenades"'));
+  const styleSrc = read("web", "style.css");
+  check("style.css: the figure uses the flash tokens, sized for phones", styleSrc.includes(".flash-fig-svg") && styleSrc.includes("max-height: 260px") && styleSrc.includes("min(280px, 100%)") && styleSrc.includes("stroke: currentColor"));
+}
 
 // ---- wiring ----------------------------------------------------------------
 console.log("wiring");

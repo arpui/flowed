@@ -92,6 +92,22 @@ class MathListIds(unittest.TestCase):
                 {"id": "s1", "prompt": "23 × 4", "answer": ["91"]},
                 {"id": "s2", "prompt": "23 × 4", "answer": ["92"]},
                 {"id": "n1", "prompt": "Quants?", "answer": ["3"], "answer_kind": None},
+                # figures and pairs (docs/ENCARREC-M5-E3-FIGURES.md): kept, dropped by the figure, or by the answer
+                {"id": "a1", "prompt": "Quin tipus d'angle és?", "answer": ["agut"], "answer_kind": "choice", "options": ["agut", "recte", "obtús", "pla"], "figure": {"type": "angle", "deg": 45}},
+                {"id": "a2", "prompt": "Quin tipus d'angle és?", "answer": ["recte"], "answer_kind": "choice", "options": ["agut", "recte", "obtús", "pla"], "figure": {"type": "angle", "deg": 45}},
+                {"id": "a3", "prompt": "Quin tipus d'angle és?", "answer": ["obtús"], "answer_kind": "choice", "options": ["agut", "obtús"], "figure": {"type": "angle", "deg": 200}},
+                {"id": "p1", "prompt": "Quines coordenades té el punt?", "answer": ["(2, 3)"], "answer_kind": "pair", "figure": {"type": "grid", "points": [[2, 3]]}},
+                {"id": "p2", "prompt": "Quines coordenades té el punt?", "answer": ["(3,2)"], "answer_kind": "pair", "figure": {"type": "grid", "points": [[2, 3]]}},
+                {"id": "p3", "prompt": "Quines coordenades?", "answer": ["dos"], "answer_kind": "pair"},
+                {"id": "p4", "prompt": "Quines coordenades?", "answer": ["(3 ; 4)"], "answer_kind": "pair"},
+                {"id": "f1", "prompt": "Quant fa el perímetre?", "answer": ["10"], "answer_kind": "unit", "unit": "cm", "figure": {"type": "rect", "w": 4, "h": 2, "labels": True}},
+                {"id": "f2", "prompt": "Quant fa el perímetre?", "answer": ["12"], "answer_kind": "unit", "unit": "cm", "figure": {"type": "rect", "w": 4, "h": 2, "labels": True}},
+                {"id": "f3", "prompt": "Quina és l'àrea?", "answer": ["8"], "answer_kind": "unit", "unit": "cm²", "figure": {"type": "bars", "labels": ["a"], "values": [1]}},
+                {"id": "f4", "prompt": "x", "answer": ["1"], "figure": {"type": "pie"}},
+                {"id": "f5", "prompt": "x", "answer": ["1"], "figure": None},
+                {"id": "f6", "prompt": "Quina és l'àrea?", "answer": ["6"], "answer_kind": "unit", "unit": "cm²", "figure": {"type": "triangle", "sides": [3, 4, 5], "labels": True}},
+                {"id": "f7", "prompt": "x", "answer": ["1"], "figure": {"type": "triangle", "sides": [1, 2, 3]}},
+                {"id": "f8", "prompt": "x", "answer": ["3"], "figure": {"type": "circle", "mark": "radius", "rot": 400}},
             ]}
             files["92-nope.json"] = {"id": "math-t9.flash.nope", "level": "t9", "title": {"en": "nope"}, "generate": {"kind": "nope", "count": 4}}
             write_math(tmp, "math-t9", files)

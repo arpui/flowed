@@ -40,6 +40,7 @@ export interface FlashWordView {
   unit?: string; // math, unit kind: shown outside the box
   options?: string[]; // math, choice kind: the buttons
   form?: "value" | "simplest"; // math, fraction kind
+  figure?: Figure; // math: drawn as SVG above the prompt (docs/ENCARREC-M5-E3-FIGURES.md)
 }
 
 export interface FlashListView {
@@ -137,6 +138,7 @@ function mathView(w: MathWord): FlashWordView {
   if (w.unit) v.unit = w.unit;
   if (kind === "choice") v.options = w.options ?? [];
   if (kind === "fraction") v.form = w.form ?? "value";
+  if (w.figure) v.figure = w.figure;
   return v;
 }
 
@@ -149,8 +151,8 @@ function mathView(w: MathWord): FlashWordView {
 // hooks/curriculum.py flash_lists mirrors these rules: the same ids, the same drops.
 
 export type MathOp = "+" | "−" | "×" | ":";
-export type AnswerKind = "number" | "fraction" | "unit" | "choice";
-const ANSWER_KINDS: readonly string[] = ["number", "fraction", "unit", "choice"];
+export type AnswerKind = "number" | "fraction" | "unit" | "choice" | "pair";
+const ANSWER_KINDS: readonly string[] = ["number", "fraction", "unit", "choice", "pair"];
 
 const MATH_OP = new Map<string, MathOp>([
   ["+", "+"], ["−", "−"], ["-", "−"], ["×", "×"], ["x", "×"], ["*", "×"], [":", ":"], ["/", ":"],
@@ -166,6 +168,7 @@ export interface MathWord {
   unit?: string; // unit: the unit shown outside the box
   options?: string[]; // choice: the buttons
   form?: "value" | "simplest"; // fraction: equivalents count, or only the irreducible form
+  figure?: Figure; // a figure above the prompt (checked by checkFigure)
 }
 
 /** The operator as the lists write it (`x`, `*`, `-`, `/` are synonyms), or null. */
@@ -303,6 +306,185 @@ function fracText(num: number, den: number): string {
   return num % den === 0 ? String(num / den) : `${num}/${den}`;
 }
 
+// ---- figures (docs/ENCARREC-M5-E3-FIGURES.md §2–§4) ------------------------------
+// A math word may carry a `figure`: the client draws it as inline SVG above the prompt, and nothing
+// outside the list is needed. The server checks it (a bad one drops its word, as a bad item does) and
+// returns the clean object with its defaults filled in. The drawing never shows the answer: an angle has
+// no degrees unless `label`, and a circle's mark has no name on it.
+
+export type CircleMark = "radius" | "diameter" | "chord" | "arc" | "center";
+export type Figure =
+  | { type: "angle"; deg: number; label: boolean }
+  | { type: "triangle"; sides: number[]; labels: boolean; unit?: string }
+  | { type: "polygon"; sides: number[]; regular: boolean; labels: boolean; unit?: string }
+  | { type: "rect"; w: number; h: number; labels: boolean; unit?: string }
+  | { type: "circle"; mark: CircleMark; rot: number }
+  | { type: "bars"; labels: string[]; values: number[]; title?: string }
+  | { type: "grid"; points: Array<[number, number]>; size: number };
+
+export const CIRCLE_MARKS: readonly CircleMark[] = ["radius", "diameter", "chord", "arc", "center"];
+export const CIRCLE_NAME: Record<CircleMark, string> = { radius: "radi", diameter: "diàmetre", chord: "corda", arc: "arc", center: "centre" };
+export const ANGLE_NAMES: readonly string[] = ["agut", "recte", "obtús", "pla", "complet"];
+export const TRIANGLE_NAMES: readonly string[] = ["equilàter", "isòsceles", "escalè"];
+const FIGURE_TYPES: readonly string[] = ["angle", "triangle", "polygon", "rect", "circle", "bars", "grid"];
+const MAX_SIDE = 999;
+
+/** An integer in lo..hi (7 and 7.0 both), or null. */
+function intIn(v: unknown, lo: number, hi: number): number | null {
+  const n = wholeNumber(v);
+  return n !== null && n >= lo && n <= hi ? n : null;
+}
+
+/** Between lo and hi whole sides, each 1..999, or null. */
+function sidesOf(v: unknown, lo: number, hi: number): number[] | null {
+  if (!Array.isArray(v) || v.length < lo || v.length > hi) return null;
+  const out: number[] = [];
+  for (const x of v) {
+    const n = intIn(x, 1, MAX_SIDE);
+    if (n === null) return null;
+    out.push(n);
+  }
+  return out;
+}
+
+/** Strict triangle inequality: the three sides close a triangle with an area. */
+export function validTriangle(s: number[]): boolean {
+  const [a = 0, b = 0, c = 0] = s;
+  return a + b > c && a + c > b && b + c > a;
+}
+
+/** A triangle's name by its sides: all equal, two equal, or none. */
+export function triangleKind(s: number[]): string {
+  const distinct = new Set(s).size;
+  return distinct === 1 ? "equilàter" : distinct === 2 ? "isòsceles" : "escalè";
+}
+
+/** The angle's name by its degrees (181..359 has none: it is not an option). */
+export function angleName(deg: number): string | null {
+  if (deg >= 1 && deg < 90) return "agut";
+  if (deg === 90) return "recte";
+  if (deg > 90 && deg < 180) return "obtús";
+  if (deg === 180) return "pla";
+  if (deg === 360) return "complet";
+  return null;
+}
+
+/** An ordered pair written (3, 4), 3,4, 3 4 or (3 ; 4). Null when it is not one. Parentheses come in pairs. */
+export function parsePair(s: unknown): [number, number] | null {
+  const t = String(s ?? "").trim();
+  if (t.startsWith("(") !== t.endsWith(")")) return null;
+  const m = /^\s*(-?[0-9]+)\s*(?:[,;]\s*|\s+)(-?[0-9]+)\s*$/.exec(t.startsWith("(") ? t.slice(1, -1) : t);
+  return m ? [Number(m[1]), Number(m[2])] : null;
+}
+
+/** The figure as the client draws it, or why it is not one. */
+export function checkFigure(raw: unknown): { figure: Figure } | { problem: string } {
+  const f = asRecord(raw);
+  const bad = (problem: string) => ({ problem });
+  const unit = typeof f.unit === "string" && f.unit.trim() ? f.unit.trim() : null;
+  const unitPart: { unit?: string } = unit === null ? {} : { unit };
+  const labels = f.labels === true;
+  const type = typeof f.type === "string" ? f.type : "";
+  if (!FIGURE_TYPES.includes(type)) return bad(`tipus desconegut (${JSON.stringify(f.type)})`);
+  switch (type) {
+    case "angle": {
+      const deg = intIn(f.deg, 1, 360);
+      if (deg === null) return bad("angle: deg ha de ser un enter de 1 a 360");
+      return { figure: { type: "angle", deg, label: f.label === true } };
+    }
+    case "triangle": {
+      const sides = sidesOf(f.sides, 3, 3);
+      if (!sides) return bad("triangle: cal 3 costats enters de 1 a 999");
+      if (!validTriangle(sides)) return bad(`triangle: ${sides.join(", ")} no formen un triangle`);
+      return { figure: { type: "triangle", sides, labels, ...unitPart } };
+    }
+    case "polygon": {
+      const sides = sidesOf(f.sides, 3, 8);
+      if (!sides) return bad("polygon: de 3 a 8 costats enters de 1 a 999");
+      const regular = f.regular === true;
+      if (regular && sides.some((x) => x !== sides[0])) return bad("polygon: regular però amb costats diferents");
+      return { figure: { type: "polygon", sides, regular, labels, ...unitPart } };
+    }
+    case "rect": {
+      const w = intIn(f.w, 1, MAX_SIDE);
+      const h = intIn(f.h, 1, MAX_SIDE);
+      if (w === null || h === null) return bad("rect: w i h han de ser enters de 1 a 999");
+      return { figure: { type: "rect", w, h, labels, ...unitPart } };
+    }
+    case "circle": {
+      const mark = CIRCLE_MARKS.find((m) => m === f.mark);
+      if (!mark) return bad(`circle: mark desconegut (${JSON.stringify(f.mark)})`);
+      const rot = f.rot === undefined ? 0 : intIn(f.rot, 0, 359);
+      if (rot === null) return bad("circle: rot ha de ser un enter de 0 a 359");
+      return { figure: { type: "circle", mark, rot } };
+    }
+    case "bars": {
+      if (!Array.isArray(f.labels) || f.labels.length < 1 || f.labels.length > 8) return bad("bars: de 1 a 8 barres");
+      const names = f.labels.map((x) => (typeof x === "string" ? x.trim() : ""));
+      if (names.some((x) => !x)) return bad("bars: cada barra necessita una etiqueta");
+      if (!Array.isArray(f.values) || f.values.length !== names.length) return bad("bars: values ha de tenir una xifra per barra");
+      const values: number[] = [];
+      for (const v of f.values) {
+        const n = intIn(v, 0, MAX_SIDE);
+        if (n === null) return bad("bars: values ha de ser enters ≥ 0");
+        values.push(n);
+      }
+      const title = typeof f.title === "string" && f.title.trim() ? f.title.trim() : null;
+      return { figure: { type: "bars", labels: names, values, ...(title === null ? {} : { title }) } };
+    }
+    default: {
+      // grid
+      const size = f.size === undefined ? 10 : intIn(f.size, 1, 10);
+      if (size === null) return bad("grid: size ha de ser un enter de 1 a 10");
+      if (!Array.isArray(f.points) || f.points.length < 1 || f.points.length > 12) return bad("grid: de 1 a 12 punts");
+      const points: Array<[number, number]> = [];
+      for (const p of f.points) {
+        if (!Array.isArray(p) || p.length !== 2) return bad("grid: cada punt és [x, y]");
+        const x = intIn(p[0], 0, size);
+        const y = intIn(p[1], 0, size);
+        if (x === null || y === null) return bad(`grid: el punt ha d'estar entre 0 i ${size}`);
+        points.push([x, y]);
+      }
+      return { figure: { type: "grid", points, size } };
+    }
+  }
+}
+
+/** Where a figure settles the answer, the answer must agree with it (E3 §4). Null when it agrees or the
+ *  figure cannot tell (a question the figure does not settle). */
+export function figureAnswerProblem(fig: Figure, prompt: string, kind: AnswerKind, answer: string[]): string | null {
+  const a = answer[0] ?? "";
+  if (fig.type === "angle" && kind === "choice" && ANGLE_NAMES.includes(a)) {
+    const want = angleName(fig.deg);
+    return want === a ? null : `la figura té ${fig.deg}°, no és ${a}`;
+  }
+  if (fig.type === "triangle" && kind === "choice" && TRIANGLE_NAMES.includes(a)) {
+    const want = triangleKind(fig.sides);
+    return want === a ? null : `els costats donen ${want}, no ${a}`;
+  }
+  if (fig.type === "circle" && kind === "choice" && Object.values(CIRCLE_NAME).includes(a)) {
+    const want = CIRCLE_NAME[fig.mark];
+    return want === a ? null : `la marca és ${want}, no ${a}`;
+  }
+  if (fig.type === "grid" && kind === "pair" && fig.points.length === 1) {
+    const q = fig.points[0] ?? [0, 0];
+    const p = parsePair(a);
+    return p && p[0] === q[0] && p[1] === q[1] ? null : `el punt és (${q[0]}, ${q[1]})`;
+  }
+  const n = numericValue(a);
+  if (n !== null && (kind === "number" || kind === "unit")) {
+    if (fig.type === "rect" && /[àa]rea/i.test(prompt) && fig.w * fig.h !== n) return `l'àrea és ${fig.w * fig.h}`;
+    if (/per[ií]metre/i.test(prompt)) {
+      const per =
+        fig.type === "rect" ? 2 * (fig.w + fig.h)
+        : fig.type === "triangle" || fig.type === "polygon" ? fig.sides.reduce((x, y) => x + y, 0)
+        : null;
+      if (per !== null && per !== n) return `el perímetre és ${per}`;
+    }
+  }
+  return null;
+}
+
 // ---- generators (docs/ENCARREC-M5-E1-FLASH.md §3) ----------------------------------
 
 type Rng = () => number;
@@ -314,6 +496,7 @@ interface GenItem {
   unit?: string;
   options?: string[];
   form?: "value" | "simplest";
+  figure?: Figure;
 }
 type Generator = (r: Rng, p: Params) => GenItem | null;
 
@@ -387,6 +570,18 @@ const LADDERS: Record<string, Array<[string, number]>> = {
   capacity: [["kl", 3], ["l", 0], ["dl", -1], ["ml", -3]],
 };
 const PAIRS: ReadonlyArray<[string, string, number, number]> = [["m", "cm", 100, 99], ["kg", "g", 1000, 999], ["l", "ml", 1000, 999]];
+
+const COLOURS = ["vermell", "blau", "verd", "groc", "taronja"];
+
+/** n items of xs, chosen from the stream (a shuffle, then the first n). */
+function subset<T>(r: Rng, xs: readonly T[], n: number): T[] {
+  const a = xs.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [a[i], a[j]] = [a[j] as T, a[i] as T];
+  }
+  return a.slice(0, n);
+}
 
 const GENERATORS = new Map<string, Generator>([
   ["round", (r, p) => {
@@ -597,6 +792,103 @@ const GENERATORS = new Map<string, Generator>([
     }
     return { prompt: `${terms.slice(0, 4).join(", ")}, ?`, target: [String(terms[4])] };
   }],
+  ["angle_type", (r, p) => {
+    const cats = p.full === true ? ANGLE_NAMES : ANGLE_NAMES.slice(0, 4);
+    const cat = pick(r, cats);
+    const deg = cat === "agut" ? int(r, 1, 89) : cat === "recte" ? 90 : cat === "obtús" ? int(r, 91, 179) : cat === "pla" ? 180 : 360;
+    return { prompt: "Quin tipus d'angle és?", target: [cat], answer_kind: "choice", options: cats.slice(), figure: { type: "angle", deg, label: false } };
+  }],
+  ["triangle_by_sides", (r) => {
+    const t = int(r, 0, 2);
+    let s: number[];
+    if (t === 0) {
+      const e = int(r, 2, 12);
+      s = [e, e, e];
+    } else if (t === 1) {
+      const e = int(r, 2, 12);
+      const c = int(r, 1, 2 * e - 1);
+      if (c === e) return null;
+      s = [e, e, c];
+    } else {
+      s = [int(r, 2, 12), int(r, 2, 12), int(r, 2, 12)];
+      if (!validTriangle(s) || new Set(s).size !== 3) return null;
+    }
+    return { prompt: "Quin tipus de triangle és, segons els costats?", target: [triangleKind(s)], answer_kind: "choice", options: TRIANGLE_NAMES.slice(), figure: { type: "triangle", sides: s, labels: true, unit: "cm" } };
+  }],
+  ["perimeter_figure", (r) => {
+    const t = int(r, 0, 2);
+    let fig: Figure;
+    let total: number;
+    if (t === 0) {
+      const s = [int(r, 2, 15), int(r, 2, 15), int(r, 2, 15)];
+      if (!validTriangle(s)) return null;
+      fig = { type: "triangle", sides: s, labels: true, unit: "cm" };
+      total = s.reduce((x, y) => x + y, 0);
+    } else if (t === 1) {
+      const w = int(r, 2, 20);
+      const h = int(r, 2, 20);
+      fig = { type: "rect", w, h, labels: true, unit: "cm" };
+      total = 2 * (w + h);
+    } else {
+      const n = int(r, 3, 8);
+      const regular = r() < 0.5;
+      const s = regular ? Array<number>(n).fill(int(r, 2, 12)) : Array.from({ length: n }, () => int(r, 2, 12));
+      fig = { type: "polygon", sides: s, regular, labels: true, unit: "cm" };
+      total = s.reduce((x, y) => x + y, 0);
+    }
+    return { prompt: "Quant fa el perímetre?", target: [String(total)], answer_kind: "unit", unit: "cm", figure: fig };
+  }],
+  ["area_figure", (r) => {
+    if (r() < 0.5) {
+      const w = int(r, 2, 20);
+      const h = int(r, 2, 20);
+      return { prompt: "Quina és l'àrea del rectangle?", target: [String(w * h)], answer_kind: "unit", unit: "cm²", figure: { type: "rect", w, h, labels: true, unit: "cm" } };
+    }
+    // a right triangle with whole sides (3k, 4k, 5k): the legs are the two shorter sides, the prompt says so
+    const k = int(r, 1, 3);
+    return {
+      prompt: "Quina és l'àrea del triangle rectangle? (els catets són els dos costats més curts)",
+      target: [String(6 * k * k)],
+      answer_kind: "unit",
+      unit: "cm²",
+      figure: { type: "triangle", sides: [3 * k, 4 * k, 5 * k], labels: true, unit: "cm" },
+    };
+  }],
+  ["circle_element", (r) => {
+    const mark = pick(r, CIRCLE_MARKS);
+    const rot = int(r, 0, 359); // the same mark turns: the cards differ, the answer does not
+    return {
+      prompt: "Quin element del cercle està marcat?",
+      target: [CIRCLE_NAME[mark]],
+      answer_kind: "choice",
+      options: CIRCLE_MARKS.map((m) => CIRCLE_NAME[m]),
+      figure: { type: "circle", mark, rot },
+    };
+  }],
+  ["bars_read", (r) => {
+    const n = int(r, 3, 5);
+    const labels = subset(r, COLOURS, n);
+    const values = labels.map(() => int(r, 1, 12));
+    const figure: Figure = { type: "bars", labels, values, title: "Alumnes que han triat cada color" };
+    const t = int(r, 0, 2);
+    if (t === 0) {
+      const i = int(r, 0, n - 1);
+      return { prompt: `Quants alumnes han triat el ${labels[i] ?? ""}?`, target: [String(values[i] ?? 0)], figure };
+    }
+    if (t === 1) {
+      const max = Math.max(...values);
+      if (values.filter((v) => v === max).length > 1) return null;
+      return { prompt: "Quin és el color més triat?", target: [labels[values.indexOf(max)] ?? ""], answer_kind: "choice", options: labels.slice(), figure };
+    }
+    const sum = values.reduce((x, y) => x + y, 0);
+    if (sum % n !== 0) return null;
+    return { prompt: "Quina és la mitjana d'alumnes per color?", target: [String(sum / n)], figure };
+  }],
+  ["grid_point", (r) => {
+    const x = int(r, 0, 10);
+    const y = int(r, 0, 10);
+    return { prompt: "Quines coordenades té el punt?", target: [`(${x}, ${y})`], answer_kind: "pair", figure: { type: "grid", points: [[x, y]], size: 10 } };
+  }],
 ]);
 
 /** The generator kinds a `generate` block may name (besides `op`). */
@@ -619,8 +911,10 @@ export function generatedWords(listId: string, gen: JsonRecord): MathWord[] {
   const seen = new Set<string>();
   for (let tries = 0; out.length < count && tries < count * 200; tries++) {
     const item = make(rng, params);
-    if (!item || seen.has(item.prompt)) continue;
-    seen.add(item.prompt);
+    if (!item) continue;
+    const card = item.prompt + "\u0000" + JSON.stringify(item.figure ?? null); // a figure card is its prompt and its figure
+    if (seen.has(card)) continue;
+    seen.add(card);
     out.push({ id: `g${out.length + 1}`, ...item });
   }
   return out;
@@ -655,6 +949,7 @@ function itemProblem(item: JsonRecord): string | null {
     if (item.form === "simplest" && !isSimplestText(answer[0])) return `${answer[0]} no és la fracció irreductible`;
   }
   if (kind === "unit" && (typeof item.unit !== "string" || !item.unit.trim())) return "unit sense text";
+  if (kind === "pair" && parsePair(answer[0]) === null) return `${answer[0]} no són unes coordenades (x, y)`;
   if (kind === "number" || kind === "unit") {
     const sop = simpleOp(item.prompt);
     if (sop) {
@@ -662,6 +957,12 @@ function itemProblem(item: JsonRecord): string | null {
       if (r === null) return `${item.prompt} no dona un resultat enter ≥ 0`;
       if (numericValue(answer[0]) !== r) return `${item.prompt} és ${r}, no ${answer[0]}`;
     }
+  }
+  if (item.figure !== undefined) {
+    const f = checkFigure(item.figure);
+    if ("problem" in f) return `figura: ${f.problem}`;
+    const why = figureAnswerProblem(f.figure, item.prompt, kind as AnswerKind, answer);
+    if (why) return `figura i resposta no coincideixen: ${why}`;
   }
   return null;
 }
@@ -673,6 +974,10 @@ function itemWord(item: JsonRecord, id: string): MathWord {
   if (kind === "unit") w.unit = String(item.unit).trim();
   if (kind === "choice") w.options = strings(item.options);
   if (kind === "fraction") w.form = item.form === "simplest" ? "simplest" : "value";
+  if (item.figure !== undefined) {
+    const f = checkFigure(item.figure);
+    if ("figure" in f) w.figure = f.figure;
+  }
   return w;
 }
 

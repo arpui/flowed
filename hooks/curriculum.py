@@ -660,8 +660,9 @@ MATH_GEN_KINDS = frozenset({
     "round", "digit_value", "compare_numbers", "frac_of", "frac_equiv", "frac_same_den", "frac_dec",
     "dec_times_int", "percent_of", "divisible", "combined", "unit_convert", "complex_to_simple",
     "time_convert", "area_simple", "mean", "probability", "equation", "sequence",
+    "angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point",
 })
-MATH_ANSWER_KINDS = ("number", "fraction", "unit", "choice")
+MATH_ANSWER_KINDS = ("number", "fraction", "unit", "choice", "pair")
 _FRAC_PLAIN = re.compile(r"(-?)([0-9]+)\s*/\s*([0-9]+)")
 _FRAC_MIXED = re.compile(r"(-?)([0-9]+)\s+([0-9]+)\s*/\s*([0-9]+)")
 _FRAC_DEC = re.compile(r"(-?)([0-9]+)[,.]([0-9]+)")
@@ -714,6 +715,122 @@ def _flash_is_simplest(s) -> bool:
     return math.gcd(num, den) == 1
 
 
+# Figures and pairs (docs/ENCARREC-M5-E3-FIGURES.md §2–§4): mirror of checkFigure, figureAnswerProblem
+# and parsePair in server/src/flash.ts. Only the outcome matters here (keep or drop an item).
+_FIGURE_TYPES = ("angle", "triangle", "polygon", "rect", "circle", "bars", "grid")
+_CIRCLE_NAME = {"radius": "radi", "diameter": "diàmetre", "chord": "corda", "arc": "arc", "center": "centre"}
+_ANGLE_NAMES = ("agut", "recte", "obtús", "pla", "complet")
+_TRIANGLE_NAMES = ("equilàter", "isòsceles", "escalè")
+_PAIR_INNER = re.compile(r"\s*(-?[0-9]+)\s*(?:[,;]\s*|\s+)(-?[0-9]+)\s*")
+
+
+def math_parse_pair(s):
+    """(x, y) from (3, 4), 3,4, 3 4 or (3 ; 4); None when it is not one or the parentheses do not pair."""
+    t = s.strip() if isinstance(s, str) else ""
+    if t.startswith("(") != t.endswith(")"):
+        return None
+    m = _PAIR_INNER.fullmatch(t[1:-1] if t.startswith("(") else t)
+    return (int(m[1]), int(m[2])) if m else None
+
+
+def _fig_int(v, lo: int, hi: int) -> int | None:
+    n = _whole(v)
+    return n if n is not None and lo <= n <= hi else None
+
+
+def _fig_sides(v, lo: int, hi: int) -> list[int] | None:
+    if not isinstance(v, list) or not lo <= len(v) <= hi:
+        return None
+    out = [_fig_int(x, 1, 999) for x in v]
+    return None if any(x is None for x in out) else out
+
+
+def _fig_valid_triangle(s: list[int]) -> bool:
+    a, b, c = s
+    return a + b > c and a + c > b and b + c > a
+
+
+def _figure(raw) -> dict | None:
+    """The figure as checkFigure keeps it, or None (the item is dropped)."""
+    if not isinstance(raw, dict) or raw.get("type") not in _FIGURE_TYPES:
+        return None
+    t = raw["type"]
+    if t == "angle":
+        deg = _fig_int(raw.get("deg"), 1, 360)
+        return None if deg is None else {"type": t, "deg": deg}
+    if t == "triangle":
+        s = _fig_sides(raw.get("sides"), 3, 3)
+        return {"type": t, "sides": s} if s and _fig_valid_triangle(s) else None
+    if t == "polygon":
+        s = _fig_sides(raw.get("sides"), 3, 8)
+        if not s or (raw.get("regular") is True and any(x != s[0] for x in s)):
+            return None
+        return {"type": t, "sides": s}
+    if t == "rect":
+        w, h = _fig_int(raw.get("w"), 1, 999), _fig_int(raw.get("h"), 1, 999)
+        return None if w is None or h is None else {"type": t, "w": w, "h": h}
+    if t == "circle":
+        if raw.get("mark") not in _CIRCLE_NAME:
+            return None
+        rot = 0 if "rot" not in raw else _fig_int(raw["rot"], 0, 359)
+        return None if rot is None else {"type": t, "mark": raw["mark"], "rot": rot}
+    if t == "bars":
+        labels = raw.get("labels")
+        if not isinstance(labels, list) or not 1 <= len(labels) <= 8:
+            return None
+        names = [x.strip() if isinstance(x, str) else "" for x in labels]
+        values = raw.get("values")
+        if any(not x for x in names) or not isinstance(values, list) or len(values) != len(names):
+            return None
+        nums = [_fig_int(v, 0, 999) for v in values]
+        return None if any(v is None for v in nums) else {"type": t, "labels": names, "values": nums}
+    # grid
+    size = 10 if "size" not in raw else _fig_int(raw["size"], 1, 10)
+    pts = raw.get("points")
+    if size is None or not isinstance(pts, list) or not 1 <= len(pts) <= 12:
+        return None
+    out = []
+    for p in pts:
+        if not isinstance(p, list) or len(p) != 2:
+            return None
+        x, y = _fig_int(p[0], 0, size), _fig_int(p[1], 0, size)
+        if x is None or y is None:
+            return None
+        out.append((x, y))
+    return {"type": t, "points": out, "size": size}
+
+
+def _figure_fits(fig: dict, prompt: str, kind: str, answer: list[str]) -> bool:
+    """False where the figure settles the answer and the answer disagrees (figureAnswerProblem)."""
+    a = answer[0] if answer else ""
+    t = fig["type"]
+    if t == "angle" and kind == "choice" and a in _ANGLE_NAMES:
+        d = fig["deg"]
+        want = ("agut" if d < 90 else "recte" if d == 90 else "obtús" if d < 180 else "pla" if d == 180 else "complet" if d == 360 else None)
+        return want == a
+    if t == "triangle" and kind == "choice" and a in _TRIANGLE_NAMES:
+        distinct = len(set(fig["sides"]))
+        return ("equilàter" if distinct == 1 else "isòsceles" if distinct == 2 else "escalè") == a
+    if t == "circle" and kind == "choice" and a in _CIRCLE_NAME.values():
+        return _CIRCLE_NAME[fig["mark"]] == a
+    if t == "grid" and kind == "pair" and len(fig["points"]) == 1:
+        return math_parse_pair(a) == fig["points"][0]
+    n = math_numeric(a)
+    if n is not None and kind in ("number", "unit"):
+        if t == "rect" and re.search(r"[àa]rea", prompt, re.IGNORECASE) and fig["w"] * fig["h"] != n:
+            return False
+        if re.search(r"per[ií]metre", prompt, re.IGNORECASE):
+            if t == "rect":
+                per = 2 * (fig["w"] + fig["h"])
+            elif t in ("triangle", "polygon"):
+                per = sum(fig["sides"])
+            else:
+                per = None
+            if per is not None and per != n:
+                return False
+    return True
+
+
 def _flash_item_ok(item: dict) -> bool:
     """An explicit item is kept when it passes the checks of server/src/flash.ts itemProblem."""
     if not isinstance(item.get("id"), str) or not item["id"].strip():
@@ -737,12 +854,18 @@ def _flash_item_ok(item: dict) -> bool:
             return False
     if kind == "unit" and (not isinstance(item.get("unit"), str) or not item["unit"].strip()):
         return False
+    if kind == "pair" and math_parse_pair(answer[0]) is None:
+        return False
     if kind in ("number", "unit"):
         sop = math_simple_op(item["prompt"])
         if sop:
             r = math_op_result(sop[0], sop[1], sop[2])
             if r is None or math_numeric(answer[0]) != r:
                 return False
+    if "figure" in item:
+        fig = _figure(item["figure"])
+        if fig is None or not _figure_fits(fig, item["prompt"], kind, answer):
+            return False
     return True
 
 

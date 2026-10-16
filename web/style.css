@@ -1052,6 +1052,18 @@ nav#commands button[hidden] { display: none; }
 .flash-choice.wrong { text-decoration: line-through; border-color: var(--flash-err); }
 .flash-choice.right { border-color: var(--flash-ok); background: var(--flash-good); }
 
+/* Figures (E3): SVG en línia sobre el prompt; colors dels tokens de Flash, mida fluida, mai més de 260 px d'alt. */
+.flash-fig { width: 100%; max-width: min(280px, 100%); margin: 0 auto; color: var(--flash-ink); }
+.flash-fig-svg { display: block; width: 100%; height: auto; max-height: 260px; }
+.flash-fig-svg .fig-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.flash-fig-svg .fig-grid { stroke: var(--flash-ink); stroke-opacity: 0.22; stroke-width: 1; }
+.flash-fig-svg .fig-mark { fill: none; stroke: var(--flash-amber); stroke-width: 4; stroke-linecap: round; }
+.flash-fig-svg .fig-dot { fill: var(--flash-amber); }
+.flash-fig-svg .fig-bar { fill: var(--flash-ok); opacity: 0.85; }
+.flash-fig-svg .fig-text { fill: currentColor; font-size: 14px; font-family: inherit; }
+.flash-fig-svg .fig-tick { fill: currentColor; font-size: 11px; font-family: inherit; opacity: 0.8; }
+.flash-fig-svg .fig-title { fill: currentColor; font-size: 13px; font-weight: 600; font-family: inherit; }
+
 .flash-stats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .flash-stats li {
   display: flex;
