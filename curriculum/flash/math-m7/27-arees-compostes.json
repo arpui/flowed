@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.arees-compostes",
+  "level": "m7",
+  "competence": "m7.composite_areas",
+  "title": { "ca": "Àrees compostes", "es": "Áreas compuestas", "en": "Composite areas" },
+  "generate": { "kind": "composite_area", "count": 12 }
+}

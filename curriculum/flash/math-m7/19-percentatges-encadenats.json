@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.percentatges-encadenats",
+  "level": "m7",
+  "competence": "m7.proportionality",
+  "title": { "ca": "Percentatges encadenats", "es": "Porcentajes encadenados", "en": "Chained percentages" },
+  "generate": { "kind": "chained_percent", "count": 12 }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.valor-absolut-i-oposat",
+  "level": "m7",
+  "competence": "m7.integers",
+  "title": { "ca": "Valor absolut i oposat", "es": "Valor absoluto y opuesto", "en": "Absolute value and opposite" },
+  "generate": { "kind": "abs_opp", "count": 12 }
+}

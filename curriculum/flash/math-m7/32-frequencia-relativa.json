@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.frequencia-relativa",
+  "level": "m7",
+  "competence": "m7.statistics",
+  "title": { "ca": "Freqüència relativa", "es": "Frecuencia relativa", "en": "Relative frequency" },
+  "generate": { "kind": "freq_relative", "count": 12 }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.tipus-de-variable",
+  "level": "m7",
+  "competence": "m7.statistics",
+  "title": { "ca": "Tipus de variable", "es": "Tipo de variable", "en": "Type of variable" },
+  "generate": { "kind": "variable_type", "count": 12 }
+}

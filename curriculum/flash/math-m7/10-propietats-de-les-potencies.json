@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.propietats-de-les-potencies",
+  "level": "m7",
+  "competence": "m7.powers_roots",
+  "title": { "ca": "Propietats de les potències", "es": "Propiedades de las potencias", "en": "Power properties" },
+  "generate": { "kind": "power_props", "count": 12 }
+}

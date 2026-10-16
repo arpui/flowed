@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.fraccions-combinades",
+  "level": "m7",
+  "competence": "m7.fractions",
+  "title": { "ca": "Fraccions combinades", "es": "Fracciones combinadas", "en": "Combined fractions" },
+  "generate": { "kind": "frac_combined", "count": 12 }
+}

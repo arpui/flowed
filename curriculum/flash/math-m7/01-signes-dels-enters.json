@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.signes-dels-enters",
+  "level": "m7",
+  "competence": "m7.integers",
+  "title": { "ca": "Signes dels enters", "es": "Signos de los enteros", "en": "Integer signs" },
+  "generate": { "kind": "int_signs", "count": 12 }
+}

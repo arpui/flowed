@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.teorema-de-pitagores",
+  "level": "m7",
+  "competence": "m7.pythagoras",
+  "title": { "ca": "Teorema de Pitàgores", "es": "Teorema de Pitágoras", "en": "Pythagoras' theorem" },
+  "generate": { "kind": "pythagoras", "count": 12 }
+}

@@ -4,6 +4,7 @@ Python side counts the same words as the server (server/src/flash.ts), and a mat
 level file has no Flash requirement."""
 import json
 import math
+import re
 import shutil
 import subprocess
 import sys
@@ -120,15 +121,15 @@ class MathListIds(unittest.TestCase):
                 {"id": "e5-sx2", "prompt": "x", "answer": ["7 h 75 min"], "answer_kind": "sexagesimal"},
                 {"id": "e5-sx3", "prompt": "x", "answer": ["18° 55'"], "answer_kind": "sexagesimal", "mode": "angle"},
                 {"id": "e5-sx4", "prompt": "x", "answer": ["18° 55'"], "answer_kind": "sexagesimal", "mode": "time"},
-                {"id": "e5-pa1", "prompt": "Quant mesura l'angle ?", "answer": ["70"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}},
-                {"id": "e5-pa2", "prompt": "Quant mesura l'angle ?", "answer": ["110"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}},
-                {"id": "e5-pa3", "prompt": "Quant mesura l'angle ?", "answer": ["70"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}, "answer_kind": "number"},
+                {"id": "e5-pa1", "prompt": "Quant mesura l'angle marcat amb «?»", "answer": ["70"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}},
+                {"id": "e5-pa2", "prompt": "Quant mesura l'angle marcat amb «?»", "answer": ["110"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}},
+                {"id": "e5-pa3", "prompt": "Quant mesura l'angle marcat amb «?»", "answer": ["70"], "figure": {"type": "parallels", "angle": 70, "known": 1, "ask": 4}, "answer_kind": "number"},
                 {"id": "e5-rt1", "prompt": "Calcula el costat que falta (?)", "answer": ["5"], "answer_kind": "unit", "unit": "cm", "figure": {"type": "right_triangle", "a": 3, "b": 4, "c": 5, "ask": "c", "unit": "cm"}},
                 {"id": "e5-rt2", "prompt": "x", "answer": ["6"], "figure": {"type": "right_triangle", "a": 3, "b": 4, "c": 6, "ask": "c"}},
                 {"id": "e5-nl1", "prompt": "Quin nombre és?", "answer": ["−3"], "figure": {"type": "number_line", "min": -5, "max": 5, "point": -3}},
                 {"id": "e5-nl2", "prompt": "Quin nombre és?", "answer": ["3"], "figure": {"type": "number_line", "min": -5, "max": 5, "point": -3}},
-                {"id": "e5-gr1", "prompt": "Quina és la pendent de la recta?", "answer": ["2"], "figure": {"type": "grid", "points": [], "min": -6, "max": 6, "line": {"m": 2, "n": -3}}},
-                {"id": "e5-gr2", "prompt": "Quina és la pendent de la recta?", "answer": ["3"], "figure": {"type": "grid", "points": [], "min": -6, "max": 6, "line": {"m": 2, "n": -3}}},
+                {"id": "e5-gr1", "prompt": "Quin és el pendent de la recta?", "answer": ["2"], "figure": {"type": "grid", "points": [], "min": -6, "max": 6, "line": {"m": 2, "n": -3}}},
+                {"id": "e5-gr2", "prompt": "Quin és el pendent de la recta?", "answer": ["3"], "figure": {"type": "grid", "points": [], "min": -6, "max": 6, "line": {"m": 2, "n": -3}}},
                 {"id": "e5-gr3", "prompt": "x", "answer": ["(−3, 4)"], "answer_kind": "pair", "figure": {"type": "grid", "points": [[-3, 4]], "min": -6, "max": 6}},
                 {"id": "e5-gr4", "prompt": "x", "answer": ["(−3, 4)"], "answer_kind": "pair", "figure": {"type": "grid", "points": [[-3, 8]], "min": -6, "max": 6}},
             ]}
@@ -287,6 +288,50 @@ class M5FlashGate(unittest.TestCase):
                 shutil.rmtree(d, ignore_errors=True)
             self.assertEqual(fp["closed"], n)
             self.assertEqual(fp["met"], met, n)
+
+
+class M7FlashLists(unittest.TestCase):
+    """E7 §1–§3: one list per m7 generator (docs/ENCARREC-M7-E5-FLASH.md §4), the repàs first, and flash_share 60."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cur = cu.load_curriculum(REPO_ROOT / "curriculum" / "math-m7.md")
+        cls.lists = cu.flash_lists(REPO_ROOT, "math-m7")
+        cls.files = sorted((REPO_ROOT / "curriculum" / "flash" / "math-m7").glob("*.json"))
+        cls.md = (REPO_ROOT / "curriculum" / "math-m7.md").read_text(encoding="utf-8")
+
+    def test_one_valid_list_per_file_and_the_ids_are_unique(self):
+        self.assertEqual(len(self.files), 36)
+        self.assertEqual(len(self.lists), 36)
+        ids = [l["id"] for l in self.lists]
+        self.assertEqual(len(set(ids)), len(ids))
+        self.assertEqual(ids[0], "math-m7.flash.taules-repas")
+        self.assertEqual(len(self.lists[0]["words"]), 24)
+        # 12 cards each, except the four kinds whose vocabulary is finite (GEN_ROOM in server/src/flash.ts)
+        room = {"math-m7.flash.proporcionalitat-directa-o-inversa": 8, "math-m7.flash.punts-notables-del-triangle": 8,
+                "math-m7.flash.tipus-de-variable": 10, "math-m7.flash.probabilitat-de-laplace": 9}
+        for l in self.lists[1:]:
+            self.assertEqual(len(l["words"]), room.get(l["id"], 12), l["id"])
+
+    def test_every_competence_exists_in_math_m7_and_the_repas_has_none(self):
+        competences = set(re.findall(r"^### (m7\.[a-z_]+)", self.md, flags=re.M))
+        for f in self.files:
+            raw = json.loads(f.read_text(encoding="utf-8"))
+            self.assertEqual(raw["level"], "m7", f.name)
+            self.assertEqual(set(raw["title"]), {"ca", "es", "en"}, f.name)
+            if f.name.startswith("00-"):
+                self.assertNotIn("competence", raw)
+                continue
+            self.assertIn(raw["competence"], competences, f.name)
+
+    def test_the_level_asks_for_sixty_percent_and_the_gate_counts_36(self):
+        self.assertEqual(self.cur["meta"]["flash_share"], 60)
+        with tempfile.TemporaryDirectory() as data:
+            fp = cu.flash_progress(REPO_ROOT, self.cur, data, "math-m7")
+        self.assertEqual((fp["share"], fp["total"], fp["needed"]), (60, 36, math.ceil(36 * 0.6)))
+        self.assertEqual(fp["needed"], 22)
+        self.assertFalse(fp["met"])
+
 
 
 if __name__ == "__main__":

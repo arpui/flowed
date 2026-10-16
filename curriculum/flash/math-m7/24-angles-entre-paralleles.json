@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.angles-entre-paralleles",
+  "level": "m7",
+  "competence": "m7.angles_lines",
+  "title": { "ca": "Angles entre paral·leles", "es": "Ángulos entre paralelas", "en": "Angles between parallel lines" },
+  "generate": { "kind": "parallel_angles", "count": 12 }
+}

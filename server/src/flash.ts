@@ -1707,7 +1707,7 @@ const E5_GENERATORS: Array<[string, Generator]> = [
     const m = nonZero(r, 4);
     const n = int(r, -5, 5);
     const figure = checkedFigure({ type: "grid", points: [], min: -6, max: 6, line: { m, n } });
-    if (r() < 0.5) return { prompt: "Quina és la pendent de la recta?", target: [signedText(m)], figure };
+    if (r() < 0.5) return { prompt: "Quin és el pendent de la recta?", target: [signedText(m)], figure };
     return { prompt: "Quina és l'ordenada a l'origen de la recta?", target: [signedText(n)], figure };
   }],
   ["pythagoras", (r) => {
@@ -1731,7 +1731,7 @@ const E5_GENERATORS: Array<[string, Generator]> = [
     if (ask === known) return null;
     const angle = int(r, 20, 160);
     return {
-      prompt: "Quant mesura l'angle ?",
+      prompt: "Quant mesura l'angle marcat amb «?»",
       target: [String(parallelValue(angle, known, ask))],
       figure: checkedFigure({ type: "parallels", angle, known, ask }),
     };
@@ -1825,7 +1825,7 @@ const E5_GENERATORS: Array<[string, Generator]> = [
   ["freq_relative", (r) => {
     const total = int(r, 4, 40);
     const n = int(r, 1, total - 1);
-    return { prompt: `${total} alumnes, ${n} tenen gos. Freqüència relativa?`, target: [fracTextE5(n, total)], answer_kind: "fraction" };
+    return { prompt: `${total} alumnes, ${n === 1 ? "1 té" : `${n} tenen`} gos. Freqüència relativa?`, target: [fracTextE5(n, total)], answer_kind: "fraction" };
   }],
   ["median", (r) => {
     const count = int(r, 5, 8);

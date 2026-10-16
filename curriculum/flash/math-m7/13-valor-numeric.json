@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.valor-numeric",
+  "level": "m7",
+  "competence": "m7.algebraic_language",
+  "title": { "ca": "Valor numèric", "es": "Valor numérico", "en": "Numerical value" },
+  "generate": { "kind": "value_expr", "count": 12 }
+}

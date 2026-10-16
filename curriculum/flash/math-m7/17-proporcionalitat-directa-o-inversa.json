@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.proporcionalitat-directa-o-inversa",
+  "level": "m7",
+  "competence": "m7.proportionality",
+  "title": { "ca": "Proporcionalitat directa o inversa", "es": "Proporcionalidad directa o inversa", "en": "Direct or inverse proportion" },
+  "generate": { "kind": "proportion_type", "count": 12 }
+}

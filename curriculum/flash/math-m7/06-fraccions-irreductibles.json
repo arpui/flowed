@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.fraccions-irreductibles",
+  "level": "m7",
+  "competence": "m7.fractions",
+  "title": { "ca": "Fraccions irreductibles", "es": "Fracciones irreducibles", "en": "Simplest fractions" },
+  "generate": { "kind": "frac_simplify", "count": 12 }
+}

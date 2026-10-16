@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.enters-amb-potencies-i-parentesis",
+  "level": "m7",
+  "competence": "m7.integers",
+  "title": { "ca": "Enters amb potències i parèntesis", "es": "Enteros con potencias y paréntesis", "en": "Integers with powers and brackets" },
+  "generate": { "kind": "int_combined", "count": 12 }
+}

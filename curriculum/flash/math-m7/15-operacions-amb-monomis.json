@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.operacions-amb-monomis",
+  "level": "m7",
+  "competence": "m7.monomials",
+  "title": { "ca": "Operacions amb monomis", "es": "Operaciones con monomios", "en": "Operations with monomials" },
+  "generate": { "kind": "monomial_ops", "count": 12 }
+}

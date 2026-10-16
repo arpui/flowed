@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.probabilitat-de-laplace",
+  "level": "m7",
+  "competence": "m7.probability",
+  "title": { "ca": "Probabilitat de Laplace", "es": "Probabilidad de Laplace", "en": "Laplace probability" },
+  "generate": { "kind": "laplace", "count": 12 }
+}

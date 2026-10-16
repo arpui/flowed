@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.mitjana-ponderada",
+  "level": "m7",
+  "competence": "m7.statistics",
+  "title": { "ca": "Mitjana ponderada", "es": "Media ponderada", "en": "Weighted mean" },
+  "generate": { "kind": "weighted_mean", "count": 12 }
+}

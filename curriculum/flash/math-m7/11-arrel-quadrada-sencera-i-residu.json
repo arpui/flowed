@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.arrel-quadrada-sencera-i-residu",
+  "level": "m7",
+  "competence": "m7.powers_roots",
+  "title": { "ca": "Arrel quadrada sencera i residu", "es": "Raíz cuadrada entera y resto", "en": "Integer square root and remainder" },
+  "generate": { "kind": "int_sqrt", "count": 12 }
+}

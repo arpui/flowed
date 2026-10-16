@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.punts-notables-del-triangle",
+  "level": "m7",
+  "competence": "m7.triangle_points",
+  "title": { "ca": "Punts notables del triangle", "es": "Puntos notables del triángulo", "en": "Notable points of a triangle" },
+  "generate": { "kind": "notable_points", "count": 12 }
+}

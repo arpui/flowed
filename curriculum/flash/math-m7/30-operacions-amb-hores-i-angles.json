@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.operacions-amb-hores-i-angles",
+  "level": "m7",
+  "competence": "m7.sexagesimal",
+  "title": { "ca": "Operacions amb hores i angles", "es": "Operaciones con horas y ángulos", "en": "Operations with hours and angles" },
+  "generate": { "kind": "sexagesimal_ops", "count": 12 }
+}

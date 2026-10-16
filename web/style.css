@@ -1064,6 +1064,8 @@ nav#commands button[hidden] { display: none; }
 .flash-fig-svg .fig-bar { fill: var(--flash-ok); opacity: 0.85; }
 .flash-fig-svg .fig-text { fill: currentColor; font-size: 14px; font-family: inherit; }
 .flash-fig-svg .fig-tick { fill: currentColor; font-size: 11px; font-family: inherit; opacity: 0.8; }
+.flash-fig-svg .fig-tick--lg { font-size: 15px; }
+.flash-fig--wide { max-width: 100%; }
 .flash-fig-svg .fig-title { fill: currentColor; font-size: 13px; font-weight: 600; font-family: inherit; }
 
 .flash-stats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }

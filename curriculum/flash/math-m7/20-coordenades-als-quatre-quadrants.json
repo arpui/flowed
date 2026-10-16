@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.coordenades-als-quatre-quadrants",
+  "level": "m7",
+  "competence": "m7.functions",
+  "title": { "ca": "Coordenades als quatre quadrants", "es": "Coordenadas en los cuatro cuadrantes", "en": "Coordinates in the four quadrants" },
+  "generate": { "kind": "quadrant_point", "count": 12 }
+}

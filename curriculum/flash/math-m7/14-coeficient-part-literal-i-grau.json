@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.coeficient-part-literal-i-grau",
+  "level": "m7",
+  "competence": "m7.monomials",
+  "title": { "ca": "Coeficient, part literal i grau", "es": "Coeficiente, parte literal y grado", "en": "Coefficient, literal part and degree" },
+  "generate": { "kind": "monomial_parts", "count": 12 }
+}

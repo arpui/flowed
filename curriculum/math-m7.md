@@ -7,6 +7,7 @@ pass_mark: 80
 carry_mark: 65
 checkpoint_items: 16
 ready_share: 50
+flash_share: 60
 ---
 
 # Math m7 — Àlgebra operativa (1r d'ESO)

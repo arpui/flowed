@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.suma-dels-angles-interiors",
+  "level": "m7",
+  "competence": "m7.angles_lines",
+  "title": { "ca": "Suma dels angles interiors", "es": "Suma de los ángulos interiores", "en": "Sum of interior angles" },
+  "generate": { "kind": "polygon_angle_sum", "count": 12 }
+}

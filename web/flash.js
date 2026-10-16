@@ -741,11 +741,13 @@
       }
       case "parallels": {
         // Dues paral·leles i una secant. Les posicions 1–8 (1–4 a la de dalt, 5–8 a la de baix; 1 UL, 2 UR, 3 DL, 4 DR).
+        // §5 (E7): figura més gran (ample de la targeta, alçada fins al màxim); si els dos angles comparteixen vèrtex,
+        // els arcs tenen radis diferents i cada etiqueta va a la seva distància, així no s'encavalquen.
         const alpha = [1, 4, 5, 8].includes(f.known) ? f.angle : 180 - f.angle; // l'angle de la secant
         const rad = (alpha * Math.PI) / 180;
-        const cx = 160;
-        const yT = 75;
-        const yB = 165;
+        const cx = 150;
+        const yT = 72;
+        const yB = 172;
         const dx = ((yB - yT) * Math.cos(rad)) / Math.sin(rad);
         const P = [cx - dx / 2, yT];
         const Q = [cx + dx / 2, yB];
@@ -753,9 +755,9 @@
         const R = [1, 0];
         const L = [-1, 0];
         const mD = [-D[0], -D[1]];
-        const ext = 16;
-        let body = `<line class="fig-line" x1="10" y1="${yT}" x2="310" y2="${yT}"/>`;
-        body += `<line class="fig-line" x1="10" y1="${yB}" x2="310" y2="${yB}"/>`;
+        const ext = 10;
+        let body = `<line class="fig-line" x1="8" y1="${yT}" x2="292" y2="${yT}"/>`;
+        body += `<line class="fig-line" x1="8" y1="${yB}" x2="292" y2="${yB}"/>`;
         body += `<line class="fig-line" x1="${f1(P[0] - D[0] * ext)}" y1="${f1(P[1] - D[1] * ext)}" x2="${f1(Q[0] + D[0] * ext)}" y2="${f1(Q[1] + D[1] * ext)}"/>`;
         // la posició k: el punt de la secant i els dos raigs de l'angle (UL, UR, DL, DR)
         const place = (k) => ({ X: k > 4 ? Q : P, rays: [[L, mD], [R, mD], [L, D], [R, D]][(k - 1) % 4] });
@@ -764,22 +766,33 @@
           const len = Math.hypot(s[0], s[1]);
           return [s[0] / len, s[1] / len];
         };
+        // Radi de l'arc: 16 per defecte; si els dos angles són al mateix vèrtex, el demanat va per fora (30).
+        const same = (f.known > 4) === (f.ask > 4);
+        const radius = (k) => (same && k === f.ask ? 30 : 16);
         const arc = (k) => {
           const { X, rays } = place(k);
           const [u1, u2] = rays;
-          const a = [X[0] + u1[0] * 16, X[1] + u1[1] * 16];
-          const b = [X[0] + u2[0] * 16, X[1] + u2[1] * 16];
+          const r = radius(k);
+          const a = [X[0] + u1[0] * r, X[1] + u1[1] * r];
+          const b = [X[0] + u2[0] * r, X[1] + u2[1] * r];
           const cross = u1[0] * u2[1] - u1[1] * u2[0];
-          return `<path class="fig-mark" d="M ${xy(a)} A 16 16 0 0 ${cross > 0 ? 1 : 0} ${xy(b)}"/>`;
+          return `<path class="fig-mark" d="M ${xy(a)} A ${r} ${r} 0 0 ${cross > 0 ? 1 : 0} ${xy(b)}"/>`;
         };
         const label = (k, text) => {
           const { X, rays } = place(k);
           const b = bisector(rays[0], rays[1]);
-          return svgText(X[0] + b[0] * 28, X[1] + b[1] * 28, text);
+          const d = radius(k) + 12; // la lletra queda just fora del seu arc
+          // dins del marc: un vèrtex al límit (angles molt aguts) no deixa la lletra fora de la figura
+          const lx = Math.min(272, Math.max(28, X[0] + b[0] * d));
+          let ly = Math.min(228, Math.max(14, X[1] + b[1] * d));
+          // un angle agut a una paral·lela té la bisectriu gairebé sobre la recta: la lletra passa a fora de la recta
+          if (Math.abs(ly - yT) < 12) ly = yT - 14;
+          else if (Math.abs(ly - yB) < 12) ly = yB + 14;
+          return svgText(lx, ly, text);
         };
         body += arc(f.known) + label(f.known, `${f.angle}°`) + arc(f.ask) + label(f.ask, "?");
         return {
-          vb: "0 0 320 240",
+          vb: "0 0 300 244",
           body,
           label: `Dues rectes paral·leles tallades per una secant, amb un angle de ${f.angle} graus marcat`,
         };
@@ -815,21 +828,22 @@
         return { vb: "0 0 300 220", body, label: "Triangle rectangle, amb un costat per calcular" };
       }
       case "number_line": {
-        // Recta numèrica amb un punt marcat; una marca cada 1, 2 o 5 unitats segons l'obertura.
-        const L = 30;
-        const R = 270;
-        const y = 112;
+        // Recta numèrica amb un punt marcat; una marca cada 1, 2 o 5 unitats segons l'obertura. §5 (E7): ample complet
+        // de la targeta, marques i números més grans (llegibles al mòbil); cada marca ha de tenir prou lloc per al número.
+        const L = 24;
+        const R = 276;
+        const y = 60;
         const span = f.max - f.min;
-        const step = span <= 12 ? 1 : span <= 24 ? 2 : 5;
+        const step = span <= 8 ? 1 : span <= 16 ? 2 : 5;
         const X = (v) => L + ((v - f.min) / span) * (R - L);
         let body = `<line class="fig-line" x1="${L - 10}" y1="${y}" x2="${R + 10}" y2="${y}"/>`;
         for (let v = f.min; v <= f.max; v += step) {
-          body += `<line class="fig-line" x1="${f1(X(v))}" y1="${y - 5}" x2="${f1(X(v))}" y2="${y + 5}"/>`;
-          body += svgText(X(v), y + 20, sg(v), "middle", "fig-tick");
+          body += `<line class="fig-line" x1="${f1(X(v))}" y1="${y - 7}" x2="${f1(X(v))}" y2="${y + 7}"/>`;
+          body += svgText(X(v), y + 26, sg(v), "middle", "fig-tick fig-tick--lg");
         }
-        body += `<circle class="fig-dot" cx="${f1(X(f.point))}" cy="${y}" r="6"/>`;
-        if (f.label) body += svgText(R + 10, y + 42, f.label, "end");
-        return { vb: "0 0 300 170", body, label: `Recta numèrica de ${sg(f.min)} a ${sg(f.max)}` };
+        body += `<circle class="fig-dot" cx="${f1(X(f.point))}" cy="${y}" r="8"/>`;
+        if (f.label) body += svgText(R + 10, y + 50, f.label, "end", "fig-tick fig-tick--lg");
+        return { vb: "0 0 300 118", body, label: `Recta numèrica de ${sg(f.min)} a ${sg(f.max)}` };
       }
       default:
         return null;
@@ -1414,7 +1428,7 @@
         <div class="flash-dots" id="flash-dots" aria-hidden="true"></div>
         <div class="flash-stage${card.prompt.length > 40 ? " flash-long" : ""}" id="flash-stage">
           <p class="flash-dir">${escText(dirLabel)}</p>
-          ${card.figure ? `<div class="flash-fig">${C.figureSvg(card.figure)}</div>` : ""}
+          ${card.figure ? `<div class="flash-fig${card.figure.type === "parallels" || card.figure.type === "number_line" ? " flash-fig--wide" : ""}">${C.figureSvg(card.figure)}</div>` : ""}
           <div class="flash-word">${escText(card.prompt)}</div>
           <div class="flash-timer ok" id="flash-timer"${card.limit ? "" : " hidden"}>
             <div class="flash-tbar"><i id="flash-tbar"></i></div>

@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.fraccio-generatriu",
+  "level": "m7",
+  "competence": "m7.decimals_generatrix",
+  "title": { "ca": "Fracció generatriu", "es": "Fracción generatriz", "en": "Generating fraction" },
+  "generate": { "kind": "generatrix", "count": 12 }
+}

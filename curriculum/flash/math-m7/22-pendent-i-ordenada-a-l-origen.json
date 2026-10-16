@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.pendent-i-ordenada-a-l-origen",
+  "level": "m7",
+  "competence": "m7.functions",
+  "title": { "ca": "Pendent i ordenada a l'origen", "es": "Pendiente y ordenada en el origen", "en": "Slope and y-intercept" },
+  "generate": { "kind": "line_read", "count": 12 }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.traduir-a-llenguatge-algebraic",
+  "level": "m7",
+  "competence": "m7.algebraic_language",
+  "title": { "ca": "Traduir a llenguatge algebraic", "es": "Traducir a lenguaje algebraico", "en": "Translate into algebra" },
+  "generate": { "kind": "translate_expr", "count": 12 }
+}

@@ -125,7 +125,7 @@ for (const f of mathFiles) {
   check(`math file ${f} has no problems (no dropped item)`, problems.length === 0, problems);
 }
 check("one math list per file under curriculum/flash/math-*", listsMath.length === mathFiles.length, listsMath.map((l) => l.id));
-check("every math list is kind math, level m5, titled, with words", listsMath.every((l) => l.kind === "math" && l.level === "m5" && l.title.length > 0 && l.words.length > 0));
+check("every math list is kind math, level m5 or m7, titled, with words", listsMath.every((l) => l.kind === "math" && (l.level === "m5" || l.level === "m7") && l.title.length > 0 && l.words.length > 0));
 check("every math word has a prompt, a native = [prompt] and a target", listsMath.every((l) => l.words.every((w) => w.prompt && w.native.join() === w.prompt && w.target.length > 0)));
 for (const l of listsMath) {
   const ids = l.words.map((w) => w.id);
@@ -518,6 +518,9 @@ console.log("generators (E1)");
   const expectedE3 = [...expected, "angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point", ...E5_KINDS];
   check("the generator kinds of §3, the figure kinds of E3 and mult of §6", JSON.stringify([...GEN_KINDS].sort()) === JSON.stringify([...expectedE3].sort()), GEN_KINDS);
   check("count: default 12, clamped to 1..50, a non-integer gives 12", genCount(undefined) === 12 && genCount(0) === 1 && genCount(51) === 50 && genCount(7) === 7 && genCount(12.5) === 12 && genCount("9") === 12);
+  // E7 §5: "1 té gos" (not "1 tenen gos") when the count is one
+  const fq = generatedWords("math-m7.flash.freq-check", { kind: "freq_relative", count: 50 }).map((w) => w.prompt);
+  check("freq_relative says '1 té gos' for one pupil", fq.every((p) => !/ 1 tenen gos/.test(p)) && fq.some((p) => /, 1 té gos\./.test(p)), fq.slice(0, 3));
   check("unknown kinds and prototype names give no words", generatedWords("x", { kind: "nope", count: 5 }).length === 0 && generatedWords("x", { kind: "constructor", count: 5 }).length === 0);
   const same1 = JSON.stringify(generatedWords("math-m5.flash.round", { kind: "round", count: 30 }));
   const same2 = JSON.stringify(generatedWords("math-m5.flash.round", { kind: "round", count: 30 }));
@@ -946,7 +949,7 @@ console.log("figure drawing (E3)");
   check("a circle's aria does not name the marked element", /aria-label="Cercle amb un element marcat"/.test(C.figureSvg({ type: "circle", mark: "radius", rot: 0 })));
   check("labels are escaped inside the svg", (C.figureSvg({ type: "bars", labels: ["<b>x</b>"], values: [1] }) as string).includes("&lt;b&gt;x&lt;/b&gt;") && !(C.figureSvg({ type: "bars", labels: ["<b>x</b>"], values: [1] }) as string).includes("<b>"));
   const flashSrc = read("web", "flash.js");
-  check("the card shows the figure above the prompt and the pair input has its own label", flashSrc.includes('<div class="flash-fig">${C.figureSvg(card.figure)}</div>') && flashSrc.indexOf("flash-fig\">") < flashSrc.indexOf('<div class="flash-word">') && flashSrc.includes('aria-label="Coordenades"'));
+  check("the card shows the figure above the prompt and the pair input has its own label", flashSrc.includes('C.figureSvg(card.figure)}</div>') && flashSrc.includes('flash-fig--wide') && flashSrc.indexOf("flash-fig\">") < flashSrc.indexOf('<div class="flash-word">') && flashSrc.includes('aria-label="Coordenades"'));
   const styleSrc = read("web", "style.css");
   check("style.css: the figure uses the flash tokens, sized for phones", styleSrc.includes(".flash-fig-svg") && styleSrc.includes("max-height: 260px") && styleSrc.includes("min(280px, 100%)") && styleSrc.includes("stroke: currentColor"));
   // E4 §3: a size label sits outside its figure (on the outward normal of its side), inside the drawing box.
@@ -1473,7 +1476,7 @@ console.log("m7 (E5)");
       case "variable_type":
         return STATS[/«(.+)»/.exec(p)?.[1] ?? ""] === t && KINDS.includes(t) ? null : p;
       case "freq_relative": {
-        m = /^(\d+) alumnes, (\d+) tenen gos/.exec(p);
+        m = /^(\d+) alumnes, (\d+) (?:tenen|té) gos/.exec(p);
         return m && qEq(qn(BigInt(m[2]!), BigInt(m[1]!)), got) ? null : p;
       }
       case "median": {
@@ -1685,9 +1688,9 @@ console.log("m7 (E5)");
       if (!("figure" in c)) throw new Error(`figura no vàlida: ${JSON.stringify(f)}`);
       return figureAnswerProblem(c.figure, prompt, kind, [a]);
     };
-    check("the answer agrees with the figure: parallels (70° at 1 means 70° at 4 and 110° at 2)", fp({ type: "parallels", angle: 70, known: 1, ask: 4 }, "Quant mesura l'angle ?", "number", "70") === null && fp({ type: "parallels", angle: 70, known: 1, ask: 2 }, "Quant mesura l'angle ?", "number", "70") !== null && fp({ type: "parallels", angle: 70, known: 1, ask: 2 }, "x", "number", "110") === null);
+    check("the answer agrees with the figure: parallels (70° at 1 means 70° at 4 and 110° at 2)", fp({ type: "parallels", angle: 70, known: 1, ask: 4 }, "Quant mesura l'angle marcat amb «?»", "number", "70") === null && fp({ type: "parallels", angle: 70, known: 1, ask: 2 }, "Quant mesura l'angle marcat amb «?»", "number", "70") !== null && fp({ type: "parallels", angle: 70, known: 1, ask: 2 }, "x", "number", "110") === null);
     check("the answer agrees with the figure: right_triangle (the side marked ?, the perimeter, the area) and number_line (the point)", fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Calcula el costat que falta (?)", "unit", "3") === null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Calcula el costat que falta (?)", "unit", "4") !== null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Quin és el perímetre?", "unit", "12") === null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Quina és l'àrea?", "unit", "6") === null && fp({ type: "number_line", min: -5, max: 5, point: -3 }, "Quin nombre és?", "number", "−3") === null && fp({ type: "number_line", min: -5, max: 5, point: -3 }, "Quin nombre és?", "number", "3") !== null);
-    check("the answer agrees with the figure: grid line (pendent and ordenada)", fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quina és la pendent de la recta?", "number", "2") === null && fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quina és l'ordenada a l'origen de la recta?", "number", "−3") === null && fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quina és la pendent de la recta?", "number", "3") !== null);
+    check("the answer agrees with the figure: grid line (pendent and ordenada)", fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quin és el pendent de la recta?", "number", "2") === null && fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quina és l'ordenada a l'origen de la recta?", "number", "−3") === null && fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quin és el pendent de la recta?", "number", "3") !== null);
     // the parallels: every place's value, by the geometry (the angle of the secant and its supplement)
     let geomOk = true;
     for (let angle = 20; angle <= 160; angle += 7) {
@@ -1726,7 +1729,7 @@ console.log("m7 (E5)");
       check(`${f.type}: an svg in line with a Catalan aria, its labels inside the box, no hex colour`, /^<svg class="flash-fig-svg" viewBox="[^"]+" role="img" aria-label="[^"]+"/.test(svg) && inside && !hex, svg.slice(0, 160));
     }
     const par = C.figureSvg({ type: "parallels", angle: 35, known: 1, ask: 7 }) as string;
-    check("parallels: the known angle shows its value and the asked one shows ?, and the two parallels are drawn", par.includes("35°") && par.includes(">?</text>") && (par.match(/<line class="fig-line" x1="10"/g) ?? []).length === 2 && par.includes('aria-label="Dues rectes paral·leles'));
+    check("parallels: the known angle shows its value and the asked one shows ?, and the two parallels are drawn", par.includes("35°") && par.includes(">?</text>") && (par.match(/<line class="fig-line" x1="8"/g) ?? []).length === 2 && par.includes('aria-label="Dues rectes paral·leles'));
     check("right_triangle: the asked side shows ? and the others their sizes; no answer in the aria", (C.figureSvg({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "c", unit: "cm" }) as string).includes(">?</text>") && (C.figureSvg({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "c" }) as string).includes('aria-label="Triangle rectangle, amb un costat per calcular"'));
     check("grid with a negative range: the ticks run from −6 to 6 and the line is drawn in amber", (() => {
       const svg = C.figureSvg({ type: "grid", points: [], min: -6, max: 6, size: 12, line: { m: 1, n: 0 } }) as string;

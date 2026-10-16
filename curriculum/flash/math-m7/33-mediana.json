@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.mediana",
+  "level": "m7",
+  "competence": "m7.statistics",
+  "title": { "ca": "Mediana", "es": "Mediana", "en": "Median" },
+  "generate": { "kind": "median", "count": 12 }
+}

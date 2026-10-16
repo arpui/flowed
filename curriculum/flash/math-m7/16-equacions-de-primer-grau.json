@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.equacions-de-primer-grau",
+  "level": "m7",
+  "competence": "m7.linear_equations",
+  "title": { "ca": "Equacions de primer grau", "es": "Ecuaciones de primer grado", "en": "First-degree equations" },
+  "generate": { "kind": "linear_eq", "count": 12 }
+}

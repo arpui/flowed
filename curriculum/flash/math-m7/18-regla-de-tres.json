@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.regla-de-tres",
+  "level": "m7",
+  "competence": "m7.proportionality",
+  "title": { "ca": "Regla de tres", "es": "Regla de tres", "en": "Rule of three" },
+  "generate": { "kind": "rule_of_three", "count": 12 }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.tipus-de-decimal",
+  "level": "m7",
+  "competence": "m7.decimals_generatrix",
+  "title": { "ca": "Tipus de decimal", "es": "Tipo de decimal", "en": "Type of decimal" },
+  "generate": { "kind": "decimal_type", "count": 12 }
+}

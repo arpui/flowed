@@ -1,0 +1,7 @@
+{
+  "id": "math-m7.flash.velocitat-i-densitat",
+  "level": "m7",
+  "competence": "m7.units_derived",
+  "title": { "ca": "Velocitat i densitat", "es": "Velocidad y densidad", "en": "Speed and density" },
+  "generate": { "kind": "speed_convert", "count": 12 }
+}
