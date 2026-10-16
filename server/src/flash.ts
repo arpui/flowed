@@ -907,9 +907,11 @@ export function figureAnswerProblem(fig: Figure, prompt: string, kind: AnswerKin
       }
       return want === n ? null : `${why} ${want}`;
     }
-    if (fig.type === "number_line" && kind === "number") return n === fig.point ? null : `el punt és ${fig.point}`;
+    // Only a card that asks for the marked point is answered by it; a change card (int_number_line)
+    // marks the START, so the result is never on screen before the attempt.
+    if (fig.type === "number_line" && kind === "number" && /punt/i.test(prompt)) return n === fig.point ? null : `el punt és ${fig.point}`;
     if (fig.type === "grid" && fig.line !== undefined && kind === "number") {
-      if (/pendent/i.test(prompt)) return n === fig.line.m ? null : `la pendent és ${fig.line.m}`;
+      if (/pendent/i.test(prompt)) return n === fig.line.m ? null : `el pendent és ${fig.line.m}`;
       if (/ordenada/i.test(prompt)) return n === fig.line.n ? null : `l'ordenada a l'origen és ${fig.line.n}`;
     }
   }
@@ -1910,7 +1912,7 @@ const E9_GENERATORS: Array<[string, Generator]> = [
     const k = int(r, 2, 10);
     return { prompt: `Quant és ∛${k ** 3}?`, target: [String(k)] };
   }],
-  // The figure marks the answer (figureAnswerProblem: a number_line's point is the answer), as every figure here does.
+  // The figure marks the START temperature, never the result (the answer must not be on screen).
   ["int_number_line", (r) => {
     const start = int(r, -9, 9);
     const d = nonZero(r, 9);
@@ -1919,7 +1921,7 @@ const E9_GENERATORS: Array<[string, Generator]> = [
     return {
       prompt: `Eren ${signedText(start)} °C i ${d > 0 ? "puja" : "baixa"} ${Math.abs(d)} °C. Quina temperatura hi ha ara?`,
       target: [signedText(end)],
-      figure: checkedFigure({ type: "number_line", min: -10, max: 10, point: end, label: "°C" }),
+      figure: checkedFigure({ type: "number_line", min: -10, max: 10, point: start, label: "°C" }),
     };
   }],
   ["frac_ops4", (r) => {

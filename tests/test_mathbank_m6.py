@@ -219,7 +219,7 @@ class M6CurriculumTest(unittest.TestCase):
         self.assertEqual(self.cur["meta"]["level"], "m6")
         self.assertEqual(self.cur["meta"]["language"], "math")
         self.assertEqual(self.cur["meta"]["checkpoint_items"], 12)
-        self.assertNotIn("flash_share", self.cur["meta"])  # E9 adds it
+        self.assertEqual(self.cur["meta"]["flash_share"], 60)  # E9
 
     def test_the_seventeen_competences_are_there(self):
         self.assertEqual(len(self.cur["competencies"]), 17)

@@ -25,7 +25,7 @@ flash_share: 60
 > competència. Les competències sense `Bank:` (p. ex. `m6.coordinates`) només tenen
 > Flash.
 >
-> `flash_share` no és aquí: el posa l'encàrrec E9 (contingut Flash de m6).
+> `flash_share: 60` (capçalera): cal tancar el 60 % de les llistes Flash de m6 per obrir el test de nivell.
 
 ---
 

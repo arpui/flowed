@@ -890,7 +890,7 @@ def _figure_fits(fig: dict, prompt: str, kind: str, answer: list[str]) -> bool:
         else:
             want = fig[fig["ask"]]
         return n == want
-    if t == "number_line" and n is not None and kind == "number":
+    if t == "number_line" and n is not None and kind == "number" and re.search(r"punt", prompt, re.IGNORECASE):
         return n == fig["point"]
     if t == "grid" and "line" in fig and n is not None and kind == "number":
         if re.search(r"pendent", prompt, re.IGNORECASE):

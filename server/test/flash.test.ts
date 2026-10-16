@@ -1705,9 +1705,10 @@ console.log("m7 (E5)");
       case "int_number_line": {
         m = /^Eren (−?\d+) °C i (puja|baixa) (\d+) °C\. Quina temperatura hi ha ara\?$/.exec(p);
         if (!m) return fail;
-        const end = Number(minus(m[1]!)) + Number(m[3]) * (m[2] === "puja" ? 1 : -1);
+        const start = Number(minus(m[1]!));
+        const end = start + Number(m[3]) * (m[2] === "puja" ? 1 : -1);
         const f = w.figure;
-        const onLine = f !== undefined && f.type === "number_line" && f.point === end && f.min === -10 && f.max === 10 && f.label === "°C";
+        const onLine = f !== undefined && f.type === "number_line" && f.point === start && f.min === -10 && f.max === 10 && f.label === "°C";
         return onLine && String(end) === minus(t) && end >= -10 && end <= 10 ? null : fail;
       }
       case "frac_ops4": {
@@ -1832,6 +1833,7 @@ console.log("m7 (E5)");
     check("m6 scale: both km and m answers", sc.some((w) => w.unit === "km") && sc.some((w) => w.unit === "m"));
     const nl = generatedWords("math-m6.flash.int_number_line", { kind: "int_number_line", count: 50 });
     check("m6 int_number_line: the card has a figure on every card, the answer on the number line", nl.every((w) => w.figure !== undefined && w.figure.type === "number_line"));
+    check("m6 int_number_line: the dot is the start, never the answer", nl.every((w) => w.figure !== undefined && w.figure.type === "number_line" && String(w.figure.point) !== minus(w.target[0]!)));
   }
   {
     // E9 §4: the known angle of parallel_angles is 35°..145° in steps of 5, on every card of the m7 list
@@ -1882,7 +1884,7 @@ console.log("m7 (E5)");
       return figureAnswerProblem(c.figure, prompt, kind, [a]);
     };
     check("the answer agrees with the figure: parallels (70° at 1 means 70° at 4 and 110° at 2)", fp({ type: "parallels", angle: 70, known: 1, ask: 4 }, "Quant mesura l'angle marcat amb «?»", "number", "70") === null && fp({ type: "parallels", angle: 70, known: 1, ask: 2 }, "Quant mesura l'angle marcat amb «?»", "number", "70") !== null && fp({ type: "parallels", angle: 70, known: 1, ask: 2 }, "x", "number", "110") === null);
-    check("the answer agrees with the figure: right_triangle (the side marked ?, the perimeter, the area) and number_line (the point)", fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Calcula el costat que falta (?)", "unit", "3") === null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Calcula el costat que falta (?)", "unit", "4") !== null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Quin és el perímetre?", "unit", "12") === null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Quina és l'àrea?", "unit", "6") === null && fp({ type: "number_line", min: -5, max: 5, point: -3 }, "Quin nombre és?", "number", "−3") === null && fp({ type: "number_line", min: -5, max: 5, point: -3 }, "Quin nombre és?", "number", "3") !== null);
+    check("the answer agrees with the figure: right_triangle (the side marked ?, the perimeter, the area) and number_line (the point)", fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Calcula el costat que falta (?)", "unit", "3") === null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Calcula el costat que falta (?)", "unit", "4") !== null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Quin és el perímetre?", "unit", "12") === null && fp({ type: "right_triangle", a: 3, b: 4, c: 5, ask: "a" }, "Quina és l'àrea?", "unit", "6") === null && fp({ type: "number_line", min: -5, max: 5, point: -3 }, "Quin nombre representa el punt?", "number", "−3") === null && fp({ type: "number_line", min: -5, max: 5, point: -3 }, "Quin nombre representa el punt?", "number", "3") !== null && fp({ type: "number_line", min: -10, max: 10, point: 5 }, "Eren 5 °C i baixa 6 °C. Quina temperatura hi ha ara?", "number", "−1") === null);
     check("the answer agrees with the figure: grid line (pendent and ordenada)", fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quin és el pendent de la recta?", "number", "2") === null && fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quina és l'ordenada a l'origen de la recta?", "number", "−3") === null && fp({ type: "grid", points: [], min: -6, max: 6, line: { m: 2, n: -3 } }, "Quin és el pendent de la recta?", "number", "3") !== null);
     // the parallels: every place's value, by the geometry (the angle of the secant and its supplement)
     let geomOk = true;
