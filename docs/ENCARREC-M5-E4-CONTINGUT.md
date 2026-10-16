@@ -68,3 +68,17 @@ A la capçalera de `curriculum/math-m5.md`, afegeix `flash_share: 60`. Comprova 
 - [ ] `flash_share: 60` a `math-m5.md` i el camí de m5 ho mostra.
 - [ ] Etiquetes fora de les figures; "Tria" / "Escriu les coordenades"; enunciats llargs més petits.
 - [ ] Res més canvia. Tests en verd (llevat de l'esperada).
+
+## 6. Afegit (2026-10-16, Albert): multiplicacions aleatòries en lloc de taules seguides
+
+A m5 les taules en ordre ja se les saben; és feina de repàs. Per tant:
+
+- **Treu** `curriculum/flash/math-m5/01-taula-2.json` … `08-taula-9.json` i `09-2x1-xifres.json` (només hi ha perfils de prova; el seu progrés es perd, és acceptat).
+- **Nou generador** `kind: "mult"` (E1, mateixes regles: determinista, `count`, ids `g1…gN`, mirall Python per `count`): `params.digits: [da, db]` = nombre de xifres de cada factor. Una xifra = 2..9 (sense 0 ni 1); 2 xifres = 10..99; 3 xifres = 100..999. Ordre aleatori (llavor = id de la llista), sense repetir la mateixa multiplicació (ni la commutada `a×b`/`b×a`) dins la llista. Resposta `number`.
+- **Tres llistes noves**, que van **primer** a la carpeta:
+  - `01-taules-repas.json`: "Taules (repàs)", `digits: [1, 1]`, `count: 24`.
+  - `02-mult-2x1.json`: "2 xifres × 1 xifra", `digits: [2, 1]`, `count: 12`.
+  - `03-mult-3x1.json`: "3 xifres × 1 xifra", `digits: [3, 1]`, `count: 12`.
+  - Totes amb `"competence": "m5.mult_3digit"` només la de 3×1; les altres sense.
+- Les 26 llistes de §1 continuen numerant-se a partir de `10-`.
+- Tests: el generador `mult` (xifres correctes, sense repetits ni commutats, determinista, resultat recalculat), ids Python == servidor, i el total de `flash_progress` de m5 reflecteix 3 + 26 llistes.
