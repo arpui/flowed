@@ -649,6 +649,660 @@ def factor_letters(rng: random.Random) -> dict:
     }
 
 
+# ------------------------------------------- m5 families (E2, DISSENY-M5 §2.3) ---
+# Fourteen families for the 5th level (curriculum/math-m5.md). Same contract as the
+# families above: the value is re-derived from `expression` (or `problem`) by
+# mathgrade, and every number >= 2 of an `expression` is written in its story or
+# its why. A UNIT lives in `answer` ("3500 m", "40 cm²", "95 min"): mathgrade splits
+# a trailing unit off (_parse_with_unit) and grading asks for it — a bare "3500" is
+# "near" (7): "valor correcte, unitat que falta".
+
+_MEASURE_UNITS = frozenset({"m", "cm", "mm", "km", "kg", "g", "l", "ml", "min", "m²", "cm²"})
+
+
+def _is_unit_answer(text) -> bool:
+    """A value with a known measure unit ("40 cm²", "95 min"), not an expression with letters."""
+    try:
+        _, unit = mathgrade._parse_with_unit(text)
+    except mathgrade.ParseError:
+        return False
+    return unit in _MEASURE_UNITS
+
+
+def _answer_value(text) -> Fraction:
+    """The exact value of an answer, with or without its unit."""
+    return mathgrade._parse_with_unit(text)[0].value
+
+
+def _fmt_fixed(f: Fraction, places: int) -> str:
+    """Decimal comma with exactly `places` decimals: 4 -> '4,000', 0.25 -> '0,25'."""
+    scaled = f * 10 ** places
+    if scaled.denominator != 1:
+        raise GenError(f"not a {places}-decimal value: {f}")
+    n = int(scaled)
+    sign = "-" if n < 0 else ""
+    ip, fp = divmod(abs(n), 10 ** places)
+    return f"{sign}{ip},{fp:0{places}d}" if places else f"{sign}{ip}"
+
+
+def _fmt_min_dec(f: Fraction) -> str:
+    """The shortest exact decimal: 9.4 -> '9,4', 2 -> '2', 2.45 -> '2,45'."""
+    for places in range(0, 4):
+        if (f * 10 ** places).denominator == 1:
+            return _fmt_fixed(f, places)
+    raise GenError(f"not a decimal with at most three places: {f}")
+
+
+def _listing(values) -> str:
+    """'4, 8, 6 i 2' — the Catalan listing of a short data set."""
+    values = [str(v) for v in values]
+    return ", ".join(values[:-1]) + " i " + values[-1]
+
+
+def mult_3digit(rng: random.Random) -> dict:
+    """3 digits x 2 digits and 3 x 3, with and without carrying."""
+    kind = rng.choice(["3x2", "3x3"])
+    want_carry = rng.random() < 0.5
+    for _ in range(500):
+        a = rng.randint(100, 999)
+        b = rng.randint(11, 99) if kind == "3x2" else rng.randint(100, 999)
+        if _has_carry(a, b) == want_carry:
+            break
+    else:
+        raise GenError(f"mult_3digit: no {kind} pair with carry={want_carry} in 500 draws")
+    if want_carry:
+        why = ("Alguna multiplicació d'una xifra per una altra passa de 9: cal transportar. "
+               "Multiplica per cada xifra del segon factor i suma els productes alineats.")
+    else:
+        why = ("Cap multiplicació d'una xifra per una altra passa de 9: no hi ha transport. "
+               "Multiplica per cada xifra del segon factor i suma els productes alineats.")
+    return {
+        "type": "compute",
+        "instruction": "Calcula el resultat.",
+        "problem": f"{a} × {b}",
+        "answer": str(a * b),
+        "also_accept": [],
+        "options": [],
+        "value": Fraction(a * b),
+        "why": why,
+    }
+
+
+def div_2digit(rng: random.Random) -> dict:
+    """Exact division by a 2-digit divisor: a 3- or 4-digit dividend, no remainder."""
+    d = rng.randint(11, 99)
+    q = rng.randint(11, 99)
+    a = d * q
+    return {
+        "type": "compute",
+        "instruction": "Calcula el quocient (la divisió és exacta, sense residu).",
+        "problem": f"{a} ÷ {d}",
+        "answer": str(q),
+        "also_accept": [],
+        "options": [],
+        "value": Fraction(q),
+        "why": (f"Busca quantes vegades hi cap {d} dins {a}: {d} × {q} = {a}, "
+                f"així que {a} ÷ {d} = {q}. Si la multiplicació dóna el dividend, la divisió és exacta."),
+    }
+
+
+def combined_ops(rng: random.Random) -> dict:
+    """Hierarchy and parentheses: 3 or 4 operands, a whole result that is never negative."""
+    shape = rng.randrange(5)
+    for _ in range(500):
+        if shape == 0:  # a + b × c - d
+            a, b, c = rng.randint(2, 30), rng.randint(2, 12), rng.randint(2, 12)
+            bc = b * c
+            d = rng.randint(2, a + bc)
+            v = a + bc - d
+            if v < 0:
+                continue
+            problem = f"{a} + {b} × {c} - {d}"
+            why = (f"Primer la multiplicació: {b} × {c} = {bc}; després, d'esquerra a dreta: "
+                   f"{a} + {bc} = {a + bc} i {a + bc} − {d} = {v}.")
+        elif shape == 1:  # (a + b) × c - d
+            a, b, c = rng.randint(2, 20), rng.randint(2, 12), rng.randint(2, 9)
+            s = (a + b) * c
+            d = rng.randint(2, s)
+            v = s - d
+            problem = f"({a} + {b}) × {c} - {d}"
+            why = (f"Primer el parèntesi: {a} + {b} = {a + b}; després la multiplicació: "
+                   f"{a + b} × {c} = {s}; i per acabar {s} − {d} = {v}.")
+        elif shape == 2:  # a × (b - c) + d
+            a, b, c = rng.randint(2, 12), rng.randint(4, 20), rng.randint(2, 9)
+            if c >= b:
+                continue
+            d = rng.randint(2, 40)
+            p = a * (b - c)
+            v = p + d
+            problem = f"{a} × ({b} - {c}) + {d}"
+            why = (f"Primer el parèntesi: {b} − {c} = {b - c}; després la multiplicació: "
+                   f"{a} × {b - c} = {p}; i després la suma: {p} + {d} = {v}.")
+        elif shape == 3:  # a × b - c × d
+            a, b, c, d = rng.randint(3, 12), rng.randint(3, 12), rng.randint(2, 9), rng.randint(2, 9)
+            p1, p2 = a * b, c * d
+            if p1 < p2:
+                continue
+            v = p1 - p2
+            problem = f"{a} × {b} - {c} × {d}"
+            why = (f"Primer les dues multiplicacions: {a} × {b} = {p1} i {c} × {d} = {p2}; "
+                   f"després la resta: {p1} − {p2} = {v}.")
+        else:  # a + b × c - d ÷ e  (d = e × k, exact)
+            a, b, c = rng.randint(2, 30), rng.randint(2, 12), rng.randint(2, 12)
+            e, k = rng.randint(2, 9), rng.randint(2, 9)
+            bc = b * c
+            d = e * k
+            v = a + bc - k
+            if v < 0:
+                continue
+            problem = f"{a} + {b} × {c} - {d} ÷ {e}"
+            why = (f"Primer la divisió ({d} ÷ {e} = {k}) i la multiplicació ({b} × {c} = {bc}); "
+                   f"després, d'esquerra a dreta: {a} + {bc} − {k} = {v}.")
+        return {
+            "type": "compute",
+            "instruction": "Calcula respectant l'ordre de les operacions.",
+            "problem": problem,
+            "answer": str(v),
+            "also_accept": [],
+            "options": [],
+            "value": Fraction(v),
+            "why": why,
+        }
+    raise GenError(f"combined_ops: no valid draw for shape {shape} in 500 tries")
+
+
+def frac_same_den(rng: random.Random) -> dict:
+    """Sum or difference of fractions with the SAME denominator. The direct result
+    is the answer; its simplified form (a mixed number when it is improper) is
+    accepted too."""
+    d = rng.randint(3, 12)
+    if rng.random() < 0.5:
+        a, b = rng.randint(1, d - 1), rng.randint(1, d - 1)
+        op, num = "+", a + b
+    else:
+        b = rng.randint(1, d - 2)
+        a = rng.randint(b + 1, d - 1)
+        op, num = "-", a - b
+    value = Fraction(num, d)
+    answer = f"{num}/{d}"
+    simple = _fmt_frac(value)
+    why = (f"Els denominadors són iguals ({d}): el denominador no canvia; només operes "
+           f"amb els numeradors: {a} {op} {b} = {num}, és a dir {num}/{d}.")
+    g = math.gcd(num, d)
+    if g > 1:
+        why += f" Simplifica dividint numerador i denominador per {g}: {simple}."
+    why += mixed_gloss(simple)
+    return {
+        "type": "compute",
+        "instruction": "Calcula i simplifica si es pot.",
+        "problem": f"{a}/{d} {op} {b}/{d}",
+        "answer": answer,
+        "also_accept": [simple] if simple != answer else [],
+        "options": [],
+        "value": value,
+        "why": why,
+    }
+
+
+def frac_of_quantity(rng: random.Random) -> dict:
+    """A fraction of a quantity, as a short statement: 3/4 de 120 -> 90."""
+    for _ in range(500):
+        d = rng.choice([2, 3, 4, 5, 6, 8, 10])
+        n = rng.randint(1, d - 1)
+        if math.gcd(n, d) == 1:
+            break
+    else:
+        raise GenError("frac_of_quantity: no reduced fraction in 500 draws")
+    k = rng.randint(2, 30)
+    q = d * k
+    return {
+        "type": "compute",
+        "instruction": "Calcula la fracció de la quantitat.",
+        "problem": f"Quant és {n}/{d} de {q}?",
+        "expression": f"{n}/{d} × {q}",
+        "answer": str(n * k),
+        "also_accept": [],
+        "options": [],
+        "value": Fraction(n * k),
+        "why": (f"Parteix {q} en {d} parts iguals ({q} ÷ {d} = {k}) i en prens {n}: "
+                f"{n} × {k} = {n * k}."),
+    }
+
+
+def dec_ops(rng: random.Random) -> dict:
+    """Sums and differences of decimals to the thousandth, and a decimal times a whole number."""
+    kind = rng.choice(["add", "sub", "mul"])
+    if kind == "mul":
+        p = rng.choice([1, 2])
+        lim = 10 ** p
+        units = rng.randint(lim + 1, 10 * lim - 1)
+        if units % lim == 0:
+            units += 1
+        m = rng.randint(2, 9)
+        x = Fraction(units, lim)
+        prod = x * m
+        return {
+            "type": "compute",
+            "instruction": "Calcula (multiplica sense mirar la coma i després posa-la).",
+            "problem": f"{_fmt_fixed(x, p)} × {m}",
+            "answer": _fmt_min_dec(prod),
+            "also_accept": [],
+            "options": [],
+            "value": prod,
+            "why": (f"Sense la coma: {units} × {m} = {units * m}; el número té {p} "
+                    f"{'xifra' if p == 1 else 'xifres'} decimal{'s' if p == 2 else ''}, "
+                    f"així que el resultat és {_fmt_min_dec(prod)}."),
+        }
+    a = Fraction(rng.randint(1, 9999), 1000)
+    b = Fraction(rng.randint(1, 9999), 1000)
+    if kind == "sub":
+        if a == b:
+            raise GenError("dec_ops: equal operands in a subtraction")
+        if a < b:
+            a, b = b, a
+        res = a - b
+        op, opname = "-", "resta"
+    else:
+        res = a + b
+        op, opname = "+", "suma"
+    ua, ub = int(a * 1000), int(b * 1000)
+    return {
+        "type": "compute",
+        "instruction": "Calcula i alinea les comes.",
+        "problem": f"{_fmt_fixed(a, 3)} {op} {_fmt_fixed(b, 3)}",
+        "answer": _fmt_min_dec(res),
+        "also_accept": [],
+        "options": [],
+        "value": res,
+        "why": (f"Alinea les comes i fes la {opname} com amb enters, en mil·lèsimes: "
+                f"{ua} {op} {ub} = {int(res * 1000)}; torna a posar la coma."),
+    }
+
+
+def percent_basic(rng: random.Random) -> dict:
+    """10, 25, 50 or 75 % of a quantity; the quantity is a multiple of 20, so every answer is whole."""
+    p = rng.choice([10, 25, 50, 75])
+    q = 20 * rng.randint(1, 20)
+    v = Fraction(q * p, 100)
+    return {
+        "type": "compute",
+        "instruction": "Calcula el percentatge.",
+        "problem": f"Quant és el {p} % de {q}?",
+        "expression": f"{q} × {p} ÷ 100",
+        "answer": str(v),
+        "also_accept": [],
+        "options": [],
+        "value": v,
+        "why": f"El {p} % són {p} de cada 100: {q} × {p} ÷ 100 = {v}.",
+    }
+
+
+_SMD = [  # (big unit, small unit, factor between them, big name, small name)
+    ("km", "m", 1000, "quilòmetres", "metres"),
+    ("m", "cm", 100, "metres", "centímetres"),
+    ("cm", "mm", 10, "centímetres", "mil·límetres"),
+    ("kg", "g", 1000, "quilograms", "grams"),
+    ("l", "ml", 1000, "litres", "mil·lilitres"),
+]
+
+
+def smd_convert(rng: random.Random) -> dict:
+    """Length, mass and capacity conversions, answered with the unit: up (3,5 km -> 3500 m)
+    or down (245 cm -> 2,45 m)."""
+    big, small, f, bname, sname = rng.choice(_SMD)
+    if rng.random() < 0.5:  # up: from the big unit to the small one
+        x = Fraction(rng.randint(1, 99), 10)
+        v = x * f
+        return {
+            "type": "compute",
+            "instruction": "Converteix la unitat i escriu-la.",
+            "problem": f"Quants {sname} són {_fmt_fixed(x, 1)} {big}?",
+            "expression": f"{_fmt_fixed(x, 1)} × {f}",
+            "answer": f"{int(v)} {small}",
+            "also_accept": [],
+            "options": [],
+            "value": v,
+            "why": f"1 {big} = {f} {small}: {_fmt_fixed(x, 1)} × {f} = {int(v)} {small}.",
+        }
+    y = rng.randint(10, 9 * f)  # down: from the small unit to the big one
+    v = Fraction(y, f)
+    value_txt = _fmt_min_dec(v)
+    return {
+        "type": "compute",
+        "instruction": "Converteix la unitat i escriu-la.",
+        "problem": f"Quants {bname} són {y} {small}?",
+        "expression": f"{y} ÷ {f}",
+        "answer": f"{value_txt} {big}",
+        "also_accept": [],
+        "options": [],
+        "value": v,
+        "why": f"1 {big} = {f} {small}: {y} {small} són {y} ÷ {f} = {value_txt} {big}.",
+    }
+
+
+def time_intervals(rng: random.Random) -> dict:
+    """Start and end time -> duration in minutes (the same day)."""
+    h1 = rng.randint(7, 18)
+    m1 = rng.choice(range(0, 60, 5))
+    dur = rng.choice(range(10, 241, 5))
+    t1 = h1 * 60 + m1
+    t2 = t1 + dur
+    if t2 >= 23 * 60:
+        raise GenError("time_intervals: the trip crosses midnight")
+    h2, m2 = divmod(t2, 60)
+    return {
+        "type": "compute",
+        "instruction": "Quants minuts dura?",
+        "problem": (f"Un autobús surt a les {h1}:{m1:02d} i arriba a les {h2}:{m2:02d}. "
+                    "Quants minuts dura el trajecte?"),
+        "expression": f"{t2} - {t1}",
+        "answer": f"{dur} min",
+        "also_accept": [],
+        "options": [],
+        "value": Fraction(dur),
+        "why": (f"Passa les hores a minuts: {h2}:{m2:02d} són {t2} min i {h1}:{m1:02d} són "
+                f"{t1} min; {t2} − {t1} = {dur} min."),
+    }
+
+
+def area_perimeter(rng: random.Random) -> dict:
+    """Area (cm²) and perimeter (cm) of rectangles, squares and triangles."""
+    kind = rng.choice(["rect_area", "rect_perim", "square_perim", "tri_area", "tri_perim"])
+    if kind == "rect_area":
+        b, h = rng.randint(2, 12), rng.randint(2, 12)
+        return {
+            "type": "compute",
+            "instruction": "Calcula l'àrea.",
+            "problem": f"Un rectangle té {b} cm de base i {h} cm d'alçada. Quina és la seva àrea?",
+            "expression": f"{b} × {h}",
+            "answer": f"{b * h} cm²",
+            "also_accept": [], "options": [], "value": Fraction(b * h),
+            "why": f"L'àrea del rectangle és base × alçada: {b} × {h} = {b * h} cm².",
+        }
+    if kind == "rect_perim":
+        b, h = rng.randint(2, 12), rng.randint(2, 12)
+        p = 2 * (b + h)
+        return {
+            "type": "compute",
+            "instruction": "Calcula el perímetre.",
+            "problem": f"Quin és el perímetre d'un rectangle de {b} cm de base i {h} cm d'alçada?",
+            "expression": f"2 × ({b} + {h})",
+            "answer": f"{p} cm",
+            "also_accept": [], "options": [], "value": Fraction(p),
+            "why": f"Té 2 costats de {b} cm i 2 de {h} cm: 2 × ({b} + {h}) = {p} cm.",
+        }
+    if kind == "square_perim":
+        s = rng.randint(2, 15)
+        return {
+            "type": "compute",
+            "instruction": "Calcula el perímetre.",
+            "problem": f"Un quadrat té {s} cm de costat. Quin és el seu perímetre?",
+            "expression": f"4 × {s}",
+            "answer": f"{4 * s} cm",
+            "also_accept": [], "options": [], "value": Fraction(4 * s),
+            "why": f"Té 4 costats iguals: 4 × {s} = {4 * s} cm.",
+        }
+    if kind == "tri_area":
+        b, h = rng.randint(2, 14), rng.randint(2, 14)
+        if (b * h) % 2:
+            h += 1
+        return {
+            "type": "compute",
+            "instruction": "Calcula l'àrea.",
+            "problem": f"Un triangle té {b} cm de base i {h} cm d'alçada. Quina és la seva àrea?",
+            "expression": f"{b} × {h} ÷ 2",
+            "answer": f"{b * h // 2} cm²",
+            "also_accept": [], "options": [], "value": Fraction(b * h, 2),
+            "why": f"L'àrea del triangle és base × alçada ÷ 2: {b} × {h} = {b * h}, i {b * h} ÷ 2 = {b * h // 2} cm².",
+        }
+    # tri_perim: a valid triangle (each side shorter than the other two together)
+    for _ in range(500):
+        a, b, c = rng.randint(3, 15), rng.randint(3, 15), rng.randint(3, 15)
+        if a < b + c and b < a + c and c < a + b:
+            break
+    else:
+        raise GenError("area_perimeter: no valid triangle in 500 draws")
+    p = a + b + c
+    return {
+        "type": "compute",
+        "instruction": "Calcula el perímetre.",
+        "problem": f"Un triangle té els costats de {a} cm, {b} cm i {c} cm. Quant mesura el seu perímetre?",
+        "expression": f"{a} + {b} + {c}",
+        "answer": f"{p} cm",
+        "also_accept": [], "options": [], "value": Fraction(p),
+        "why": f"El perímetre és la suma dels tres costats: {a} + {b} + {c} = {p} cm.",
+    }
+
+
+def mean_mode_range(rng: random.Random) -> dict:
+    """The mean (always a whole number), the mode, or the range of a short data set."""
+    kind = rng.choice(["mean", "mode", "range"])
+    if kind == "mean":
+        n = rng.choice([4, 5])
+        for _ in range(500):
+            data = [rng.randint(2, 20) for _ in range(n)]
+            if sum(data) % n == 0:
+                break
+        else:
+            raise GenError("mean_mode_range: no whole mean in 500 draws")
+        total = sum(data)
+        m = total // n
+        return {
+            "type": "compute",
+            "instruction": "Calcula la mitjana.",
+            "problem": f"Quina és la mitjana de les dades {_listing(data)}?",
+            "expression": "(" + " + ".join(str(x) for x in data) + f") ÷ {n}",
+            "answer": str(m),
+            "also_accept": [], "options": [], "value": Fraction(m),
+            "why": f"Hi ha {n} dades: les sumes totes ({total}) i reparteixes el total entre {n}: {total} ÷ {n} = {m}.",
+        }
+    if kind == "mode":
+        n = rng.randint(6, 7)
+        mode = rng.randint(1, 9)
+        pool = [v for v in range(1, 10) if v != mode]
+        others = []
+        while len(others) < n - 3:
+            v = rng.choice(pool)
+            if others.count(v) < 2:  # no other value can tie the mode
+                others.append(v)
+        data = others + [mode] * 3
+        rng.shuffle(data)
+        return {
+            "type": "compute",
+            "instruction": "Quina és la moda? (el valor que més es repeteix)",
+            "problem": f"Quina és la moda de les dades {_listing(data)}?",
+            "expression": str(mode),
+            "answer": str(mode),
+            "also_accept": [], "options": [], "value": Fraction(mode),
+            "why": f"La moda és el valor que més es repeteix: el {mode} surt 3 vegades, més que cap altre.",
+        }
+    for _ in range(500):
+        n = rng.randint(5, 7)
+        data = [rng.randint(2, 40) for _ in range(n)]
+        if max(data) != min(data):
+            break
+    else:
+        raise GenError("mean_mode_range: no range in 500 draws")
+    mx, mn = max(data), min(data)
+    return {
+        "type": "compute",
+        "instruction": "Calcula el rang (la diferència entre el més gran i el més petit).",
+        "problem": f"Quin és el rang de les dades {_listing(data)}?",
+        "expression": f"{mx} - {mn}",
+        "answer": str(mx - mn),
+        "also_accept": [], "options": [], "value": Fraction(mx - mn),
+        "why": f"El més gran és {mx} i el més petit {mn}: {mx} − {mn} = {mx - mn}.",
+    }
+
+
+def probability_simple(rng: random.Random) -> dict:
+    """Favourable over possible outcomes, written as a fraction. The direct count is the
+    answer; its simplified form is accepted too."""
+    x, y = rng.randint(1, 9), rng.randint(1, 9)
+    t = x + y
+    value = Fraction(x, t)
+    answer = f"{x}/{t}"
+    simple = _fmt_frac(value)
+    why = (f"Casos favorables: {x} boles vermelles; casos possibles: {x} + {y} = {t}; "
+           f"la probabilitat és {x}/{t}")
+    why += f", que simplificada és {simple}." if simple != answer else "."
+    return {
+        "type": "compute",
+        "instruction": "Escriu la probabilitat com a fracció.",
+        "problem": (f"Una bossa té {x} boles vermelles i {y} de blaves. Si n'agafes una a l'atzar "
+                    "sense mirar, quina és la probabilitat que sigui vermella?"),
+        "expression": f"{x}/({x} + {y})",
+        "answer": answer,
+        "also_accept": [simple] if simple != answer else [],
+        "options": [],
+        "value": value,
+        "why": why,
+    }
+
+
+def equations_simple(rng: random.Random) -> dict:
+    """a·x + b = c with a whole solution: take b off both sides, then divide by a."""
+    a, x, b = rng.randint(2, 9), rng.randint(2, 12), rng.randint(1, 20)
+    c = a * x + b
+    return {
+        "type": "compute",
+        "instruction": "Resol l'equació: quant val x?",
+        "problem": f"Quant val x en l'equació {a}x + {b} = {c}?",
+        "expression": f"({c} - {b}) ÷ {a}",
+        "answer": str(x),
+        "also_accept": [], "options": [], "value": Fraction(x),
+        "why": (f"Treu {b} als dos costats: {a}x = {c} − {b} = {c - b}; després divideix "
+                f"per {a}: x = {c - b} ÷ {a} = {x}."),
+    }
+
+
+# Two-to-three-operation stories. Each builder returns the story, the expression, its
+# value, the why and WRONG operations on the same numbers (choose distractors); None
+# when the draw does not fit (the caller draws again).
+_MS_NOUNS = [("quaderns", "m"), ("gominoles", "f"), ("llibres", "m"), ("cromos", "m")]
+_MS_PAIRS = [("quaderns", "bolígrafs"), ("gominoles", "xiclets"), ("llibres", "cromos")]
+
+
+def _ms_story(rng: random.Random):
+    kind = rng.choice(["change", "share", "boxes", "factory", "pair"])
+    art, mid = _wp_person(rng)
+    if kind == "change":
+        n1, p1 = rng.randint(2, 6), rng.randint(2, 9)
+        n2, p2 = rng.randint(2, 5), rng.randint(2, 9)
+        total = n1 * p1 + n2 * p2
+        bills = [b for b in (10, 20, 50, 100) if b > total and b - total <= 60]
+        if not bills:
+            return None
+        bill = rng.choice(bills)
+        o1, o2 = rng.choice(_MS_PAIRS)
+        return {
+            "story": (f"{art} compra {n1} {o1} a {p1} € cada un i {n2} {o2} a {p2} € cada un. "
+                      f"Paga amb un bitllet de {bill} €. Quants euros li tornen?"),
+            "expr": f"{bill} - ({n1} × {p1} + {n2} × {p2})",
+            "value": Fraction(bill - total),
+            "why": (f"Primer el cost: {n1} × {p1} = {n1 * p1} € i {n2} × {p2} = {n2 * p2} €, "
+                    f"que sumen {total} €; després el canvi: {bill} − {total} = {bill - total} €."),
+            "wrong": [f"{bill} - {n1} × {p1} + {n2} × {p2}", f"{n1} × {p1} + {n2} × {p2} - {bill}",
+                      f"{bill} - {n1} × {p1}", f"({bill} - {n1}) × {p1}"],
+        }
+    if kind == "share":
+        q, k, p = rng.randint(2, 6), rng.randint(2, 9), rng.randint(1, 9)
+        n = q * k + p
+        obj, g = rng.choice(_WP_OBJECTS)
+        return {
+            "story": (f"{art} té {n} {obj}. En dona {p} a un amic i reparteix la resta igualment "
+                      f"entre {q} amics. {_wp_quant(g).capitalize()} {obj} rep cada amic?"),
+            "expr": f"({n} - {p}) ÷ {q}",
+            "value": Fraction(k),
+            "why": (f"Primer en treu els {p} que dona: {n} − {p} = {n - p}; després les reparteix "
+                    f"entre {q}: {n - p} ÷ {q} = {k}."),
+            "wrong": [f"{n} - {p} ÷ {q}", f"{n} ÷ {q} - {p}", f"({n} + {p}) ÷ {q}"],
+        }
+    if kind == "boxes":
+        c, p = rng.randint(3, 9), rng.randint(3, 12)
+        r = rng.randint(1, c * p - 1)
+        obj, g = rng.choice(_WP_OBJECTS)
+        return {
+            "story": (f"Hi ha {c} caixes amb {p} {obj} a cada caixa. Se'n treuen {r} per regalar. "
+                      f"{_wp_quant(g).capitalize()} {obj} en queden?"),
+            "expr": f"{c} × {p} - {r}",
+            "value": Fraction(c * p - r),
+            "why": f"{c} caixes de {p} són {c * p} {obj}; després en resten {r}: {c * p} − {r} = {c * p - r}.",
+            "wrong": [f"{c} × ({p} - {r})", f"{c} + {p} - {r}", f"{c} × {p} + {r}"],
+        }
+    if kind == "factory":
+        p, h, d = rng.randint(10, 40), rng.randint(3, 6), rng.randint(2, 30)
+        return {
+            "story": (f"Una fàbrica fa {p} peces cada hora. Funciona {h} hores i després en descarta "
+                      f"{d} per defectuoses. Quantes peces bones té?"),
+            "expr": f"{p} × {h} - {d}",
+            "value": Fraction(p * h - d),
+            "why": f"En {h} hores fa {p} × {h} = {p * h} peces; en descarta {d}: {p * h} − {d} = {p * h - d}.",
+            "wrong": [f"{p} + {h} - {d}", f"{p} × ({h} - {d})", f"{p} × {h} + {d}"],
+        }
+    # pair: two collections, then some are lost
+    n, m, d = rng.randint(4, 20), rng.randint(3, 20), rng.randint(1, 19)
+    if d > n + m - 1:
+        return None
+    noun, g = rng.choice(_MS_NOUNS)
+    return {
+        "story": (f"{art} té {n} {noun} i el seu germà en té {m}. Entre els dos en perden {d}. "
+                  f"{_wp_quant(g).capitalize()} {noun} els queden?"),
+        "expr": f"{n} + {m} - {d}",
+        "value": Fraction(n + m - d),
+        "why": f"Primer els junts: {n} + {m} = {n + m}; després en perden {d}: {n + m} − {d} = {n + m - d}.",
+        "wrong": [f"{n} + ({m} - {d})", f"{n} - {m} - {d}", f"{n} × {m} - {d}", f"{n} + {m} + {d}"],
+    }
+
+
+def word_problems_multistep(rng: random.Random) -> dict:
+    """Two- and three-operation word problems (compute), or — about one in five — the
+    whole operation that solves them (choose). The arithmetic is `expression`; every
+    number in it is written in the story."""
+    want_choose = rng.random() < 0.2
+    for _ in range(500):
+        s = _ms_story(rng)
+        if s is None:
+            continue
+        if not want_choose:
+            return {
+                "type": "compute",
+                "instruction": "Llegeix el problema i escriu el resultat.",
+                "problem": s["story"],
+                "expression": s["expr"],
+                "answer": str(s["value"]),
+                "also_accept": [],
+                "options": [],
+                "value": s["value"],
+                "why": s["why"],
+            }
+        picks, seen = [], {s["value"]}
+        for w in s["wrong"]:
+            try:
+                wv = mathgrade.parse_expr(w).value
+            except mathgrade.ParseError:
+                continue
+            if wv not in seen:  # a distractor must be wrong by value, and distinct
+                seen.add(wv)
+                picks.append(w)
+        if len(picks) < 3:
+            continue
+        options = [s["expr"], *picks[:3]]
+        rng.shuffle(options)
+        return {
+            "type": "choose",
+            "instruction": "Quina operació resol el problema? Escriu-la.",
+            "problem": s["story"],
+            "expression": s["expr"],
+            "answer": s["expr"],
+            "also_accept": [],
+            "options": options,
+            "value": s["value"],
+            "why": s["why"] + " Les altres operacions no hi encaixen.",
+        }
+    raise GenError(f"word_problems_multistep: no usable story in 500 draws (choose={want_choose})")
+
+
 FAMILIES = {
     "mult_2digit": mult_2digit,
     "frac_add_unlike": frac_add_unlike,
@@ -659,6 +1313,21 @@ FAMILIES = {
     "value_numeric": value_numeric,
     "distributive_letters": distributive_letters,
     "factor_letters": factor_letters,
+    # m5 (E2)
+    "mult_3digit": mult_3digit,
+    "div_2digit": div_2digit,
+    "combined_ops": combined_ops,
+    "frac_same_den": frac_same_den,
+    "frac_of_quantity": frac_of_quantity,
+    "dec_ops": dec_ops,
+    "percent_basic": percent_basic,
+    "smd_convert": smd_convert,
+    "time_intervals": time_intervals,
+    "area_perimeter": area_perimeter,
+    "mean_mode_range": mean_mode_range,
+    "probability_simple": probability_simple,
+    "equations_simple": equations_simple,
+    "word_problems_multistep": word_problems_multistep,
 }
 
 # Fallback when the curriculum .md has no `Bank:` line (the pilot ids).
@@ -1007,6 +1676,88 @@ def props_factor_numeric(rng: random.Random) -> dict:
     }
 
 
+def partial_products_3(rng: random.Random) -> dict:
+    """3-digit x 2-digit by partial products (the m5 steps of m5.mult_3digit): split the
+    2-digit factor into tens + units, two multiplications, one summing step."""
+    for _ in range(500):
+        a = rng.randint(100, 999)
+        b = rng.randint(11, 99)
+        if b % 10:  # a units digit, or the split is one trivial step
+            break
+    else:
+        raise GenError("partial_products_3: no pair with a units digit in 500 draws")
+    bt, bu = (b // 10) * 10, b % 10
+    v1, v2, tot = a * bt, a * bu, a * b
+    return {
+        "type": "steps",
+        "method": "partial_products",  # the same trace as the 2x2 family: same goals
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{a} × {b}",
+        "answer": str(tot),
+        "value": Fraction(tot),
+        "steps": [
+            {"n": 1, "expect": f"{a} × {bt}", "value": str(v1),
+             "accept": [f"{a} * {bt}", f"{a} × {bt} = {v1}"],
+             "error_class": "procedure",
+             "why": f"Separa {b} en {bt} + {bu} i multiplica {a} × {bt}."},
+            {"n": 2, "expect": f"{a} × {bu}", "value": str(v2),
+             "accept": [f"{a} * {bu}", f"{a} × {bu} = {v2}"],
+             "error_class": "calculation",
+             "why": f"Ara les unitats: {a} × {bu}."},
+            {"n": 3, "expect": f"{v1} + {v2}", "value": str(tot),
+             "accept": [f"{v1} + {v2} = {tot}"],
+             "error_class": "carrying",
+             "why": "Suma els dos productes parcials."},
+        ],
+        "why": (f"{b} = {bt} + {bu}: {a} × {bt} = {v1} i {a} × {bu} = {v2}; "
+                f"{v1} + {v2} = {tot}."),
+    }
+
+
+def long_division_2(rng: random.Random) -> dict:
+    """Exact division by a 2-digit divisor as a trace: the multiple for the tens of the
+    quotient, the subtraction, the units of the quotient, and the sum of the two parts.
+    The dividend is built as divisor x quotient, so the division is exact."""
+    for _ in range(500):
+        d = rng.randint(11, 99)
+        q = rng.randint(11, 99)
+        if q % 10:  # a units digit: the trace has a real units step
+            break
+    else:
+        raise GenError("long_division_2: no divisor/quotient pair in 500 draws")
+    a = d * q
+    qt0, qu = (q // 10) * 10, q % 10
+    p1 = d * qt0
+    r1 = d * qu  # = a - p1
+    return {
+        "type": "steps",
+        "method": "long_division_2",
+        "instruction": STEPS_INSTRUCTION,
+        "problem": f"{a} ÷ {d}",
+        "answer": str(q),
+        "value": Fraction(q),
+        "steps": [
+            {"n": 1, "expect": f"{d} × {qt0}", "value": str(p1),
+             "accept": [f"{d} * {qt0}", f"{d} × {qt0} = {p1}"],
+             "error_class": "facts",
+             "why": f"Les desenes del quocient són {qt0}: {d} × {qt0} = {p1}, el múltiple de {d} que no passa de {a}."},
+            {"n": 2, "expect": f"{a} - {p1}", "value": str(r1),
+             "accept": [f"{a} - {p1} = {r1}"],
+             "error_class": "calculation",
+             "why": f"Resta: {a} − {p1} = {r1}; és el que queda per repartir."},
+            {"n": 3, "expect": f"{r1} ÷ {d}", "value": str(qu),
+             "accept": [f"{r1} / {d} = {qu}", f"{r1} ÷ {d} = {qu}"],
+             "error_class": "facts",
+             "why": f"Les unitats del quocient: {r1} ÷ {d} = {qu}."},
+            {"n": 4, "expect": f"{qt0} + {qu}", "value": str(q),
+             "accept": [f"{qt0} + {qu} = {q}"],
+             "error_class": "calculation",
+             "why": f"Ajunta les desenes i les unitats del quocient: {qt0} + {qu} = {q}."},
+        ],
+        "why": (f"{d} × {q} = {a}: el quocient és {qt0} + {qu} = {q}, i la divisió és exacta."),
+    }
+
+
 STEPS_FAMILIES = {
     "partial_products": partial_products,
     "partial_sums": partial_sums,
@@ -1015,6 +1766,9 @@ STEPS_FAMILIES = {
     "props_grouping_numeric": props_grouping_numeric,
     "props_distributive_numeric": props_distributive_numeric,
     "props_factor_numeric": props_factor_numeric,
+    # m5 (E2)
+    "partial_products_3": partial_products_3,
+    "long_division_2": long_division_2,
 }
 
 
@@ -1087,6 +1841,10 @@ STEP_GOALS: dict[str, dict] = {
     "grouping": {1: "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)",
                  2: "Calcula el parèntesi i escriu l'operació que en queda",
                  "last": "Calcula el resultat final"},
+    "long_division_2": {1: "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)",
+                        2: "Resta aquest múltiple al dividend: el que queda s'ha de repartir",
+                        3: "Divideix el que queda pel divisor per trobar les unitats del quocient",
+                        "last": "Ajunta les desenes i les unitats del quocient"},
 }
 
 
@@ -1262,7 +2020,7 @@ def validate_item(item: dict) -> list[str]:
     # The two-path check is not "same value" but POLYNOMIAL EQUIVALENCE —
     # problem and answer must share the canonical form of the very normalizer
     # that will grade the learner (hooks/mathgrade.py parse_poly).
-    if _ALG_LETTERS.search(str(item["answer"])):
+    if _ALG_LETTERS.search(str(item["answer"])) and not _is_unit_answer(item["answer"]):
         prob_src = item.get("expression") or item["problem"]
         try:
             ppoly = mathgrade.parse_poly(prob_src)
@@ -1311,7 +2069,7 @@ def validate_item(item: dict) -> list[str]:
         errs.append(f"problem does not parse: {e}")
         pval = None
     try:
-        aval = mathgrade.parse_expr(item["answer"]).value
+        aval = _answer_value(item["answer"])
     except mathgrade.ParseError as e:
         errs.append(f"answer does not parse: {e}")
         aval = None
@@ -1389,7 +2147,7 @@ def build_item(family: str, rng: random.Random, competence_id: str, seq: int,
         if pval != cand["value"]:
             raise GenError(f"{family}: template value {cand['value']} != evaluator "
                            f"value {pval} for {src!r}")
-        aval = mathgrade.parse_expr(cand["answer"]).value
+        aval = _answer_value(cand["answer"])
         if aval != cand["value"]:
             raise GenError(f"{family}: answer {cand['answer']!r} -> {aval} != "
                            f"{cand['value']}")
@@ -1491,8 +2249,12 @@ def generate(curriculum_path: Path, competence_id: str, n: int, seed: int,
     # `steps/<cid>__steps.json` into ONE item set addressed by id (progress,
     # the review queue, records), so the numbering continues across BOTH files
     # — a steps item and a compute item of one competence can never share an id.
+    # The same rule covers the PROBLEMS: a competence never serves one exercise
+    # twice, so a steps item cannot repeat a compute item of its own competence
+    # (or the other way round). Both files are read, whichever one is written.
     last_num = 0
-    siblings = [path, out_dir / f"{competence_id}.json", out_dir / f"{competence_id}__steps.json"]
+    siblings = [path, out_dir / f"{competence_id}.json", out_dir / f"{competence_id}__steps.json",
+                out_dir / "steps" / f"{competence_id}__steps.json"]
     if out_dir.name == "steps":
         siblings.append(out_dir.parent / f"{competence_id}.json")
     seen_paths = set()
@@ -1505,6 +2267,7 @@ def generate(curriculum_path: Path, competence_id: str, n: int, seed: int,
             m = re.search(r"\.(\d+)$", it.get("id", ""))
             if m:
                 last_num = max(last_num, int(m.group(1)))
+            used.add(norm_problem(it.get("problem", "")))
     for it in existing:
         m = re.search(r"\.(\d+)$", it.get("id", ""))
         if m:

@@ -1028,8 +1028,11 @@ class MathCheckpointTest(unittest.TestCase):
         (d / "learner-profile.json").write_text(json.dumps(
             {"learner": {"name": "T", "target_language": "math",
                          "target_level": "m7", "current_level": "m7"}}), encoding="utf-8")
+        # m5 sits between m4 and m7 (E2): the m7 learner certifies M4 and M5 first.
         (d / "certificates.json").write_text(json.dumps(
             [{"language": "math", "level": "M4", "date": "2026-10-01",
+              "type": "checkpoint", "result": "pass"},
+             {"language": "math", "level": "M5", "date": "2026-10-16",
               "type": "checkpoint", "result": "pass"}]), encoding="utf-8")
         self.assertEqual(cu.find_curriculum(REPO_ROOT, d).name, "math-m7.md")
 

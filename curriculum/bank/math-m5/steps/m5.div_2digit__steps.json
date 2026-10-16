@@ -1,0 +1,722 @@
+[
+  {
+    "id": "m5.div_2digit.013",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "5120 ÷ 80",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "80 × 60",
+        "value": "4800",
+        "accept": [
+          "80 * 60",
+          "80 × 60 = 4800"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 60: 80 × 60 = 4800, el múltiple de 80 que no passa de 5120.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "5120 - 4800",
+        "value": "320",
+        "accept": [
+          "5120 - 4800 = 320"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 5120 − 4800 = 320; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "320 ÷ 80",
+        "value": "4",
+        "accept": [
+          "320 / 80 = 4",
+          "320 ÷ 80 = 4"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 320 ÷ 80 = 4.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "60 + 4",
+        "value": "64",
+        "accept": [
+          "60 + 4 = 64"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 60 + 4 = 64.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "64",
+    "why": "80 × 64 = 5120: el quocient és 60 + 4 = 64, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.014",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2652 ÷ 39",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "39 × 60",
+        "value": "2340",
+        "accept": [
+          "39 * 60",
+          "39 × 60 = 2340"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 60: 39 × 60 = 2340, el múltiple de 39 que no passa de 2652.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "2652 - 2340",
+        "value": "312",
+        "accept": [
+          "2652 - 2340 = 312"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 2652 − 2340 = 312; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "312 ÷ 39",
+        "value": "8",
+        "accept": [
+          "312 / 39 = 8",
+          "312 ÷ 39 = 8"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 312 ÷ 39 = 8.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "60 + 8",
+        "value": "68",
+        "accept": [
+          "60 + 8 = 68"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 60 + 8 = 68.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "68",
+    "why": "39 × 68 = 2652: el quocient és 60 + 8 = 68, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.015",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3956 ÷ 86",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "86 × 40",
+        "value": "3440",
+        "accept": [
+          "86 * 40",
+          "86 × 40 = 3440"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 40: 86 × 40 = 3440, el múltiple de 86 que no passa de 3956.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "3956 - 3440",
+        "value": "516",
+        "accept": [
+          "3956 - 3440 = 516"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 3956 − 3440 = 516; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "516 ÷ 86",
+        "value": "6",
+        "accept": [
+          "516 / 86 = 6",
+          "516 ÷ 86 = 6"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 516 ÷ 86 = 6.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "40 + 6",
+        "value": "46",
+        "accept": [
+          "40 + 6 = 46"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 40 + 6 = 46.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "46",
+    "why": "86 × 46 = 3956: el quocient és 40 + 6 = 46, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.016",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "341 ÷ 11",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "11 × 30",
+        "value": "330",
+        "accept": [
+          "11 * 30",
+          "11 × 30 = 330"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 30: 11 × 30 = 330, el múltiple de 11 que no passa de 341.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "341 - 330",
+        "value": "11",
+        "accept": [
+          "341 - 330 = 11"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 341 − 330 = 11; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "11 ÷ 11",
+        "value": "1",
+        "accept": [
+          "11 / 11 = 1",
+          "11 ÷ 11 = 1"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 11 ÷ 11 = 1.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "30 + 1",
+        "value": "31",
+        "accept": [
+          "30 + 1 = 31"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 30 + 1 = 31.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "31",
+    "why": "11 × 31 = 341: el quocient és 30 + 1 = 31, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.017",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3510 ÷ 65",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "65 × 50",
+        "value": "3250",
+        "accept": [
+          "65 * 50",
+          "65 × 50 = 3250"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 50: 65 × 50 = 3250, el múltiple de 65 que no passa de 3510.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "3510 - 3250",
+        "value": "260",
+        "accept": [
+          "3510 - 3250 = 260"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 3510 − 3250 = 260; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "260 ÷ 65",
+        "value": "4",
+        "accept": [
+          "260 / 65 = 4",
+          "260 ÷ 65 = 4"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 260 ÷ 65 = 4.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "50 + 4",
+        "value": "54",
+        "accept": [
+          "50 + 4 = 54"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 50 + 4 = 54.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "54",
+    "why": "65 × 54 = 3510: el quocient és 50 + 4 = 54, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.018",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2052 ÷ 38",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "38 × 50",
+        "value": "1900",
+        "accept": [
+          "38 * 50",
+          "38 × 50 = 1900"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 50: 38 × 50 = 1900, el múltiple de 38 que no passa de 2052.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "2052 - 1900",
+        "value": "152",
+        "accept": [
+          "2052 - 1900 = 152"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 2052 − 1900 = 152; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "152 ÷ 38",
+        "value": "4",
+        "accept": [
+          "152 / 38 = 4",
+          "152 ÷ 38 = 4"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 152 ÷ 38 = 4.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "50 + 4",
+        "value": "54",
+        "accept": [
+          "50 + 4 = 54"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 50 + 4 = 54.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "54",
+    "why": "38 × 54 = 2052: el quocient és 50 + 4 = 54, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.019",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "528 ÷ 24",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "24 × 20",
+        "value": "480",
+        "accept": [
+          "24 * 20",
+          "24 × 20 = 480"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 20: 24 × 20 = 480, el múltiple de 24 que no passa de 528.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "528 - 480",
+        "value": "48",
+        "accept": [
+          "528 - 480 = 48"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 528 − 480 = 48; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "48 ÷ 24",
+        "value": "2",
+        "accept": [
+          "48 / 24 = 2",
+          "48 ÷ 24 = 2"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 48 ÷ 24 = 2.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "20 + 2",
+        "value": "22",
+        "accept": [
+          "20 + 2 = 22"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 20 + 2 = 22.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "22",
+    "why": "24 × 22 = 528: el quocient és 20 + 2 = 22, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.020",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "1357 ÷ 59",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "59 × 20",
+        "value": "1180",
+        "accept": [
+          "59 * 20",
+          "59 × 20 = 1180"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 20: 59 × 20 = 1180, el múltiple de 59 que no passa de 1357.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "1357 - 1180",
+        "value": "177",
+        "accept": [
+          "1357 - 1180 = 177"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 1357 − 1180 = 177; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "177 ÷ 59",
+        "value": "3",
+        "accept": [
+          "177 / 59 = 3",
+          "177 ÷ 59 = 3"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 177 ÷ 59 = 3.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "20 + 3",
+        "value": "23",
+        "accept": [
+          "20 + 3 = 23"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 20 + 3 = 23.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "23",
+    "why": "59 × 23 = 1357: el quocient és 20 + 3 = 23, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.021",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3080 ÷ 56",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "56 × 50",
+        "value": "2800",
+        "accept": [
+          "56 * 50",
+          "56 × 50 = 2800"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 50: 56 × 50 = 2800, el múltiple de 56 que no passa de 3080.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "3080 - 2800",
+        "value": "280",
+        "accept": [
+          "3080 - 2800 = 280"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 3080 − 2800 = 280; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "280 ÷ 56",
+        "value": "5",
+        "accept": [
+          "280 / 56 = 5",
+          "280 ÷ 56 = 5"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 280 ÷ 56 = 5.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "50 + 5",
+        "value": "55",
+        "accept": [
+          "50 + 5 = 55"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 50 + 5 = 55.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "55",
+    "why": "56 × 55 = 3080: el quocient és 50 + 5 = 55, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.022",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3872 ÷ 88",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "88 × 40",
+        "value": "3520",
+        "accept": [
+          "88 * 40",
+          "88 × 40 = 3520"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 40: 88 × 40 = 3520, el múltiple de 88 que no passa de 3872.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "3872 - 3520",
+        "value": "352",
+        "accept": [
+          "3872 - 3520 = 352"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 3872 − 3520 = 352; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "352 ÷ 88",
+        "value": "4",
+        "accept": [
+          "352 / 88 = 4",
+          "352 ÷ 88 = 4"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 352 ÷ 88 = 4.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "40 + 4",
+        "value": "44",
+        "accept": [
+          "40 + 4 = 44"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 40 + 4 = 44.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "44",
+    "why": "88 × 44 = 3872: el quocient és 40 + 4 = 44, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.023",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "1104 ÷ 16",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "16 × 60",
+        "value": "960",
+        "accept": [
+          "16 * 60",
+          "16 × 60 = 960"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 60: 16 × 60 = 960, el múltiple de 16 que no passa de 1104.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "1104 - 960",
+        "value": "144",
+        "accept": [
+          "1104 - 960 = 144"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 1104 − 960 = 144; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "144 ÷ 16",
+        "value": "9",
+        "accept": [
+          "144 / 16 = 9",
+          "144 ÷ 16 = 9"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 144 ÷ 16 = 9.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "60 + 9",
+        "value": "69",
+        "accept": [
+          "60 + 9 = 69"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 60 + 9 = 69.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "69",
+    "why": "16 × 69 = 1104: el quocient és 60 + 9 = 69, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m5.div_2digit.024",
+    "competence": "m5.div_2digit",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2054 ÷ 79",
+    "method": "long_division_2",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "79 × 20",
+        "value": "1580",
+        "accept": [
+          "79 * 20",
+          "79 × 20 = 1580"
+        ],
+        "error_class": "facts",
+        "why": "Les desenes del quocient són 20: 79 × 20 = 1580, el múltiple de 79 que no passa de 2054.",
+        "goal": "Busca el múltiple del divisor per les desenes del quocient (escriu la multiplicació)"
+      },
+      {
+        "n": 2,
+        "expect": "2054 - 1580",
+        "value": "474",
+        "accept": [
+          "2054 - 1580 = 474"
+        ],
+        "error_class": "calculation",
+        "why": "Resta: 2054 − 1580 = 474; és el que queda per repartir.",
+        "goal": "Resta aquest múltiple al dividend: el que queda s'ha de repartir"
+      },
+      {
+        "n": 3,
+        "expect": "474 ÷ 79",
+        "value": "6",
+        "accept": [
+          "474 / 79 = 6",
+          "474 ÷ 79 = 6"
+        ],
+        "error_class": "facts",
+        "why": "Les unitats del quocient: 474 ÷ 79 = 6.",
+        "goal": "Divideix el que queda pel divisor per trobar les unitats del quocient"
+      },
+      {
+        "n": 4,
+        "expect": "20 + 6",
+        "value": "26",
+        "accept": [
+          "20 + 6 = 26"
+        ],
+        "error_class": "calculation",
+        "why": "Ajunta les desenes i les unitats del quocient: 20 + 6 = 26.",
+        "goal": "Ajunta les desenes i les unitats del quocient"
+      }
+    ],
+    "answer": "26",
+    "why": "79 × 26 = 2054: el quocient és 20 + 6 = 26, i la divisió és exacta.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  }
+]
