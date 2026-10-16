@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.unitats-de-superficie",
+  "level": "m6",
+  "competence": "m6.area_units",
+  "title": {
+    "ca": "Unitats de superfície",
+    "es": "Unidades de superficie",
+    "en": "Area units"
+  },
+  "generate": {
+    "kind": "area_units",
+    "count": 12
+  }
+}

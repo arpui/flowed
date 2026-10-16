@@ -670,6 +670,9 @@ MATH_GEN_KINDS = frozenset({
     "linear_func", "line_read", "pythagoras", "parallel_angles", "polygon_angle_sum",
     "notable_points", "composite_area", "unit_area_volume", "speed_convert", "sexagesimal_ops",
     "variable_type", "freq_relative", "median", "weighted_mean", "laplace",
+    # m6 (docs/ENCARREC-M6-E9-FLASH.md §1)
+    "power_value", "int_number_line", "frac_ops4", "dec_division", "percent_change", "scale",
+    "area_units", "volume_units", "angle_ops", "area_polygon_formula", "circle_measures", "volume_solid",
 })
 MATH_ANSWER_KINDS = ("number", "fraction", "unit", "choice", "pair", "factorization", "algebraic", "sexagesimal")
 # The most cards some kinds can make (their vocabulary is finite): a list asks for count and gets at most this.

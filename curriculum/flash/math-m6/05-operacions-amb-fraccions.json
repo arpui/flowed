@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.operacions-amb-fraccions",
+  "level": "m6",
+  "competence": "m6.fraction_ops",
+  "title": {
+    "ca": "Operacions amb fraccions",
+    "es": "Operaciones con fracciones",
+    "en": "Fraction operations"
+  },
+  "generate": {
+    "kind": "frac_ops4",
+    "count": 12
+  }
+}

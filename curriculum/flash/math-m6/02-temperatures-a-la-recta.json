@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.temperatures-a-la-recta-numerica",
+  "level": "m6",
+  "competence": "m6.integers",
+  "title": {
+    "ca": "Temperatures a la recta numèrica",
+    "es": "Temperaturas en la recta numérica",
+    "en": "Temperatures on the number line"
+  },
+  "generate": {
+    "kind": "int_number_line",
+    "count": 12
+  }
+}

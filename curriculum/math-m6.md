@@ -7,6 +7,7 @@ pass_mark: 80
 carry_mark: 65
 checkpoint_items: 12
 ready_share: 50
+flash_share: 60
 ---
 
 # Math m6 — currículum (esborrany)

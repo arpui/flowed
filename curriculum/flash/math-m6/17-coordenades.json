@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.coordenades",
+  "level": "m6",
+  "competence": "m6.coordinates",
+  "title": {
+    "ca": "Coordenades",
+    "es": "Coordenadas",
+    "en": "Coordinates"
+  },
+  "generate": {
+    "kind": "quadrant_point",
+    "count": 12
+  }
+}

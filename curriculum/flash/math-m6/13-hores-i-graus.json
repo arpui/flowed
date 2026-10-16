@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.hores-i-graus",
+  "level": "m6",
+  "competence": "m6.angles_sexagesimal",
+  "title": {
+    "ca": "Hores i graus",
+    "es": "Horas y grados",
+    "en": "Hours and degrees"
+  },
+  "generate": {
+    "kind": "angle_ops",
+    "count": 12
+  }
+}

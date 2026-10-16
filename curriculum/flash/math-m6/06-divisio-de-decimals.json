@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.divisio-de-decimals",
+  "level": "m6",
+  "competence": "m6.decimal_division",
+  "title": {
+    "ca": "Divisió de decimals",
+    "es": "División de decimales",
+    "en": "Decimal division"
+  },
+  "generate": {
+    "kind": "dec_division",
+    "count": 12
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.equacions",
+  "level": "m6",
+  "competence": "m6.equations_intro",
+  "title": {
+    "ca": "Equacions",
+    "es": "Ecuaciones",
+    "en": "Equations"
+  },
+  "generate": {
+    "kind": "equation",
+    "count": 12
+  }
+}

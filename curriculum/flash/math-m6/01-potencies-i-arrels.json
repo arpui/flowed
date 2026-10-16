@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.potencies-i-arrels",
+  "level": "m6",
+  "competence": "m6.powers_roots",
+  "title": {
+    "ca": "Potències i arrels",
+    "es": "Potencias y raíces",
+    "en": "Powers and roots"
+  },
+  "generate": {
+    "kind": "power_value",
+    "count": 12
+  }
+}

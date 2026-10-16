@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.mcd-i-mcm",
+  "level": "m6",
+  "competence": "m6.gcd_lcm",
+  "title": {
+    "ca": "MCD i mcm",
+    "es": "MCD y mcm",
+    "en": "GCD and LCM"
+  },
+  "generate": {
+    "kind": "gcd_lcm",
+    "count": 12
+  }
+}

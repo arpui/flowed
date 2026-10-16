@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.frequencia-relativa",
+  "level": "m6",
+  "competence": "m6.statistics",
+  "title": {
+    "ca": "Freqüència relativa",
+    "es": "Frecuencia relativa",
+    "en": "Relative frequency"
+  },
+  "generate": {
+    "kind": "freq_relative",
+    "count": 12
+  }
+}

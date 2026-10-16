@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.volum-i-capacitat",
+  "level": "m6",
+  "competence": "m6.volume_capacity",
+  "title": {
+    "ca": "Volum i capacitat",
+    "es": "Volumen y capacidad",
+    "en": "Volume and capacity"
+  },
+  "generate": {
+    "kind": "volume_units",
+    "count": 12
+  }
+}

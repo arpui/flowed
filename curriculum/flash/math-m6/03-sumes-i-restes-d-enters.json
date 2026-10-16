@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.sumes-i-restes-d-enters",
+  "level": "m6",
+  "competence": "m6.integers",
+  "title": {
+    "ca": "Sumes i restes d'enters",
+    "es": "Sumas y restas de enteros",
+    "en": "Adding and subtracting integers"
+  },
+  "generate": {
+    "kind": "int_signs",
+    "count": 12
+  }
+}

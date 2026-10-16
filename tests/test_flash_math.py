@@ -334,5 +334,45 @@ class M7FlashLists(unittest.TestCase):
 
 
 
+class M6FlashLists(unittest.TestCase):
+    """E9 §2–§3: the m6 lists (docs/ENCARREC-M6-E9-FLASH.md §2): the repàs first, one list per generator, flash_share 60."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cur = cu.load_curriculum(REPO_ROOT / "curriculum" / "math-m6.md")
+        cls.lists = cu.flash_lists(REPO_ROOT, "math-m6")
+        cls.files = sorted((REPO_ROOT / "curriculum" / "flash" / "math-m6").glob("*.json"))
+        cls.md = (REPO_ROOT / "curriculum" / "math-m6.md").read_text(encoding="utf-8")
+
+    def test_one_valid_list_per_file_and_the_ids_are_unique(self):
+        self.assertEqual(len(self.files), 22)
+        self.assertEqual(len(self.lists), 22)
+        ids = [l["id"] for l in self.lists]
+        self.assertEqual(len(set(ids)), len(ids))
+        self.assertEqual(ids[0], "math-m6.flash.taules-repas")
+        self.assertEqual(len(self.lists[0]["words"]), 24)
+        for l in self.lists[1:]:
+            self.assertEqual(len(l["words"]), 12, l["id"])
+
+    def test_every_competence_exists_in_math_m6_and_the_repas_has_none(self):
+        competences = set(re.findall(r"^### (m6\.[a-z_]+)", self.md, flags=re.M))
+        for f in self.files:
+            raw = json.loads(f.read_text(encoding="utf-8"))
+            self.assertEqual(raw["level"], "m6", f.name)
+            self.assertEqual(set(raw["title"]), {"ca", "es", "en"}, f.name)
+            if f.name.startswith("00-"):
+                self.assertNotIn("competence", raw)
+                continue
+            self.assertIn(raw["competence"], competences, f.name)
+
+    def test_the_level_asks_for_sixty_percent_and_the_gate_counts_22(self):
+        self.assertEqual(self.cur["meta"]["flash_share"], 60)
+        with tempfile.TemporaryDirectory() as data:
+            fp = cu.flash_progress(REPO_ROOT, self.cur, data, "math-m6")
+        self.assertEqual((fp["share"], fp["total"], fp["needed"]), (60, 22, math.ceil(22 * 0.6)))
+        self.assertEqual(fp["needed"], 14)
+        self.assertFalse(fp["met"])
+
+
 if __name__ == "__main__":
     unittest.main()

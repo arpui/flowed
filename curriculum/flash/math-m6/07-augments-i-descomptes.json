@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.augments-i-descomptes",
+  "level": "m6",
+  "competence": "m6.percent_change",
+  "title": {
+    "ca": "Augments i descomptes",
+    "es": "Aumentos y descuentos",
+    "en": "Increases and discounts"
+  },
+  "generate": {
+    "kind": "percent_change",
+    "count": 12
+  }
+}

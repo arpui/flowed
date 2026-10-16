@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.arees-de-poligons",
+  "level": "m6",
+  "competence": "m6.areas_polygons",
+  "title": {
+    "ca": "Àrees de polígons",
+    "es": "Áreas de polígonos",
+    "en": "Polygon areas"
+  },
+  "generate": {
+    "kind": "area_polygon_formula",
+    "count": 12
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.probabilitat",
+  "level": "m6",
+  "competence": "m6.probability",
+  "title": {
+    "ca": "Probabilitat",
+    "es": "Probabilidad",
+    "en": "Probability"
+  },
+  "generate": {
+    "kind": "probability",
+    "count": 12
+  }
+}

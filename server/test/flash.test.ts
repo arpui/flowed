@@ -57,6 +57,18 @@ const E5_KINDS: string[] = [
   "sexagesimal_ops", "variable_type", "freq_relative", "median", "weighted_mean", "laplace",
 ];
 
+// docs/ENCARREC-M6-E9-FLASH.md §1: the 12 generators of m6 (the other 9 of its lists are m5 or m7 kinds)
+const M6_KINDS: string[] = [
+  "power_value", "int_number_line", "frac_ops4", "dec_division", "percent_change", "scale",
+  "area_units", "volume_units", "angle_ops", "area_polygon_formula", "circle_measures", "volume_solid",
+];
+// the kinds of the 21 generated lists of m6 (one per list, §2 of the same encàrrec)
+const M6_LIST_KINDS: string[] = [
+  "power_value", "int_number_line", "int_signs", "gcd_lcm", "frac_ops4", "dec_division", "percent_change", "rule_of_three",
+  "scale", "equation", "area_units", "volume_units", "angle_ops", "area_polygon_formula", "circle_measures", "volume_solid",
+  "quadrant_point", "freq_relative", "median", "mean", "probability",
+];
+
 let failures = 0;
 function check(name: string, cond: boolean, detail?: unknown) {
   if (cond) console.log(`  ok   ${name}`);
@@ -125,12 +137,29 @@ for (const f of mathFiles) {
   check(`math file ${f} has no problems (no dropped item)`, problems.length === 0, problems);
 }
 check("one math list per file under curriculum/flash/math-*", listsMath.length === mathFiles.length, listsMath.map((l) => l.id));
-check("every math list is kind math, level m5 or m7, titled, with words", listsMath.every((l) => l.kind === "math" && (l.level === "m5" || l.level === "m7") && l.title.length > 0 && l.words.length > 0));
+check("every math list is kind math, level m5, m6 or m7, titled, with words", listsMath.every((l) => l.kind === "math" && (l.level === "m5" || l.level === "m6" || l.level === "m7") && l.title.length > 0 && l.words.length > 0));
 check("every math word has a prompt, a native = [prompt] and a target", listsMath.every((l) => l.words.every((w) => w.prompt && w.native.join() === w.prompt && w.target.length > 0)));
 for (const l of listsMath) {
   const ids = l.words.map((w) => w.id);
   check(`math word ids unique in ${l.id}`, new Set(ids).size === ids.length);
 }
+// E9 §2: the m6 lists — the repàs first (mult [1,1], 24 cards), then one per generator, each with its three titles,
+// level m6, count 12 and a competence that exists in math-m6.md (the repàs has none).
+{
+  const m6Files = mathFiles.filter((f) => f.startsWith("math-m6/")).sort();
+  const compIds6 = new Set([...read("curriculum", "math-m6.md").matchAll(/^### (m6\.[a-z0-9_]+) /gm)].map((m) => m[1]));
+  const raw6 = m6Files.map((f) => JSON.parse(read("curriculum", "flash", f)));
+  check("m6: 22 files (the repàs and 21 generators), numbered 00…21", m6Files.length === 22 && m6Files[0] === "math-m6/00-taules-repas.json" && m6Files[21] === "math-m6/21-probabilitat.json", m6Files);
+  check("m6: every list is level m6 with the three titles", raw6.every((r) => r.level === "m6" && r.title && r.title.ca && r.title.es && r.title.en));
+  check("m6: the repàs is mult [1,1] with 24 cards and no competence", raw6[0]?.generate?.kind === "mult" && raw6[0]?.generate?.count === 24 && JSON.stringify(raw6[0]?.generate?.params?.digits) === "[1,1]" && !("competence" in (raw6[0] ?? {})));
+  const gens6 = raw6.slice(1);
+  check("m6: the 21 generated lists use the 21 kinds of §2, each once, with count 12", JSON.stringify(gens6.map((r) => r.generate?.kind).sort()) === JSON.stringify([...M6_LIST_KINDS].sort()) && gens6.every((r) => r.generate?.count === 12 && !("items" in r)), gens6.map((r) => r.generate?.kind));
+  check("m6: every competence named by an m6 list exists in math-m6.md", gens6.every((r) => typeof r.competence === "string" && compIds6.has(r.competence)), gens6.filter((r) => !compIds6.has(r.competence)).map((r) => r.competence));
+  const lists6 = listsMath.filter((l) => l.id.startsWith("math-m6."));
+  check("m6: 22 lists give 24 words for the repàs and 12 for each generator", lists6.length === 22 && lists6[0]?.words.length === 24 && lists6.slice(1).every((l) => l.words.length === 12), lists6.map((l) => `${l.id}:${l.words.length}`));
+  check("m6: the ids are unique and every list is kind math", new Set(lists6.map((l) => l.id)).size === 22 && lists6.every((l) => l.kind === "math"));
+}
+
 // E4 §6: the m5 multiplication lists (kind mult): the digits of each factor, no repeat, no commuted repeat, the result computed.
 {
   const digitsOf = (n: number) => String(n).length;
@@ -516,7 +545,7 @@ console.log("generators (E1)");
 {
   const expected = ["round", "digit_value", "compare_numbers", "frac_of", "frac_equiv", "frac_same_den", "frac_dec", "dec_times_int", "percent_of", "divisible", "combined", "unit_convert", "complex_to_simple", "time_convert", "area_simple", "mean", "probability", "equation", "sequence", "mult"];
   const expectedE3 = [...expected, "angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point", ...E5_KINDS];
-  check("the generator kinds of §3, the figure kinds of E3 and mult of §6", JSON.stringify([...GEN_KINDS].sort()) === JSON.stringify([...expectedE3].sort()), GEN_KINDS);
+  check("the generator kinds of §3, the figure kinds of E3 and mult of §6", JSON.stringify([...GEN_KINDS].sort()) === JSON.stringify([...expectedE3, ...M6_KINDS].sort()), GEN_KINDS);
   check("count: default 12, clamped to 1..50, a non-integer gives 12", genCount(undefined) === 12 && genCount(0) === 1 && genCount(51) === 50 && genCount(7) === 7 && genCount(12.5) === 12 && genCount("9") === 12);
   // E7 §5: "1 té gos" (not "1 tenen gos") when the count is one
   const fq = generatedWords("math-m7.flash.freq-check", { kind: "freq_relative", count: 50 }).map((w) => w.prompt);
@@ -1645,8 +1674,172 @@ console.log("m7 (E5)");
     const ws = generatedWords("math-m7.flash.sexagesimal_ops", { kind: "sexagesimal_ops", count: 50 });
     return ws.some((w) => w.mode === "time") && ws.some((w) => w.mode === "angle") && ws.every((w) => (w.mode === "angle") === /°/.test(w.target[0] ?? ""));
   })());
-  check("the generators of m7 are listed in GEN_KINDS (35 new, none of the m5 ones lost)", E5_KINDS.every((k) => GEN_KINDS.includes(k)) && E5_KINDS.length === 35 && GEN_KINDS.length === 62);
+  check("the generators of m7 are listed in GEN_KINDS (35 new, none of the m5 ones lost)", E5_KINDS.every((k) => GEN_KINDS.includes(k)) && E5_KINDS.length === 35 && GEN_KINDS.length === 74);
   check("a list of a kind with a small room gives the room, not the count (GEN_ROOM)", Object.entries(GEN_ROOM).every(([k, n]) => generatedWords(`math-m7.flash.${k}`, { kind: k, count: 50 }).length === n));
+
+  // ---- m6 (docs/ENCARREC-M6-E9-FLASH.md §1, §4): the 12 generators, each card read again with its own arithmetic ----
+  const AREA_E: Record<string, number> = { "km²": 6, ha: 4, a: 2, "m²": 0, "cm²": -4, "mm²": -6 };
+  const VOL_E: Record<string, number> = { "m³": 3, "dm³": 0, "cm³": -3, l: 0, ml: -3 };
+  const pow10q = (x: Q, e: number): Q => (e >= 0 ? qn(x[0] * 10n ** BigInt(e), x[1]) : qn(x[0], x[1] * 10n ** BigInt(-e)));
+  const verifyM6 = (kind: string, w: MathWord): string | null => {
+    const p = w.prompt;
+    const t = w.target[0] ?? "";
+    const got = readQ(t);
+    const fail = `${p} → ${t}`;
+    let m: RegExpExecArray | null;
+    switch (kind) {
+      case "power_value": {
+        if ((m = /^Quant és (\d+)([⁰¹²³⁴⁵⁶⁷⁸⁹]+)\?$/.exec(p))) return qEq(qn(BigInt(m[1]!) ** BigInt(supNum(m[2]!))), got) ? null : fail;
+        if ((m = /^Quant és √(\d+)\?$/.exec(p))) {
+          const n = Number(m[1]);
+          const r = Math.round(Math.sqrt(n));
+          return r * r === n && qEq(qn(BigInt(r)), got) ? null : fail;
+        }
+        if ((m = /^Quant és ∛(\d+)\?$/.exec(p))) {
+          const n = Number(m[1]);
+          const r = Math.round(Math.cbrt(n));
+          return r * r * r === n && qEq(qn(BigInt(r)), got) ? null : fail;
+        }
+        return fail;
+      }
+      case "int_number_line": {
+        m = /^Eren (−?\d+) °C i (puja|baixa) (\d+) °C\. Quina temperatura hi ha ara\?$/.exec(p);
+        if (!m) return fail;
+        const end = Number(minus(m[1]!)) + Number(m[3]) * (m[2] === "puja" ? 1 : -1);
+        const f = w.figure;
+        const onLine = f !== undefined && f.type === "number_line" && f.point === end && f.min === -10 && f.max === 10 && f.label === "°C";
+        return onLine && String(end) === minus(t) && end >= -10 && end <= 10 ? null : fail;
+      }
+      case "frac_ops4": {
+        m = /^(\d+)\/(\d+) ([+·:−]) (\d+)\/(\d+)$/.exec(p);
+        if (!m) return fail;
+        const x = qn(BigInt(m[1]!), BigInt(m[2]!));
+        const y = qn(BigInt(m[4]!), BigInt(m[5]!));
+        const want = m[3] === "+" ? qAdd(x, y) : m[3] === "−" ? qSub(x, y) : m[3] === "·" ? qMul(x, y) : qDiv(x, y);
+        if (want[0] <= 0n) return `resultat no positiu: ${p}`;
+        const shown = want[1] === 1n ? String(want[0]) : `${want[0]}/${want[1]}`;
+        return shown === t ? null : `${fail} (la fracció ha de ser ${shown})`; // the text is the irreducible form
+      }
+      case "dec_division": {
+        m = /^(\d+(?:,\d)?) : (\d+(?:,\d)?)$/.exec(p);
+        if (!m) return fail;
+        const a = readQ(m[1]!);
+        const b = readQ(m[2]!);
+        return a !== null && b !== null && b[0] !== 0n && qEq(qDiv(a, b), got) ? null : fail;
+      }
+      case "percent_change": {
+        m = /^(Augment|Descompte) del (\d+) % sobre (\d+)$/.exec(p);
+        if (!m) return fail;
+        const pct = BigInt(m[2]!);
+        const base = BigInt(m[3]!);
+        const change = (base * pct) / 100n;
+        return (base * pct) % 100n === 0n && qEq(qn(m[1] === "Augment" ? base + change : base - change), got) ? null : fail;
+      }
+      case "scale": {
+        m = /^Escala 1:([\d.]+)\. (\d+) cm al mapa = \? (km|m)$/.exec(p);
+        if (!m) return fail;
+        const cm = BigInt(m[1]!.replace(/\./g, "")) * BigInt(m[2]!);
+        return qEq(m[3] === "km" ? qn(cm, 100000n) : qn(cm, 100n), got) && w.unit === m[3] ? null : fail;
+      }
+      case "area_units":
+      case "volume_units": {
+        m = /^(\d+(?:,\d+)?) (\S+) = \? (\S+)$/.exec(p);
+        if (!m) return fail;
+        const table = kind === "area_units" ? AREA_E : VOL_E;
+        const ea = table[m[2]!];
+        const eb = table[m[3]!];
+        const v = readQ(m[1]!);
+        if (ea === undefined || eb === undefined || v === null) return fail;
+        return qEq(pow10q(v, ea - eb), got) && w.unit === m[3] ? null : fail;
+      }
+      case "angle_ops": {
+        const toMin = (s: string): number | null => {
+          const mm = /^(\d+)°(?: (\d+)')?$/.exec(s);
+          return mm && Number(mm[2] ?? 0) < 60 ? Number(mm[1]) * 60 + Number(mm[2] ?? 0) : null;
+        };
+        let want: number | null = null;
+        if ((m = /^(\d+)° (\d+)' \+ (\d+)° (\d+)'$/.exec(p))) want = Number(m[1]) * 60 + Number(m[2]) + Number(m[3]) * 60 + Number(m[4]);
+        else if ((m = /^90° − (\d+)° (\d+)'$/.exec(p))) want = 5400 - (Number(m[1]) * 60 + Number(m[2]));
+        return want !== null && toMin(t) === want && w.mode === "angle" ? null : fail;
+      }
+      case "area_polygon_formula": {
+        const sides: Record<string, number> = { pentàgon: 5, hexàgon: 6, octàgon: 8 };
+        if ((m = /^([^ ]+) regular de costat (\d+) cm i apotema (\d+(?:,\d)?) cm\. Àrea\?$/.exec(p))) {
+          const n = sides[m[1]!];
+          const s = Number(m[2]);
+          const a = readQ(m[3]!);
+          if (n === undefined || a === null) return fail;
+          // the apothem is the true one for the side, to a tenth
+          if (Math.abs(Number(a[0]) / Number(a[1]) - s / (2 * Math.tan(Math.PI / n))) > 0.05) return `apotema lluny de la figura: ${p}`;
+          return qEq(qDiv(qMul(qn(BigInt(n * s)), a), qn(2n)), got) ? null : fail;
+        }
+        if ((m = /^Rombe de diagonals D = (\d+) cm i d = (\d+) cm\. Àrea\?$/.exec(p))) return qEq(qDiv(qn(BigInt(m[1]!) * BigInt(m[2]!)), qn(2n)), got) ? null : fail;
+        if ((m = /^Trapezi de bases (\d+) cm i (\d+) cm i altura (\d+) cm\. Àrea\?$/.exec(p))) {
+          return qEq(qDiv(qn((BigInt(m[1]!) + BigInt(m[2]!)) * BigInt(m[3]!)), qn(2n)), got) ? null : fail;
+        }
+        return fail;
+      }
+      case "circle_measures": {
+        const PI = 314n; // π = 3,14 = 314/100
+        if ((m = /^Longitud d'una circumferència de radi (\d+) cm \(π = 3,14\)$/.exec(p))) return qEq(qn(2n * PI * BigInt(m[1]!), 100n), got) && w.unit === "cm" ? null : fail;
+        if ((m = /^Àrea d'un cercle de radi (\d+) cm \(π = 3,14\)$/.exec(p))) return qEq(qn(PI * BigInt(m[1]!) ** 2n, 100n), got) && w.unit === "cm²" ? null : fail;
+        if ((m = /^Longitud d'una circumferència de diàmetre (\d+) cm \(π = 3,14\)$/.exec(p))) return qEq(qn(PI * BigInt(m[1]!), 100n), got) && w.unit === "cm" ? null : fail;
+        return fail;
+      }
+      case "volume_solid": {
+        if ((m = /^Prisma rectangular de (\d+) cm × (\d+) cm × (\d+) cm\. Volum\?$/.exec(p))) {
+          return qEq(qn(BigInt(m[1]!) * BigInt(m[2]!) * BigInt(m[3]!)), got) && w.unit === "cm³" ? null : fail;
+        }
+        if ((m = /^Cilindre de radi (\d+) cm i altura (\d+) cm \(π = 3,14\)\. Volum\?$/.exec(p))) {
+          return qEq(qn(314n * BigInt(m[1]!) ** 2n * BigInt(m[2]!), 100n), got) && w.unit === "cm³" ? null : fail;
+        }
+        return fail;
+      }
+      default:
+        return `sense comprovació: ${kind}`;
+    }
+  };
+  for (const kind of M6_KINDS) {
+    const words = generatedWords(`math-m6.flash.${kind}`, { kind, count: 50 });
+    check(`m6 ${kind}: 50 distinct cards, ids g1…, the same list gives the same cards`, words.length === 50 && words.every((w, i) => w.id === `g${i + 1}`) && new Set(words.map((w) => w.prompt)).size === 50 && JSON.stringify(words) === JSON.stringify(generatedWords(`math-m6.flash.${kind}`, { kind, count: 50 })), words.length);
+    const bad = words.map((w) => verifyM6(kind, w)).filter((x): x is string => x !== null);
+    check(`m6 ${kind}: every card read again with its own arithmetic agrees with its answer`, bad.length === 0, bad.slice(0, 3));
+    const shape = words.flatMap((w): string[] => {
+      const out: string[] = [];
+      const ak = (w.answer_kind ?? "number") as AnswerKind;
+      if (ak === "unit" && !w.unit) out.push("unit sense text");
+      if (ak === "fraction" && parseFraction(w.target[0] ?? "") === null) out.push(`fracció ${w.target[0]}`);
+      if (ak === "sexagesimal") {
+        const s = parseSexa(w.target[0] ?? "", w.mode ?? "time");
+        if (!w.mode || !s || !s.normalized) out.push(`sexagesimal ${w.target[0]}`);
+      }
+      if (w.figure !== undefined) {
+        const f = checkFigure(w.figure);
+        if ("problem" in f) out.push(`figura: ${f.problem}`);
+        else {
+          const why = figureAnswerProblem(f.figure, w.prompt, ak, w.target);
+          if (why) out.push(`figura i resposta: ${why}`);
+        }
+      }
+      return out;
+    });
+    check(`m6 ${kind}: the figures agree with the answers, the answers are well formed`, shape.length === 0, shape.slice(0, 3));
+  }
+  {
+    const ws = generatedWords("math-m6.flash.angle_ops", { kind: "angle_ops", count: 50 });
+    check("m6 angle_ops: both sums and differences from 90°, every angle in degrees and minutes", ws.some((w) => /\+/.test(w.prompt)) && ws.some((w) => /^90°/.test(w.prompt)) && ws.every((w) => w.mode === "angle"));
+    const sc = generatedWords("math-m6.flash.scale", { kind: "scale", count: 50 });
+    check("m6 scale: both km and m answers", sc.some((w) => w.unit === "km") && sc.some((w) => w.unit === "m"));
+    const nl = generatedWords("math-m6.flash.int_number_line", { kind: "int_number_line", count: 50 });
+    check("m6 int_number_line: the card has a figure on every card, the answer on the number line", nl.every((w) => w.figure !== undefined && w.figure.type === "number_line"));
+  }
+  {
+    // E9 §4: the known angle of parallel_angles is 35°..145° in steps of 5, on every card of the m7 list
+    const angles = generatedWords("math-m7.flash.parallel_angles", { kind: "parallel_angles", count: 50 }).map((w) => (w.figure as Extract<Figure, { type: "parallels" }>).angle);
+    check("parallel_angles (E9 §4): the known angle is 35..145 in steps of 5 on every card", angles.length === 50 && angles.every((a) => a >= 35 && a <= 145 && a % 5 === 0), angles.slice(0, 8));
+    const figOk = (raw: unknown) => "figure" in checkFigure(raw);
+    check("parallel_angles (E9 §4): the hand-written figures keep 20..160 (checkFigure is unchanged)", figOk({ type: "parallels", angle: 20, known: 1, ask: 4 }) && figOk({ type: "parallels", angle: 160, known: 1, ask: 4 }) && !figOk({ type: "parallels", angle: 161, known: 1, ask: 4 }));
+  }
 
   // ---- explicit items of the new kinds: kept or dropped (docs/ENCARREC-M7-E5-FLASH.md §2, §3) ----
   {

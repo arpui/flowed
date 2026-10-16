@@ -1729,7 +1729,7 @@ const E5_GENERATORS: Array<[string, Generator]> = [
     const known = int(r, 1, 8);
     const ask = int(r, 1, 8);
     if (ask === known) return null;
-    const angle = int(r, 20, 160);
+    const angle = 5 * int(r, 7, 29); // E9 §4: 35°..145° in steps of 5 (a small angle makes the arcs and the label collide)
     return {
       prompt: "Quant mesura l'angle marcat amb «?»",
       target: [String(parallelValue(angle, known, ask))],
@@ -1869,6 +1869,165 @@ const E5_GENERATORS: Array<[string, Generator]> = [
     return { prompt: card, target: [fracTextE5(fav, all)], answer_kind: "fraction" };
   }],
 ];
+// ---- m6 generators (docs/ENCARREC-M6-E9-FLASH.md §1): the same rules as the m5 and m7 ones ----------
+// Each answer is worked out from the numbers drawn. A decimal answer is exact and written with a comma.
+
+/** The area units of m6, with their powers of ten against the m² (the hectare is hm², the are is dam²). */
+const LADDER_M6_AREA: Array<[string, number]> = [["km²", 6], ["ha", 4], ["a", 2], ["m²", 0], ["cm²", -4], ["mm²", -6]];
+/** The volume and capacity units of m6, against the m³ (1 dm³ = 1 l, 1 cm³ = 1 ml). */
+const LADDER_M6_VOLUME: Array<[string, number]> = [["m³", 3], ["dm³", 0], ["cm³", -3], ["l", 0], ["ml", -3]];
+
+/** A conversion inside one ladder: `m` with `k` decimals in unit ua, asked in unit ub. Null when the answer
+ *  would need more places than the card can show (at most three after the comma). */
+function ladderCard(r: Rng, ladder: Array<[string, number]>): GenItem | null {
+  const i = int(r, 0, ladder.length - 1);
+  let j = int(r, 0, ladder.length - 2);
+  if (j >= i) j += 1;
+  const [ua, ea] = ladder[i] as [string, number];
+  const [ub, eb] = ladder[j] as [string, number];
+  const k = int(r, 0, 2);
+  const m = k === 0 ? int(r, 1, 99) : int(r, 11, 999);
+  if (k > 0 && m % 10 === 0) return null; // the last decimal is not a zero
+  const e = ea - eb - k; // m · 10^-k in ua is m · 10^e in ub
+  if (e < -3 || e > 6) return null;
+  const target = e >= 0 ? decComma(m * 10 ** e, 0) : decComma(m, -e);
+  return { prompt: `${decComma(m, k)} ${ua} = ? ${ub}`, target: [target], answer_kind: "unit", unit: ub };
+}
+
+const E9_GENERATORS: Array<[string, Generator]> = [
+  ["power_value", (r) => {
+    const t = int(r, 0, 2);
+    if (t === 0) {
+      const b = int(r, 2, 12);
+      const e = int(r, 2, 4);
+      if (b ** e > 10000) return null;
+      return { prompt: `Quant és ${b}${supText(e)}?`, target: [String(b ** e)] };
+    }
+    if (t === 1) {
+      const k = int(r, 2, 25);
+      return { prompt: `Quant és √${k * k}?`, target: [String(k)] };
+    }
+    const k = int(r, 2, 10);
+    return { prompt: `Quant és ∛${k ** 3}?`, target: [String(k)] };
+  }],
+  // The figure marks the answer (figureAnswerProblem: a number_line's point is the answer), as every figure here does.
+  ["int_number_line", (r) => {
+    const start = int(r, -9, 9);
+    const d = nonZero(r, 9);
+    const end = start + d;
+    if (end < -10 || end > 10) return null;
+    return {
+      prompt: `Eren ${signedText(start)} °C i ${d > 0 ? "puja" : "baixa"} ${Math.abs(d)} °C. Quina temperatura hi ha ara?`,
+      target: [signedText(end)],
+      figure: checkedFigure({ type: "number_line", min: -10, max: 10, point: end, label: "°C" }),
+    };
+  }],
+  ["frac_ops4", (r) => {
+    const f = (): [number, number] => {
+      const d = int(r, 2, 9);
+      return [int(r, 1, d - 1), d];
+    };
+    const [a, b] = f();
+    const [c, d] = f();
+    const fr = (text: string, num: number, den: number): GenItem => {
+      const g = gcd(num, den) || 1; // the answer in lowest terms (a value is accepted in any form anyway)
+      return fracItem(text, num / g, den / g);
+    };
+    switch (int(r, 0, 3)) {
+      case 0: return fr(`${a}/${b} + ${c}/${d}`, a * d + c * b, b * d);
+      case 1:
+        if (a * d <= c * b) return null; // the difference is positive
+        return fr(`${a}/${b} − ${c}/${d}`, a * d - c * b, b * d);
+      case 2: return fr(`${a}/${b} · ${c}/${d}`, a * c, b * d);
+      default: return fr(`${a}/${b} : ${c}/${d}`, a * d, b * c);
+    }
+  }],
+  ["dec_division", (r) => {
+    if (r() < 0.5) {
+      // a decimal divisor (0,2 … 0,9) and a whole quotient: the dividend is q · d
+      const dv = int(r, 2, 9);
+      const q = int(r, 2, 40);
+      const a10 = q * dv; // the dividend in tenths
+      if (a10 % 10 === 0) return null; // a whole dividend has no decimal to show
+      return { prompt: `${decComma(a10, 1)} : ${decComma(dv, 1)}`, target: [String(q)] };
+    }
+    // a whole divisor and a quotient with one decimal (1,1 … 9,9)
+    const d = int(r, 2, 9);
+    const q10 = int(r, 11, 99);
+    if (q10 % 10 === 0) return null;
+    return { prompt: `${decComma(q10 * d, 1)} : ${d}`, target: [decComma(q10, 1)] };
+  }],
+  ["percent_change", (r) => {
+    const pct = pick(r, [5, 10, 15, 20, 25, 30, 40, 50]);
+    const base = (100 / gcd(pct, 100)) * int(r, 2, 30); // so that the change is whole
+    const change = (base * pct) / 100;
+    if (r() < 0.5) return { prompt: `Augment del ${pct} % sobre ${base}`, target: [String(base + change)] };
+    return { prompt: `Descompte del ${pct} % sobre ${base}`, target: [String(base - change)] };
+  }],
+  ["scale", (r) => {
+    const n = pick(r, [5000, 10000, 20000, 25000, 50000, 100000, 250000, 500000, 1000000]);
+    const k = int(r, 1, 20); // centimetres on the map
+    const head = `Escala 1:${thousands(n)}. ${k} cm al mapa = ? `;
+    if (r() < 0.5) return { prompt: `${head}km`, target: [decComma(k * n, 5)], answer_kind: "unit", unit: "km" };
+    return { prompt: `${head}m`, target: [decComma(k * n, 2)], answer_kind: "unit", unit: "m" };
+  }],
+  ["area_units", (r) => ladderCard(r, LADDER_M6_AREA)],
+  ["volume_units", (r) => ladderCard(r, LADDER_M6_VOLUME)],
+  ["angle_ops", (r) => {
+    // minutes in steps of 5′ (10′ … 55′), so the text never shows 5′ alone
+    const x = int(r, 10, 80) * 60 + 5 * int(r, 2, 11);
+    if (r() < 0.5) {
+      const y = int(r, 10, 80) * 60 + 5 * int(r, 2, 11);
+      return { prompt: `${sexaText(x, "angle")} + ${sexaText(y, "angle")}`, target: [sexaText(x + y, "angle")], answer_kind: "sexagesimal", mode: "angle" };
+    }
+    return { prompt: `90° − ${sexaText(x, "angle")}`, target: [sexaText(90 * 60 - x, "angle")], answer_kind: "sexagesimal", mode: "angle" };
+  }],
+  ["area_polygon_formula", (r) => {
+    const t = int(r, 0, 2);
+    if (t === 0) {
+      // a regular polygon: the apothem is the true one for the side, rounded to tenths; area = n · s · a / 2
+      const n = pick(r, [5, 6, 8]);
+      const s = int(r, 2, 12);
+      const a10 = Math.round((10 * s) / (2 * Math.tan(Math.PI / n)));
+      return { prompt: `${POLYGON_NAMES[n]} regular de costat ${s} cm i apotema ${decComma(a10, 1)} cm. Àrea?`, target: [decComma(n * s * a10 * 5, 2)], answer_kind: "unit", unit: "cm²" };
+    }
+    if (t === 1) {
+      const D = int(r, 2, 20);
+      const d = int(r, 2, 20);
+      return { prompt: `Rombe de diagonals D = ${D} cm i d = ${d} cm. Àrea?`, target: [decComma(D * d * 5, 1)], answer_kind: "unit", unit: "cm²" };
+    }
+    const B = int(r, 4, 20);
+    const b = int(r, 2, B - 1);
+    const h = int(r, 2, 20);
+    return { prompt: `Trapezi de bases ${B} cm i ${b} cm i altura ${h} cm. Àrea?`, target: [decComma((B + b) * h * 5, 1)], answer_kind: "unit", unit: "cm²" };
+  }],
+  ["circle_measures", (r) => {
+    const t = int(r, 0, 2);
+    if (t === 0) {
+      const rad = int(r, 1, 20);
+      return { prompt: `Longitud d'una circumferència de radi ${rad} cm (π = 3,14)`, target: [decComma(628 * rad, 2)], answer_kind: "unit", unit: "cm" };
+    }
+    if (t === 1) {
+      const rad = int(r, 1, 20);
+      return { prompt: `Àrea d'un cercle de radi ${rad} cm (π = 3,14)`, target: [decComma(314 * rad * rad, 2)], answer_kind: "unit", unit: "cm²" };
+    }
+    const dm = int(r, 2, 20);
+    return { prompt: `Longitud d'una circumferència de diàmetre ${dm} cm (π = 3,14)`, target: [decComma(314 * dm, 2)], answer_kind: "unit", unit: "cm" };
+  }],
+  ["volume_solid", (r) => {
+    if (r() < 0.5) {
+      const a = int(r, 2, 15);
+      const b = int(r, 2, 15);
+      const c = int(r, 2, 15);
+      return { prompt: `Prisma rectangular de ${a} cm × ${b} cm × ${c} cm. Volum?`, target: [String(a * b * c)], answer_kind: "unit", unit: "cm³" };
+    }
+    const rad = int(r, 1, 8);
+    const h = int(r, 2, 15);
+    return { prompt: `Cilindre de radi ${rad} cm i altura ${h} cm (π = 3,14). Volum?`, target: [decComma(314 * rad * rad * h, 2)], answer_kind: "unit", unit: "cm³" };
+  }],
+];
+for (const [kind, gen] of E9_GENERATORS) GENERATORS.set(kind, gen);
+
 for (const [kind, gen] of E5_GENERATORS) GENERATORS.set(kind, gen);
 
 /** The generator kinds a `generate` block may name (besides `op`). */

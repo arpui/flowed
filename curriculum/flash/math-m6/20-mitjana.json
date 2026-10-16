@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.mitjana",
+  "level": "m6",
+  "competence": "m6.statistics",
+  "title": {
+    "ca": "Mitjana",
+    "es": "Media",
+    "en": "Mean"
+  },
+  "generate": {
+    "kind": "mean",
+    "count": 12
+  }
+}

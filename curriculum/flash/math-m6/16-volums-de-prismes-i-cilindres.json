@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.volums-de-prismes-i-cilindres",
+  "level": "m6",
+  "competence": "m6.volumes",
+  "title": {
+    "ca": "Volums de prismes i cilindres",
+    "es": "Volúmenes de prismas y cilindros",
+    "en": "Volumes of prisms and cylinders"
+  },
+  "generate": {
+    "kind": "volume_solid",
+    "count": 12
+  }
+}

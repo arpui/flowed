@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.circumferencia-i-cercle",
+  "level": "m6",
+  "competence": "m6.circle",
+  "title": {
+    "ca": "Circumferència i cercle",
+    "es": "Circunferencia y círculo",
+    "en": "Circumference and circle"
+  },
+  "generate": {
+    "kind": "circle_measures",
+    "count": 12
+  }
+}

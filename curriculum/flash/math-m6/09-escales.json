@@ -1,0 +1,14 @@
+{
+  "id": "math-m6.flash.escales",
+  "level": "m6",
+  "competence": "m6.scales",
+  "title": {
+    "ca": "Escales",
+    "es": "Escalas",
+    "en": "Scales"
+  },
+  "generate": {
+    "kind": "scale",
+    "count": 12
+  }
+}
