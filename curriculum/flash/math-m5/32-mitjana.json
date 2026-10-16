@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.mitjana",
+  "level": "m5",
+  "competence": "m5.mean_mode_range",
+  "title": { "ca": "Mitjana", "es": "Media", "en": "Mean" },
+  "generate": { "kind": "mean", "count": 12 }
+}

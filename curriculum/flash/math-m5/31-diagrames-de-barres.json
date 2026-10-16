@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.diagrames-de-barres",
+  "level": "m5",
+  "competence": "m5.mean_mode_range",
+  "title": { "ca": "Diagrames de barres", "es": "Diagramas de barras", "en": "Bar charts" },
+  "generate": { "kind": "bars_read", "count": 12 }
+}

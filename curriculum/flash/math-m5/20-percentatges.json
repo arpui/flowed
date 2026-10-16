@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.percentatges",
+  "level": "m5",
+  "competence": "m5.percent_basic",
+  "title": { "ca": "Percentatges", "es": "Porcentajes", "en": "Percentages" },
+  "generate": { "kind": "percent_of", "count": 12 }
+}

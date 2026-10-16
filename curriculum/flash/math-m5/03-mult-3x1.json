@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.mult-3x1",
+  "level": "m5",
+  "competence": "m5.mult_3digit",
+  "title": { "ca": "3 xifres × 1 xifra", "es": "3 cifras × 1 cifra", "en": "3-digit × 1-digit" },
+  "generate": { "kind": "mult", "count": 12, "params": { "digits": [3, 1] } }
+}

@@ -1,6 +1,0 @@
-{
-  "id": "math-m5.flash.taula-3",
-  "level": "m5",
-  "title": { "ca": "Taula del 3", "es": "Tabla del 3", "en": "3 times table" },
-  "generate": { "op": "×", "a": [3], "b": { "from": 1, "to": 10 } }
-}

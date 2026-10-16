@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.fraccio-d-una-quantitat",
+  "level": "m5",
+  "competence": "m5.frac_of_quantity",
+  "title": { "ca": "Fracció d'una quantitat", "es": "Fracción de una cantidad", "en": "Fraction of a quantity" },
+  "generate": { "kind": "frac_of", "count": 12 }
+}

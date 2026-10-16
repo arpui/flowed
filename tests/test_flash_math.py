@@ -3,6 +3,7 @@
 Python side counts the same words as the server (server/src/flash.ts), and a math level with no
 level file has no Flash requirement."""
 import json
+import math
 import shutil
 import subprocess
 import sys
@@ -72,6 +73,8 @@ class MathListIds(unittest.TestCase):
             files = {}
             for i, kind in enumerate(kinds):
                 gen = {"kind": kind}
+                if kind == "mult":
+                    gen["params"] = {"digits": [2, 1]}  # at [1,1] there are only 36 products: the server gives fewer than 50
                 if i % 4 == 1:
                     gen["count"] = 1
                 elif i % 4 == 2:
@@ -115,12 +118,13 @@ class MathListIds(unittest.TestCase):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
-    def test_m5_has_eight_tables_and_the_explicit_list(self):
+    def test_m5_has_the_tables_the_explicit_list_and_the_generated_ones(self):
         lists = {l["id"]: l["words"] for l in cu.flash_lists(REPO_ROOT, "math-m5")}
-        self.assertEqual(len(lists), 9)
-        self.assertEqual(lists["math-m5.flash.taula-7"], [f"7x{b}" for b in range(1, 11)])
-        self.assertEqual(lists["math-m5.flash.2x1-xifres"][0], "23x4")
-        self.assertEqual(len(lists["math-m5.flash.2x1-xifres"]), 12)
+        self.assertEqual(len(lists), 29)  # §6: 3 multiplication lists (01..03, kind mult) + 26 generated (10..35, E4)
+        self.assertEqual(len(lists["math-m5.flash.arrodonir"]), 12)
+        self.assertEqual(lists["math-m5.flash.taules-repas"], [f"g{i}" for i in range(1, 25)])
+        self.assertEqual(len(lists["math-m5.flash.mult-2x1"]), 12)
+        self.assertEqual(len(lists["math-m5.flash.mult-3x1"]), 12)
 
 
 class MathRules(unittest.TestCase):
@@ -220,9 +224,49 @@ class MathGate(unittest.TestCase):
         cur["meta"]["stem"] = "math-m5"
         with tempfile.TemporaryDirectory() as data:
             fp = cu.flash_progress(REPO_ROOT, cur, data, "math-m5")
-        self.assertEqual(fp["total"], 9)
+        self.assertEqual(fp["total"], 29)
         self.assertEqual(fp["share"], 0)
         self.assertTrue(fp["met"])
+
+
+class M5FlashGate(unittest.TestCase):
+    """E4 §2: math-m5.md asks for flash_share 60; the level needs ceil(total × 0,6) closed lists."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cur = cu.load_curriculum(REPO_ROOT / "curriculum" / "math-m5.md")
+        cls.lists = cu.flash_lists(REPO_ROOT, "math-m5")
+
+    def close(self, n):
+        """A data dir where the first n lists are closed (every word in box 2) and the rest are untouched."""
+        d = Path(tempfile.mkdtemp(prefix="flash-gate-"))
+        lists = {
+            l["id"]: {"words": {w: {"box": cu.FLASH_KNOWN_BOX, "seen": 2, "first_try": 2, "misses": 0, "last": "2026-10-16"} for w in l["words"]}, "closed_at": None}
+            for l in self.lists[:n]
+        }
+        (d / cu.FLASH_DB).write_text(json.dumps({"version": 1, "lists": lists}), encoding="utf-8")
+        return d
+
+    def test_the_level_asks_for_sixty_percent_of_the_valid_lists(self):
+        self.assertEqual(self.cur["meta"]["flash_share"], 60)
+        with tempfile.TemporaryDirectory() as data:
+            fp = cu.flash_progress(REPO_ROOT, self.cur, data, "math-m5")
+        self.assertEqual(fp["share"], 60)
+        self.assertEqual(fp["total"], len(self.lists))
+        self.assertEqual(fp["total"], 29)
+        self.assertEqual(fp["needed"], math.ceil(29 * 0.6))  # 18
+        self.assertEqual(fp["closed"], 0)
+        self.assertFalse(fp["met"])
+
+    def test_met_exactly_at_the_needed_count(self):
+        for n, met in ((17, False), (18, True)):
+            d = self.close(n)
+            try:
+                fp = cu.flash_progress(REPO_ROOT, self.cur, d, "math-m5")
+            finally:
+                shutil.rmtree(d, ignore_errors=True)
+            self.assertEqual(fp["closed"], n)
+            self.assertEqual(fp["met"], met, n)
 
 
 if __name__ == "__main__":

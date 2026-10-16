@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.decimal-per-enter",
+  "level": "m5",
+  "competence": "m5.dec_ops",
+  "title": { "ca": "Decimal per enter", "es": "Decimal por entero", "en": "Decimal times a whole number" },
+  "generate": { "kind": "dec_times_int", "count": 12 }
+}

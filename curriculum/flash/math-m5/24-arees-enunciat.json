@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.arees-enunciat",
+  "level": "m5",
+  "competence": "m5.area_perimeter",
+  "title": { "ca": "Àrees (enunciat)", "es": "Áreas (enunciado)", "en": "Areas (word problem)" },
+  "generate": { "kind": "area_simple", "count": 12 }
+}

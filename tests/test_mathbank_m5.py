@@ -272,7 +272,7 @@ class M5CurriculumTest(unittest.TestCase):
         self.assertEqual(m["language"], "math")
         self.assertEqual(m["level"], "m5")
         self.assertEqual(m["status"], "esborrany")
-        self.assertNotIn("flash_share", m)
+        self.assertEqual(m["flash_share"], 60)  # E4: the Flash lists of m5 are in curriculum/flash/math-m5/
 
     def test_the_design_competences_are_all_there(self):
         ids = [c["id"] for c in self.cur["competencies"]]

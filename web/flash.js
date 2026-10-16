@@ -236,14 +236,27 @@
     return [pts.reduce((a, p) => a + p[0], 0) / pts.length, pts.reduce((a, p) => a + p[1], 0) / pts.length];
   }
 
-  // L'etiqueta d'un costat: al mig, empesa cap a fora de la figura.
+  // Caixa dins la qual es fitten les figures amb etiquetes de costat: prou marge perquè les mides caiguin dins el dibuix.
+  const FIG_BOX = { x0: 52, y0: 40, x1: 248, y1: 180 };
+
+  // L'etiqueta d'un costat: fora de la figura, sobre la normal exterior del mig del costat. La caixa del text
+  // queda tota al costat de fora (amplada ~8 px per caràcter, alçada del text), així no trepitja la línia.
   function edgeLabel(a, b, text, centre) {
     const mx = (a[0] + b[0]) / 2;
     const my = (a[1] + b[1]) / 2;
-    const dx = mx - centre[0];
-    const dy = my - centre[1];
-    const len = Math.hypot(dx, dy) || 1;
-    return svgText(mx + (dx / len) * 22, my + (dy / len) * 22, text);
+    const ex = b[0] - a[0];
+    const ey = b[1] - a[1];
+    const len = Math.hypot(ex, ey) || 1;
+    let nx = -ey / len;
+    let ny = ex / len;
+    if ((mx - centre[0]) * nx + (my - centre[1]) * ny < 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    const hw = (text.length * 8) / 2;
+    const hh = 8;
+    const d = Math.abs(nx) * hw + Math.abs(ny) * hh + 6;
+    return svgText(mx + nx * d, my + ny * d, text);
   }
 
   function figureDraw(f) {
@@ -273,7 +286,7 @@
         const [a, b, c] = f.sides;
         const x2 = (c * c + a * a - b * b) / (2 * a);
         const y2 = Math.sqrt(Math.max(0, c * c - x2 * x2));
-        const p = fitPoints([[0, 0], [a, 0], [x2, y2]], { x0: 30, y0: 22, x1: 270, y1: 198 });
+        const p = fitPoints([[0, 0], [a, 0], [x2, y2]], FIG_BOX);
         const ctr = centreOf(p);
         let body = `<polygon class="fig-line" points="${p.map(xy).join(" ")}"/>`;
         if (f.labels) {
@@ -288,21 +301,21 @@
           const t = -Math.PI / 2 + (2 * Math.PI * k) / n;
           raw.push([Math.cos(t), Math.sin(t)]);
         }
-        const p = fitPoints(raw, { x0: 40, y0: 24, x1: 260, y1: 196 });
+        const p = fitPoints(raw, FIG_BOX);
         const ctr = centreOf(p);
         let body = `<polygon class="fig-line" points="${p.map(xy).join(" ")}"/>`;
         if (f.labels) f.sides.forEach((x, k) => (body += edgeLabel(p[k], p[(k + 1) % n], `${x}${us}`, ctr)));
         return { vb: "0 0 300 220", body, label: `Polígon de ${n} costats` };
       }
       case "rect": {
-        const s = Math.min(200 / f.w, 150 / f.h);
+        const s = Math.min(190 / f.w, 140 / f.h);
         const W = f.w * s;
         const H = f.h * s;
-        const x0 = (300 - W) / 2;
+        const x0 = (300 - W - 44) / 2; // 44 px kept on the right for the height label
         const y0 = (220 - H) / 2;
         let body = `<rect class="fig-line" x="${f1(x0)}" y="${f1(y0)}" width="${f1(W)}" height="${f1(H)}" fill="none"/>`;
         if (f.labels) {
-          body += svgText(x0 + W / 2, y0 - 12, `${f.w}${us}`) + svgText(x0 + W + 12, y0 + H / 2, `${f.h}${us}`, "start");
+          body += svgText(x0 + W / 2, y0 - 14, `${f.w}${us}`) + svgText(x0 + W + 8, y0 + H / 2, `${f.h}${us}`, "start");
         }
         return { vb: "0 0 300 220", body, label: f.labels ? `Rectangle de ${f.w}${us} per ${f.h}${us}` : "Rectangle" };
       }
@@ -911,7 +924,7 @@
     view = "card";
     const choice = card.kind === "choice";
     const dirLabel = card.math
-      ? choice ? "Tria la resposta" : card.kind === "pair" ? "Escriu les coordenades" : "Calcula"
+      ? choice ? "Tria" : card.kind === "pair" ? "Escriu les coordenades" : "Calcula"
       : card.dir === "nt"
         ? `Escriu-ho en ${data.target}`
         : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
@@ -931,7 +944,7 @@
           <span class="flash-prog" id="flash-prog"></span>
         </div>
         <div class="flash-dots" id="flash-dots" aria-hidden="true"></div>
-        <div class="flash-stage" id="flash-stage">
+        <div class="flash-stage${card.prompt.length > 40 ? " flash-long" : ""}" id="flash-stage">
           <p class="flash-dir">${escText(dirLabel)}</p>
           ${card.figure ? `<div class="flash-fig">${C.figureSvg(card.figure)}</div>` : ""}
           <div class="flash-word">${escText(card.prompt)}</div>

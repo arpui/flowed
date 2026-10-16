@@ -661,6 +661,7 @@ MATH_GEN_KINDS = frozenset({
     "dec_times_int", "percent_of", "divisible", "combined", "unit_convert", "complex_to_simple",
     "time_convert", "area_simple", "mean", "probability", "equation", "sequence",
     "angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point",
+    "mult",
 })
 MATH_ANSWER_KINDS = ("number", "fraction", "unit", "choice", "pair")
 _FRAC_PLAIN = re.compile(r"(-?)([0-9]+)\s*/\s*([0-9]+)")

@@ -497,6 +497,7 @@ interface GenItem {
   options?: string[];
   form?: "value" | "simplest";
   figure?: Figure;
+  key?: string; // two items with the same key are the same exercise (mult: a×b and b×a)
 }
 type Generator = (r: Rng, p: Params) => GenItem | null;
 
@@ -889,7 +890,25 @@ const GENERATORS = new Map<string, Generator>([
     const y = int(r, 0, 10);
     return { prompt: "Quines coordenades té el punt?", target: [`(${x}, ${y})`], answer_kind: "pair", figure: { type: "grid", points: [[x, y]], size: 10 } };
   }],
+  // E4 §6: a product of two factors with `digits: [da, db]` digits each (1 digit = 2..9, 2 = 10..99, 3 = 100..999).
+  // The same product twice, or a×b and b×a, is the same card: the key keeps one of them.
+  ["mult", (r, p) => {
+    const d = paramDigits(p);
+    const [loA, hiA] = DIGIT_RANGE[d[0]] ?? [2, 9];
+    const [loB, hiB] = DIGIT_RANGE[d[1]] ?? [2, 9];
+    const a = int(r, loA, hiA);
+    const b = int(r, loB, hiB);
+    return { prompt: `${a} × ${b}`, target: [String(a * b)], key: `${Math.min(a, b)}×${Math.max(a, b)}` };
+  }],
 ]);
+
+/** The digits of each factor of a `mult` list: `digits: [da, db]`, each 1, 2 or 3; else [1, 1]. */
+const DIGIT_RANGE: Record<number, [number, number]> = { 1: [2, 9], 2: [10, 99], 3: [100, 999] };
+function paramDigits(p: Params): [number, number] {
+  const v = p.digits;
+  const ok = Array.isArray(v) && v.length === 2 && v.every((x) => Number.isInteger(x) && x >= 1 && x <= 3);
+  return ok ? [v[0] as number, v[1] as number] : [1, 1];
+}
 
 /** The generator kinds a `generate` block may name (besides `op`). */
 export const GEN_KINDS: readonly string[] = [...GENERATORS.keys()];
@@ -912,7 +931,7 @@ export function generatedWords(listId: string, gen: JsonRecord): MathWord[] {
   for (let tries = 0; out.length < count && tries < count * 200; tries++) {
     const item = make(rng, params);
     if (!item) continue;
-    const card = item.prompt + "\u0000" + JSON.stringify(item.figure ?? null); // a figure card is its prompt and its figure
+    const card = (item.key ?? item.prompt) + "\u0000" + JSON.stringify(item.figure ?? null); // a figure card is its prompt and its figure
     if (seen.has(card)) continue;
     seen.add(card);
     out.push({ id: `g${out.length + 1}`, ...item });

@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.arees-figura",
+  "level": "m5",
+  "competence": "m5.area_perimeter",
+  "title": { "ca": "Àrees (figura)", "es": "Áreas (figura)", "en": "Areas (figure)" },
+  "generate": { "kind": "area_figure", "count": 12 }
+}

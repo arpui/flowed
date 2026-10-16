@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.fraccions-i-decimals",
+  "level": "m5",
+  "title": { "ca": "Fraccions i decimals", "es": "Fracciones y decimales", "en": "Fractions and decimals" },
+  "generate": { "kind": "frac_dec", "count": 12 }
+}

@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.operacions-combinades",
+  "level": "m5",
+  "competence": "m5.combined_ops",
+  "title": { "ca": "Operacions combinades", "es": "Operaciones combinadas", "en": "Combined operations" },
+  "generate": { "kind": "combined", "count": 12 }
+}

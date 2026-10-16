@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.divisibilitat",
+  "level": "m5",
+  "title": { "ca": "Divisibilitat", "es": "Divisibilidad", "en": "Divisibility" },
+  "generate": { "kind": "divisible", "count": 12 }
+}

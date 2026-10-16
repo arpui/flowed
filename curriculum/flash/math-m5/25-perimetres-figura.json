@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.perimetres-figura",
+  "level": "m5",
+  "competence": "m5.area_perimeter",
+  "title": { "ca": "Perímetres (figura)", "es": "Perímetros (figura)", "en": "Perimeters (figure)" },
+  "generate": { "kind": "perimeter_figure", "count": 12 }
+}

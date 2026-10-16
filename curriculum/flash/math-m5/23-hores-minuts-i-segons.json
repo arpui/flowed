@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.hores-minuts-i-segons",
+  "level": "m5",
+  "competence": "m5.time_intervals",
+  "title": { "ca": "Hores, minuts i segons", "es": "Horas, minutos y segundos", "en": "Hours, minutes and seconds" },
+  "generate": { "kind": "time_convert", "count": 12 }
+}

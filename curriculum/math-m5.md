@@ -7,6 +7,7 @@ pass_mark: 80
 carry_mark: 65
 checkpoint_items: 12
 ready_share: 50
+flash_share: 60
 ---
 
 # Math m5 — currículum (esborrany)
@@ -26,7 +27,8 @@ ready_share: 50
 > competències sense ítems de càlcul (p. ex. `m5.distributive`) declaren la família de
 > passos.
 >
-> Sense `flash_share`: el contingut Flash de m5 el deixa E4.
+> `flash_share: 60`: el contingut Flash de m5 són les llistes de `curriculum/flash/math-m5/`
+> (encàrrec E4); el nivell demana el 60 % d'elles tancades.
 
 ---
 

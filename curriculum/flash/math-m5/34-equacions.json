@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.equacions",
+  "level": "m5",
+  "competence": "m5.equations_simple",
+  "title": { "ca": "Equacions", "es": "Ecuaciones", "en": "Equations" },
+  "generate": { "kind": "equation", "count": 12 }
+}

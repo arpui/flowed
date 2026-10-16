@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.arrodonir",
+  "level": "m5",
+  "title": { "ca": "Arrodonir", "es": "Redondear", "en": "Rounding" },
+  "generate": { "kind": "round", "count": 12 }
+}

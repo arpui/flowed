@@ -110,15 +110,47 @@ for (const l of listsMath) {
   const ids = l.words.map((w) => w.id);
   check(`math word ids unique in ${l.id}`, new Set(ids).size === ids.length);
 }
+// E4 §6: the m5 multiplication lists (kind mult): the digits of each factor, no repeat, no commuted repeat, the result computed.
 {
-  const t7 = listsMath.find((l) => l.id === "math-m5.flash.taula-7");
-  const w = t7?.words.find((x) => x.id === "7x3");
-  check("taula del 7: ten words, 7 × 3 = 21", t7?.words.length === 10 && w?.prompt === "7 × 3" && w?.target.join() === "21", w);
-  check("taula del 7: the ids are <a><op><b>", t7?.words.map((x) => x.id).join() === "7x1,7x2,7x3,7x4,7x5,7x6,7x7,7x8,7x9,7x10");
-  const ex = listsMath.find((l) => l.id === "math-m5.flash.2x1-xifres");
-  check("2×1 digits: twelve explicit items, 23 × 4 = 92", ex?.words.length === 12 && ex.words[0]?.prompt === "23 × 4" && ex.words[0]?.target.join() === "92");
+  const digitsOf = (n: number) => String(n).length;
+  const multCheck = (id: string, count: number, da: number, db: number) => {
+    const l = listsMath.find((x) => x.id === id);
+    const pairs = (l?.words ?? []).map((w) => ((w.prompt ?? "").match(/^(\d+) × (\d+)$/) ?? []).slice(1).map(Number));
+    const keys = pairs.map(([a, b]) => `${Math.min(a!, b!)}×${Math.max(a!, b!)}`);
+    const okDigits = pairs.every(([a, b]) => digitsOf(a!) === da && digitsOf(b!) === db && a! >= 2 && b! >= 2);
+    const okResult = (l?.words ?? []).every((w) => w.target.join() === String(pairs[(l?.words ?? []).indexOf(w)]!.reduce((x, y) => x * y, 1)));
+    check(`${id}: ${count} words, ${da}×${db} digits, no repeat or commuted repeat, result computed`,
+      !!l && l.words.length === count && okDigits && new Set(keys).size === keys.length && okResult && l.words.map((w) => w.id).join() === Array.from({ length: count }, (_, i) => `g${i + 1}`).join(),
+      { n: l?.words.length, sample: l?.words.slice(0, 2) });
+  };
+  multCheck("math-m5.flash.taules-repas", 24, 1, 1);
+  multCheck("math-m5.flash.mult-2x1", 12, 2, 1);
+  multCheck("math-m5.flash.mult-3x1", 12, 3, 1);
+  const repas = listsMath.find((l) => l.id === "math-m5.flash.taules-repas");
+  check("taules (repàs): the factors are 2..9", (repas?.words ?? []).every((w) => { const [a, b] = (w.prompt ?? "").split(" × ").map(Number); return a! >= 2 && a! <= 9 && b! >= 2 && b! <= 9; }));
+  const mult = mathWords({ id: "math-m5.flash.mult-2x1", generate: { kind: "mult", count: 12, params: { digits: [2, 1] } } }).words;
+  check("mult: the same list gives the same words (deterministic, seeded by the id)", JSON.stringify(mult.map((w) => w.prompt)) === JSON.stringify(listsMath.find((l) => l.id === "math-m5.flash.mult-2x1")?.words.map((w) => w.prompt)));
 }
 check("math lists have no language entries (the lists are per domain)", listsMath.every((l) => !l.id.startsWith("en-")) && listsCa.every((l) => !l.id.startsWith("math-")));
+
+// E4: the m5 lists — one per generator, numbered from 10, each with its three titles, count 12 and, when it
+// names one, a competence that exists in math-m5.md.
+{
+  const compIds = new Set([...read("curriculum", "math-m5.md").matchAll(/^### (m5\.[a-z0-9_]+) /gm)].map((m) => m[1]));
+  check("math list ids are unique across the domain", new Set(listsMath.map((l) => l.id)).size === listsMath.length);
+  const m5Files = mathFiles.filter((f) => f.startsWith("math-m5/"));
+  const numbers = m5Files.map((f) => Number(f.split("/")[1]?.slice(0, 2)));
+  check("m5 files are numbered 01, 02, 03 (multiplications) and 10..35 (the 26 generators)", numbers.join() === [1, 2, 3, ...Array.from({ length: 26 }, (_, i) => i + 10)].join(), numbers);
+  const gen = m5Files.map((f) => JSON.parse(read("curriculum", "flash", f)));
+  check("every m5 list has the three titles and a level m5", gen.every((r) => r.level === "m5" && r.title && r.title.ca && r.title.es && r.title.en));
+  const e4 = gen.slice(3);
+  check("the 26 generated m5 lists (10..35) take a generate block of count 12", e4.length === 26 && e4.every((r) => r.generate && r.generate.kind && r.generate.count === 12 && !("items" in r)));
+  const comps = gen.filter((r) => "competence" in r);
+  check("every competence named by an m5 list exists in math-m5.md", comps.length > 0 && comps.every((r) => compIds.has(r.competence)), comps.map((r) => r.competence));
+  check("E4 table: 15 generated lists name a competence over 11 distinct ones, plus mult-3x1 (m5.mult_3digit)", comps.length === 16 && new Set(comps.map((r) => r.competence)).size === 12, comps.map((r) => r.competence));
+  const cardLists = listsMath.filter((l) => e4.some((r) => r.id === l.id));
+  check("the 26 generated m5 lists (10..35) each give 12 words", cardLists.length === 26 && cardLists.every((l) => l.words.length === 12), cardLists.map((l) => `${l.id}:${l.words.length}`));
+}
 
 console.log("math engine");
 check("normalizeOp: synonyms map to the four signs", normalizeOp("x") === "×" && normalizeOp("*") === "×" && normalizeOp("-") === "−" && normalizeOp("−") === "−" && normalizeOp("/") === ":" && normalizeOp(":") === ":" && normalizeOp("+") === "+");
@@ -447,9 +479,9 @@ try {
   writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m5" });
   const mathGet = flashStateResponse(root, v1Dir) as any;
   check("math profile: GET enabled, empty state", mathGet.enabled === true && JSON.stringify(mathGet.state) === JSON.stringify(emptyFlashState()));
-  const mathState = { version: 1, lists: { "math-m5.flash.taula-7": { words: { "7x3": { box: 2, seen: 2, first_try: 2, misses: 0, last: "2026-10-16" } }, closed_at: null } }, rounds_by_day: { "2026-10-16": 1 } };
+  const mathState = { version: 1, lists: { "math-m5.flash.taules-repas": { words: { g3: { box: 2, seen: 2, first_try: 2, misses: 0, last: "2026-10-16" } }, closed_at: null } }, rounds_by_day: { "2026-10-16": 1 } };
   const mathPut = saveFlashState(root, v1Dir, { ...mathState, lists: { ...mathState.lists, "en-A1.flash.family": good.lists["en-A1.flash.family"] } });
-  check("math profile: PUT keeps the math lists, drops the language ones", mathPut.status === 200 && JSON.stringify(Object.keys((mathPut.body as any).state.lists)) === '["math-m5.flash.taula-7"]', (mathPut.body as any).state?.lists);
+  check("math profile: PUT keeps the math lists, drops the language ones", mathPut.status === 200 && JSON.stringify(Object.keys((mathPut.body as any).state.lists)) === '["math-m5.flash.taules-repas"]', (mathPut.body as any).state?.lists);
   check("math profile: the math progress is read back", JSON.stringify((flashStateResponse(root, v1Dir) as any).state.lists) === JSON.stringify(mathState.lists));
 } finally {
   fs.rmSync(v1Dir, { recursive: true, force: true });
@@ -461,9 +493,9 @@ try {
 // reading of its prompt (a small evaluator, plain regexes), not with the generator's own code.
 console.log("generators (E1)");
 {
-  const expected = ["round", "digit_value", "compare_numbers", "frac_of", "frac_equiv", "frac_same_den", "frac_dec", "dec_times_int", "percent_of", "divisible", "combined", "unit_convert", "complex_to_simple", "time_convert", "area_simple", "mean", "probability", "equation", "sequence"];
+  const expected = ["round", "digit_value", "compare_numbers", "frac_of", "frac_equiv", "frac_same_den", "frac_dec", "dec_times_int", "percent_of", "divisible", "combined", "unit_convert", "complex_to_simple", "time_convert", "area_simple", "mean", "probability", "equation", "sequence", "mult"];
   const expectedE3 = [...expected, "angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point"];
-  check("the 19 generator kinds of §3 and the 7 figure kinds of E3", JSON.stringify([...GEN_KINDS].sort()) === JSON.stringify([...expectedE3].sort()), GEN_KINDS);
+  check("the generator kinds of §3, the figure kinds of E3 and mult of §6", JSON.stringify([...GEN_KINDS].sort()) === JSON.stringify([...expectedE3].sort()), GEN_KINDS);
   check("count: default 12, clamped to 1..50, a non-integer gives 12", genCount(undefined) === 12 && genCount(0) === 1 && genCount(51) === 50 && genCount(7) === 7 && genCount(12.5) === 12 && genCount("9") === 12);
   check("unknown kinds and prototype names give no words", generatedWords("x", { kind: "nope", count: 5 }).length === 0 && generatedWords("x", { kind: "constructor", count: 5 }).length === 0);
   const same1 = JSON.stringify(generatedWords("math-m5.flash.round", { kind: "round", count: 30 }));
@@ -620,6 +652,10 @@ console.log("generators (E1)");
         }
         return want !== null && Math.abs(tv.num / tv.den - want) < 1e-9 ? null : "probabilitat";
       }
+      case "mult":
+        m = /^(\d+) × (\d+)$/.exec(p);
+        if (!m) return "forma";
+        return Number(m[1]) * Number(m[2]) === Number(t) && Number(m[1]) >= 2 && Number(m[2]) >= 2 ? null : "producte";
       case "equation":
         m = /^(\d+)·x ([+−]) (\d+) = (\d+)\. x = \?$/.exec(p);
         if (m) {
@@ -645,11 +681,13 @@ console.log("generators (E1)");
   };
 
   for (const kind of GEN_KINDS) {
-    const words = generatedWords(`math-m5.flash.${kind}`, { kind, count: 50 });
+    // mult at its default [1,1] has only 36 products (unordered): it is asked for 50 with [2,1] instead
+    const pr = kind === "mult" ? { params: { digits: [2, 1] } } : {};
+    const words = generatedWords(`math-m5.flash.${kind}`, { kind, count: 50, ...pr });
     check(`${kind}: 50 words, ids g1…g50, cards distinct (prompt and figure)`, words.length === 50 && words.every((w, i) => w.id === `g${i + 1}`) && new Set(words.map((w) => w.prompt + JSON.stringify(w.figure ?? null))).size === 50, words.length);
     const bad = (expected.includes(kind) ? words.map((w) => verify(kind, w)) : []).filter((x): x is string => x !== null); // E3 kinds: the figure block below
     check(`${kind}: every result checked with an independent reading`, bad.length === 0, bad.slice(0, 3));
-    const dflt = generatedWords(`math-m5.flash.${kind}`, { kind });
+    const dflt = generatedWords(`math-m5.flash.${kind}`, { kind, ...pr });
     check(`${kind}: the default count is 12 and they are the first twelve`, dflt.length === 12 && JSON.stringify(dflt) === JSON.stringify(words.slice(0, 12)));
   }
   check("decComma: 235 with 2 decimals is 2,35; 940 is 9,4; 7 with 2 decimals is 0,07", decComma(235, 2) === "2,35" && decComma(940, 2) === "9,4" && decComma(7, 2) === "0,07" && decComma(42, 0) === "42");
@@ -889,6 +927,43 @@ console.log("figure drawing (E3)");
   check("the card shows the figure above the prompt and the pair input has its own label", flashSrc.includes('<div class="flash-fig">${C.figureSvg(card.figure)}</div>') && flashSrc.indexOf("flash-fig\">") < flashSrc.indexOf('<div class="flash-word">') && flashSrc.includes('aria-label="Coordenades"'));
   const styleSrc = read("web", "style.css");
   check("style.css: the figure uses the flash tokens, sized for phones", styleSrc.includes(".flash-fig-svg") && styleSrc.includes("max-height: 260px") && styleSrc.includes("min(280px, 100%)") && styleSrc.includes("stroke: currentColor"));
+  // E4 §3: a size label sits outside its figure (on the outward normal of its side), inside the drawing box.
+  {
+    const texts = (svg: string) => [...svg.matchAll(/<text class="fig-text" x="([-\d.]+)" y="([-\d.]+)"/g)].map((m) => [Number(m[1]), Number(m[2])]);
+    const vb = (svg: string) => (svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/) ?? []).slice(1).map(Number);
+    const inPoly = (pts: number[][], x: number, y: number) => {
+      let c = false;
+      for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+        const [xi, yi] = pts[i] as number[];
+        const [xj, yj] = pts[j] as number[];
+        if ((yi! > y) !== (yj! > y) && x < ((xj! - xi!) * (y - yi!)) / (yj! - yi!) + xi!) c = !c;
+      }
+      return c;
+    };
+    const polyOf = (svg: string) => (svg.match(/<polygon class="fig-line" points="([^"]+)"/)?.[1] ?? "").split(" ").map((p) => p.split(",").map(Number));
+    const inBox = (svg: string, [x, y]: number[]) => { const [W, H] = vb(svg); return x! >= 0 && y! >= 0 && x! <= W! && y! <= H!; };
+    const cases: Array<[string, any]> = [
+      ["triangle 5-7-9", { type: "triangle", sides: [5, 7, 9], labels: true, unit: "cm" }],
+      ["triangle equilateral 12", { type: "triangle", sides: [12, 12, 12], labels: true, unit: "cm" }],
+      ["triangle 3-4-5", { type: "triangle", sides: [3, 4, 5], labels: true, unit: "cm" }],
+      ["square 4 sides of 10", { type: "polygon", sides: [10, 10, 10, 10], regular: true, labels: true, unit: "cm" }],
+      ["hexagon 12", { type: "polygon", sides: [12, 12, 12, 12, 12, 12], regular: true, labels: true, unit: "cm" }],
+    ];
+    for (const [name, f] of cases) {
+      const svg = C.figureSvg(f) as string;
+      const ts = texts(svg);
+      const poly = polyOf(svg);
+      check(`${name}: one size label per side, all outside the figure and inside the drawing`, ts.length === f.sides.length && ts.every(([x, y]) => !inPoly(poly, x!, y!) && inBox(svg, [x!, y!])), ts);
+    }
+    const rect = C.figureSvg({ type: "rect", w: 20, h: 8, labels: true, unit: "cm" }) as string;
+    const r = (rect.match(/<rect class="fig-line" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/) ?? []).slice(1).map(Number);
+    const rt = texts(rect);
+    const outsideRect = rt.every(([x, y]) => x! < r[0]! || x! > r[0]! + r[2]! || y! < r[1]! || y! > r[1]! + r[3]!);
+    check("rect: the width label is above the top edge and the height label to the right, both outside the rectangle", rt.length === 2 && outsideRect && rt[0]![1]! < r[1]! && rt[1]![0]! > r[0]! + r[2]! && rt.every(([x, y]) => inBox(rect, [x!, y!])), { r, rt });
+  }
+  const cardSrc = flashSrc;
+  check("flash.js: the card says Tria for a choice, Escriu les coordenades for a pair, Calcula otherwise", cardSrc.includes('? choice ? "Tria" : card.kind === "pair" ? "Escriu les coordenades" : "Calcula"') && !cardSrc.includes("Tria la resposta"));
+  check("flash.js: an enunciat longer than 40 characters puts flash-long on the stage (smaller word)", cardSrc.includes('card.prompt.length > 40 ? " flash-long" : ""') && styleSrc.includes(".flash-stage.flash-long .flash-word"));
 }
 
 // ---- wiring ----------------------------------------------------------------

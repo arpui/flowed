@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.coordenades",
+  "level": "m5",
+  "title": { "ca": "Coordenades", "es": "Coordenadas", "en": "Coordinates" },
+  "generate": { "kind": "grid_point", "count": 12 }
+}

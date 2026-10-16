@@ -1,6 +1,0 @@
-{
-  "id": "math-m5.flash.taula-4",
-  "level": "m5",
-  "title": { "ca": "Taula del 4", "es": "Tabla del 4", "en": "4 times table" },
-  "generate": { "op": "×", "a": [4], "b": { "from": 1, "to": 10 } }
-}

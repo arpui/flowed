@@ -1,0 +1,7 @@
+{
+  "id": "math-m5.flash.complex-i-incomplex",
+  "level": "m5",
+  "competence": "m5.smd_convert",
+  "title": { "ca": "Complex i incomplex", "es": "Complejo e incomplejo", "en": "Compound and simple units" },
+  "generate": { "kind": "complex_to_simple", "count": 12 }
+}

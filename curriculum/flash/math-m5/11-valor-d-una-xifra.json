@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.valor-d-una-xifra",
+  "level": "m5",
+  "title": { "ca": "Valor d'una xifra", "es": "Valor de una cifra", "en": "Place value of a digit" },
+  "generate": { "kind": "digit_value", "count": 12 }
+}

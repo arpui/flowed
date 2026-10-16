@@ -1,0 +1,6 @@
+{
+  "id": "math-m5.flash.series",
+  "level": "m5",
+  "title": { "ca": "Sèries", "es": "Sucesiones", "en": "Sequences" },
+  "generate": { "kind": "sequence", "count": 12 }
+}
