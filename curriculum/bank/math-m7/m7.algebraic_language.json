@@ -1,0 +1,194 @@
+[
+  {
+    "id": "m7.algebraic_language.001",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "la diferència entre el triple de x i 3",
+    "answer": "3x - 3",
+    "also_accept": [
+      "-3 + 3x"
+    ],
+    "options": [],
+    "why": "«El triple de x» és 3 · x; «la diferència amb 3» és restar 3: 3x - 3.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "x · 3 - 3"
+  },
+  {
+    "id": "m7.algebraic_language.002",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "un nombre x augmentat en 5 i després multiplicat per 3",
+    "answer": "3x + 15",
+    "also_accept": [
+      "15 + 3x"
+    ],
+    "options": [],
+    "why": "«Augmentat en 5» és x + 5; «multiplicat per 3» és 3 · (x + 5), que es desplega en 3x + 15.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "(x + 5) · 3"
+  },
+  {
+    "id": "m7.algebraic_language.003",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "el doble d'un nombre x, més 3",
+    "answer": "2x + 3",
+    "also_accept": [
+      "3 + 2x"
+    ],
+    "options": [],
+    "why": "«El doble d'un nombre x» és 2 · x; «més 3» és + 3: 2x + 3.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "x · 2 + 3"
+  },
+  {
+    "id": "m7.algebraic_language.004",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "el doble d'un nombre x, més 8",
+    "answer": "2x + 8",
+    "also_accept": [
+      "8 + 2x"
+    ],
+    "options": [],
+    "why": "«El doble d'un nombre x» és 2 · x; «més 8» és + 8: 2x + 8.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "x · 2 + 8"
+  },
+  {
+    "id": "m7.algebraic_language.005",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "un nombre x augmentat en 3 i després multiplicat per 3",
+    "answer": "3x + 9",
+    "also_accept": [
+      "9 + 3x"
+    ],
+    "options": [],
+    "why": "«Augmentat en 3» és x + 3; «multiplicat per 3» és 3 · (x + 3), que es desplega en 3x + 9.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "(x + 3) · 3"
+  },
+  {
+    "id": "m7.algebraic_language.006",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "un nombre x augmentat en 2 i després multiplicat per 6",
+    "answer": "6x + 12",
+    "also_accept": [
+      "12 + 6x"
+    ],
+    "options": [],
+    "why": "«Augmentat en 2» és x + 2; «multiplicat per 6» és 6 · (x + 2), que es desplega en 6x + 12.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "(x + 2) · 6"
+  },
+  {
+    "id": "m7.algebraic_language.007",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "el quadrat d'un nombre x més el seu triple",
+    "answer": "x^2 + 3x",
+    "also_accept": [
+      "3x + x^2"
+    ],
+    "options": [],
+    "why": "«El quadrat de x» és x^2 i «el seu triple» és 3 · x: x^2 + 3x.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "x · x + x · 3"
+  },
+  {
+    "id": "m7.algebraic_language.008",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "un nombre x augmentat en 6 i després multiplicat per 2",
+    "answer": "2x + 12",
+    "also_accept": [
+      "12 + 2x"
+    ],
+    "options": [],
+    "why": "«Augmentat en 6» és x + 6; «multiplicat per 2» és 2 · (x + 6), que es desplega en 2x + 12.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "(x + 6) · 2"
+  },
+  {
+    "id": "m7.algebraic_language.009",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "la diferència entre el triple de x i 8",
+    "answer": "3x - 8",
+    "also_accept": [
+      "-8 + 3x"
+    ],
+    "options": [],
+    "why": "«El triple de x» és 3 · x; «la diferència amb 8» és restar 8: 3x - 8.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "x · 3 - 8"
+  },
+  {
+    "id": "m7.algebraic_language.010",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "la diferència entre el triple de x i 4",
+    "answer": "3x - 4",
+    "also_accept": [
+      "-4 + 3x"
+    ],
+    "options": [],
+    "why": "«El triple de x» és 3 · x; «la diferència amb 4» és restar 4: 3x - 4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "x · 3 - 4"
+  },
+  {
+    "id": "m7.algebraic_language.011",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "la diferència entre el triple de x i 6",
+    "answer": "3x - 6",
+    "also_accept": [
+      "-6 + 3x"
+    ],
+    "options": [],
+    "why": "«El triple de x» és 3 · x; «la diferència amb 6» és restar 6: 3x - 6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "x · 3 - 6"
+  },
+  {
+    "id": "m7.algebraic_language.012",
+    "competence": "m7.algebraic_language",
+    "type": "compute",
+    "instruction": "Tradueix l'enunciat a llenguatge algebraic (x és el nombre).",
+    "problem": "el doble d'un nombre x, més 5",
+    "answer": "2x + 5",
+    "also_accept": [
+      "5 + 2x"
+    ],
+    "options": [],
+    "why": "«El doble d'un nombre x» és 2 · x; «més 5» és + 5: 2x + 5.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "x · 2 + 5"
+  }
+]

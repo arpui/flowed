@@ -1,0 +1,182 @@
+[
+  {
+    "id": "m7.fractions.001",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(2/2 + 5/5) ÷ (4/4)",
+    "answer": "80/40",
+    "also_accept": [
+      "2"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 2/2 + 5/5 = 2. Dividir per una fracció és multiplicar per la inversa: 2 ÷ 4/4 = 2. Sense simplificar queda 80/40; simplificada, 2.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.002",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(2/3 + 7/2) ÷ (1/3)",
+    "answer": "75/6",
+    "also_accept": [
+      "12 1/2"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 2/3 + 7/2 = 4 1/6. Dividir per una fracció és multiplicar per la inversa: 4 1/6 ÷ 1/3 = 12 1/2. Sense simplificar queda 75/6; simplificada, 12 1/2.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.003",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(4/2 - 9/5) × (9/8)",
+    "answer": "18/80",
+    "also_accept": [
+      "9/40"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 4/2 - 9/5 = 1/5. Després la multiplicació: 1/5 × 9/8 = 9/40. Sense simplificar queda 18/80; simplificada, 9/40.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.004",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(8/6 - 1/4) × (7/7)",
+    "answer": "182/168",
+    "also_accept": [
+      "1 1/12"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 8/6 - 1/4 = 1 1/12. Després la multiplicació: 1 1/12 × 7/7 = 1 1/12. Sense simplificar queda 182/168; simplificada, 1 1/12.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.005",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(3/5)^2 + 6/3",
+    "answer": "177/75",
+    "also_accept": [
+      "2 9/25"
+    ],
+    "options": [],
+    "why": "Primer la potència: (3/5)^2 = 9/25. Després la suma amb 6/3: 2 9/25. Sense simplificar queda 177/75; simplificada, 2 9/25.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.006",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(7/3 - 6/7) × (5/2)",
+    "answer": "155/42",
+    "also_accept": [
+      "3 29/42"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 7/3 - 6/7 = 1 10/21. Després la multiplicació: 1 10/21 × 5/2 = 3 29/42. Sense simplificar queda 155/42; simplificada, 3 29/42.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.007",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(8/3 + 7/3) ÷ (9/6)",
+    "answer": "270/81",
+    "also_accept": [
+      "3 1/3"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 8/3 + 7/3 = 5. Dividir per una fracció és multiplicar per la inversa: 5 ÷ 9/6 = 3 1/3. Sense simplificar queda 270/81; simplificada, 3 1/3.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.008",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(6/5 + 2/2) ÷ (4/6)",
+    "answer": "132/40",
+    "also_accept": [
+      "3 3/10"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 6/5 + 2/2 = 2 1/5. Dividir per una fracció és multiplicar per la inversa: 2 1/5 ÷ 4/6 = 3 3/10. Sense simplificar queda 132/40; simplificada, 3 3/10.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.009",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(4/3 - 7/6) × (8/7)",
+    "answer": "24/126",
+    "also_accept": [
+      "4/21"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 4/3 - 7/6 = 1/6. Després la multiplicació: 1/6 × 8/7 = 4/21. Sense simplificar queda 24/126; simplificada, 4/21.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.010",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(6/7 - 4/6) × (2/4)",
+    "answer": "16/168",
+    "also_accept": [
+      "2/21"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 6/7 - 4/6 = 4/21. Després la multiplicació: 4/21 × 2/4 = 2/21. Sense simplificar queda 16/168; simplificada, 2/21.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.011",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(4/4 + 8/8) ÷ (5/5)",
+    "answer": "320/160",
+    "also_accept": [
+      "2"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 4/4 + 8/8 = 2. Dividir per una fracció és multiplicar per la inversa: 2 ÷ 5/5 = 2. Sense simplificar queda 320/160; simplificada, 2.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.fractions.012",
+    "competence": "m7.fractions",
+    "type": "compute",
+    "instruction": "Calcula i dona el resultat (pots deixar-lo sense simplificar).",
+    "problem": "(6/2 + 4/2) ÷ (6/8)",
+    "answer": "160/24",
+    "also_accept": [
+      "6 2/3"
+    ],
+    "options": [],
+    "why": "Primer el parèntesi: 6/2 + 4/2 = 5. Dividir per una fracció és multiplicar per la inversa: 5 ÷ 6/8 = 6 2/3. Sense simplificar queda 160/24; simplificada, 6 2/3.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  }
+]
