@@ -1,0 +1,172 @@
+[
+  {
+    "id": "m6.fraction_ops.001",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "1/2 + 2/6",
+    "answer": "5/6",
+    "also_accept": [],
+    "options": [],
+    "why": "Denominador comú 6: 1/2 = 3/6 i 2/6 = 2/6; suma els numeradors: 3 + 2 = 5, així que 5/6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.002",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "10/12 - 1/3",
+    "answer": "1/2",
+    "also_accept": [
+      "6/12"
+    ],
+    "options": [],
+    "why": "Denominador comú 12: 10/12 = 10/12 i 1/3 = 4/12; resta els numeradors: 10 - 4 = 6, així que 6/12. Simplifica dividint per 6: 1/2.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.003",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "1/5 ÷ (9/10)",
+    "answer": "2/9",
+    "also_accept": [
+      "10/45"
+    ],
+    "options": [],
+    "why": "Dividir per una fracció és multiplicar per la inversa: 1/5 × 10/9 = 10/45. Simplifica dividint per 5: 2/9.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.004",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "7/12 - 4/10",
+    "answer": "11/60",
+    "also_accept": [],
+    "options": [],
+    "why": "Denominador comú 60: 7/12 = 35/60 i 4/10 = 24/60; resta els numeradors: 35 - 24 = 11, així que 11/60.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.005",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "1/11 ÷ (2/6)",
+    "answer": "3/11",
+    "also_accept": [
+      "6/22"
+    ],
+    "options": [],
+    "why": "Dividir per una fracció és multiplicar per la inversa: 1/11 × 6/2 = 6/22. Simplifica dividint per 2: 3/11.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.006",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "2/7 ÷ (2/6)",
+    "answer": "6/7",
+    "also_accept": [
+      "12/14"
+    ],
+    "options": [],
+    "why": "Dividir per una fracció és multiplicar per la inversa: 2/7 × 6/2 = 12/14. Simplifica dividint per 2: 6/7.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.007",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "2/3 × 1/3",
+    "answer": "2/9",
+    "also_accept": [],
+    "options": [],
+    "why": "Multiplica els numeradors (2 × 1 = 2) i els denominadors (3 × 3 = 9): 2/9.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.008",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "3/7 × 1/11",
+    "answer": "3/77",
+    "also_accept": [],
+    "options": [],
+    "why": "Multiplica els numeradors (3 × 1 = 3) i els denominadors (7 × 11 = 77): 3/77.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.009",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "7/10 ÷ (1/3)",
+    "answer": "2 1/10",
+    "also_accept": [
+      "21/10"
+    ],
+    "options": [],
+    "why": "Dividir per una fracció és multiplicar per la inversa: 7/10 × 3/1 = 21/10. Com a nombre mixt: 21/10 = 2 + 1/10, que s'escriu 2 1/10 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.010",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "6/12 × 10/11",
+    "answer": "5/11",
+    "also_accept": [
+      "60/132"
+    ],
+    "options": [],
+    "why": "Multiplica els numeradors (6 × 10 = 60) i els denominadors (12 × 11 = 132): 60/132. Simplifica dividint per 12: 5/11.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.011",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "1/2 - 1/3",
+    "answer": "1/6",
+    "also_accept": [],
+    "options": [],
+    "why": "Denominador comú 6: 1/2 = 3/6 i 1/3 = 2/6; resta els numeradors: 3 - 2 = 1, així que 1/6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m6.fraction_ops.012",
+    "competence": "m6.fraction_ops",
+    "type": "compute",
+    "instruction": "Calcula i simplifica el resultat.",
+    "problem": "4/5 + 2/3",
+    "answer": "1 7/15",
+    "also_accept": [
+      "22/15"
+    ],
+    "options": [],
+    "why": "Denominador comú 15: 4/5 = 12/15 i 2/3 = 10/15; suma els numeradors: 12 + 10 = 22, així que 22/15. Com a nombre mixt: 22/15 = 1 + 7/15, que s'escriu 1 7/15 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  }
+]

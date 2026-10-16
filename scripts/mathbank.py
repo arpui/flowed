@@ -658,7 +658,8 @@ def factor_letters(rng: random.Random) -> dict:
 # "near" (7): "valor correcte, unitat que falta".
 
 _MEASURE_UNITS = frozenset({"m", "cm", "mm", "km", "kg", "g", "l", "ml", "min", "m²", "cm²",
-                            "dm", "dm²", "km²", "m³", "dm³", "cm³"})  # m7 (E6) adds the volumes
+                            "dm", "dm²", "km²", "m³", "dm³", "cm³",  # m7 (E6) adds the volumes
+                            "mm²", "ha"})  # m6 (E8) adds mm² and ha (not "a": a letter unit reads as algebra)
 
 
 def _is_unit_answer(text) -> bool:
@@ -2158,6 +2159,597 @@ M7_FAMILIES = {
 }
 
 
+# --------------------------------------------- m6 (E8, DISSENY-M7-M6 §2) ---
+# The Go families of 6è de primària. Same contract as the rest: `value` is the
+# template's Fraction, re-derived from `expression` (or `problem`) by the evaluator.
+# Roots are "exact roots" only: the expression is a product of powers or a plain
+# number (mathgrade does not read √). Units: a unit lives in `answer`; every unit
+# used here is in _MEASURE_UNITS (the area "a" is only ever given, never asked:
+# its answers are in m², because a letter-unit would read as algebra).
+
+
+def powers_value(rng: random.Random) -> dict:
+    """Exact powers (positive and negative bases), products of powers, and exact roots:
+    the square or cube root of a perfect power, written as a product of prime powers."""
+    shape = rng.randrange(4)
+    if shape == 3:
+        # a root is drawn from prime powers only, so its expression is a power or a plain
+        # prime (mathgrade reads no root sign): 8 is 2^3, 7 is 7
+        k = rng.choice([2, 3, 4, 5, 7, 8, 9, 11])
+        square = rng.random() < 0.5
+        n = k * k if square else k ** 3
+        expr = _prod_str(_fac(k))
+        name = "quadrada" if square else "cúbica"
+        return {
+            "type": "compute",
+            "instruction": "Calcula l'arrel exacta (és un nombre enter).",
+            "problem": f"Quina és l'arrel {name} exacta de {n}?",
+            "expression": expr,
+            "answer": str(k),
+            "also_accept": [],
+            "options": [],
+            "value": Fraction(k),
+            "why": (f"{n} = {_fac_str(n)}, i {k}{'²' if square else '³'} = {n}, així que "
+                    f"l'arrel {name} de {n} és {k}. Com a potència exacta: {expr} = {k}."),
+        }
+    if shape == 0:
+        b = rng.choice([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+        emax = {2: 10, 3: 5, 4: 4, 5: 4, 6: 4, 7: 3, 8: 3, 9: 3, 10: 5, 11: 2, 12: 2}[b]
+        e = rng.randint(2, emax)
+        value = Fraction(b ** e)
+        problem = f"{b}^{e}"
+        why = f"{b}^{e} vol dir {' · '.join([str(b)] * e)} = {b ** e}."
+    elif shape == 1:
+        b = rng.randint(2, 6)
+        e = rng.choice([2, 3])
+        value = Fraction((-b) ** e)
+        problem = f"({-b})^{e}"
+        why = (f"Un negatiu elevat a un exponent {'senar' if e % 2 else 'parell'} dóna un resultat "
+               f"{'negatiu' if e % 2 else 'positiu'}: ({-b})^{e} = {value}.")
+    else:
+        b1, b2 = rng.sample([2, 3, 5, 10], 2)
+        e1, e2 = rng.randint(2, 3), rng.randint(2, 3)
+        p1, p2 = b1 ** e1, b2 ** e2
+        value = Fraction(p1 * p2)
+        problem = f"{b1}^{e1} × {b2}^{e2}"
+        why = f"{b1}^{e1} = {p1} i {b2}^{e2} = {p2}; {p1} × {p2} = {value}."
+    return {
+        "type": "compute",
+        "instruction": "Calcula la potència o el producte de potències.",
+        "problem": problem,
+        "answer": str(value.numerator),
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": why,
+    }
+
+
+def integers_context(rng: random.Random) -> dict:
+    """Sums and differences of integers in a context: temperatures, a lift below ground,
+    a debt. The story is the problem; the arithmetic is the expression."""
+    shape = rng.randrange(4)
+    a = rng.randint(2, 12)
+    b = rng.randint(2, 15)
+    if shape == 0:
+        story = (f"A les 8 del matí hi ha −{a} graus. Al migdia la temperatura puja {b} graus. "
+                 "Quina temperatura hi ha al migdia?")
+        why = f"Pujar és sumar: −{a} + {b} = {b - a}. Els nombres negatius estan sota zero."
+    elif shape == 1:
+        story = (f"L'ascensor és a la planta −{a} (el soterrani {a}). Puja {b} plantes. "
+                 "En quina planta és ara?")
+        why = f"Les plantes del soterrani tenen signe negatiu. Pujar és sumar: −{a} + {b} = {b - a}."
+    elif shape == 2:
+        story = (f"En Pau té un deute de {a} €, és a dir, un saldo de −{a} € al compte. "
+                 f"Ingressa {b} €. Quin és el saldo ara?")
+        why = f"Ingressar és sumar: −{a} + {b} = {b - a}. Un saldo negatiu és un deute."
+    else:
+        story = (f"Al matí hi fan {a} graus. Al vespre la temperatura baixa {b} graus. "
+                 "Quina temperatura hi fa al vespre?")
+        why = f"Baixar és restar: {a} − {b} = {a - b}. Si el resultat és negatiu, està sota zero."
+    expr = f"-{a} + {b}" if shape < 3 else f"{a} - {b}"
+    value = Fraction(b - a if shape < 3 else a - b)
+    return {
+        "type": "compute",
+        "instruction": "Fes l'operació amb enters (pujar o ingressar és sumar, baixar és restar).",
+        "problem": story,
+        "expression": expr,
+        "answer": str(value),
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": why,
+    }
+
+
+def frac_ops4(rng: random.Random) -> dict:
+    """The four operations with fractions of different denominators; the answer is the
+    irreducible form, and the unreduced result is also accepted."""
+    op = rng.choice(["+", "-", "×", "÷"])
+    for _ in range(2000):
+        d1, d2 = rng.randint(2, 12), rng.randint(2, 12)
+        if op in "+-" and d1 == d2:
+            continue
+        n1, n2 = rng.randint(1, d1 - 1), rng.randint(1, d2 - 1)
+        f1, f2 = Fraction(n1, d1), Fraction(n2, d2)
+        if op == "-":
+            if f1 == f2:
+                continue
+            if f1 < f2:
+                n1, d1, n2, d2 = n2, d2, n1, d1
+                f1, f2 = f2, f1
+            value = f1 - f2
+        elif op == "+":
+            value = f1 + f2
+        elif op == "×":
+            value = f1 * f2
+        else:
+            value = f1 / f2
+        if value.denominator != 1:
+            break
+    else:
+        raise GenError("frac_ops4: no fraction pair in 2000 draws")
+    if op in "+-":
+        L = _lcm(d1, d2)
+        a1, a2 = n1 * (L // d1), n2 * (L // d2)
+        raw_num = a1 + a2 if op == "+" else a1 - a2
+        raw_den = L
+        why = (f"Denominador comú {L}: {n1}/{d1} = {a1}/{L} i {n2}/{d2} = {a2}/{L}; "
+               f"{'suma' if op == '+' else 'resta'} els numeradors: {a1} {op} {a2} = {raw_num}, "
+               f"així que {raw_num}/{L}.")
+    elif op == "×":
+        raw_num, raw_den = n1 * n2, d1 * d2
+        why = (f"Multiplica els numeradors ({n1} × {n2} = {raw_num}) i els denominadors "
+               f"({d1} × {d2} = {raw_den}): {raw_num}/{raw_den}.")
+    else:
+        raw_num, raw_den = n1 * d2, d1 * n2
+        why = (f"Dividir per una fracció és multiplicar per la inversa: {n1}/{d1} × {d2}/{n2} = "
+               f"{raw_num}/{raw_den}.")
+    g = math.gcd(raw_num, raw_den)
+    answer = _fmt_frac(value)
+    raw = f"{raw_num}/{raw_den}"
+    if g > 1:
+        why += f" Simplifica dividint per {g}: {answer}."
+    why += mixed_gloss(answer)
+    return {
+        "type": "compute",
+        "instruction": "Calcula i simplifica el resultat.",
+        "problem": (f"{n1}/{d1} ÷ ({n2}/{d2})" if op == "÷" else f"{n1}/{d1} {op} {n2}/{d2}"),
+        "answer": answer,
+        "also_accept": [raw] if raw != answer else [],
+        "options": [],
+        "value": value,
+        "why": why,
+    }
+
+
+def dec_division(rng: random.Random) -> dict:
+    """A decimal divided by a whole number or by a one-decimal number, with an exact
+    quotient (up to two decimals)."""
+    for _ in range(500):
+        if rng.random() < 0.5:
+            d = Fraction(rng.randint(2, 9))
+        else:
+            k = rng.randint(2, 99)
+            if k % 10 == 0:
+                continue
+            d = Fraction(k, 10)
+        q = Fraction(rng.randint(11, 999), 100)
+        dividend = d * q
+        if dividend >= 1000 or (dividend * 1000).denominator != 1:
+            continue
+        break
+    else:
+        raise GenError("dec_division: no exact pair in 500 draws")
+    ds, qs, xs = _fmt_min_dec(d), _fmt_min_dec(q), _fmt_min_dec(dividend)
+    if d.denominator == 1:
+        why = (f"Divideix {xs} per {ds} com amb enters i posa la coma al quocient just quan "
+               f"baixes la primera xifra decimal del dividend: {xs} ÷ {ds} = {qs}.")
+    else:
+        why = (f"Per dividir per {ds} (un decimal), multiplica dividend i divisor per 10: "
+               f"{_fmt_min_dec(dividend * 10)} ÷ {_fmt_min_dec(d * 10)} = {qs}, el mateix resultat.")
+    return {
+        "type": "compute",
+        "instruction": "Calcula el quocient exacte (la coma al lloc correcte).",
+        "problem": f"{xs} ÷ {ds}",
+        "answer": qs,
+        "also_accept": [],
+        "options": [],
+        "value": q,
+        "why": why,
+    }
+
+
+def percent_change(rng: random.Random) -> dict:
+    """Increases and decreases of a price (a factor 1 ± p/100), and a direct rule of three."""
+    shape = rng.randrange(3)
+    if shape == 2:
+        for _ in range(400):
+            n = rng.choice([2, 4, 5, 8])
+            c = rng.randrange(10, 200, 10)
+            k = rng.randint(2, 12)
+            value = Fraction(c * k, n)
+            if (value * 1000).denominator == 1:
+                break
+        else:
+            raise GenError("percent_change: no exact rule of three in 400 draws")
+        return {
+            "type": "compute",
+            "instruction": "Resol la regla de tres directa.",
+            "problem": (f"{n} kg de pomes costen {c} €. Quant costen {k} kg de les mateixes "
+                        "pomes?"),
+            "expression": f"{c} × {k} ÷ {n}",
+            "answer": _fmt_min_dec(value),
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": (f"Regla de tres directa: {c} × {k} = {c * k}; {c * k} ÷ {n} = "
+                    f"{_fmt_min_dec(value)}. Més quilos, més euros."),
+        }
+    b = rng.randrange(10, 310, 10)
+    p = rng.choice([5, 10, 15, 20, 25, 50])
+    if shape == 0:
+        factor = Fraction(100 + p, 100)
+        story = f"Un article val {b} €. Puja un {p} %. Quin és el preu nou?"
+        head = f"Augment del {p} %: el factor és 1 + {p}/100 = {_fmt_min_dec(factor)}."
+    else:
+        factor = Fraction(100 - p, 100)
+        story = (f"Un article val {b} €. Es fa una rebaixa del {p} %. "
+                 "Quin és el preu després de la rebaixa?")
+        head = f"Descompte del {p} %: el factor és 1 − {p}/100 = {_fmt_min_dec(factor)}."
+    value = b * factor
+    return {
+        "type": "compute",
+        "instruction": "Calcula el preu final amb el factor de l'augment o del descompte.",
+        "problem": story,
+        "expression": f"{b} × {_fmt_min_dec(factor)}",
+        "answer": _fmt_min_dec(value),
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": f"{head} {b} × {_fmt_min_dec(factor)} = {_fmt_min_dec(value)} €.",
+    }
+
+
+def scales(rng: random.Random) -> dict:
+    """Map to real (1 cm on the map is n cm on the ground), real to map, and a real distance
+    in km on a map at 1:n."""
+    shape = rng.randrange(3)
+    if shape == 0:
+        n = rng.choice([100, 500, 1000, 2000, 5000, 10000, 25000, 50000])
+        L = rng.randint(2, 12)
+        value = Fraction(L * n, 100)
+        return {
+            "type": "compute",
+            "instruction": "Passa la mesura del plànol a la real (en metres).",
+            "problem": (f"En un plànol a escala 1:{n}, una paret mesura {L} cm. Quants metres "
+                        "mesura la paret de veritat?"),
+            "expression": f"{L} × {n} ÷ 100",
+            "answer": f"{int(value)} m",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": (f"Cada centímetre del plànol són {n} cm de veritat: {L} × {n} = {L * n} cm. "
+                    f"Passa-ho a metres (1 m = 100 cm): {L * n} ÷ 100 = {int(value)} m."),
+        }
+    if shape == 1:
+        n = rng.choice([100, 200, 500, 1000])
+        D = rng.randint(2, 40)
+        value = Fraction(D * 100, n)
+        return {
+            "type": "compute",
+            "instruction": "Passa la distància real a centímetres del mapa.",
+            "problem": (f"En un mapa a escala 1:{n}, quants centímetres es dibuixen per a una "
+                        f"distància real de {D} m?"),
+            "expression": f"{D} × 100 ÷ {n}",
+            "answer": f"{_fmt_min_dec(value)} cm",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": (f"1 m = 100 cm, així que {D} m = {D * 100} cm. {D * 100} ÷ {n} = "
+                    f"{_fmt_min_dec(value)} cm sobre el mapa."),
+        }
+    K = rng.randint(2, 9)
+    n = rng.choice([25000, 50000, 100000])
+    value = Fraction(K * 100000, n)
+    return {
+        "type": "compute",
+        "instruction": "Passa la distància real a centímetres del mapa.",
+        "problem": (f"Dues ciutats estan a {K} km en línia recta. En un mapa a escala 1:{n}, "
+                    "quants centímetres les separen?"),
+        "expression": f"{K} × 100000 ÷ {n}",
+        "answer": f"{int(value)} cm",
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": (f"1 km = 100000 cm, així que {K} km = {K * 100000} cm. {K * 100000} ÷ {n} = "
+                f"{int(value)} cm."),
+    }
+
+
+# (big unit, small unit, how many small units in one big one).
+_AREA_PAIRS = [("km²", "m²", 1000000), ("m²", "dm²", 100), ("dm²", "cm²", 100),
+               ("cm²", "mm²", 100), ("m²", "cm²", 10000), ("ha", "m²", 10000), ("a", "m²", 100)]
+
+
+def area_units(rng: random.Random) -> dict:
+    """Changing area units: km² to mm², ha and a (answers in m² when a is involved).
+    Down (multiply) or up (divide: a decimal answer)."""
+    big, small, f = rng.choice(_AREA_PAIRS)
+    up = rng.random() < 0.5 and big != "a"
+    if not up:
+        n = Fraction(rng.randint(1, 40), 10)
+        value = n * f
+        return {
+            "type": "compute",
+            "instruction": "Fes el canvi d'unitat de superfície.",
+            "problem": f"Un terreny fa {_fmt_min_dec(n)} {big}. Quants {small} fa?",
+            "expression": f"{_fmt_min_dec(n)} × {f}",
+            "answer": f"{int(value)} {small}",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": (f"1 {big} = {f} {small}. Per tant {_fmt_min_dec(n)} {big} són "
+                    f"{_fmt_min_dec(n)} × {f} = {int(value)} {small}."),
+        }
+    k = rng.randint(2, 999)
+    m = k * (f // 100)
+    value = Fraction(m, f)
+    return {
+        "type": "compute",
+        "instruction": "Fes el canvi d'unitat de superfície (pot sortir un decimal).",
+        "problem": f"Un terreny fa {m} {small}. Quants {big} fa?",
+        "expression": f"{m} ÷ {f}",
+        "answer": f"{_fmt_min_dec(value)} {big}",
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": (f"1 {big} = {f} {small}, així que {m} {small} = {m} ÷ {f} {big} = "
+                f"{_fmt_min_dec(value)} {big}."),
+    }
+
+
+# (big unit, small unit, how many small units in one big one).
+_VOL_PAIRS = [("m³", "dm³", 1000), ("dm³", "cm³", 1000), ("m³", "l", 1000), ("l", "ml", 1000)]
+
+
+def volume_units(rng: random.Random) -> dict:
+    """Volume and capacity units: m³, dm³, cm³, l and ml (down, or up with a decimal)."""
+    big, small, f = rng.choice(_VOL_PAIRS)
+    if rng.random() < 0.5:
+        n = Fraction(rng.randint(1, 40), 10)
+        value = n * f
+        return {
+            "type": "compute",
+            "instruction": "Fes el canvi d'unitat de volum o de capacitat.",
+            "problem": f"Un recipient té {_fmt_min_dec(n)} {big}. Quants {small} té?",
+            "expression": f"{_fmt_min_dec(n)} × {f}",
+            "answer": f"{int(value)} {small}",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": f"1 {big} = {f} {small}. {_fmt_min_dec(n)} × {f} = {int(value)} {small}.",
+        }
+    m = rng.randint(2, 4000)
+    value = Fraction(m, f)
+    return {
+        "type": "compute",
+        "instruction": "Fes el canvi d'unitat de volum o de capacitat (pot sortir un decimal).",
+        "problem": f"Un recipient té {m} {small}. Quants {big} té?",
+        "expression": f"{m} ÷ {f}",
+        "answer": f"{_fmt_min_dec(value)} {big}",
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": (f"1 {big} = {f} {small}, així que {m} {small} = {m} ÷ {f} {big} = "
+                f"{_fmt_min_dec(value)} {big}."),
+    }
+
+
+def areas_polygons(rng: random.Random) -> dict:
+    """Area of a regular polygon (perimeter times apothem over two), of a rhombus
+    (diagonals) and of a trapezium (bases and height)."""
+    shape = rng.randrange(3)
+    if shape == 0:
+        n = rng.choice([5, 6, 8])
+        s = rng.randint(2, 12)
+        apo = Fraction(rng.randint(20, 90), 10)  # apothem 2,0 .. 9,0 cm
+        perim = n * s
+        value = Fraction(perim) * apo / 2
+        return {
+            "type": "compute",
+            "instruction": "Calcula l'àrea del polígon regular amb la seva apotema.",
+            "problem": (f"Un polígon regular de {n} costats mesura {s} cm de costat i té "
+                        f"l'apotema de {_fmt_min_dec(apo)} cm. Quina és la seva àrea?"),
+            "expression": f"{perim} × {_fmt_min_dec(apo)} ÷ 2",
+            "answer": f"{_fmt_min_dec(value)} cm²",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": (f"El perímetre és {n} × {s} = {perim} cm. L'àrea del polígon regular és "
+                    f"perímetre × apotema ÷ 2: {perim} × {_fmt_min_dec(apo)} ÷ 2 = "
+                    f"{_fmt_min_dec(value)} cm²."),
+        }
+    if shape == 1:
+        D = rng.randint(4, 20)
+        d = rng.randint(4, 16)
+        value = Fraction(D * d, 2)
+        return {
+            "type": "compute",
+            "instruction": "Calcula l'àrea del rombe amb les diagonals.",
+            "problem": f"Un rombe té les diagonals de {D} cm i {d} cm. Quina és la seva àrea?",
+            "expression": f"{D} × {d} ÷ 2",
+            "answer": f"{_fmt_min_dec(value)} cm²",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": (f"Àrea del rombe: diagonal major × diagonal menor ÷ 2 = {D} × {d} ÷ 2 = "
+                    f"{_fmt_min_dec(value)} cm²."),
+        }
+    B = rng.randint(4, 20)
+    b = rng.randint(2, B - 1)
+    h = rng.randint(2, 12)
+    value = Fraction((B + b) * h, 2)
+    return {
+        "type": "compute",
+        "instruction": "Calcula l'àrea del trapezi amb les bases i l'altura.",
+        "problem": (f"Un trapezi té les bases de {B} cm i {b} cm i l'altura de {h} cm. "
+                    "Quina és la seva àrea?"),
+        "expression": f"({B} + {b}) × {h} ÷ 2",
+        "answer": f"{_fmt_min_dec(value)} cm²",
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": (f"Àrea del trapezi: (base gran + base petita) × altura ÷ 2 = "
+                f"({B} + {b}) × {h} ÷ 2 = {_fmt_min_dec(value)} cm²."),
+    }
+
+
+def circle_measures(rng: random.Random) -> dict:
+    """Circumference (from the radius or the diameter) and area of a circle, with π = 3,14."""
+    shape = rng.randrange(3)
+    r = rng.randint(2, 15)
+    pi = Fraction(314, 100)
+    if shape == 0:
+        value = pi * 2 * r
+        return {
+            "type": "compute",
+            "instruction": "Calcula la longitud de la circumferència (π = 3,14).",
+            "problem": f"Un cercle té un radi de {r} cm. Quina és la longitud de la circumferència? (π = 3,14)",
+            "expression": f"2 × 3,14 × {r}",
+            "answer": f"{_fmt_min_dec(value)} cm",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": f"Circumferència = 2 × π × radi = 2 × 3,14 × {r} = {_fmt_min_dec(value)} cm.",
+        }
+    if shape == 1:
+        value = pi * r * r
+        return {
+            "type": "compute",
+            "instruction": "Calcula l'àrea del cercle (π = 3,14).",
+            "problem": f"Un cercle té un radi de {r} cm. Quina és la seva àrea? (π = 3,14)",
+            "expression": f"3,14 × {r} ^ 2",
+            "answer": f"{_fmt_min_dec(value)} cm²",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": (f"Àrea = π × radi^2 = 3,14 × {r}^2 = 3,14 × {r * r} = "
+                    f"{_fmt_min_dec(value)} cm²."),
+        }
+    d = 2 * r
+    value = pi * d
+    return {
+        "type": "compute",
+        "instruction": "Calcula la longitud de la circumferència a partir del diàmetre (π = 3,14).",
+        "problem": f"Un cercle té un diàmetre de {d} cm. Quina és la longitud de la circumferència? (π = 3,14)",
+        "expression": f"3,14 × {d}",
+        "answer": f"{_fmt_min_dec(value)} cm",
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": f"Circumferència = π × diàmetre = 3,14 × {d} = {_fmt_min_dec(value)} cm.",
+    }
+
+
+def volumes_solids(rng: random.Random) -> dict:
+    """Volume of a cuboid, of a cylinder (π = 3,14) and of a triangular prism."""
+    shape = rng.randrange(3)
+    if shape == 0:
+        a, b, c = rng.randint(2, 12), rng.randint(2, 12), rng.randint(2, 12)
+        value = Fraction(a * b * c)
+        return {
+            "type": "compute",
+            "instruction": "Calcula el volum del prisma rectangular.",
+            "problem": (f"Un prisma rectangular té les arestes de {a} cm, {b} cm i {c} cm. "
+                        "Quin és el seu volum?"),
+            "expression": f"{a} × {b} × {c}",
+            "answer": f"{int(value)} cm³",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": f"Volum = llargada × amplada × alçada = {a} × {b} × {c} = {int(value)} cm³.",
+        }
+    if shape == 1:
+        r, h = rng.randint(2, 10), rng.randint(2, 15)
+        value = Fraction(314, 100) * r * r * h
+        return {
+            "type": "compute",
+            "instruction": "Calcula el volum del cilindre (π = 3,14).",
+            "problem": (f"Un cilindre té un radi de la base de {r} cm i una altura de {h} cm. "
+                        "Quin és el seu volum? (π = 3,14)"),
+            "expression": f"3,14 × {r} ^ 2 × {h}",
+            "answer": f"{_fmt_min_dec(value)} cm³",
+            "also_accept": [],
+            "options": [],
+            "value": value,
+            "why": (f"Volum del cilindre = π × radi^2 × altura = 3,14 × {r}^2 × {h} = "
+                    f"3,14 × {r * r} × {h} = {_fmt_min_dec(value)} cm³."),
+        }
+    b, hb = rng.randint(2, 12), rng.randint(2, 10)
+    L = rng.randint(2, 12)
+    base = Fraction(b * hb, 2)
+    value = base * L
+    return {
+        "type": "compute",
+        "instruction": "Calcula el volum del prisma de base triangular.",
+        "problem": (f"Un prisma té una base triangular de {b} cm de base i {hb} cm d'altura, i "
+                    f"una llargada de {L} cm. Quin és el seu volum?"),
+        "expression": f"{b} × {hb} ÷ 2 × {L}",
+        "answer": f"{_fmt_min_dec(value)} cm³",
+        "also_accept": [],
+        "options": [],
+        "value": value,
+        "why": (f"Àrea de la base = {b} × {hb} ÷ 2 = {_fmt_min_dec(base)} cm²; volum = àrea de "
+                f"la base × llargada = {_fmt_min_dec(base)} × {L} = {_fmt_min_dec(value)} cm³."),
+    }
+
+
+def sexagesimal_ops_easy(rng: random.Random) -> dict:
+    """Times and angles in hours (or degrees) and minutes, in the easy range of m6: the sum
+    of two durations or two angles, minutes multiples of five. The answer is in minutes."""
+    shape = rng.randrange(2)
+    h1, m1 = rng.randint(0, 2), rng.randrange(0, 60, 5)
+    h2, m2 = rng.randint(0, 2), rng.randrange(0, 60, 5)
+    total = (h1 * 60 + m1) + (h2 * 60 + m2)
+    if shape == 0:
+        problem = (f"Una classe de matemàtiques dura {h1} h {m1} min i una de música {h2} h "
+                   f"{m2} min. Quants minuts duren les dues juntes?")
+        unit_word = "hores i minuts"
+    else:
+        problem = (f"Un angle mesura {h1} graus i {m1} minuts, i un altre {h2} graus i "
+                   f"{m2} minuts. Quants minuts sumen els dos angles?")
+        unit_word = "graus i minuts"
+    return {
+        "type": "compute",
+        "instruction": f"Passa cada quantitat ({unit_word}) a minuts i suma-les (1 hora o 1 grau = 60 minuts).",
+        "problem": problem,
+        "expression": f"({h1} × 60 + {m1}) + ({h2} × 60 + {m2})",
+        "answer": f"{total} min",
+        "also_accept": [],
+        "options": [],
+        "value": Fraction(total),
+        "why": (f"Cada quantitat en minuts (1 hora o 1 grau = 60 minuts): {h1 * 60 + m1} i "
+                f"{h2 * 60 + m2}; la suma és {total} min."),
+    }
+
+
+M6_FAMILIES = {
+    "powers_value": powers_value,
+    "integers_context": integers_context,
+    "frac_ops4": frac_ops4,
+    "dec_division": dec_division,
+    "percent_change": percent_change,
+    "scales": scales,
+    "area_units": area_units,
+    "volume_units": volume_units,
+    "areas_polygons": areas_polygons,
+    "circle_measures": circle_measures,
+    "volumes_solids": volumes_solids,
+    "sexagesimal_ops_easy": sexagesimal_ops_easy,
+}
+
+
 FAMILIES = {
     "mult_2digit": mult_2digit,
     "frac_add_unlike": frac_add_unlike,
@@ -2185,6 +2777,8 @@ FAMILIES = {
     "word_problems_multistep": word_problems_multistep,
     # m7 (E6)
     **M7_FAMILIES,
+    # m6 (E8)
+    **M6_FAMILIES,
 }
 
 # Fallback when the curriculum .md has no `Bank:` line (the pilot ids).
