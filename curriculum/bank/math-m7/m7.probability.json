@@ -1,0 +1,182 @@
+[
+  {
+    "id": "m7.probability.001",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "En una bossa hi ha 2 boles vermelles i 6 de blaves. Quina probabilitat hi ha de treure una bola vermella? Dona-la com a fracció.",
+    "answer": "2/8",
+    "also_accept": [
+      "1/4"
+    ],
+    "options": [],
+    "why": "Casos possibles: 2 + 6 = 8; casos favorables: 2. Probabilitat = 2/8.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "2 / (2 + 6)"
+  },
+  {
+    "id": "m7.probability.002",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "Es llança un dau de 6 cares numerades de l'1 al 6. Quina probabilitat hi ha de treure un nombre primer? Dona-la com a fracció.",
+    "answer": "3/6",
+    "also_accept": [
+      "1/2"
+    ],
+    "options": [],
+    "why": "Els casos favorables són 2, 3 i 5: 3 de 6 casos possibles. Probabilitat = 3/6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "3 / 6"
+  },
+  {
+    "id": "m7.probability.003",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "En una bossa hi ha 3 boles vermelles i 8 de blaves. Quina probabilitat hi ha de treure una bola vermella? Dona-la com a fracció.",
+    "answer": "3/11",
+    "also_accept": [],
+    "options": [],
+    "why": "Casos possibles: 3 + 8 = 11; casos favorables: 3. Probabilitat = 3/11.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "3 / (3 + 8)"
+  },
+  {
+    "id": "m7.probability.004",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "Es llança un dau de 6 cares numerades de l'1 al 6. Quina probabilitat hi ha de treure un nombre parell? Dona-la com a fracció.",
+    "answer": "3/6",
+    "also_accept": [
+      "1/2"
+    ],
+    "options": [],
+    "why": "Els casos favorables són 2, 4 i 6: 3 de 6 casos possibles. Probabilitat = 3/6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "3 / 6"
+  },
+  {
+    "id": "m7.probability.005",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "En una bossa hi ha 8 boles vermelles i 5 de blaves. Quina probabilitat hi ha de treure una bola vermella? Dona-la com a fracció.",
+    "answer": "8/13",
+    "also_accept": [],
+    "options": [],
+    "why": "Casos possibles: 8 + 5 = 13; casos favorables: 8. Probabilitat = 8/13.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "8 / (8 + 5)"
+  },
+  {
+    "id": "m7.probability.006",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "Es llança un dau de 6 cares numerades de l'1 al 6. Quina probabilitat hi ha de treure un múltiple de 3? Dona-la com a fracció.",
+    "answer": "2/6",
+    "also_accept": [
+      "1/3"
+    ],
+    "options": [],
+    "why": "Els casos favorables són 3 i 6: 2 de 6 casos possibles. Probabilitat = 2/6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "2 / 6"
+  },
+  {
+    "id": "m7.probability.007",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "En una bossa hi ha 2 boles vermelles i 4 de blaves. Quina probabilitat hi ha de treure una bola vermella? Dona-la com a fracció.",
+    "answer": "2/6",
+    "also_accept": [
+      "1/3"
+    ],
+    "options": [],
+    "why": "Casos possibles: 2 + 4 = 6; casos favorables: 2. Probabilitat = 2/6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "2 / (2 + 4)"
+  },
+  {
+    "id": "m7.probability.008",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "En una bossa hi ha 7 boles vermelles i 6 de blaves. Quina probabilitat hi ha de treure una bola vermella? Dona-la com a fracció.",
+    "answer": "7/13",
+    "also_accept": [],
+    "options": [],
+    "why": "Casos possibles: 7 + 6 = 13; casos favorables: 7. Probabilitat = 7/13.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "7 / (7 + 6)"
+  },
+  {
+    "id": "m7.probability.009",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "Es llança un dau de 6 cares numerades de l'1 al 6. Quina probabilitat hi ha de treure un nombre més gran que 4? Dona-la com a fracció.",
+    "answer": "2/6",
+    "also_accept": [
+      "1/3"
+    ],
+    "options": [],
+    "why": "Els casos favorables són 5 i 6: 2 de 6 casos possibles. Probabilitat = 2/6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "2 / 6"
+  },
+  {
+    "id": "m7.probability.010",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "En una bossa hi ha 2 boles vermelles i 9 de blaves. Quina probabilitat hi ha de treure una bola vermella? Dona-la com a fracció.",
+    "answer": "2/11",
+    "also_accept": [],
+    "options": [],
+    "why": "Casos possibles: 2 + 9 = 11; casos favorables: 2. Probabilitat = 2/11.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "2 / (2 + 9)"
+  },
+  {
+    "id": "m7.probability.011",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "En una bossa hi ha 8 boles vermelles i 3 de blaves. Quina probabilitat hi ha de treure una bola vermella? Dona-la com a fracció.",
+    "answer": "8/11",
+    "also_accept": [],
+    "options": [],
+    "why": "Casos possibles: 8 + 3 = 11; casos favorables: 8. Probabilitat = 8/11.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "8 / (8 + 3)"
+  },
+  {
+    "id": "m7.probability.012",
+    "competence": "m7.probability",
+    "type": "compute",
+    "instruction": "Calcula la probabilitat (casos favorables entre casos possibles).",
+    "problem": "En una bossa hi ha 7 boles vermelles i 5 de blaves. Quina probabilitat hi ha de treure una bola vermella? Dona-la com a fracció.",
+    "answer": "7/12",
+    "also_accept": [],
+    "options": [],
+    "why": "Casos possibles: 7 + 5 = 12; casos favorables: 7. Probabilitat = 7/12.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42",
+    "expression": "7 / (7 + 5)"
+  }
+]

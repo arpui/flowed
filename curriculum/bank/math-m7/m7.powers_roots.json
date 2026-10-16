@@ -1,0 +1,182 @@
+[
+  {
+    "id": "m7.powers_roots.001",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "(2^2)^3",
+    "answer": "2^6",
+    "also_accept": [
+      "64"
+    ],
+    "options": [],
+    "why": "Potència de potència: es multipliquen els exponents. 2 × 3 = 6, així que (2^2)^3 = 2^6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.002",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "3^3 × 3^2",
+    "answer": "3^5",
+    "also_accept": [
+      "243"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en multiplicar se sumen els exponents. 3 + 2 = 5, així que 3^3 × 3^2 = 3^5.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.003",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "(2^4)^3",
+    "answer": "2^12",
+    "also_accept": [
+      "4096"
+    ],
+    "options": [],
+    "why": "Potència de potència: es multipliquen els exponents. 4 × 3 = 12, així que (2^4)^3 = 2^12.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.004",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "2^2 × 2^3",
+    "answer": "2^5",
+    "also_accept": [
+      "32"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en multiplicar se sumen els exponents. 2 + 3 = 5, així que 2^2 × 2^3 = 2^5.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.005",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "2^6 × 2^3",
+    "answer": "2^9",
+    "also_accept": [
+      "512"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en multiplicar se sumen els exponents. 6 + 3 = 9, així que 2^6 × 2^3 = 2^9.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.006",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "(10^2)^3",
+    "answer": "10^6",
+    "also_accept": [
+      "1000000"
+    ],
+    "options": [],
+    "why": "Potència de potència: es multipliquen els exponents. 2 × 3 = 6, així que (10^2)^3 = 10^6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.007",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "(5^2)^2",
+    "answer": "5^4",
+    "also_accept": [
+      "625"
+    ],
+    "options": [],
+    "why": "Potència de potència: es multipliquen els exponents. 2 × 2 = 4, així que (5^2)^2 = 5^4.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.008",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "(10^3)^3",
+    "answer": "10^9",
+    "also_accept": [
+      "1000000000"
+    ],
+    "options": [],
+    "why": "Potència de potència: es multipliquen els exponents. 3 × 3 = 9, així que (10^3)^3 = 10^9.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.009",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "3^4 × 3^2",
+    "answer": "3^6",
+    "also_accept": [
+      "729"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en multiplicar se sumen els exponents. 4 + 2 = 6, així que 3^4 × 3^2 = 3^6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.010",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "10^2 × 10^4",
+    "answer": "10^6",
+    "also_accept": [
+      "1000000"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en multiplicar se sumen els exponents. 2 + 4 = 6, així que 10^2 × 10^4 = 10^6.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.011",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "5^9 ÷ 5^2",
+    "answer": "5^7",
+    "also_accept": [
+      "78125"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en dividir es resten els exponents. 9 - 2 = 7, així que 5^9 ÷ 5^2 = 5^7.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.012",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i dona el resultat com a potència.",
+    "problem": "2^7 ÷ 2^5",
+    "answer": "2^2",
+    "also_accept": [
+      "4"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en dividir es resten els exponents. 7 - 5 = 2, així que 2^7 ÷ 2^5 = 2^2.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  }
+]

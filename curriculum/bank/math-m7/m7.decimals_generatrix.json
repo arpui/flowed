@@ -1,0 +1,176 @@
+[
+  {
+    "id": "m7.decimals_generatrix.001",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "0,457",
+    "answer": "457/1000",
+    "also_accept": [],
+    "options": [],
+    "why": "0,457 té 3 decimals, així que és 457/1000. Ja és irreductible: el numerador i el denominador no tenen cap factor comú. Resultat: 457/1000.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.002",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "2,4",
+    "answer": "2 2/5",
+    "also_accept": [
+      "24/10"
+    ],
+    "options": [],
+    "why": "2,4 té 1 decimal, així que és 24/10. Simplifiquem dividint numerador i denominador pel MCD (2). Resultat: 2 2/5. Com a nombre mixt: 12/5 = 2 + 2/5, que s'escriu 2 2/5 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.003",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "1,26",
+    "answer": "1 13/50",
+    "also_accept": [
+      "126/100"
+    ],
+    "options": [],
+    "why": "1,26 té 2 decimals, així que és 126/100. Simplifiquem dividint numerador i denominador pel MCD (2). Resultat: 1 13/50. Com a nombre mixt: 63/50 = 1 + 13/50, que s'escriu 1 13/50 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.004",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "0,5",
+    "answer": "1/2",
+    "also_accept": [
+      "5/10"
+    ],
+    "options": [],
+    "why": "0,5 té 1 decimal, així que és 5/10. Simplifiquem dividint numerador i denominador pel MCD (5). Resultat: 1/2.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.005",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "0,42",
+    "answer": "21/50",
+    "also_accept": [
+      "420/1000"
+    ],
+    "options": [],
+    "why": "0,42 té 3 decimals, així que és 420/1000. Simplifiquem dividint numerador i denominador pel MCD (20). Resultat: 21/50.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.006",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "2,234",
+    "answer": "2 117/500",
+    "also_accept": [
+      "2234/1000"
+    ],
+    "options": [],
+    "why": "2,234 té 3 decimals, així que és 2234/1000. Simplifiquem dividint numerador i denominador pel MCD (2). Resultat: 2 117/500. Com a nombre mixt: 1117/500 = 2 + 117/500, que s'escriu 2 117/500 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.007",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "1,9",
+    "answer": "1 9/10",
+    "also_accept": [
+      "19/10"
+    ],
+    "options": [],
+    "why": "1,9 té 1 decimal, així que és 19/10. Ja és irreductible: el numerador i el denominador no tenen cap factor comú. Resultat: 1 9/10. Com a nombre mixt: 19/10 = 1 + 9/10, que s'escriu 1 9/10 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.008",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "0,17",
+    "answer": "17/100",
+    "also_accept": [],
+    "options": [],
+    "why": "0,17 té 2 decimals, així que és 17/100. Ja és irreductible: el numerador i el denominador no tenen cap factor comú. Resultat: 17/100.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.009",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "0,3",
+    "answer": "3/10",
+    "also_accept": [],
+    "options": [],
+    "why": "0,3 té 1 decimal, així que és 3/10. Ja és irreductible: el numerador i el denominador no tenen cap factor comú. Resultat: 3/10.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.010",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "0,8",
+    "answer": "4/5",
+    "also_accept": [
+      "8/10"
+    ],
+    "options": [],
+    "why": "0,8 té 1 decimal, així que és 8/10. Simplifiquem dividint numerador i denominador pel MCD (2). Resultat: 4/5.",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.011",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "2,466",
+    "answer": "2 233/500",
+    "also_accept": [
+      "2466/1000"
+    ],
+    "options": [],
+    "why": "2,466 té 3 decimals, així que és 2466/1000. Simplifiquem dividint numerador i denominador pel MCD (2). Resultat: 2 233/500. Com a nombre mixt: 1233/500 = 2 + 233/500, que s'escriu 2 233/500 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.decimals_generatrix.012",
+    "competence": "m7.decimals_generatrix",
+    "type": "compute",
+    "instruction": "Escriu el decimal com a fracció irreductible.",
+    "problem": "1,8",
+    "answer": "1 4/5",
+    "also_accept": [
+      "18/10"
+    ],
+    "options": [],
+    "why": "1,8 té 1 decimal, així que és 18/10. Simplifiquem dividint numerador i denominador pel MCD (2). Resultat: 1 4/5. Com a nombre mixt: 9/5 = 1 + 4/5, que s'escriu 1 4/5 (sense el «+»).",
+    "status": "validated",
+    "source": "mathbank · 2026-10-16 · seed 42"
+  }
+]
