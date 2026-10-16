@@ -1,0 +1,19 @@
+{
+  "id": "en-A1.flash.family",
+  "level": "A1",
+  "title": { "ca": "La família", "es": "La familia", "en": "Family" },
+  "words": [
+    { "id": "mother", "target": ["mother", "mum", "mom"], "native": { "ca": ["mare"], "es": ["madre"] } },
+    { "id": "father", "target": ["father", "dad"], "native": { "ca": ["pare"], "es": ["padre"] } },
+    { "id": "sister", "target": ["sister"], "native": { "ca": ["germana"], "es": ["hermana"] } },
+    { "id": "brother", "target": ["brother"], "native": { "ca": ["germà"], "es": ["hermano"] } },
+    { "id": "grandmother", "target": ["grandmother", "grandma", "granny"], "native": { "ca": ["àvia"], "es": ["abuela"] } },
+    { "id": "grandfather", "target": ["grandfather", "grandpa"], "native": { "ca": ["avi"], "es": ["abuelo"] } },
+    { "id": "aunt", "target": ["aunt"], "native": { "ca": ["tia"], "es": ["tía"] } },
+    { "id": "uncle", "target": ["uncle"], "native": { "ca": ["oncle", "tiet"], "es": ["tío"] } },
+    { "id": "son", "target": ["son"], "native": { "ca": ["fill"], "es": ["hijo"] } },
+    { "id": "daughter", "target": ["daughter"], "native": { "ca": ["filla"], "es": ["hija"] } },
+    { "id": "wife", "target": ["wife"], "native": { "ca": ["dona", "esposa", "muller"], "es": ["esposa", "mujer"] } },
+    { "id": "husband", "target": ["husband"], "native": { "ca": ["marit", "espòs"], "es": ["marido", "esposo"] } }
+  ]
+}

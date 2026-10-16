@@ -1,0 +1,19 @@
+{
+  "id": "en-A1.flash.home",
+  "level": "A1",
+  "title": { "ca": "La casa", "es": "La casa", "en": "Home" },
+  "words": [
+    { "id": "house", "target": ["house"], "native": { "ca": ["casa"], "es": ["casa"] } },
+    { "id": "kitchen", "target": ["kitchen"], "native": { "ca": ["cuina"], "es": ["cocina"] } },
+    { "id": "bedroom", "target": ["bedroom"], "native": { "ca": ["dormitori", "habitació"], "es": ["dormitorio", "habitación"] } },
+    { "id": "bathroom", "target": ["bathroom"], "native": { "ca": ["lavabo", "bany", "cambra de bany"], "es": ["baño", "cuarto de baño"] } },
+    { "id": "window", "target": ["window"], "native": { "ca": ["finestra"], "es": ["ventana"] } },
+    { "id": "door", "target": ["door"], "native": { "ca": ["porta"], "es": ["puerta"] } },
+    { "id": "table", "target": ["table"], "native": { "ca": ["taula"], "es": ["mesa"] } },
+    { "id": "chair", "target": ["chair"], "native": { "ca": ["cadira"], "es": ["silla"] } },
+    { "id": "bed", "target": ["bed"], "native": { "ca": ["llit"], "es": ["cama"] } },
+    { "id": "floor", "target": ["floor"], "native": { "ca": ["terra"], "es": ["suelo"] } },
+    { "id": "garden", "target": ["garden"], "native": { "ca": ["jardí"], "es": ["jardín"] } },
+    { "id": "key", "target": ["key"], "native": { "ca": ["clau"], "es": ["llave"] } }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "en-A1.flash.food",
+  "level": "A1",
+  "title": { "ca": "Menjar i beure", "es": "Comida y bebida", "en": "Food and drink" },
+  "words": [
+    { "id": "bread", "target": ["bread"], "native": { "ca": ["pa"], "es": ["pan"] } },
+    { "id": "water", "target": ["water"], "native": { "ca": ["aigua"], "es": ["agua"] } },
+    { "id": "milk", "target": ["milk"], "native": { "ca": ["llet"], "es": ["leche"] } },
+    { "id": "cheese", "target": ["cheese"], "native": { "ca": ["formatge"], "es": ["queso"] } },
+    { "id": "egg", "target": ["egg"], "native": { "ca": ["ou"], "es": ["huevo"] } },
+    { "id": "apple", "target": ["apple"], "native": { "ca": ["poma"], "es": ["manzana"] } },
+    { "id": "chicken", "target": ["chicken"], "native": { "ca": ["pollastre"], "es": ["pollo"] } },
+    { "id": "fish", "target": ["fish"], "native": { "ca": ["peix"], "es": ["pescado", "pez"] } },
+    { "id": "rice", "target": ["rice"], "native": { "ca": ["arròs"], "es": ["arroz"] } },
+    { "id": "juice", "target": ["juice"], "native": { "ca": ["suc"], "es": ["zumo", "jugo"] } },
+    { "id": "breakfast", "target": ["breakfast"], "native": { "ca": ["esmorzar"], "es": ["desayuno"] } },
+    { "id": "dinner", "target": ["dinner"], "native": { "ca": ["sopar"], "es": ["cena"] } }
+  ]
+}
