@@ -455,7 +455,20 @@ try {
 
   writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m5" });
   const math = flashListsResponse(root, dataDir) as any;
-  check("math profile: enabled, the math-* lists only", math.enabled === true && math.lists.length === listsMath.length && math.lists.every((l: List & { kind?: string }) => l.kind === "math"), math.lists.map((l: List) => l.id));
+  const m5Lists = listsMath.filter((l) => l.level === "m5");
+  check("math profile: enabled, the math lists of its level only", math.enabled === true && m5Lists.length > 0 && math.lists.length === m5Lists.length && math.lists.every((l: List & { kind?: string }) => l.kind === "math" && l.level === "m5"), math.lists.map((l: List) => l.id));
+
+  // 2026-10-17 (Albert): an m5 learner saw the m6 and m7 lists too. The course level decides.
+  writeProfile({ native_language: "Catalan", target_language: "Math", current_level: "m5", target_level: "m7" });
+  const c5 = flashListsResponse(root, dataDir) as any;
+  check("course m5 (m5 → m7, nothing certified): only m5 lists", c5.level === "M5" && c5.lists.length > 0 && c5.lists.every((l: List) => l.level === "m5"), c5.level);
+  fs.writeFileSync(path.join(dataDir, "certificates.json"), JSON.stringify([{ language: "Math", level: "M5" }]));
+  const c6 = flashListsResponse(root, dataDir) as any;
+  check("m5 certified: the m6 lists", c6.level === "M6" && c6.lists.length > 0 && c6.lists.every((l: List) => l.level === "m6"), c6.level);
+  fs.rmSync(path.join(dataDir, "certificates.json"));
+  writeProfile({ native_language: "Catalan", target_language: "Math", current_level: "m7", target_level: "m7" });
+  const c7 = flashListsResponse(root, dataDir) as any;
+  check("course m7: only m7 lists", c7.level === "M7" && c7.lists.length > 0 && c7.lists.every((l: List) => l.level === "m7"), c7.level);
 } finally {
   fs.rmSync(dataDir, { recursive: true, force: true });
 }

@@ -2212,18 +2212,72 @@ function readJson(file: string): JsonRecord {
 
 /** The body of GET /api/flash/lists. Disabled (or no profile to read) gives
  *  an empty list, so nothing of the drill reaches a domain it is not on. */
+// Same scale and rule as hooks/curriculum.py (LEVELS, find_curriculum): the course the learner
+// is doing is the lowest level, from the profile's current_level up to its target_level, that has
+// no certificate; every level certified → the last one. null when there is no curriculum.
+const LEVELS = ["A0", "A1", "A2", "B1", "B2", "C1", "C2", "M1", "M2", "M3", "M4", "M5", "M6", "M7"];
+const lvlIndex = (v: unknown): number => {
+  const i = LEVELS.indexOf(String(v ?? "").trim().toUpperCase());
+  return i < 0 ? 99 : i;
+};
+
+export function courseLevel(root: string, dataDir: string, learner: JsonRecord): string | null {
+  const lang = String(learner.target_language ?? "").trim().toLowerCase();
+  const target = lvlIndex(learner.target_level);
+  if (!lang || target === 99) return null;
+  let floor = lvlIndex(learner.current_level);
+  if (floor === 99 || floor > target) floor = -1;
+  const levels: string[] = [];
+  let files: string[] = [];
+  try {
+    files = fs.readdirSync(path.join(root, "curriculum")).filter((f) => f.endsWith(".md"));
+  } catch {
+    return null;
+  }
+  for (const f of files) {
+    let head = "";
+    try {
+      head = fs.readFileSync(path.join(root, "curriculum", f), "utf8").split("\n---")[0] ?? "";
+    } catch {
+      continue;
+    }
+    const meta = (k: string) => (new RegExp(`^${k}:\\s*(.+)$`, "m").exec(head)?.[1] ?? "").trim();
+    const lv = meta("level").toUpperCase();
+    if (meta("language").toLowerCase() === lang && floor <= lvlIndex(lv) && lvlIndex(lv) <= target) levels.push(lv);
+  }
+  if (!levels.length) return null;
+  levels.sort((a, b) => lvlIndex(a) - lvlIndex(b));
+  let certs: unknown = [];
+  try {
+    certs = JSON.parse(fs.readFileSync(path.join(dataDir, "certificates.json"), "utf8"));
+  } catch {
+    /* no certificates yet */
+  }
+  const done = new Set(
+    (Array.isArray(certs) ? certs : [])
+      .map(asRecord)
+      .filter((c) => String(c.language ?? "").trim().toLowerCase() === lang)
+      .map((c) => String(c.level ?? "").trim().toUpperCase()),
+  );
+  return levels.find((l) => !done.has(l)) ?? levels[levels.length - 1]!;
+}
+
 export function flashListsResponse(root: string, dataDir: string): JsonRecord {
   const profile = readJson(path.join(dataDir, "learner-profile.json"));
   const learner = asRecord(profile.learner);
   const native = String(learner.native_language ?? "").trim();
   const code = nativeCode(native);
   const target = String(learner.target_language ?? "").trim();
-  const level = String(learner.current_level ?? "").trim().toUpperCase();
+  // Only the lists of the level being worked on (2026-10-17, Albert: an m5 learner saw m6/m7 too).
+  // The course level, as the path computes it; without a curriculum, the declared current level.
+  const level = (courseLevel(root, dataDir, learner) ?? String(learner.current_level ?? "")).trim().toUpperCase();
   const cfg = flashConfig(readJson(path.join(root, "config", "domain.json")), profileDomain(profile));
   if (!cfg.enabled || !cfg.dir) {
     return { ok: true, enabled: false, native, nativeCode: code, target, level, lists: [] };
   }
-  return { ok: true, enabled: true, native, nativeCode: code, target, level, lists: loadFlashLists(root, cfg.dir, code) };
+  const all = loadFlashLists(root, cfg.dir, code);
+  const lists = level ? all.filter((l) => String(l.level ?? "").trim().toUpperCase() === level) : all;
+  return { ok: true, enabled: true, native, nativeCode: code, target, level, lists };
 }
 
 // ---- progress (docs/ENCARREC-FLASH-v1.md) -------------------------------------
