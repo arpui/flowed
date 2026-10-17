@@ -50,6 +50,20 @@ if [[ "$MODELS_ONLY" == "0" ]]; then
     port="${spec##*:}"
     scripts/flowed-web.sh --stop --port "$port" 2>/dev/null || true
   done
+  # Portal (una sola adreça), si s'ha arrencat amb flowed-start.sh (docs/ENCARREC-PORTAL.md).
+  PORTAL_PID_FILE="$FLOWED_HOME_DIR/portal.pid"
+  if [[ -f "$PORTAL_PID_FILE" ]]; then
+    for pid in $(cat "$PORTAL_PID_FILE" 2>/dev/null); do kill "$pid" 2>/dev/null || true; done
+    for _ in $(seq 1 5); do
+      alive=0
+      for pid in $(cat "$PORTAL_PID_FILE" 2>/dev/null); do kill -0 "$pid" 2>/dev/null && alive=1 || true; done
+      [[ "$alive" == "0" ]] && break
+      sleep 1
+    done
+    for pid in $(cat "$PORTAL_PID_FILE" 2>/dev/null); do kill -9 "$pid" 2>/dev/null || true; done
+    rm -f "$PORTAL_PID_FILE"
+    echo "portal aturat"
+  fi
 fi
 
 if [[ "$WEBS_ONLY" == "0" && "$FLOWED_DEEP_MANAGED" == "1" ]]; then

@@ -210,6 +210,7 @@ echo "Config: $FLOWED_ENV_FILE (la resta, de config/fluent.json)"
 echo "Pla: deep=$(basename "$FLOWED_DEEP_MODEL") :$FLOWED_DEEP_PORT (backend=$FLOWED_DEEP_BACKEND, CUDA $FLOWED_DEEP_GPU, ctx $FLOWED_DEEP_CTX, managed=$FLOWED_DEEP_MANAGED)"
 [[ "$FLOWED_FACE_ENABLED" == "1" ]] && echo "     face :$FLOWED_FACE_PORT (CUDA $FLOWED_FACE_GPU)" || echo "     face: off"
 [[ "$MODELS_ONLY" == "0" ]] && echo "     webs: stop+releu [$FLOWED_WEBS]"
+[[ "$MODELS_ONLY" == "0" && -n "${FLOWED_PORTAL_PORT:-}" ]] && echo "     portal: :$FLOWED_PORTAL_PORT (una sola adreça, stop+releu)"
 if [[ "$DRY" == "1" ]]; then echo "(dry-run: no s'executa res)"; exit 0; fi
 if [[ "$YES" == "0" ]]; then
   read -rp "engego? [S/n]: " ans
@@ -272,6 +273,47 @@ if [[ "$MODELS_ONLY" == "0" ]]; then
     wait_port_free "$port"
     scripts/flowed-web.sh --app "$id" --port "$port"
   done
+  # Portal (una sola adreça): només si FLOWED_PORTAL_PORT és definit (.env o entorn).
+  # docs/ENCARREC-PORTAL.md. Un fallo del portal no tomba les webs.
+  if [[ -n "${FLOWED_PORTAL_PORT:-}" ]]; then
+    PORTAL_PID_FILE="$FLOWED_HOME_DIR/portal.pid"
+    PORTAL_LOG="$FLOWED_HOME_DIR/portal.log"
+    if [[ -f "$PORTAL_PID_FILE" ]]; then
+      for pid in $(cat "$PORTAL_PID_FILE" 2>/dev/null); do kill "$pid" 2>/dev/null || true; done
+      for _ in $(seq 1 5); do
+        alive=0
+        for pid in $(cat "$PORTAL_PID_FILE" 2>/dev/null); do kill -0 "$pid" 2>/dev/null && alive=1 || true; done
+        [[ "$alive" == "0" ]] && break
+        sleep 1
+      done
+      for pid in $(cat "$PORTAL_PID_FILE" 2>/dev/null); do kill -9 "$pid" 2>/dev/null || true; done
+      rm -f "$PORTAL_PID_FILE"
+    fi
+    PORTAL_BUN="$(command -v bun || echo "$HOME/.bun/bin/bun")"
+    mkdir -p "$FLOWED_HOME_DIR"
+    if [[ ! -x "$PORTAL_BUN" ]]; then
+      echo "avís: bun no trobat — el portal no s'arrenca"
+    else
+      FLOWED_PORTAL_PORT="$FLOWED_PORTAL_PORT" nohup "$PORTAL_BUN" "$ROOT/scripts/flowed-portal.mjs" \
+        >> "$PORTAL_LOG" 2>&1 &
+      echo "$!" > "$PORTAL_PID_FILE"
+      portal_ok=0
+      for _ in $(seq 1 10); do
+        if curl -sf -m 2 "http://127.0.0.1:$FLOWED_PORTAL_PORT/portal/health" >/dev/null 2>&1; then portal_ok=1; break; fi
+        sleep 1
+      done
+      if [[ "$portal_ok" == "1" ]]; then
+        echo "portal UP (port=$FLOWED_PORTAL_PORT) — una sola adreça per a tots els alumnes"
+        echo "  local:    http://localhost:$FLOWED_PORTAL_PORT"
+        PORTAL_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+        [[ -n "$PORTAL_IP" ]] && echo "  network:  http://$PORTAL_IP:$FLOWED_PORTAL_PORT"
+        echo "  log:      $PORTAL_LOG"
+        echo "  stop:     scripts/flowed-stop.sh --webs-only"
+      else
+        echo "avís: el portal no ha respost al port $FLOWED_PORTAL_PORT — mira $PORTAL_LOG"
+      fi
+    fi
+  fi
 fi
 
 echo
@@ -284,3 +326,4 @@ for spec in $FLOWED_WEBS; do
   id="${spec%%:*}"; port="${spec##*:}"
   [[ -f "$FLOWED_HOME_DIR/$id/learner-profile.json" ]] && echo "web $id :$port — mode: $(web_mode "$id")" || true
 done
+[[ -n "${FLOWED_PORTAL_PORT:-}" ]] && echo "portal :$FLOWED_PORTAL_PORT — una sola adreça (http://localhost:$FLOWED_PORTAL_PORT)" || true

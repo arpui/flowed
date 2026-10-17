@@ -50,6 +50,29 @@ restarts). Ports in use now: 4200 test-math, 4201 test-m7, 4203 albert-math,
 4205 test-lang (the language test). Production `flowed` keeps its own ports in
 its own repo/home — the two never collide.
 
+### 2b. One address for every learner (the portal, optional)
+
+Instead of giving each learner a port, the portal serves them all from one
+port (`scripts/flowed-portal.mjs`, spec `docs/ENCARREC-PORTAL.md`):
+
+```bash
+# .env (cp .env.railab .env, or .env.rapve): uncomment
+FLOWED_PORTAL_PORT=4000
+```
+
+- `scripts/flowed-start.sh` starts the webs and then the portal (log
+  `~/.flowed/portal.log`, pid `~/.flowed/portal.pid`); `scripts/flowed-stop.sh`
+  stops it (also with `--webs-only`).
+- The learner opens `http://<host>:4000`, types their name (lowercased first
+  name, as today) and their password (`~/.flowed/<id>/.web-password`). If
+  two profiles share both, "Què vols fer?" asks which one. `/switch` goes back
+  to that choice, `/logout` leaves.
+- The portal adds the basic auth header itself; the browser never sees the
+  basic-auth prompt. The profile servers are unchanged and keep their ports.
+- Adding a learner: add `<id>:<port>` to `FLOWED_WEBS` and run `flowed-start.sh`.
+- The portal keeps a signing secret in `~/.flowed/.portal-secret` (mode 600).
+  Failed logins are limited to 5 per IP in 5 minutes.
+
 ## 3. Com funciona tot (the flow of one turn)
 
 1. The learner presses a button. The web sends the DOMAIN command name
