@@ -946,7 +946,8 @@
     if (p.timer === false) timer = false;
     else if (p.timer === true) timer = 20;
     else if (TIMER_OPTIONS.includes(Number(p.timer))) timer = Number(p.timer);
-    return { dir, timer };
+    const mode = p.mode === "sprint" ? "sprint" : "normal"; // docs/ENCARREC-FLASH-P3-MODES.md §2
+    return { dir, timer, mode };
   }
 
   // Punts de la ronda: 'pending' (buit), 'cur' (la targeta actual), 'ok' | 'retry' | 'err'.
@@ -1471,6 +1472,19 @@
     return `<button type="button" data-sprint="${v}" aria-pressed="${sprintSec === v}">${v / 60} min</button>`;
   }
 
+  function modeButton(key) {
+    const on = prefs.mode === key;
+    return `<button type="button" data-mode="${key}" aria-pressed="${on}">${key === "sprint" ? "⏱ Contrarellotge" : "Normal"}</button>`;
+  }
+
+  // Triar la contrarellotge: la llista que ja hi era, si és elegible; si no, la primera elegible.
+  function pickSprintSelection(prev) {
+    const cur = data.lists.find((l) => l.id === prev);
+    if (cur && C.sprintable(cur)) return cur.id;
+    const first = data.lists.find((l) => C.sprintable(l));
+    return first ? first.id : prev;
+  }
+
   function timeButton(v) {
     const key = v === false ? "off" : String(v);
     return `<button type="button" data-timer="${key}" aria-pressed="${prefs.timer === v}">${escText(TIME_LABEL[key])}</button>`;
@@ -1497,6 +1511,7 @@
     const math = lists.length > 0 && lists.every(isMath);
     // La direcció només afecta les de traducció: sense cap, no surt.
     const spoken = lists.length > 0 && lists.every(isLangDrill);
+    const sprintOn = prefs.mode === "sprint"; // docs/ENCARREC-FLASH-P3-MODES.md §2
     const sel = lists.find((l) => l.id === selected);
     const selClosed = sel ? C.listStatus(sel, state).closed : false;
     const selPractice = C.isPractice(sel);
@@ -1506,12 +1521,14 @@
         const st = C.listStatus(l, state);
         const pct = st.total ? Math.round((st.known / st.total) * 100) : 0;
         const off = !usable(l);
+        const noSprint = sprintOn && !C.sprintable(l); // en contrarellotge, només les elegibles (§2)
         const cls = ["flash-row", st.closed ? "closed" : "", l.id === selected ? "sel" : "", C.isPractice(l) ? "practice" : ""].join(" ").replace(/\s+/g, " ").trim();
         // Practice: the good rounds, not words (docs/ENCARREC-FLASH-PRACTICA.md §2.3).
         const count = C.isPractice(l) ? `rondes bones ${st.known}/${st.total}` : `${st.known}/${st.total}`;
-        return `<button type="button" class="${cls}" data-list="${escText(l.id)}" aria-pressed="${l.id === selected}"${off ? " disabled" : ""}>
+        const note = noSprint ? ' <small class="flash-off">no disponible en contrarellotge</small>' : off ? ' <small class="flash-off">Cal la veu activada</small>' : "";
+        return `<button type="button" class="${cls}" data-list="${escText(l.id)}" aria-pressed="${l.id === selected}"${off || noSprint ? " disabled" : ""}>
           <span class="flash-mark">${st.closed ? "✓" : ""}</span>
-          <span class="flash-row-title">${escText(l.title)}${off ? ' <small class="flash-off">Cal la veu activada</small>' : ""}</span>
+          <span class="flash-row-title">${escText(l.title)}${note}</span>
           <span class="flash-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
           <span class="flash-count">${count}</span>
         </button>`;
@@ -1523,16 +1540,21 @@
           <h2>⚡ Flash <span class="flash-sub">${escText(math ? "Matemàtiques" : data.target)} · ${escText(data.level)}</span></h2>
         </div>
         <div class="flash-body">
+          <p class="flash-label">Mode</p>
+          <div class="flash-mode">
+            <div class="flash-seg" role="group" aria-label="Mode">${modeButton("normal")}${modeButton("sprint")}</div>
+            ${sprintOn ? `<div class="flash-seg" role="group" aria-label="Durada de la contrarellotge">${C.SPRINT_OPTIONS.map(sprintButton).join("")}</div>` : ""}
+          </div>
           ${math || spoken ? "" : `<p class="flash-label">Direcció</p>
           <div class="flash-seg" role="group" aria-label="Direcció">${dirButton("nt")}${dirButton("tn")}${dirButton("mix")}</div>`}
-          <p class="flash-label">Temps per ${noun(lists[0] || {})}</p>
-          <div class="flash-seg" role="group" aria-label="Temps per ${noun(lists[0] || {})}">${timeButton(false)}${C.TIMER_OPTIONS.map(timeButton).join("")}</div>
+          ${sprintOn ? "" : `<p class="flash-label">Temps per ${noun(lists[0] || {})}</p>
+          <div class="flash-seg" role="group" aria-label="Temps per ${noun(lists[0] || {})}">${timeButton(false)}${C.TIMER_OPTIONS.map(timeButton).join("")}</div>`}
           <p class="flash-label">Llistes <span class="flash-hint-inline">· doble clic per començar</span></p>
           <div class="flash-lists">${rows || '<p class="flash-note">Encara no hi ha llistes.</p>'}</div>
           <div class="flash-actions">
-            <button type="button" class="primary" data-act="go"${sel && usable(sel) ? "" : " disabled"}>${selClosed && !selPractice ? "Repassa" : "Comença"}</button>
-            ${C.sprintable(sel) ? `<button type="button" data-act="sprint">⏱ Contrarellotge</button>
-            <div class="flash-seg" role="group" aria-label="Durada de la contrarellotge">${C.SPRINT_OPTIONS.map(sprintButton).join("")}</div>` : ""}
+            ${sprintOn
+              ? `<button type="button" class="primary" data-act="sprint"${sel && C.sprintable(sel) ? "" : " disabled"}>⏱ Comença</button>`
+              : `<button type="button" class="primary" data-act="go"${sel && usable(sel) ? "" : " disabled"}>${selClosed && !selPractice ? "Repassa" : "Comença"}</button>`}
           </div>
         </div>
       </div>`;
@@ -2013,12 +2035,13 @@
           <div id="flash-figure"></div>
           <div class="flash-word" id="flash-word"></div>
         </div>
+        <div class="flash-choices" id="flash-choices" role="group" aria-label="Opcions" hidden></div>
         <form class="flash-form" id="flash-form" autocomplete="off">
           <input id="flash-input" type="text" inputmode="numeric" aria-label="Resultat" autocomplete="off" autocapitalize="off" spellcheck="false">
           <span class="flash-unit" id="flash-unit" hidden></span>
           <button type="submit" class="primary">Següent</button>
         </form>
-        <p class="flash-note">Enter buit: la salta, no compta com a errada.</p>
+        <p class="flash-note" id="flash-skipnote">Enter buit: la salta, no compta com a errada.</p>
       </div>`;
     paintSprintCount();
   }
@@ -2059,7 +2082,7 @@
     }
     const w = s.deck.shift();
     s.last = w.id;
-    s.card = { prompt: w.prompt || "", unit: w.unit || "", accepted: w.target.slice(), figure: w.figure || null };
+    s.card = { prompt: w.prompt || "", unit: w.unit || "", accepted: w.target.slice(), figure: w.figure || null, kind: w.answer_kind === "choice" && (w.options || []).length ? "choice" : w.answer_kind || "number", options: (w.options || []).slice() };
     paintSprintCard();
   }
 
@@ -2075,9 +2098,21 @@
     const unit = q("#flash-unit");
     unit.textContent = c.unit;
     unit.hidden = !c.unit;
+    // Targeta de botons (docs/ENCARREC-FLASH-P3-MODES.md §3): un toc respon i passa; no hi ha Enter ni salt.
+    const choice = c.kind === "choice";
+    const box = q("#flash-choices");
+    box.innerHTML = choice ? c.options.map((o, i) => `<button type="button" class="flash-choice" data-choice="${i}"><kbd>${i + 1}</kbd><span>${escText(o)}</span></button>`).join("") : "";
+    box.hidden = !choice;
+    q("#flash-form").hidden = choice;
+    q("#flash-skipnote").hidden = choice;
     const input = q("#flash-input");
     input.value = "";
-    input.focus();
+    if (choice) {
+      const first = box.querySelector("[data-choice]");
+      if (first) first.focus({ preventScroll: true });
+    } else {
+      input.focus();
+    }
     paintSprintCount();
   }
 
@@ -2095,6 +2130,20 @@
       if (C.checkSprint(t, c.accepted, c.unit)) s.correct += 1;
       else s.wrong.push({ prompt: c.prompt, typed: t, answer: c.accepted[0] + (c.unit ? ` ${c.unit}` : "") });
     }
+    paintSprintCount();
+    sprintNext();
+  }
+
+  // Una opció de la targeta de botons: es compta (encert o errada) i surt la següent, sense dir res.
+  function sprintChoose(i) {
+    const s = sprint;
+    const c = s && s.card;
+    if (!s || s.over || !c || c.kind !== "choice" || i < 0 || i >= c.options.length) return;
+    const picked = c.options[i];
+    s.card = null;
+    s.done += 1;
+    if (C.checkChoice(picked, c.accepted).ok) s.correct += 1;
+    else s.wrong.push({ prompt: c.prompt, typed: picked, answer: c.accepted[0], figure: c.figure });
     paintSprintCount();
     sprintNext();
   }
@@ -2124,7 +2173,7 @@
     const more = s.wrong.length - shown.length;
     const errors = s.wrong.length
       ? `<p class="flash-label">Errades</p>
-          <ul class="flash-errors">${shown.map((e) => `<li><span class="flash-err-op">${escText(e.prompt)}</span> — has posat <strong>${escText(e.typed)}</strong> → <strong>${escText(e.answer)}</strong></li>`).join("")}</ul>
+          <ul class="flash-errors">${shown.map((e) => `<li>${e.figure ? `<div class="flash-err-fig">${C.figureSvg(e.figure)}</div>` : ""}<span class="flash-err-op">${escText(e.prompt)}</span> — has posat <strong>${escText(e.typed)}</strong> → <strong>${escText(e.answer)}</strong></li>`).join("")}</ul>
           ${more > 0 ? `<p class="flash-note">i ${more} més</p>` : ""}`
       : '<p class="flash-note">Cap errada.</p>';
     screen.innerHTML = `
@@ -2149,6 +2198,10 @@
           </div>
         </div>
       </div>`;
+    // §1: quan acaba el temps, la targeta (i el seu camp) desapareix i el focus es perd (és al body): Enter no
+    // feia res. El botó de repetir pren el focus, així Enter repeteix la contrarellotge.
+    const again = q('[data-act="sprint-again"]');
+    if (again) again.focus({ preventScroll: true });
   }
 
   // Línia de la traça al xat: totes les rondes d'aquesta obertura de Flash.
@@ -2186,9 +2239,15 @@
   }
 
   function onClick(e) {
-    const t = e.target.closest ? e.target.closest("[data-act],[data-dir],[data-timer],[data-sprint],[data-list],[data-choice]") : null;
+    const t = e.target.closest ? e.target.closest("[data-act],[data-dir],[data-timer],[data-sprint],[data-mode],[data-list],[data-choice]") : null;
     if (!t) return;
-    if (t.dataset.choice !== undefined) return choose(Number(t.dataset.choice));
+    if (t.dataset.choice !== undefined) return view === "sprint" ? sprintChoose(Number(t.dataset.choice)) : choose(Number(t.dataset.choice));
+    if (t.dataset.mode) {
+      prefs.mode = t.dataset.mode === "sprint" ? "sprint" : "normal";
+      savePrefs();
+      if (prefs.mode === "sprint") selected = pickSprintSelection(selected);
+      return renderMenu();
+    }
     if (t.dataset.dir) {
       prefs.dir = t.dataset.dir;
       savePrefs();
@@ -2212,7 +2271,7 @@
       const twice = lastTap.id === t.dataset.list && now - lastTap.t < 450;
       lastTap = { id: twice ? "" : t.dataset.list, t: now };
       selected = t.dataset.list;
-      if (twice) return startRound(selected, false);
+      if (twice) return prefs.mode === "sprint" ? startSprint(selected, sprintSec) : startRound(selected, false);
       return renderMenu();
     }
     switch (t.dataset.act) {
@@ -2246,6 +2305,12 @@
     if (e.key === "Escape") {
       if (view === "menu") closeFlash();
       else renderMenu();
+      return;
+    }
+    // contrarellotge amb botons: 1..n també trien (docs/ENCARREC-FLASH-P3-MODES.md §3)
+    if (view === "sprint" && sprint && sprint.card && sprint.card.kind === "choice" && /^[1-9]$/.test(e.key)) {
+      e.preventDefault();
+      sprintChoose(Number(e.key) - 1);
       return;
     }
     // choice: les tecles 1..n trien l'opció

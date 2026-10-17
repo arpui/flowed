@@ -54,7 +54,7 @@ export interface FlashListView {
   words: FlashWordView[];
   kind?: "math" | LangKind; // absent for translation lists
   mode?: "practice"; // absent = memory (docs/ENCARREC-FLASH-PRACTICA.md §2)
-  sprint?: true; // math list every card of which is a number or unit answer (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2)
+  sprint?: true; // math list every card of which is a number, unit or choice answer (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2, -P3 §3)
 }
 
 /** Expands a path whose segments may hold a `*` (e.g. `curriculum/flash/en-*`)
@@ -2198,12 +2198,13 @@ export function listMode(raw: JsonRecord): "memory" | "practice" {
   return Object.hasOwn(GEN_ROOM, kind) ? "memory" : "practice";
 }
 
-// ---- contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2) --------------------------------------
-// A math list runs as a timed sprint only when every card is answered by a number or a unit (typed, no
-// choice, fraction, pair…). A memory list is judged by its cards. A practice list has no fixed cards, so its
-// cards are sampled: SPRINT_SEEDS rounds of PRACTICE_MAX cards, memoized (the generators are pure, so the
-// answer is the same every time). Mixed lists (bars_read: number and choice cards) are not eligible.
-const SPRINT_ANSWER_KINDS: readonly string[] = ["number", "unit"];
+// ---- contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2, docs/ENCARREC-FLASH-P3-MODES.md §3) ----
+// A math list runs as a timed sprint only when every card is answered by a number, a unit (typed) or a
+// choice (one tap on an option). Fraction, pair, factorization, algebraic and sexagesimal cards are not
+// eligible. A memory list is judged by its cards. A practice list has no fixed cards, so its cards are
+// sampled: SPRINT_SEEDS rounds of PRACTICE_MAX cards, memoized (the generators are pure, so the answer is
+// the same every time). A mixed list (bars_read: number and choice cards) is eligible: each card by its kind.
+const SPRINT_ANSWER_KINDS: readonly string[] = ["number", "unit", "choice"];
 const SPRINT_SEEDS = 60;
 const sprintMemo = new Map<string, boolean>();
 

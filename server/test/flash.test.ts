@@ -390,7 +390,7 @@ const ids = (ws: Word[]) => ws.map((w) => w.id);
 
 // ---- v0.1: prefs, timer, round dots, outcome, trace ------------------------
 console.log("prefs and timer");
-check("prefs: no stored value → nt, 20 s by default", JSON.stringify(C.migratePrefs(null)) === JSON.stringify({ dir: "nt", timer: 20 }));
+check("prefs: no stored value → nt, 20 s, normal mode by default", JSON.stringify(C.migratePrefs(null)) === JSON.stringify({ dir: "nt", timer: 20, mode: "normal" }));
 check("prefs: old timer true → 20", C.migratePrefs({ dir: "tn", timer: true }).timer === 20 && C.migratePrefs({ dir: "tn", timer: true }).dir === "tn");
 check("prefs: timer false stays off", C.migratePrefs({ timer: false }).timer === false);
 check("prefs: 10/20/30 kept", [10, 20, 30].every((n) => C.migratePrefs({ timer: n }).timer === n));
@@ -2195,9 +2195,10 @@ console.log("contrarellotge");
   // §2 eligibility: only lists whose every card is a number or a unit answer.
   const memW = (kinds: string[]) => kinds.map((k, i) => ({ id: `w${i}`, target: ["1"], native: [], answer_kind: k as AnswerKind }));
   check("sprint: a memory list is eligible when all its cards are number or unit", sprintable({}, "memory", memW(["number", "unit", "number"])));
-  check("sprint: a memory list with one choice, fraction or pair card is not, and an empty one is not", !sprintable({}, "memory", memW(["number", "choice"])) && !sprintable({}, "memory", memW(["fraction"])) && !sprintable({}, "memory", memW(["pair"])) && !sprintable({}, "memory", []));
-  check("sprint: a practice list of a number generator is eligible; a choice generator is not",
-    sprintable({ id: "x", generate: { kind: "mult", params: { digits: [2, 1] } } }, "practice", []) && !sprintable({ id: "y", generate: { kind: "compare_numbers" } }, "practice", []));
+  check("sprint: a memory list with a fraction, pair, factorization, algebraic or sexagesimal card is not, and an empty one is not", !sprintable({}, "memory", memW(["number", "fraction"])) && !sprintable({}, "memory", memW(["pair"])) && !sprintable({}, "memory", memW(["factorization"])) && !sprintable({}, "memory", memW(["algebraic"])) && !sprintable({}, "memory", memW(["sexagesimal"])) && !sprintable({}, "memory", []));
+  check("sprint: a choice card is eligible too (docs/ENCARREC-FLASH-P3-MODES.md §3), alone or mixed with numbers", sprintable({}, "memory", memW(["choice"])) && sprintable({}, "memory", memW(["number", "choice"])));
+  check("sprint: a practice list of a number generator is eligible, and so is a choice generator; a pair one is not",
+    sprintable({ id: "x", generate: { kind: "mult", params: { digits: [2, 1] } } }, "practice", []) && sprintable({ id: "y", generate: { kind: "compare_numbers" } }, "practice", []) && !sprintable({ id: "z", generate: { kind: "coordinates" } }, "practice", []));
 
   const sprintIds = (lvl: string) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-sprint-"));
@@ -2210,13 +2211,14 @@ console.log("contrarellotge");
   };
   const m5 = sprintIds("m5");
   const byId = (lists: any[], id: string) => lists.find((l) => l.id === id);
-  check("sprint: /lists marks the number and unit lists, the taules included, and not the choice, fraction or pair ones",
+  check("sprint: /lists marks the number, unit and choice lists, the taules included, and not the fraction or pair ones",
     byId(m5, "math-m5.flash.taules")?.sprint === true && byId(m5, "math-m5.flash.mult-2x1")?.sprint === true &&
-    byId(m5, "math-m5.flash.unitats-de-mesura")?.sprint === true && byId(m5, "math-m5.flash.comparar-nombres-grans")?.sprint === undefined &&
+    byId(m5, "math-m5.flash.unitats-de-mesura")?.sprint === true && byId(m5, "math-m5.flash.comparar-nombres-grans")?.sprint === true &&
+    byId(m5, "math-m5.flash.tipus-d-angles")?.sprint === true &&
     byId(m5, "math-m5.flash.coordenades")?.sprint === undefined && byId(m5, "math-m5.flash.fraccions-amb-el-mateix-denominador")?.sprint === undefined);
-  check("sprint: a list that mixes number and choice cards is not eligible (bars_read)", byId(m5, "math-m5.flash.diagrames-de-barres")?.sprint === undefined);
+  check("sprint: a list that mixes number and choice cards is eligible, each card by its kind (bars_read)", byId(m5, "math-m5.flash.diagrames-de-barres")?.sprint === true);
   const counts = ["m5", "m6", "m7"].map((lvl) => sprintIds(lvl).filter((l) => l.sprint === true).length);
-  check("sprint: 58 lists are eligible over m5, m6 and m7 (20 + 17 + 21)", counts.join("+") === "20+17+21", counts);
+  check("sprint: 69 lists are eligible over m5, m6 and m7 (26 + 17 + 26)", counts.join("+") === "26+17+26", counts);
   const langDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-sprint-lang-"));
   try {
     fs.writeFileSync(path.join(langDir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "English", current_level: "A1" } }));
@@ -2233,7 +2235,7 @@ console.log("contrarellotge");
     write("a-numbers.json", { id: "t.numbers", level: "m5", title: { ca: "n" }, kind: "math", items: [{ id: "a", prompt: "3 + 4", answer: ["7"] }, { id: "b", prompt: "5 × 2", answer: ["10"] }] });
     write("b-mixed.json", { id: "t.mixed", level: "m5", title: { ca: "m" }, kind: "math", items: [{ id: "a", prompt: "3 + 4", answer: ["7"] }, { id: "b", prompt: "Quin és?", answer: ["x"], answer_kind: "choice", options: ["x", "y"] }] });
     const got = Object.fromEntries(loadFlashLists(mixDir, "curriculum/flash/mix", "ca").map((l) => [l.id, l.sprint]));
-    check("sprint: loadFlashLists marks a number-only memory list and leaves a mixed one out", got["t.numbers"] === true && got["t.mixed"] === undefined, got);
+    check("sprint: loadFlashLists marks a number-only memory list, and a number and choice one too (P3 §3)", got["t.numbers"] === true && got["t.mixed"] === true, got);
   } finally {
     fs.rmSync(mixDir, { recursive: true, force: true });
   }
@@ -2305,8 +2307,37 @@ console.log("contrarellotge");
 
   // The client's wiring (the round code is the same as before: the sprint has its own path).
   const fjs3 = read("web", "flash.js");
-  check("flash.js: the menu offers the contrarellotge only for an eligible list, with 1, 2 and 3 min", fjs3.includes('C.sprintable(sel) ? `<button type="button" data-act="sprint">') && fjs3.includes("C.SPRINT_OPTIONS.map(sprintButton)"));
+  check("flash.js: the menu offers the contrarellotge only for an eligible list, with 1, 2 and 3 min", fjs3.includes('data-act="sprint"${sel && C.sprintable(sel) ? "" : " disabled"}') && fjs3.includes("C.SPRINT_OPTIONS.map(sprintButton)") && !fjs3.includes('data-act="sprint">⏱ Contrarellotge'));
   check("flash.js: the sprint asks /api/flash/practice for lots of 20 with a new seed, and does not touch the boxes or closing", fjs3.includes("n=${C.SPRINT_LOT}&seed=${seed}") && fjs3.includes("const record = before !== undefined") && !/recordResult\(state, s\./.test(fjs3) && fjs3.includes('flowed.flash.sprint'));
+
+  // ---- docs/ENCARREC-FLASH-P3-MODES.md ----------------------------------------------------------
+  // §1 "Un altre cop" repeats the contrarellotge. The driver (scratchpad, real Chromium) found the defect: when the
+  // time ends the card and its input leave the DOM, focus falls to the body, so Enter did nothing. The fix: the
+  // repeat button takes the focus when the summary shows. The click always worked.
+  console.log("contrarellotge P3");
+  check("§1: the summary gives the focus to Un altre cop (Enter repeats the run once the card is gone)", /function renderSprintSummary\(\) \{[\s\S]*?const again = q\('\[data-act="sprint-again"\]'\);\s*if \(again\) again\.focus\(\{ preventScroll: true \}\);/.test(fjs3));
+  check("§1: Un altre cop restarts the same list and the same duration (sprint-again → startSprint)", fjs3.includes('case "sprint-again":') && fjs3.includes("startSprint(sprint.list.id, sprint.seconds)"));
+
+  // §2 the mode, remembered; the menu's rows; the bottom button; the repeat follows the run.
+  const prefsOf = (raw: unknown) => (C as any).migratePrefs(raw);
+  check("§2 prefs: the mode is normal by default, sprint when saved, anything else normal; dir and timer as before", prefsOf(null).mode === "normal" && prefsOf({ mode: "sprint" }).mode === "sprint" && prefsOf({ mode: "x" }).mode === "normal" && prefsOf({ dir: "tn", timer: 10, mode: "sprint" }).dir === "tn" && prefsOf({ dir: "tn", timer: 10, mode: "sprint" }).timer === 10);
+  check("§2 menu: the mode row is the first row, above the direction and the time", fjs3.indexOf('aria-label="Mode"') > 0 && fjs3.indexOf('aria-label="Mode"') < fjs3.indexOf('aria-label="Direcció"') && fjs3.indexOf('aria-label="Mode"') < fjs3.indexOf("aria-label=\"Temps per ${noun"));
+  check("§2 menu: Normal and ⏱ Contrarellotge are the two modes, saved in the prefs (data-mode)", fjs3.includes('data-mode="${key}"') && fjs3.includes('key === "sprint" ? "⏱ Contrarellotge" : "Normal"') && fjs3.includes('prefs.mode = t.dataset.mode === "sprint" ? "sprint" : "normal"') && fjs3.includes("savePrefs();\n      if (prefs.mode === \"sprint\") selected = pickSprintSelection(selected);"));
+  check("§2 menu: in Contrarellotge the time row is hidden and the 1 / 2 / 3 min row is shown beside the mode", fjs3.includes('${sprintOn ? "" : `<p class="flash-label">Temps per') && fjs3.includes('${sprintOn ? `<div class="flash-seg" role="group" aria-label="Durada de la contrarellotge">'));
+  check("§2 menu: a list that is not eligible is greyed out (disabled), with the small text, only in Contrarellotge", fjs3.includes("const noSprint = sprintOn && !C.sprintable(l)") && fjs3.includes('${off || noSprint ? " disabled" : ""}') && fjs3.includes('no disponible en contrarellotge</small>'));
+  check("§2 menu: the bottom button is ⏱ Comença (sprint) or Comença (normal); the stopwatch button beside it is gone", fjs3.includes('data-act="sprint"${sel && C.sprintable(sel)') && fjs3.includes('data-act="go"${sel && usable(sel)') && fjs3.includes("⏱ Comença") && !fjs3.includes("${C.sprintable(sel) ? `<button"));
+  check("§2 menu: a double click starts a Contrarellotge in that mode, a normal round otherwise", fjs3.includes('if (twice) return prefs.mode === "sprint" ? startSprint(selected, sprintSec) : startRound(selected, false);'));
+  check("§2 menu: switching to Contrarellotge keeps an eligible list selected (the first eligible otherwise)", fjs3.includes("function pickSprintSelection(prev)") && fjs3.includes("if (cur && C.sprintable(cur)) return cur.id;"));
+  check("§2 summary: Un altre cop for a contrarellotge, Una altra ronda for a normal round", fjs3.includes('data-act="sprint-again">Un altre cop') && fjs3.includes('data-act="again">Una altra ronda'));
+
+  // §3 choice cards in the contrarellotge: one tap answers, no feedback, the keys 1..n, the error with its figure.
+  check("§3 eligibility is the server's flag: number, unit and choice are eligible (SPRINT_ANSWER_KINDS)", /const SPRINT_ANSWER_KINDS: readonly string\[\] = \["number", "unit", "choice"\];/.test(read("server", "src", "flash.ts")));
+  check("§3 a choice card is answered by one tap (sprintChoose), at once, with no feedback", fjs3.includes("function sprintChoose(i)") && fjs3.includes("if (C.checkChoice(picked, c.accepted).ok) s.correct += 1;") && fjs3.includes('view === "sprint" ? sprintChoose(Number(t.dataset.choice))'));
+  check("§3 the keys 1..n answer a choice card of a contrarellotge, and nothing else", fjs3.includes('if (view === "sprint" && sprint && sprint.card && sprint.card.kind === "choice" && /^[1-9]$/.test(e.key))') && fjs3.includes("sprintChoose(Number(e.key) - 1)"));
+  check("§3 a choice card shows the buttons and no answer field or Enter skip; the card keeps its kind and options", fjs3.includes("q(\"#flash-form\").hidden = choice;") && fjs3.includes('q("#flash-skipnote").hidden = choice;') && fjs3.includes('kind: w.answer_kind === "choice" && (w.options || []).length ? "choice" : w.answer_kind || "number", options: (w.options || []).slice()'));
+  check("§3 the summary lists a choice error with its figure in small (flash-err-fig), and no figure for the others", fjs3.includes('${e.figure ? `<div class="flash-err-fig">${C.figureSvg(e.figure)}</div>` : ""}') && fjs3.includes("else s.wrong.push({ prompt: c.prompt, typed: picked, answer: c.accepted[0], figure: c.figure });"));
+  const styleP3 = read("web", "style.css");
+  check("§3 the CSS: the form hides on a choice card, the small figure is 96 px, the mode row wraps", styleP3.includes(".flash-form[hidden] { display: none; }") && styleP3.includes(".flash-err-fig { width: 96px;") && styleP3.includes(".flash-mode { display: flex; flex-wrap: wrap;"));
 }
 
 if (failures) {
