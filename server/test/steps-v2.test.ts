@@ -167,6 +167,10 @@ check("rule 7: no rule applies, the template sentence",
 check("rule 6 with the step's own numbers, when they are not the problem's",
   diagnoseStepLine(mul, stepOf(mul, 2), "93 × 6") === "Fes servir els nombres d'aquest pas: 93 i 5.",
   diagnoseStepLine(mul, stepOf(mul, 2), "93 × 6"));
+check("rule 6 never names a number the step asks for (43 ÷ 5: the quotient 8)", (() => {
+  const div = byId("m4.div_2x1.001");
+  return diagnoseStepLine(div, stepOf(div, 1), "5 x 9") === "Revisa els nombres: han de sortir del problema o dels passos d'abans.";
+})());
 check("a final bare-number step never names its result in a hint",
   diagnoseStepLine(grp, stepOf(grp, 3), "201") === "Fes servir els nombres d'aquest pas: 10 i 20.",
   diagnoseStepLine(grp, stepOf(grp, 3), "201"));

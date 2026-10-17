@@ -249,9 +249,18 @@ function diagnose(item: BankItem, step: BankStep, line: string): { text: string;
     // operands — never its result, which would give the answer away
     const basis = isBareNumber(step.expect) && idx > 0 ? numsOf(steps[idx - 1]!.expect) : expNums;
     const inProblem = basis.every((n) => probNums.includes(n));
-    return said(inProblem
-      ? `Fes servir els nombres del problema: ${joinCa(probNums)}.`
-      : `Fes servir els nombres d'aquest pas: ${joinCa(basis)}.`);
+    if (inProblem) return said(`Fes servir els nombres del problema: ${joinCa(probNums)}.`);
+    // Only numbers the learner has already seen (the problem, earlier steps) may be named:
+    // a step's own new number is what it asks for (43 ÷ 5, step "5 × 8": the 8) — 2026-10-17.
+    // The place-value parts of the problem's numbers count as seen too (25 → 20 and 5: the
+    // decomposition the method asks for), not a quotient or a product still to find.
+    const parts = probNums.flatMap((n) => /^\d+$/.test(n)
+      ? [...n].map((d, i) => String(Number(d) * 10 ** (n.length - 1 - i))).filter((p) => p !== "0")
+      : []);
+    const known = new Set([...probNums, ...parts, ...steps.slice(0, idx).flatMap((s) => [...numsOf(s.expect), ...numsOf(s.value ?? "")])]);
+    return said(basis.every((n) => known.has(n))
+      ? `Fes servir els nombres d'aquest pas: ${joinCa(basis)}.`
+      : "Revisa els nombres: han de sortir del problema o dels passos d'abans.");
   }
   // 7. no rule applies
   return { text: NO_RULE, specific: false };
