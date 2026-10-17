@@ -1100,6 +1100,7 @@
   let stateKey = "";
   let prefs = loadPrefs();
   let selected = null; // id de la llista triada al menú
+  let lastTap = { id: "", t: 0 }; // doble clic / doble toc sobre una llista
   let view = "menu"; // menu | card | summary
   let round = null; // ronda en curs
   let card = null; // targeta en curs
@@ -1282,6 +1283,8 @@
   }
 
   function renderMenu() {
+    // Keep the scroll: re-rendering the menu used to jump to the top, hiding the row just picked.
+    const keepScroll = view === "menu" && screen ? screen.scrollTop : 0;
     view = "menu";
     round = null;
     card = null;
@@ -1314,13 +1317,14 @@
           <div class="flash-seg" role="group" aria-label="Direcció">${dirButton("nt")}${dirButton("tn")}${dirButton("mix")}</div>`}
           <p class="flash-label">Temps per ${noun(lists[0] || {})}</p>
           <div class="flash-seg" role="group" aria-label="Temps per ${noun(lists[0] || {})}">${timeButton(false)}${C.TIMER_OPTIONS.map(timeButton).join("")}</div>
-          <p class="flash-label">Llistes</p>
+          <p class="flash-label">Llistes <span class="flash-hint-inline">· doble clic per començar</span></p>
           <div class="flash-lists">${rows || '<p class="flash-note">Encara no hi ha llistes.</p>'}</div>
           <div class="flash-actions">
             <button type="button" class="primary" data-act="go"${sel ? "" : " disabled"}>${selClosed ? "Repassa" : "Comença"}</button>
           </div>
         </div>
       </div>`;
+    if (keepScroll) screen.scrollTop = keepScroll;
   }
 
   // ---- ronda ---------------------------------------------------------------
@@ -1721,7 +1725,14 @@
       return renderMenu();
     }
     if (t.dataset.list && !t.dataset.act) {
+      // Double click (or double tap) on a list starts it straight away: with 30+ lists the
+      // button at the bottom is out of sight (2026-10-17, Albert). Our own timing, since
+      // a single click re-renders the menu and the browser's dblclick never reaches the row.
+      const now = Date.now();
+      const twice = lastTap.id === t.dataset.list && now - lastTap.t < 450;
+      lastTap = { id: twice ? "" : t.dataset.list, t: now };
       selected = t.dataset.list;
+      if (twice) return startRound(selected, false);
       return renderMenu();
     }
     switch (t.dataset.act) {

@@ -72,6 +72,15 @@ header {
 
 .brand { font-weight: 700; font-size: 1.05rem; }
 .brand-domain { font-weight: 500; opacity: .65; }
+.level-badge {
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.level-badge[hidden] { display: none; }
 
 /* Where you are in the session: count, and the target when there is one. */
 .pace {
@@ -909,6 +918,7 @@ nav#commands button[hidden] { display: none; }
 .flash-sub { font-size: 0.85rem; opacity: 0.75; font-weight: normal; margin-left: 6px; }
 .flash-body { display: flex; flex-direction: column; gap: 12px; }
 .flash-label { margin: 6px 0 0; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+.flash-hint-inline { text-transform: none; letter-spacing: 0; }
 .flash-note { opacity: 0.75; font-size: 0.9rem; margin: 0; }
 
 .flash-screen .ghost,

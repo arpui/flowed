@@ -629,6 +629,7 @@ async function refreshPath(force = false) {
   pathAt = Date.now();
   try {
     const res = await api("/math/path");
+    renderLevelBadge(res && res.ok ? res.data : null);
     renderPathMiniBar(res && res.ok ? res.data : null);
   } catch {
     /* the bar is never worth an error */
@@ -636,6 +637,16 @@ async function refreshPath(force = false) {
 }
 
 if (pathMiniEl) pathMiniEl.addEventListener("click", openProgress);
+
+// The level being worked on (m5, m7, A1…) next to the brand: from the path, the course the
+// learner is actually doing, not the profile's declared level (2026-10-17, Albert).
+function renderLevelBadge(path) {
+  const el = document.getElementById("level-badge");
+  if (!el) return;
+  const lv = path && path.available && path.level ? String(path.level) : "";
+  el.textContent = lv;
+  el.hidden = !lv;
+}
 
 async function refreshPace() {
   refreshPath();
