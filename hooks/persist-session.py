@@ -631,10 +631,13 @@ def build_report(session_id, transcript, tool_calls, session_info, override_sess
     if records:
         print(f"[Fluent] 🧾 {len(records)} structured record(s); prose adds "
               f"{len(extra_exercises)} exercise(s), {len(error_patterns)} pattern(s)")
-        if len(prose_exercises) != len(rec_exercises):
-            print(f"[Fluent] ⚠ divergence: {len(rec_exercises)} recorded vs "
-                  f"{len(prose_exercises)} graded in prose — the tutor did not record "
-                  f"every answer", file=sys.stderr)
+        # Only a real gap is worth a warning: answers graded in the prose that no record
+        # carries. Fewer in the prose is normal (bank/steps feedback is built by the server,
+        # not written in the parseable tutor format) — 2026-10-17, Albert.
+        if extra_exercises:
+            print(f"[Fluent] ⚠ divergence: {len(extra_exercises)} answer(s) graded in prose "
+                  f"but not recorded ({len(rec_exercises)} recorded) — the tutor did not "
+                  f"record every answer", file=sys.stderr)
     
     # Calculate stats
     total_exercises = len(exercises)

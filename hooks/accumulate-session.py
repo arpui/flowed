@@ -424,9 +424,10 @@ def main():
     draft["skills_practiced"] = list(skill_scores.keys())
     draft["review_results"] = reviews
 
-    if records and len(rec_exercises) != len(draft.get("exercises", [])):
-        print(f"[Fluent] ⚠ divergence: {len(rec_exercises)} recorded vs "
-              f"{len(draft.get('exercises', []))} graded in prose", file=sys.stderr)
+    # Warn only on a real gap (prose answers no record carries); fewer in the prose is normal.
+    if records and prose_exercises:
+        print(f"[Fluent] ⚠ divergence: {len(prose_exercises)} answer(s) graded in prose "
+              f"but not recorded ({len(rec_exercises)} recorded)", file=sys.stderr)
 
     payload = {
         "session_id": sid,
