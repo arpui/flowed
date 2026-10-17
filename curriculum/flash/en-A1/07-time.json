@@ -1,0 +1,20 @@
+{
+  "id": "en-A1.flash.time",
+  "level": "A1",
+  "competence": "a1.vocab_time",
+  "title": { "ca": "El temps i calendari", "es": "El tiempo y calendario", "en": "Time and calendar" },
+  "words": [
+    { "id": "today", "target": ["today"], "native": { "ca": ["avui"], "es": ["hoy"] } },
+    { "id": "tomorrow", "target": ["tomorrow"], "native": { "ca": ["demà"], "es": ["mañana"] } },
+    { "id": "yesterday", "target": ["yesterday"], "native": { "ca": ["ahir"], "es": ["ayer"] } },
+    { "id": "morning", "target": ["morning"], "native": { "ca": ["matí"], "es": ["mañana"] } },
+    { "id": "afternoon", "target": ["afternoon"], "native": { "ca": ["tarda"], "es": ["tarde"] } },
+    { "id": "night", "target": ["night", "evening"], "native": { "ca": ["nit", "vespre"], "es": ["noche"] } },
+    { "id": "day", "target": ["day"], "native": { "ca": ["dia"], "es": ["día"] } },
+    { "id": "week", "target": ["week"], "native": { "ca": ["setmana"], "es": ["semana"] } },
+    { "id": "month", "target": ["month"], "native": { "ca": ["mes"], "es": ["mes"] } },
+    { "id": "year", "target": ["year"], "native": { "ca": ["any"], "es": ["año"] } },
+    { "id": "hour", "target": ["hour", "time"], "native": { "ca": ["hora"], "es": ["hora"] } },
+    { "id": "always", "target": ["always"], "native": { "ca": ["sempre"], "es": ["siempre"] } }
+  ]
+}

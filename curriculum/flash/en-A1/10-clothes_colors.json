@@ -1,0 +1,20 @@
+{
+  "id": "en-A1.flash.clothes_colors",
+  "level": "A1",
+  "competence": "a1.vocab_clothes_colors",
+  "title": { "ca": "Roba i colors", "es": "Ropa y colores", "en": "Clothes and colors" },
+  "words": [
+    { "id": "shirt", "target": ["shirt", "t-shirt"], "native": { "ca": ["camisa", "samarreta"], "es": ["camisa", "camiseta"] } },
+    { "id": "trousers", "target": ["trousers", "pants"], "native": { "ca": ["pantalons"], "es": ["pantalones"] } },
+    { "id": "shoes", "target": ["shoes"], "native": { "ca": ["sabates"], "es": ["zapatos"] } },
+    { "id": "jacket", "target": ["jacket", "coat"], "native": { "ca": ["jaqueta", "abric"], "es": ["chaqueta", "abrigo"] } },
+    { "id": "dress", "target": ["dress"], "native": { "ca": ["vestit"], "es": ["vestido"] } },
+    { "id": "hat", "target": ["hat", "cap"], "native": { "ca": ["barret", "gorra"], "es": ["sombrero", "gorra"] } },
+    { "id": "red", "target": ["red"], "native": { "ca": ["vermell", "roig"], "es": ["rojo"] } },
+    { "id": "blue", "target": ["blue"], "native": { "ca": ["blau"], "es": ["azul"] } },
+    { "id": "green", "target": ["green"], "native": { "ca": ["verd"], "es": ["verde"] } },
+    { "id": "yellow", "target": ["yellow"], "native": { "ca": ["groc"], "es": ["amarillo"] } },
+    { "id": "black", "target": ["black"], "native": { "ca": ["negre"], "es": ["negro"] } },
+    { "id": "white", "target": ["white"], "native": { "ca": ["blanc"], "es": ["blanco"] } }
+  ]
+}

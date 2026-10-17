@@ -1,0 +1,20 @@
+{
+  "id": "en-A1.flash.body",
+  "level": "A1",
+  "competence": "a1.vocab_body",
+  "title": { "ca": "El cos humà", "es": "El cuerpo humano", "en": "The body" },
+  "words": [
+    { "id": "head", "target": ["head"], "native": { "ca": ["cap"], "es": ["cabeza"] } },
+    { "id": "face", "target": ["face"], "native": { "ca": ["cara"], "es": ["cara", "rostro"] } },
+    { "id": "hair", "target": ["hair"], "native": { "ca": ["cabell", "cabells", "pèl"], "es": ["pelo", "cabello"] } },
+    { "id": "eye", "target": ["eye", "eyes"], "native": { "ca": ["ull", "ulls"], "es": ["ojo", "ojos"] } },
+    { "id": "ear", "target": ["ear", "ears"], "native": { "ca": ["orella", "oïda"], "es": ["oreja", "oído"] } },
+    { "id": "nose", "target": ["nose"], "native": { "ca": ["nas"], "es": ["nariz"] } },
+    { "id": "mouth", "target": ["mouth"], "native": { "ca": ["boca"], "es": ["boca"] } },
+    { "id": "tooth", "target": ["tooth", "teeth"], "native": { "ca": ["dent", "dents"], "es": ["diente", "dientes"] } },
+    { "id": "arm", "target": ["arm", "arms"], "native": { "ca": ["braç"], "es": ["brazo"] } },
+    { "id": "hand", "target": ["hand", "hands"], "native": { "ca": ["mà"], "es": ["mano"] } },
+    { "id": "leg", "target": ["leg", "legs"], "native": { "ca": ["cama"], "es": ["pierna"] } },
+    { "id": "foot", "target": ["foot", "feet"], "native": { "ca": ["peu", "peus"], "es": ["pie", "pies"] } }
+  ]
+}

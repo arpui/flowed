@@ -1,0 +1,20 @@
+{
+  "id": "en-A1.flash.adjectives",
+  "level": "A1",
+  "competence": "a1.vocab_adjectives",
+  "title": { "ca": "Adjectius bàsics", "es": "Adjetivos básicos", "en": "Basic adjectives" },
+  "words": [
+    { "id": "good", "target": ["good"], "native": { "ca": ["bo", "bona"], "es": ["bueno", "buena"] } },
+    { "id": "bad", "target": ["bad"], "native": { "ca": ["dolent", "dolenta"], "es": ["malo", "mala"] } },
+    { "id": "big", "target": ["big", "large"], "native": { "ca": ["gran"], "es": ["grande"] } },
+    { "id": "small", "target": ["small", "little"], "native": { "ca": ["petit", "petita"], "es": ["pequeño", "pequeña"] } },
+    { "id": "hot", "target": ["hot"], "native": { "ca": ["calent", "calor"], "es": ["caliente", "calor"] } },
+    { "id": "cold", "target": ["cold"], "native": { "ca": ["fred", "freda"], "es": ["frío", "fría"] } },
+    { "id": "new", "target": ["new"], "native": { "ca": ["nou", "nova"], "es": ["nuevo", "nueva"] } },
+    { "id": "old", "target": ["old"], "native": { "ca": ["vell", "antic"], "es": ["viejo", "antiguo"] } },
+    { "id": "happy", "target": ["happy"], "native": { "ca": ["feliç", "content"], "es": ["feliz", "contento"] } },
+    { "id": "sad", "target": ["sad"], "native": { "ca": ["trist", "trista"], "es": ["triste"] } },
+    { "id": "cheap", "target": ["cheap"], "native": { "ca": ["barat", "barata"], "es": ["barato", "barata"] } },
+    { "id": "expensive", "target": ["expensive"], "native": { "ca": ["car", "cara"], "es": ["caro", "cara"] } }
+  ]
+}
