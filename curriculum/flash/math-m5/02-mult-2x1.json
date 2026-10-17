@@ -2,5 +2,6 @@
   "id": "math-m5.flash.mult-2x1",
   "level": "m5",
   "title": { "ca": "2 xifres × 1 xifra", "es": "2 cifras × 1 cifra", "en": "2-digit × 1-digit" },
+  "mode": "practice",
   "generate": { "kind": "mult", "count": 12, "params": { "digits": [2, 1] } }
 }

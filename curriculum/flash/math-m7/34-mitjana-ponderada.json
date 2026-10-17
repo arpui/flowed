@@ -3,5 +3,6 @@
   "level": "m7",
   "competence": "m7.statistics",
   "title": { "ca": "Mitjana ponderada", "es": "Media ponderada", "en": "Weighted mean" },
+  "mode": "practice",
   "generate": { "kind": "weighted_mean", "count": 12 }
 }

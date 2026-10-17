@@ -7,6 +7,7 @@
     "es": "Unidades de superficie",
     "en": "Area units"
   },
+  "mode": "practice",
   "generate": {
     "kind": "area_units",
     "count": 12

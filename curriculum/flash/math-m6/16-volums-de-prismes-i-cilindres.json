@@ -7,6 +7,7 @@
     "es": "Volúmenes de prismas y cilindros",
     "en": "Volumes of prisms and cylinders"
   },
+  "mode": "practice",
   "generate": {
     "kind": "volume_solid",
     "count": 12

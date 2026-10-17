@@ -7,6 +7,7 @@
     "es": "Temperaturas en la recta numérica",
     "en": "Temperatures on the number line"
   },
+  "mode": "practice",
   "generate": {
     "kind": "int_number_line",
     "count": 12

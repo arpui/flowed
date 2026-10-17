@@ -7,6 +7,7 @@
     "es": "MCD y mcm",
     "en": "GCD and LCM"
   },
+  "mode": "practice",
   "generate": {
     "kind": "gcd_lcm",
     "count": 12

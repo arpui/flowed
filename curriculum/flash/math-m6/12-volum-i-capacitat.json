@@ -7,6 +7,7 @@
     "es": "Volumen y capacidad",
     "en": "Volume and capacity"
   },
+  "mode": "practice",
   "generate": {
     "kind": "volume_units",
     "count": 12

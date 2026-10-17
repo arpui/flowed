@@ -2,5 +2,6 @@
   "id": "math-m5.flash.fraccions-equivalents",
   "level": "m5",
   "title": { "ca": "Fraccions equivalents", "es": "Fracciones equivalentes", "en": "Equivalent fractions" },
+  "mode": "practice",
   "generate": { "kind": "frac_equiv", "count": 12 }
 }

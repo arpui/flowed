@@ -7,6 +7,7 @@
     "es": "Operaciones con fracciones",
     "en": "Fraction operations"
   },
+  "mode": "practice",
   "generate": {
     "kind": "frac_ops4",
     "count": 12

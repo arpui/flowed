@@ -7,6 +7,7 @@
     "es": "Frecuencia relativa",
     "en": "Relative frequency"
   },
+  "mode": "practice",
   "generate": {
     "kind": "freq_relative",
     "count": 12

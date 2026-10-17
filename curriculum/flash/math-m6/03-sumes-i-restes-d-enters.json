@@ -7,6 +7,7 @@
     "es": "Sumas y restas de enteros",
     "en": "Adding and subtracting integers"
   },
+  "mode": "practice",
   "generate": {
     "kind": "int_signs",
     "count": 12

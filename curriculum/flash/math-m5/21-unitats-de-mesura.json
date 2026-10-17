@@ -3,5 +3,6 @@
   "level": "m5",
   "competence": "m5.smd_convert",
   "title": { "ca": "Unitats de mesura", "es": "Unidades de medida", "en": "Units of measure" },
+  "mode": "practice",
   "generate": { "kind": "unit_convert", "count": 12 }
 }

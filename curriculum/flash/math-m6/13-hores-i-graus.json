@@ -7,6 +7,7 @@
     "es": "Horas y grados",
     "en": "Hours and degrees"
   },
+  "mode": "practice",
   "generate": {
     "kind": "angle_ops",
     "count": 12

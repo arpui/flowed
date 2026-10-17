@@ -3,5 +3,6 @@
   "level": "m7",
   "competence": "m7.composite_areas",
   "title": { "ca": "Àrees compostes", "es": "Áreas compuestas", "en": "Composite areas" },
+  "mode": "practice",
   "generate": { "kind": "composite_area", "count": 12 }
 }

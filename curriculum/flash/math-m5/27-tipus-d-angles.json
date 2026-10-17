@@ -2,5 +2,6 @@
   "id": "math-m5.flash.tipus-d-angles",
   "level": "m5",
   "title": { "ca": "Tipus d'angles", "es": "Tipos de ángulos", "en": "Types of angles" },
+  "mode": "practice",
   "generate": { "kind": "angle_type", "count": 12 }
 }

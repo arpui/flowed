@@ -961,7 +961,10 @@ nav#commands button[hidden] { display: none; }
 .flash-mark { font-weight: 700; color: var(--flash-ok); }
 .flash-bar { height: 8px; border-radius: 4px; background: rgba(244, 241, 234, 0.2); overflow: hidden; }
 .flash-bar > span { display: block; height: 100%; background: var(--flash-ok); }
-.flash-count { font-size: 0.85rem; text-align: right; font-variant-numeric: tabular-nums; }
+.flash-count { font-size: 0.85rem; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.flash-row.practice { grid-template-columns: 20px 1fr 90px auto; } /* "rondes bones 1/2" is wider than a count */
+.flash-good { margin: 0; font-weight: 600; color: var(--flash-ok); }
+.flash-sum-first { margin: 0; font-size: 1.1rem; }
 
 .flash-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.9rem; }
 .flash-prog { font-variant-numeric: tabular-nums; opacity: 0.85; }
@@ -1116,5 +1119,6 @@ nav#commands button[hidden] { display: none; }
 
 @media (max-width: 560px) {
   .flash-row { grid-template-columns: 20px 1fr 44px; }
+  .flash-row.practice { grid-template-columns: 20px 1fr auto; }
   .flash-bar { grid-column: 2 / 4; }
 }

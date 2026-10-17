@@ -7,6 +7,7 @@
     "es": "Coordenadas",
     "en": "Coordinates"
   },
+  "mode": "practice",
   "generate": {
     "kind": "quadrant_point",
     "count": 12

@@ -3,5 +3,6 @@
   "level": "m7",
   "competence": "m7.monomials",
   "title": { "ca": "Operacions amb monomis", "es": "Operaciones con monomios", "en": "Operations with monomials" },
+  "mode": "practice",
   "generate": { "kind": "monomial_ops", "count": 12 }
 }

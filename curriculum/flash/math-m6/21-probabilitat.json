@@ -7,6 +7,7 @@
     "es": "Probabilidad",
     "en": "Probability"
   },
+  "mode": "practice",
   "generate": {
     "kind": "probability",
     "count": 12

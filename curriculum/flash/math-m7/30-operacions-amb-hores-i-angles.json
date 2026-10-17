@@ -3,5 +3,6 @@
   "level": "m7",
   "competence": "m7.sexagesimal",
   "title": { "ca": "Operacions amb hores i angles", "es": "Operaciones con horas y ángulos", "en": "Operations with hours and angles" },
+  "mode": "practice",
   "generate": { "kind": "sexagesimal_ops", "count": 12 }
 }

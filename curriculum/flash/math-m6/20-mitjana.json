@@ -7,6 +7,7 @@
     "es": "Media",
     "en": "Mean"
   },
+  "mode": "practice",
   "generate": {
     "kind": "mean",
     "count": 12

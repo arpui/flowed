@@ -2,5 +2,6 @@
   "id": "math-m5.flash.triangles-segons-els-costats",
   "level": "m5",
   "title": { "ca": "Triangles segons els costats", "es": "Triángulos según sus lados", "en": "Triangles by their sides" },
+  "mode": "practice",
   "generate": { "kind": "triangle_by_sides", "count": 12 }
 }

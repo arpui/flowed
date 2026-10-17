@@ -7,6 +7,7 @@
     "es": "Mediana",
     "en": "Median"
   },
+  "mode": "practice",
   "generate": {
     "kind": "median",
     "count": 12

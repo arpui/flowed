@@ -1,6 +1,6 @@
 {
-  "id": "math-m5.flash.taules-repas",
+  "id": "math-m5.flash.taules",
   "level": "m5",
-  "title": { "ca": "Taules (repàs)", "es": "Tablas (repaso)", "en": "Times tables (review)" },
-  "generate": { "kind": "mult", "count": 24, "params": { "digits": [1, 1] } }
+  "title": { "ca": "Taules", "es": "Tablas", "en": "Times tables" },
+  "generate": { "kind": "mult", "count": 81, "params": { "digits": [1, 1], "max": 10, "both_orders": true } }
 }

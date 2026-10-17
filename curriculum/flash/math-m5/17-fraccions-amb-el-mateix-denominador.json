@@ -3,5 +3,6 @@
   "level": "m5",
   "competence": "m5.frac_same_den",
   "title": { "ca": "Fraccions amb el mateix denominador", "es": "Fracciones con el mismo denominador", "en": "Fractions with the same denominator" },
+  "mode": "practice",
   "generate": { "kind": "frac_same_den", "count": 12 }
 }

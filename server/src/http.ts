@@ -9,7 +9,7 @@ import type { Agent } from "./agent";
 import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
 import { skillKeysFor } from "./tools";
-import { flashConfig, flashListsResponse, flashStateResponse, saveFlashState } from "./flash";
+import { flashConfig, flashListsResponse, flashPracticeResponse, flashStateResponse, saveFlashState } from "./flash";
 
 export interface HttpConfig {
   root: string;
@@ -421,6 +421,12 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       // Flash: the vocabulary drill's word lists, in the learner's native language.
       if (p === "/api/flash/lists") {
         return json(flashListsResponse(opts.root, opts.dataDir()));
+      }
+      // Flash practice (docs/ENCARREC-FLASH-PRACTICA.md §2.2): a new set of cards of a practice list, per round.
+      if (p === "/api/flash/practice") {
+        if (req.method !== "GET") return json({ ok: false, error: "mètode no permès" }, 405);
+        const r = flashPracticeResponse(opts.root, opts.dataDir(), url.searchParams.get("list") ?? "", url.searchParams.get("n"), url.searchParams.get("seed"));
+        return json(r.body, r.status);
       }
       // Flash progress (data/flash-db.json): read whole, written whole (atomic).
       if (p === "/api/flash/state") {

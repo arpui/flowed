@@ -3,5 +3,6 @@
   "level": "m5",
   "competence": "m5.area_perimeter",
   "title": { "ca": "Àrees (enunciat)", "es": "Áreas (enunciado)", "en": "Areas (word problem)" },
+  "mode": "practice",
   "generate": { "kind": "area_simple", "count": 12 }
 }

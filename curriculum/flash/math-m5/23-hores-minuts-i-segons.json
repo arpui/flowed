@@ -3,5 +3,6 @@
   "level": "m5",
   "competence": "m5.time_intervals",
   "title": { "ca": "Hores, minuts i segons", "es": "Horas, minutos y segundos", "en": "Hours, minutes and seconds" },
+  "mode": "practice",
   "generate": { "kind": "time_convert", "count": 12 }
 }

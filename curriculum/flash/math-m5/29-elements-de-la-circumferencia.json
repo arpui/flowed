@@ -2,5 +2,6 @@
   "id": "math-m5.flash.elements-de-la-circumferencia",
   "level": "m5",
   "title": { "ca": "Elements de la circumferència", "es": "Elementos de la circunferencia", "en": "Parts of a circle" },
+  "mode": "practice",
   "generate": { "kind": "circle_element", "count": 12 }
 }

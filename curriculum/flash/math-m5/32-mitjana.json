@@ -3,5 +3,6 @@
   "level": "m5",
   "competence": "m5.mean_mode_range",
   "title": { "ca": "Mitjana", "es": "Media", "en": "Mean" },
+  "mode": "practice",
   "generate": { "kind": "mean", "count": 12 }
 }

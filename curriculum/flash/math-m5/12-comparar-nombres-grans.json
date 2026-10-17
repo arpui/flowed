@@ -2,5 +2,6 @@
   "id": "math-m5.flash.comparar-nombres-grans",
   "level": "m5",
   "title": { "ca": "Comparar nombres grans", "es": "Comparar números grandes", "en": "Compare large numbers" },
+  "mode": "practice",
   "generate": { "kind": "compare_numbers", "count": 12 }
 }

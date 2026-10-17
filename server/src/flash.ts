@@ -53,6 +53,7 @@ export interface FlashListView {
   title: string;
   words: FlashWordView[];
   kind?: "math" | LangKind; // absent for translation lists
+  mode?: "practice"; // absent = memory (docs/ENCARREC-FLASH-PRACTICA.md §2)
 }
 
 /** Expands a path whose segments may hold a `*` (e.g. `curriculum/flash/en-*`)
@@ -86,11 +87,10 @@ function expandDirGlob(root: string, pattern: string): string[] {
   });
 }
 
-/** Every list under the directories `dirGlob` matches, ordered by level and
- *  then file name. Each word carries its native forms in `code` only. Drill and
- *  dictation lists (docs/ENCARREC-LANG-L1-FLASH.md §2) carry their items instead. */
-export function loadFlashLists(root: string, dirGlob: string, code: NativeCode): FlashListView[] {
-  const out: Array<{ file: string; list: FlashListView }> = [];
+/** Every readable list file under the directories `dirGlob` matches, in directory then file-name order.
+ *  A file that does not parse is left out; the others still load. */
+export function readFlashFiles(root: string, dirGlob: string): Array<{ file: string; raw: JsonRecord }> {
+  const out: Array<{ file: string; raw: JsonRecord }> = [];
   for (const dir of expandDirGlob(root, dirGlob)) {
     let files: string[] = [];
     try {
@@ -99,41 +99,52 @@ export function loadFlashLists(root: string, dirGlob: string, code: NativeCode):
       continue;
     }
     for (const file of files) {
-      let raw: JsonRecord;
       try {
-        raw = asRecord(JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")));
+        out.push({ file, raw: asRecord(JSON.parse(fs.readFileSync(path.join(dir, file), "utf8"))) });
       } catch {
         continue; // a broken list is skipped, the others still load
       }
-      const title = asRecord(raw.title);
-      const lang = raw.kind === "drill" || raw.kind === "dictation" ? raw.kind : null;
-      // A math list has `generate` or `items` (docs/ENCARREC-FLASH-MATH.md §2); both at once is ambiguous: skipped.
-      // A drill or dictation list (kind) has `items` of its own (docs/ENCARREC-LANG-L1-FLASH.md §2).
-      if (lang === null && "generate" in raw && "items" in raw) continue;
-      const math = lang === null && ("generate" in raw || "items" in raw);
-      const words: FlashWordView[] = lang
-        ? langItems(raw, lang).items.map(langView)
-        : math
-          ? mathWords(raw).words.map(mathView)
-          : (Array.isArray(raw.words) ? raw.words : []).map((w) => {
-              const word = asRecord(w);
-              return {
-                id: String(word.id ?? ""),
-                target: strings(word.target),
-                native: strings(asRecord(word.native)[code]),
-              };
-            });
-      out.push({
-        file,
-        list: {
-          id: String(raw.id ?? ""),
-          level: String(raw.level ?? ""),
-          title: String(title[code] ?? title.en ?? ""),
-          words,
-          ...(math ? { kind: "math" as const } : lang ? { kind: lang } : {}),
-        },
-      });
     }
+  }
+  return out;
+}
+
+/** Every list under the directories `dirGlob` matches, ordered by level and
+ *  then file name. Each word carries its native forms in `code` only. Drill and
+ *  dictation lists (docs/ENCARREC-LANG-L1-FLASH.md §2) carry their items instead. */
+export function loadFlashLists(root: string, dirGlob: string, code: NativeCode): FlashListView[] {
+  const out: Array<{ file: string; list: FlashListView }> = [];
+  for (const { file, raw } of readFlashFiles(root, dirGlob)) {
+    const title = asRecord(raw.title);
+    const lang = raw.kind === "drill" || raw.kind === "dictation" ? raw.kind : null;
+    // A math list has `generate` or `items` (docs/ENCARREC-FLASH-MATH.md §2); both at once is ambiguous: skipped.
+    // A drill or dictation list (kind) has `items` of its own (docs/ENCARREC-LANG-L1-FLASH.md §2).
+    if (lang === null && "generate" in raw && "items" in raw) continue;
+    const math = lang === null && ("generate" in raw || "items" in raw);
+    const words: FlashWordView[] = lang
+      ? langItems(raw, lang).items.map(langView)
+      : math
+        ? mathWords(raw).words.map(mathView)
+        : (Array.isArray(raw.words) ? raw.words : []).map((w) => {
+            const word = asRecord(w);
+            return {
+              id: String(word.id ?? ""),
+              target: strings(word.target),
+              native: strings(asRecord(word.native)[code]),
+            };
+          });
+    const mode = math ? listMode(raw) : "memory";
+    out.push({
+      file,
+      list: {
+        id: String(raw.id ?? ""),
+        level: String(raw.level ?? ""),
+        title: String(title[code] ?? title.en ?? ""),
+        words,
+        ...(math ? { kind: "math" as const } : lang ? { kind: lang } : {}),
+        ...(mode === "practice" ? { mode } : {}),
+      },
+    });
   }
   out.sort((a, b) => a.list.level.localeCompare(b.list.level) || a.file.localeCompare(b.file));
   return out.map((x) => x.list);
@@ -1012,7 +1023,9 @@ interface GenItem {
 type Generator = (r: Rng, p: Params) => GenItem | null;
 
 export const GEN_COUNT_DEFAULT = 12;
-export const GEN_COUNT_MAX = 50;
+export const GEN_COUNT_MAX = 100;
+/** A practice round asks for this many new cards at most (docs/ENCARREC-FLASH-PRACTICA.md §2.2). */
+export const PRACTICE_MAX = 20;
 
 /** FNV-1a, 32 bits, of the UTF-8 bytes of the text. */
 export function fnv1a(text: string): number {
@@ -1402,13 +1415,16 @@ const GENERATORS = new Map<string, Generator>([
   }],
   // E4 §6: a product of two factors with `digits: [da, db]` digits each (1 digit = 2..9, 2 = 10..99, 3 = 100..999).
   // The same product twice, or a×b and b×a, is the same card: the key keeps one of them.
+  // Tables (docs/ENCARREC-FLASH-PRACTICA.md §3): `max` is the top of the 1-digit factors (9 or 10), and
+  // `both_orders: true` keeps a×b and b×a as two cards (7 × 8 and 8 × 7), so 2..10 gives 81.
   ["mult", (r, p) => {
     const d = paramDigits(p);
-    const [loA, hiA] = DIGIT_RANGE[d[0]] ?? [2, 9];
-    const [loB, hiB] = DIGIT_RANGE[d[1]] ?? [2, 9];
+    const [loA, hiA] = d[0] === 1 ? [2, paramInt(p, "max", 9, 2, 10)] : DIGIT_RANGE[d[0]] ?? [2, 9];
+    const [loB, hiB] = d[1] === 1 ? [2, paramInt(p, "max", 9, 2, 10)] : DIGIT_RANGE[d[1]] ?? [2, 9];
     const a = int(r, loA, hiA);
     const b = int(r, loB, hiB);
-    return { prompt: `${a} × ${b}`, target: [String(a * b)], key: `${Math.min(a, b)}×${Math.max(a, b)}` };
+    const key = p.both_orders === true ? `${a}×${b}` : `${Math.min(a, b)}×${Math.max(a, b)}`;
+    return { prompt: `${a} × ${b}`, target: [String(a * b)], key };
   }],
 ]);
 
@@ -2115,18 +2131,30 @@ export const GEN_KINDS: readonly string[] = [...GENERATORS.keys()];
  *  Mirror in hooks/curriculum.py (MATH_GEN_ROOM). Every other kind makes GEN_COUNT_MAX. */
 export const GEN_ROOM: Readonly<Record<string, number>> = { proportion_type: 8, notable_points: 8, variable_type: 10, laplace: 9, polygon_angle_sum: 16 };
 
-/** The count of a generated list: an integer from 1 to 50, default 12 when it is not a whole number. */
+/** The most cards some kinds make when that is under GEN_COUNT_MAX (measured: the cards a seeded run of 100 finds).
+ *  Not GEN_ROOM: these lists are practice all the same. Pinned by the test in server/test/flash.test.ts.
+ *  Mirror in hooks/curriculum.py (MATH_GEN_CAP). */
+export const GEN_CAP: Readonly<Record<string, number>> = {
+  probability: 92, abs_opp: 80, decimal_type: 83, composite_area: 68, power_value: 64, translate_expr: 64, pythagoras: 60, circle_measures: 59,
+};
+
+/** The most cards a kind can make in one list: GEN_ROOM, else GEN_CAP, else GEN_COUNT_MAX. */
+export function genRoom(kind: string): number {
+  if (Object.hasOwn(GEN_ROOM, kind)) return GEN_ROOM[kind]!;
+  if (Object.hasOwn(GEN_CAP, kind)) return GEN_CAP[kind]!;
+  return GEN_COUNT_MAX;
+}
+
+/** The count of a generated list: an integer from 1 to GEN_COUNT_MAX, default 12 when it is not a whole number. */
 export function genCount(v: unknown): number {
   return Number.isInteger(v) ? Math.min(GEN_COUNT_MAX, Math.max(1, v as number)) : GEN_COUNT_DEFAULT;
 }
 
-/** The words of a generated list: `count` distinct prompts, ids g1…gN. Seeded by the list id, so the same
- *  list always gives the same words. Fewer than `count` only when the parameters leave too little room. */
-export function generatedWords(listId: string, gen: JsonRecord): MathWord[] {
+/** Up to `count` distinct cards of `gen`, drawn from `rng`, ids `prefix`1…N. Fewer only when the parameters
+ *  leave too little room (or the kind is unknown: none). */
+function drawWords(gen: JsonRecord, rng: Rng, count: number, prefix: string): MathWord[] {
   const make = GENERATORS.get(String(gen.kind));
   if (!make) return [];
-  const count = genCount(gen.count);
-  const rng = mulberry32(fnv1a(listId));
   const params = asRecord(gen.params);
   const out: MathWord[] = [];
   const seen = new Set<string>();
@@ -2136,9 +2164,36 @@ export function generatedWords(listId: string, gen: JsonRecord): MathWord[] {
     const card = (item.key ?? item.prompt) + "\u0000" + JSON.stringify(item.figure ?? null); // a figure card is its prompt and its figure
     if (seen.has(card)) continue;
     seen.add(card);
-    out.push({ id: `g${out.length + 1}`, ...item });
+    out.push({ id: `${prefix}${out.length + 1}`, ...item });
   }
   return out;
+}
+
+/** The words of a generated list: `count` distinct prompts, ids g1…gN. Seeded by the list id, so the same
+ *  list always gives the same words. Fewer than `count` only when the parameters leave too little room. */
+export function generatedWords(listId: string, gen: JsonRecord): MathWord[] {
+  const kind = String(gen.kind);
+  if (!GENERATORS.has(kind)) return [];
+  return drawWords(gen, mulberry32(fnv1a(listId)), Math.min(genCount(gen.count), genRoom(kind)), "g");
+}
+
+/** A practice round of a generated list (docs/ENCARREC-FLASH-PRACTICA.md §2.2): `n` new cards, ids p1…pN,
+ *  seeded by `seed` (the client picks a new one each round). Same seed, same cards. */
+export function practiceWords(gen: JsonRecord, seed: number, n: number): MathWord[] {
+  const kind = String(gen.kind);
+  if (!GENERATORS.has(kind)) return [];
+  return drawWords(gen, mulberry32(seed), Math.min(PRACTICE_MAX, Math.max(1, n), genRoom(kind)), "p");
+}
+
+/** How a math list is practised (docs/ENCARREC-FLASH-PRACTICA.md §2.1). `practice` only when the list asks for it
+ *  (`"mode": "practice"`), is generated by a kind other than `op`, and the kind has more cards than GEN_ROOM
+ *  allows; every other list is `memory`. Mirror in hooks/curriculum.py (_flash_math_mode). */
+export function listMode(raw: JsonRecord): "memory" | "practice" {
+  if (raw.mode !== "practice" || raw.kind === "drill" || raw.kind === "dictation") return "memory";
+  if (!("generate" in raw) || "items" in raw) return "memory";
+  const kind = asRecord(raw.generate).kind;
+  if (typeof kind !== "string" || kind === "op" || !GENERATORS.has(kind)) return "memory";
+  return Object.hasOwn(GEN_ROOM, kind) ? "memory" : "practice";
 }
 
 /** The kind of a `generate` block: "op" when it is absent, null or "op"; else the kind as written. */
@@ -2338,22 +2393,48 @@ export function courseLevel(root: string, dataDir: string, learner: JsonRecord):
   return levels.find((l) => !done.has(l)) ?? levels[levels.length - 1]!;
 }
 
-export function flashListsResponse(root: string, dataDir: string): JsonRecord {
+/** What the drill reads of the learner: the native language and its code, the target, the course level
+ *  (the same one for /lists and /practice), and the domain's Flash config. */
+function flashContext(root: string, dataDir: string) {
   const profile = readJson(path.join(dataDir, "learner-profile.json"));
   const learner = asRecord(profile.learner);
   const native = String(learner.native_language ?? "").trim();
-  const code = nativeCode(native);
-  const target = String(learner.target_language ?? "").trim();
-  // Only the lists of the level being worked on (2026-10-17, Albert: an m5 learner saw m6/m7 too).
   // The course level, as the path computes it; without a curriculum, the declared current level.
   const level = (courseLevel(root, dataDir, learner) ?? String(learner.current_level ?? "")).trim().toUpperCase();
   const cfg = flashConfig(readJson(path.join(root, "config", "domain.json")), profileDomain(profile));
+  return { native, code: nativeCode(native), target: String(learner.target_language ?? "").trim(), level, cfg };
+}
+
+export function flashListsResponse(root: string, dataDir: string): JsonRecord {
+  const { native, code, target, level, cfg } = flashContext(root, dataDir);
   if (!cfg.enabled || !cfg.dir) {
     return { ok: true, enabled: false, native, nativeCode: code, target, level, lists: [] };
   }
   const all = loadFlashLists(root, cfg.dir, code);
-  const lists = level ? all.filter((l) => String(l.level ?? "").trim().toUpperCase() === level) : all;
+  // Only the lists of the level being worked on (2026-10-17, Albert: an m5 learner saw m6/m7 too).
+  const lists = (level ? all.filter((l) => String(l.level ?? "").trim().toUpperCase() === level) : all)
+    // A practice list has no fixed words: its cards come from /api/flash/practice, a new set each round.
+    .map((l) => (l.mode === "practice" ? { ...l, words: [] } : l));
   return { ok: true, enabled: true, native, nativeCode: code, target, level, lists };
+}
+
+/** GET /api/flash/practice?list=<id>&n=10&seed=<enter>: `n` new cards (ids p1…pN, at most PRACTICE_MAX) of a
+ *  practice list (docs/ENCARREC-FLASH-PRACTICA.md §2.2). The list must be practice and of the learner's level,
+ *  the same filter as /lists. Same seed, same cards. */
+export function flashPracticeResponse(root: string, dataDir: string, listId: string, nRaw: string | null, seedRaw: string | null): { status: number; body: JsonRecord } {
+  const { level, cfg } = flashContext(root, dataDir);
+  if (!cfg.enabled || !cfg.dir) return { status: 404, body: { ok: false, error: "Flash no està activat per a aquest perfil" } };
+  const seed = seedRaw !== null && /^\d+$/.test(seedRaw) ? Number(seedRaw) : NaN;
+  if (!Number.isInteger(seed) || seed > 0xffffffff) return { status: 400, body: { ok: false, error: "cal una llavor (un enter de 0 a 4294967295)" } };
+  const n = nRaw === null || nRaw === "" ? 10 : Number(nRaw);
+  if (!Number.isInteger(n)) return { status: 400, body: { ok: false, error: "n ha de ser un enter" } };
+  const hit = readFlashFiles(root, cfg.dir).find(({ raw }) =>
+    String(raw.id ?? "") === listId &&
+    listMode(raw) === "practice" &&
+    (!level || String(raw.level ?? "").trim().toUpperCase() === level));
+  if (!hit) return { status: 404, body: { ok: false, error: "aquesta llista no és de practica o no és del teu nivell" } };
+  const words = practiceWords(asRecord(hit.raw.generate), seed, n).map(mathView);
+  return { status: 200, body: { ok: true, list: listId, words } };
 }
 
 // ---- progress (docs/ENCARREC-FLASH-v1.md) -------------------------------------
@@ -2371,10 +2452,19 @@ export interface FlashWordState {
   last: string | null;
 }
 
+export interface FlashPracticeRound {
+  day: string;
+  first_try: number; // answered right the first time
+  total: number; // cards in the round (the repeated ones not counted)
+}
+
 export interface FlashListState {
   words: Record<string, FlashWordState>;
   closed_at: string | null;
+  practice?: { rounds: FlashPracticeRound[] }; // practice lists only (docs/ENCARREC-FLASH-PRACTICA.md §2.2)
 }
+
+const PRACTICE_KEEP = 30; // the most recent rounds kept per practice list
 
 export interface FlashState {
   version: 1;
@@ -2396,10 +2486,25 @@ export function emptyFlashState(): FlashState {
   return { version: 1, lists: {}, rounds_by_day: {} };
 }
 
+/** The practice rounds that fit the shape (a day, first_try ≤ total, total ≥ 1), the most recent PRACTICE_KEEP. */
+function practiceRounds(value: unknown): FlashPracticeRound[] {
+  const rounds: FlashPracticeRound[] = [];
+  for (const r of Array.isArray(value) ? value : []) {
+    const x = asRecord(r);
+    const d = day(x.day);
+    const first = count(x.first_try);
+    const total = count(x.total);
+    if (d === null || first === null || total === null || total < 1 || first > total) continue;
+    rounds.push({ day: d, first_try: first, total });
+  }
+  return rounds.slice(-PRACTICE_KEEP);
+}
+
 /** Keeps what fits the shape and drops the rest: an unknown list id, a word
  *  whose box is outside 0..2, or any field of the wrong type. A body that is
- *  not a state at all gives an empty state. */
-export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<string>): FlashState {
+ *  not a state at all gives an empty state. `practiceIds` (when given) are the
+ *  lists that may keep `practice` rounds; the others lose them. */
+export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<string>, practiceIds?: ReadonlySet<string>): FlashState {
   const out = emptyFlashState();
   const body = asRecord(raw);
   if (body.version !== 1) return out;
@@ -2417,7 +2522,9 @@ export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<strin
       if (box === null || seen === null || firstTry === null || misses === null || (r.last !== null && last === null)) continue;
       words[wordId] = { box, seen, first_try: firstTry, misses, last };
     }
-    out.lists[listId] = { words, closed_at: day(e.closed_at) };
+    const list: FlashListState = { words, closed_at: day(e.closed_at) };
+    if (e.practice !== undefined && (!practiceIds || practiceIds.has(listId))) list.practice = { rounds: practiceRounds(asRecord(e.practice).rounds) };
+    out.lists[listId] = list;
   }
   for (const [d, n] of Object.entries(asRecord(body.rounds_by_day))) {
     const c = count(n);
@@ -2426,12 +2533,18 @@ export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<strin
   return out;
 }
 
-/** The ids of the lists the profile's domain runs (none when Flash is off there). */
-export function flashListIds(root: string, dataDir: string): Set<string> {
+/** The lists the profile's domain runs (none when Flash is off there): all of them, and the practice ones. */
+function flashListInfo(root: string, dataDir: string): { ids: Set<string>; practice: Set<string> } {
   const profile = readJson(path.join(dataDir, "learner-profile.json"));
   const cfg = flashConfig(readJson(path.join(root, "config", "domain.json")), profileDomain(profile));
-  if (!cfg.enabled || !cfg.dir) return new Set();
-  return new Set(loadFlashLists(root, cfg.dir, "ca").map((l) => l.id));
+  if (!cfg.enabled || !cfg.dir) return { ids: new Set(), practice: new Set() };
+  const lists = loadFlashLists(root, cfg.dir, "ca");
+  return { ids: new Set(lists.map((l) => l.id)), practice: new Set(lists.filter((l) => l.mode === "practice").map((l) => l.id)) };
+}
+
+/** The ids of the lists the profile's domain runs (none when Flash is off there). */
+export function flashListIds(root: string, dataDir: string): Set<string> {
+  return flashListInfo(root, dataDir).ids;
 }
 
 /** The stored progress, or an empty one when there is no file (or it does not read). */
@@ -2442,7 +2555,8 @@ export function readFlashState(root: string, dataDir: string): FlashState {
   } catch {
     raw = null;
   }
-  return sanitizeFlashState(raw, flashListIds(root, dataDir));
+  const info = flashListInfo(root, dataDir);
+  return sanitizeFlashState(raw, info.ids, info.practice);
 }
 
 /** Writes the whole state atomically: a temporary file, then rename. */
@@ -2471,7 +2585,8 @@ export function saveFlashState(root: string, dataDir: string, body: unknown): { 
   if (!body || typeof body !== "object" || Array.isArray(body) || (body as JsonRecord).version !== 1) {
     return { status: 400, body: { ok: false, error: "cal un objecte JSON amb l'estat de Flash (versió 1)" } };
   }
-  const state = sanitizeFlashState(body, flashListIds(root, dataDir));
+  const info = flashListInfo(root, dataDir);
+  const state = sanitizeFlashState(body, info.ids, info.practice);
   writeFlashState(dataDir, state);
   return { status: 200, body: { ok: true, state } };
 }

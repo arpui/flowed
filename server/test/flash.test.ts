@@ -13,6 +13,7 @@ import {
   emptyFlashState,
   factorization,
   figureAnswerProblem,
+  GEN_CAP,
   GEN_ROOM,
   parallelValue,
   parsePair,
@@ -46,6 +47,9 @@ import {
   sanitizeFlashState,
   saveFlashState,
   simpleOp,
+  listMode,
+  practiceWords,
+  flashPracticeResponse,
   type MathWord,
 } from "../src/flash.ts";
 
@@ -181,11 +185,17 @@ for (const l of listsMath) {
       !!l && l.words.length === count && okDigits && new Set(keys).size === keys.length && okResult && l.words.map((w) => w.id).join() === Array.from({ length: count }, (_, i) => `g${i + 1}`).join(),
       { n: l?.words.length, sample: l?.words.slice(0, 2) });
   };
-  multCheck("math-m5.flash.taules-repas", 24, 1, 1);
   multCheck("math-m5.flash.mult-2x1", 12, 2, 1);
   multCheck("math-m5.flash.mult-3x1", 12, 3, 1);
-  const repas = listsMath.find((l) => l.id === "math-m5.flash.taules-repas");
-  check("taules (repàs): the factors are 2..9", (repas?.words ?? []).every((w) => { const [a, b] = (w.prompt ?? "").split(" × ").map(Number); return a! >= 2 && a! <= 9 && b! >= 2 && b! <= 9; }));
+  // docs/ENCARREC-FLASH-PRACTICA.md §3: the m5 tables are 81 cards, 2..10 in both orders (7 × 8 and 8 × 7 both).
+  const tables = listsMath.find((l) => l.id === "math-m5.flash.taules");
+  const tablePairs = (tables?.words ?? []).map((w) => ((w.prompt ?? "").match(/^(\d+) × (\d+)$/) ?? []).slice(1).map(Number));
+  check("taules (m5): 81 cards, the factors 2..10, both orders, every product right, no repeat",
+    !!tables && tables.words.length === 81 && tablePairs.every(([a, b]) => a! >= 2 && a! <= 10 && b! >= 2 && b! <= 10) &&
+    new Set(tablePairs.map(([a, b]) => `${a}×${b}`)).size === 81 && tables.words.every((w, i) => w.target.join() === String(tablePairs[i]![0]! * tablePairs[i]![1]!)) &&
+    tables.words.map((w) => w.id).join() === Array.from({ length: 81 }, (_, i) => `g${i + 1}`).join(),
+    { n: tables?.words.length });
+  check("taules (m5): both 7 × 8 and 8 × 7 are cards; the list is the m5 table list, title Taules", tablePairs.some(([a, b]) => a === 7 && b === 8) && tablePairs.some(([a, b]) => a === 8 && b === 7) && tables?.title === "Taules" && !listsMath.some((l) => l.id === "math-m5.flash.taules-repas"));
   const mult = mathWords({ id: "math-m5.flash.mult-2x1", generate: { kind: "mult", count: 12, params: { digits: [2, 1] } } }).words;
   check("mult: the same list gives the same words (deterministic, seeded by the id)", JSON.stringify(mult.map((w) => w.prompt)) === JSON.stringify(listsMath.find((l) => l.id === "math-m5.flash.mult-2x1")?.words.map((w) => w.prompt)));
 }
@@ -634,9 +644,9 @@ try {
   writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m5" });
   const mathGet = flashStateResponse(root, v1Dir) as any;
   check("math profile: GET enabled, empty state", mathGet.enabled === true && JSON.stringify(mathGet.state) === JSON.stringify(emptyFlashState()));
-  const mathState = { version: 1, lists: { "math-m5.flash.taules-repas": { words: { g3: { box: 2, seen: 2, first_try: 2, misses: 0, last: "2026-10-16" } }, closed_at: null } }, rounds_by_day: { "2026-10-16": 1 } };
+  const mathState = { version: 1, lists: { "math-m5.flash.taules": { words: { g3: { box: 2, seen: 2, first_try: 2, misses: 0, last: "2026-10-16" } }, closed_at: null } }, rounds_by_day: { "2026-10-16": 1 } };
   const mathPut = saveFlashState(root, v1Dir, { ...mathState, lists: { ...mathState.lists, "en-A1.flash.family": good.lists["en-A1.flash.family"] } });
-  check("math profile: PUT keeps the math lists, drops the language ones", mathPut.status === 200 && JSON.stringify(Object.keys((mathPut.body as any).state.lists)) === '["math-m5.flash.taules-repas"]', (mathPut.body as any).state?.lists);
+  check("math profile: PUT keeps the math lists, drops the language ones", mathPut.status === 200 && JSON.stringify(Object.keys((mathPut.body as any).state.lists)) === '["math-m5.flash.taules"]', (mathPut.body as any).state?.lists);
   check("math profile: the math progress is read back", JSON.stringify((flashStateResponse(root, v1Dir) as any).state.lists) === JSON.stringify(mathState.lists));
 } finally {
   fs.rmSync(v1Dir, { recursive: true, force: true });
@@ -651,7 +661,7 @@ console.log("generators (E1)");
   const expected = ["round", "digit_value", "compare_numbers", "frac_of", "frac_equiv", "frac_same_den", "frac_dec", "dec_times_int", "percent_of", "divisible", "combined", "unit_convert", "complex_to_simple", "time_convert", "area_simple", "mean", "probability", "equation", "sequence", "mult"];
   const expectedE3 = [...expected, "angle_type", "triangle_by_sides", "perimeter_figure", "area_figure", "circle_element", "bars_read", "grid_point", ...E5_KINDS];
   check("the generator kinds of §3, the figure kinds of E3 and mult of §6", JSON.stringify([...GEN_KINDS].sort()) === JSON.stringify([...expectedE3, ...M6_KINDS].sort()), GEN_KINDS);
-  check("count: default 12, clamped to 1..50, a non-integer gives 12", genCount(undefined) === 12 && genCount(0) === 1 && genCount(51) === 50 && genCount(7) === 7 && genCount(12.5) === 12 && genCount("9") === 12);
+  check("count: default 12, clamped to 1..100, a non-integer gives 12", genCount(undefined) === 12 && genCount(0) === 1 && genCount(100) === 100 && genCount(101) === 100 && genCount(7) === 7 && genCount(12.5) === 12 && genCount("9") === 12);
   // E7 §5: "1 té gos" (not "1 tenen gos") when the count is one
   const fq = generatedWords("math-m7.flash.freq-check", { kind: "freq_relative", count: 50 }).map((w) => w.prompt);
   check("freq_relative says '1 té gos' for one pupil", fq.every((p) => !/ 1 tenen gos/.test(p)) && fq.some((p) => /, 1 té gos\./.test(p)), fq.slice(0, 3));
@@ -2048,6 +2058,134 @@ console.log("m7 (E5)");
     check("flash.js: the direction label of a choice, a pair, a factorization, an algebra and a time is said in full", flashSrc.includes('card.kind === "pair" ? "Escriu les coordenades"') && flashSrc.includes(': "Calcula"'));
     check("flash.js: the number kind reads the unicode minus (numeric) and the figure of the grid uses min and max", flashSrc.includes('.replace(/−/g, "-").replace(/,/g, ".")') && flashSrc.includes("const mn = f.min ?? 0;"));
   }
+}
+
+// ---- practice lists (docs/ENCARREC-FLASH-PRACTICA.md) ---------------------
+// Cards are new every round (a seed from the client); a list closes with two good rounds on different days.
+console.log("practice lists");
+{
+  const pathOf = (...p: string[]) => path.join(root, ...p);
+  const rawOf = (f: string) => JSON.parse(fs.readFileSync(pathOf("curriculum", "flash", f), "utf8")) as JsonRecord;
+  type JsonRecord = Record<string, unknown>;
+  const m5 = fs.readdirSync(pathOf("curriculum", "flash", "math-m5")).filter((f) => f.endsWith(".json"));
+  const m67 = ["math-m6", "math-m7"].flatMap((d) => fs.readdirSync(pathOf("curriculum", "flash", d)).filter((f) => f.endsWith(".json")).map((f) => `${d}/${f}`));
+  const allMath = [...m5.map((f) => `math-m5/${f}`), ...m67];
+  const isTaules = (f: string) => f.includes("taules");
+  const groomKinds = ["proportion_type", "notable_points", "variable_type", "laplace", "polygon_angle_sum"];
+  const kindOf = (raw: JsonRecord) => (raw.generate as JsonRecord | undefined)?.kind;
+
+  const practice = allMath.filter((f) => listMode(rawOf(f)) === "practice");
+  const memory = allMath.filter((f) => listMode(rawOf(f)) === "memory");
+  check("practice: every generated m5, m6 and m7 list is practice except the tables and the GEN_ROOM kinds",
+    practice.length === 79 && memory.length === 8 && memory.every((f) => isTaules(f) || groomKinds.includes(String(kindOf(rawOf(f))))) &&
+    practice.every((f) => !isTaules(f) && !groomKinds.includes(String(kindOf(rawOf(f))))),
+    { practice: practice.length, memory: memory.length });
+  check("practice: no practice list has a kind with a small room (GEN_ROOM)", practice.every((f) => !groomKinds.includes(String(kindOf(rawOf(f))))));
+  const langRaw = fs.readdirSync(pathOf("curriculum", "flash", "en-A1")).filter((f) => f.endsWith(".json")).map((f) => JSON.parse(fs.readFileSync(pathOf("curriculum", "flash", "en-A1", f), "utf8")) as JsonRecord);
+  check("practice: the language lists are all memory (none has a mode)", langRaw.length > 0 && langRaw.every((r) => listMode(r) === "memory" && !("mode" in r)));
+  check("practice: the mode is read from the file only for generated lists (a mode on items or op is ignored)",
+    listMode({ mode: "practice", generate: { kind: "mult", count: 12 }, items: [] }) === "memory" && listMode({ mode: "practice", generate: { kind: "op" } }) === "memory" &&
+    listMode({ mode: "practice", generate: { kind: "nope" } }) === "memory" && listMode({ mode: "practice", kind: "drill", generate: { kind: "mult" } }) === "memory" &&
+    listMode({ mode: "practice", generate: { kind: "constructor" } }) === "memory" && listMode({ mode: "practice", generate: { kind: "proportion_type" } }) === "memory" &&
+    listMode({ mode: "practice", generate: { kind: "mult" } }) === "practice" && listMode({ generate: { kind: "mult" } }) === "memory");
+
+  // A round: new cards from a seed, the same seed gives the same cards, ids p1…pN, at most 20.
+  const gen = { kind: "mult", params: { digits: [2, 1] } };
+  const r1 = practiceWords(gen, 111, 10);
+  const r2 = practiceWords(gen, 222, 10);
+  const again = practiceWords(gen, 111, 10);
+  check("practice: a round gives 10 cards with ids p1…p10", r1.length === 10 && r1.map((w) => w.id).join() === "p1,p2,p3,p4,p5,p6,p7,p8,p9,p10");
+  check("practice: another seed gives other cards; the same seed gives the same ones", JSON.stringify(r1.map((w) => w.prompt)) !== JSON.stringify(r2.map((w) => w.prompt)) && JSON.stringify(r1) === JSON.stringify(again));
+  check("practice: the cards are right (2 digits × 1 digit, the result computed, no repeat)", r1.every((w) => { const m = /^(\d{2}) × (\d) $/.exec(w.prompt + " "); return !!m && w.target[0] === String(Number(m[1]) * Number(m[2])); }) && new Set(r1.map((w) => w.prompt)).size === 10);
+  check("practice: n is at most 20 and at least 1", practiceWords(gen, 5, 50).length === 20 && practiceWords(gen, 5, 0).length === 1);
+  // GEN_CAP is measured: each kind in it makes exactly its cap at 100, every other kind (not GEN_ROOM) makes 100.
+  const capOff = Object.entries(GEN_CAP).filter(([k, n]) => generatedWords(`math-m5.flash.${k}`, { kind: k, count: 100 }).length !== n);
+  check("GEN_CAP: each capped kind makes its cap at count 100", capOff.length === 0, capOff);
+  const uncapped = GEN_KINDS.filter((k) => !Object.hasOwn(GEN_CAP, k) && !Object.hasOwn(GEN_ROOM, k))
+    .filter((k) => generatedWords(`math-m5.flash.${k}`, k === "mult" ? { kind: k, count: 100, params: { digits: [2, 1] } } : { kind: k, count: 100 }).length !== 100);
+  check("GEN_CAP: every other kind (not GEN_ROOM) makes 100 cards at count 100", uncapped.length === 0, uncapped);
+  const seeds = Array.from({ length: 8 }, (_, i) => practiceWords({ kind: "frac_of", count: 12 }, 1000 + i, 10).map((w) => w.prompt).join("|"));
+  check("practice: eight rounds of a generator list are not all the same", new Set(seeds).size > 1);
+
+  // The route: /api/flash/practice and the mode in /api/flash/lists.
+  const pDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-practice-"));
+  try {
+    fs.writeFileSync(path.join(pDir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "Math", current_level: "m5" } }));
+    const lists = flashListsResponse(root, pDir) as any;
+    const p2x1 = lists.lists.find((l: any) => l.id === "math-m5.flash.mult-2x1");
+    const tab = lists.lists.find((l: any) => l.id === "math-m5.flash.taules");
+    check("practice: /lists gives mode practice and no fixed words for a practice list", p2x1?.mode === "practice" && Array.isArray(p2x1.words) && p2x1.words.length === 0 && p2x1.title && p2x1.level === "m5");
+    check("practice: /lists keeps the words of a memory list, with no mode key", tab && tab.words.length === 81 && !("mode" in tab));
+    const ok = flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "10", "111") as any;
+    const same = flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "10", "111") as any;
+    const other = flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "10", "222") as any;
+    check("practice route: 200 with 10 cards p1…p10, the same seed the same cards, another seed other cards",
+      ok.status === 200 && ok.body.ok === true && ok.body.words.length === 10 && ok.body.words[0].id === "p1" && ok.body.words[0].answer_kind === "number" &&
+      JSON.stringify(ok.body.words) === JSON.stringify(same.body.words) && JSON.stringify(ok.body.words) !== JSON.stringify(other.body.words), ok.body);
+    check("practice route: n defaults to 10, n is capped at 20", (flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", null, "1") as any).body.words.length === 10 && (flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "99", "1") as any).body.words.length === 20);
+    const bad = [
+      ["a memory list", flashPracticeResponse(root, pDir, "math-m5.flash.taules", "10", "1") as any, 404],
+      ["an unknown list", flashPracticeResponse(root, pDir, "math-m5.flash.nope", "10", "1") as any, 404],
+      ["a list of another level", flashPracticeResponse(root, pDir, "math-m6.flash.mitjana", "10", "1") as any, 404],
+      ["no seed", flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "10", null) as any, 400],
+      ["a seed that is not a whole number", flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "10", "abc") as any, 400],
+      ["a seed out of range", flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "10", "4294967296") as any, 400],
+      ["an n that is not a whole number", flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "x", "1") as any, 400],
+    ] as const;
+    check("practice route: refuses a memory list, an unknown or other-level list, a bad seed or n", bad.every(([, r, st]) => r.status === st && r.body.ok === false), bad.map(([n, r]) => `${n}:${r.status}`));
+    fs.writeFileSync(path.join(pDir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "English", current_level: "A1" } }));
+    check("practice route: a language profile gets no practice cards (404)", (flashPracticeResponse(root, pDir, "math-m5.flash.mult-2x1", "10", "1") as any).status === 404);
+  } finally {
+    fs.rmSync(pDir, { recursive: true, force: true });
+  }
+
+  // The closing rule (the client's FlashCore, the same one as the server and flash_progress).
+  const good = (first: number, total = 10) => ({ day: "d", first_try: first, total });
+  check("practice rule: 8 of 10 is good, 7 of 10 is not, a round of 0 cards is not", C.goodRound(good(8)) && !C.goodRound(good(7)) && !C.goodRound({ first_try: 0, total: 0 }) && C.needFirst(10) === 8);
+  let st = C.emptyState();
+  const L = { id: "math-m5.flash.mult-2x1", mode: "practice", words: [], title: "x", kind: "math" };
+  const roundOf = (s: any, first: number, day: string) => C.recordPractice(s, L.id, { first, total: 10 }, day);
+  st = roundOf(st, 8, "2026-10-01");
+  check("practice rule: one good round does not close the list (1 de 2)", !C.listStatus(L, st).closed && C.listStatus(L, st).known === 1 && C.listStatus(L, st).total === 2);
+  st = roundOf(st, 9, "2026-10-01");
+  check("practice rule: two good rounds on the same day do not close it", !C.listStatus(L, st).closed && C.listStatus(L, st).known === 1);
+  st = roundOf(st, 7, "2026-10-02");
+  check("practice rule: a round of 7 of 10 does not count", !C.listStatus(L, st).closed && C.listStatus(L, st).known === 1);
+  st = roundOf(st, 10, "2026-10-03");
+  check("practice rule: a good round on another day closes it, with its day", C.listStatus(L, st).closed && st.lists[L.id].closed_at === "2026-10-03" && C.listStatus(L, st).known === 2);
+  st = roundOf(st, 4, "2026-10-04");
+  check("practice rule: a closed list keeps its closing day, and new rounds are kept too", st.lists[L.id].closed_at === "2026-10-03" && st.lists[L.id].practice.rounds.length === 5 && C.listStatus(L, st).closed);
+  let many = C.emptyState();
+  for (let i = 0; i < 35; i++) many = C.recordPractice(many, L.id, { first: 5, total: 10 }, `2026-10-${String(i % 28 + 1).padStart(2, "0")}`);
+  check("practice: at most 30 rounds are kept", many.lists[L.id].practice.rounds.length === 30);
+
+  // The server's sanitize keeps the practice rounds of a practice list, and drops the bad ones.
+  const sanBody = {
+    version: 1,
+    lists: {
+      "math-m5.flash.mult-2x1": { words: {}, closed_at: null, practice: { rounds: [
+        { day: "2026-10-01", first_try: 8, total: 10 },
+        { day: "2026-10-02", first_try: 11, total: 10 }, // first_try above total
+        { day: "2026-10-02", first_try: 3, total: 0 }, // empty round
+        { day: "yesterday", first_try: 3, total: 10 }, // a bad day
+        { day: "2026-10-03", first_try: 9, total: 10 },
+      ] } },
+      "math-m5.flash.taules": { words: {}, closed_at: null, practice: { rounds: [{ day: "2026-10-01", first_try: 8, total: 10 }] } },
+    },
+    rounds_by_day: {},
+  };
+  const kept = sanitizeFlashState(sanBody, new Set(["math-m5.flash.mult-2x1", "math-m5.flash.taules"]), new Set(["math-m5.flash.mult-2x1"]));
+  check("sanitize: practice rounds kept when valid, the bad ones dropped", JSON.stringify(kept.lists["math-m5.flash.mult-2x1"]?.practice) === JSON.stringify({ rounds: [{ day: "2026-10-01", first_try: 8, total: 10 }, { day: "2026-10-03", first_try: 9, total: 10 }] }));
+  check("sanitize: practice rounds dropped for a memory list", !("practice" in (kept.lists["math-m5.flash.taules"] ?? {})));
+  const plain = sanitizeFlashState(sanBody, new Set(["math-m5.flash.mult-2x1"]));
+  check("sanitize: without the practice set a practice list keeps its rounds; a list with none has no practice key", "practice" in (plain.lists["math-m5.flash.mult-2x1"] ?? {}) && !("practice" in (sanitizeFlashState({ version: 1, lists: { "math-m5.flash.mult-2x1": { words: {}, closed_at: null } } }, new Set(["math-m5.flash.mult-2x1"])).lists["math-m5.flash.mult-2x1"] ?? {})));
+  const capped = sanitizeFlashState({ version: 1, lists: { "math-m5.flash.mult-2x1": { words: {}, closed_at: null, practice: { rounds: Array.from({ length: 40 }, (_, i) => ({ day: "2026-10-01", first_try: i % 5, total: 9 })) } } } }, new Set(["math-m5.flash.mult-2x1"]));
+  check("sanitize: the last 30 rounds are kept", capped.lists["math-m5.flash.mult-2x1"]?.practice?.rounds.length === 30 && capped.lists["math-m5.flash.mult-2x1"]?.practice?.rounds[29]?.first_try === 39 % 5);
+
+  // The client's wiring: practice rounds come from the server, and are not counted as words.
+  const fjs2 = read("web", "flash.js");
+  check("flash.js: a practice round asks /api/flash/practice for ten cards with a new seed", fjs2.includes("/flash/practice?list=") && fjs2.includes("Math.random() * 4294967296") && fjs2.includes("PRACTICE_ROUND"));
+  check("flash.js: a practice round is not recorded as words; the menu shows the good rounds", fjs2.includes("!r.repassa && !r.practice") && fjs2.includes("rondes bones ${st.known}/${st.total}") && fjs2.includes("C.recordPractice("));
 }
 
 if (failures) {

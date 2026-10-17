@@ -3,5 +3,6 @@
   "level": "m7",
   "competence": "m7.factor_gcd_lcm",
   "title": { "ca": "MCD i mcm", "es": "MCD y mcm", "en": "GCD and LCM" },
+  "mode": "practice",
   "generate": { "kind": "gcd_lcm", "count": 12 }
 }

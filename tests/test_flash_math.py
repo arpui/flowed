@@ -36,10 +36,10 @@ def node_json(expr: str):
 
 
 def server_math_lists(root: Path = REPO_ROOT) -> list[dict]:
-    """The lists as server/src/flash.ts serves them (id and word ids), read by node."""
+    """The lists as server/src/flash.ts serves them (id, word ids and mode), read by node."""
     return node_json(
         f"m.loadFlashLists({json.dumps(str(root))}, 'curriculum/flash/math-*', 'ca')"
-        ".map((l) => ({ id: l.id, words: l.words.map((w) => w.id) }))"
+        ".map((l) => ({ id: l.id, words: l.words.map((w) => w.id), mode: l.mode ?? 'memory' }))"
     )
 
 
@@ -143,7 +143,9 @@ class MathListIds(unittest.TestCase):
         lists = {l["id"]: l["words"] for l in cu.flash_lists(REPO_ROOT, "math-m5")}
         self.assertEqual(len(lists), 29)  # §6: 3 multiplication lists (01..03, kind mult) + 26 generated (10..35, E4)
         self.assertEqual(len(lists["math-m5.flash.arrodonir"]), 12)
-        self.assertEqual(lists["math-m5.flash.taules-repas"], [f"g{i}" for i in range(1, 25)])
+        # docs/ENCARREC-FLASH-PRACTICA.md §3: the tables are 81 cards under their own id
+        self.assertEqual(lists["math-m5.flash.taules"], [f"g{i}" for i in range(1, 82)])
+        self.assertNotIn("math-m5.flash.taules-repas", lists)
         self.assertEqual(len(lists["math-m5.flash.mult-2x1"]), 12)
         self.assertEqual(len(lists["math-m5.flash.mult-3x1"]), 12)
 
@@ -210,7 +212,9 @@ class GeneratedLists(unittest.TestCase):
         lists = {l["id"]: l["words"] for l in cu.flash_lists(self.tmp, "math-x1")}
         self.assertEqual(lists["r"], [f"g{i}" for i in range(1, 13)])
         self.assertEqual(lists["f"], [f"g{i}" for i in range(1, 8)])
-        self.assertEqual(lists["b"], [f"g{i}" for i in range(1, 51)])
+        self.assertEqual(lists["b"], [f"g{i}" for i in range(1, 101)])  # 500 asked: 100, the most a list gets
+        write_math(self.tmp, "math-x2", {"01-prob.json": {"id": "p", "generate": {"kind": "probability", "count": 100}}})
+        self.assertEqual(len(cu.flash_lists(self.tmp, "math-x2")[0]["words"]), 92)  # GEN_CAP: this kind has 92 cards
 
     def test_an_unknown_kind_counts_nothing(self):
         write_math(self.tmp, "math-x1", {"01-nope.json": {"id": "n", "generate": {"kind": "nope", "count": 4}}})
@@ -232,7 +236,8 @@ class GeneratedLists(unittest.TestCase):
     def test_the_generated_count_is_clamped_and_defaults_to_twelve(self):
         self.assertEqual(cu._flash_count(None), 12)
         self.assertEqual(cu._flash_count(0), 1)
-        self.assertEqual(cu._flash_count(51), 50)
+        self.assertEqual(cu._flash_count(100), 100)
+        self.assertEqual(cu._flash_count(101), 100)
         self.assertEqual(cu._flash_count(12.5), 12)
         self.assertEqual(cu._flash_count(True), 12)
 
@@ -250,6 +255,14 @@ class MathGate(unittest.TestCase):
         self.assertTrue(fp["met"])
 
 
+def closed_entry(fl: dict) -> dict:
+    """The stored entry that closes list `fl` (as flash_lists reads it): words in box 2, or two good rounds."""
+    if fl["mode"] == "practice":
+        rounds = [{"day": "2026-10-15", "first_try": 8, "total": 10}, {"day": "2026-10-16", "first_try": 9, "total": 10}]
+        return {"words": {}, "closed_at": None, "practice": {"rounds": rounds}}
+    return {"words": {w: {"box": cu.FLASH_KNOWN_BOX, "seen": 2, "first_try": 2, "misses": 0, "last": "2026-10-16"} for w in fl["words"]}, "closed_at": None}
+
+
 class M5FlashGate(unittest.TestCase):
     """E4 §2: math-m5.md asks for flash_share 60; the level needs ceil(total × 0,6) closed lists."""
 
@@ -259,10 +272,11 @@ class M5FlashGate(unittest.TestCase):
         cls.lists = cu.flash_lists(REPO_ROOT, "math-m5")
 
     def close(self, n):
-        """A data dir where the first n lists are closed (every word in box 2) and the rest are untouched."""
+        """A data dir where the first n lists are closed and the rest are untouched: a memory list by its words
+        (every word in box 2), a practice list by two good rounds on different days."""
         d = Path(tempfile.mkdtemp(prefix="flash-gate-"))
         lists = {
-            l["id"]: {"words": {w: {"box": cu.FLASH_KNOWN_BOX, "seen": 2, "first_try": 2, "misses": 0, "last": "2026-10-16"} for w in l["words"]}, "closed_at": None}
+            l["id"]: closed_entry(l)
             for l in self.lists[:n]
         }
         (d / cu.FLASH_DB).write_text(json.dumps({"version": 1, "lists": lists}), encoding="utf-8")
@@ -372,6 +386,64 @@ class M6FlashLists(unittest.TestCase):
         self.assertEqual((fp["share"], fp["total"], fp["needed"]), (60, 22, math.ceil(22 * 0.6)))
         self.assertEqual(fp["needed"], 14)
         self.assertFalse(fp["met"])
+
+
+class PracticeLists(unittest.TestCase):
+    """docs/ENCARREC-FLASH-PRACTICA.md §2.1 and §2.4: the mode of each list, and a practice list closes by its rounds."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp(prefix="flash-practice-"))
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.data = self.tmp / "data"
+        self.data.mkdir()
+
+    def level_with(self, entry: dict | None, lid: str = "math-m5.flash.mult-2x1") -> dict:
+        (self.data / cu.FLASH_DB).write_text(json.dumps({"version": 1, "lists": {lid: entry} if entry else {}}), encoding="utf-8")
+        cur = cu.parse_curriculum("---\n---\n")
+        cur["meta"]["stem"] = "math-m5"
+        return cu.flash_progress(REPO_ROOT, cur, self.data, "math-m5")
+
+    def rounds(self, *rs) -> dict:
+        return {"words": {}, "closed_at": None, "practice": {"rounds": [{"day": d, "first_try": f, "total": t} for d, f, t in rs]}}
+
+    def test_the_modes_of_the_shipped_lists(self):
+        modes = {l["id"]: l["mode"] for l in cu.flash_lists(REPO_ROOT, "math-m5")}
+        self.assertEqual(modes["math-m5.flash.taules"], "memory")
+        self.assertEqual(modes["math-m5.flash.mult-2x1"], "practice")
+        self.assertEqual(modes["math-m5.flash.arrodonir"], "practice")
+        allm = [l for stem in ("math-m5", "math-m6", "math-m7") for l in cu.flash_lists(REPO_ROOT, stem)]
+        memory = sorted(l["id"] for l in allm if l["mode"] == "memory")
+        self.assertEqual(sum(1 for l in allm if l["mode"] == "practice"), 79)
+        self.assertEqual(memory, sorted([
+            "math-m5.flash.taules", "math-m6.flash.taules-repas", "math-m7.flash.taules-repas",
+            "math-m7.flash.proporcionalitat-directa-o-inversa", "math-m7.flash.punts-notables-del-triangle",
+            "math-m7.flash.tipus-de-variable", "math-m7.flash.probabilitat-de-laplace", "math-m7.flash.suma-dels-angles-interiors",
+        ]))
+
+    def test_the_mode_rule_mirrors_the_server(self):
+        self.assertEqual(cu._flash_math_mode({"mode": "practice", "generate": {"kind": "mult"}}), "practice")
+        self.assertEqual(cu._flash_math_mode({"generate": {"kind": "mult"}}), "memory")
+        self.assertEqual(cu._flash_math_mode({"mode": "practice", "generate": {"kind": "laplace"}}), "memory")
+        self.assertEqual(cu._flash_math_mode({"mode": "practice", "generate": {"kind": "op"}}), "memory")
+        self.assertEqual(cu._flash_math_mode({"mode": "practice", "generate": {"kind": "nope"}}), "memory")
+        self.assertEqual(cu._flash_math_mode({"mode": "practice", "generate": {"kind": "mult"}, "items": []}), "memory")
+        self.assertEqual(cu._flash_math_mode({"mode": "practice", "kind": "drill", "generate": {"kind": "mult"}}), "memory")
+
+    def test_a_practice_list_closes_with_two_good_rounds_on_different_days(self):
+        fp = self.level_with(self.rounds(("2026-10-01", 8, 10)))
+        self.assertEqual(fp["closed"], 0)
+        self.assertEqual(self.level_with(self.rounds(("2026-10-01", 8, 10), ("2026-10-01", 9, 10)))["closed"], 0)
+        self.assertEqual(self.level_with(self.rounds(("2026-10-01", 8, 10), ("2026-10-02", 7, 10)))["closed"], 0)
+        self.assertEqual(self.level_with(self.rounds(("2026-10-01", 8, 10), ("2026-10-02", 8, 10)))["closed"], 1)
+        self.assertEqual(self.level_with({"words": {}, "closed_at": "2026-10-03", "practice": {"rounds": []}})["closed"], 1)
+
+    def test_a_practice_list_ignores_its_words_and_a_memory_list_ignores_rounds(self):
+        # a practice list with no rounds is not closed by words in box 2 (its ids change each round)
+        fp = self.level_with({"words": {"g1": {"box": 2, "seen": 1, "first_try": 1, "misses": 0, "last": "2026-10-16"}}, "closed_at": None})
+        self.assertEqual(fp["closed"], 0)
+        # a memory list is closed by its words only, rounds do not close it
+        fp = self.level_with(self.rounds(("2026-10-01", 10, 10), ("2026-10-02", 10, 10)), lid="math-m5.flash.taules")
+        self.assertEqual(fp["closed"], 0)
 
 
 if __name__ == "__main__":

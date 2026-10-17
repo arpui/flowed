@@ -3,5 +3,6 @@
   "level": "m7",
   "competence": "m7.factor_gcd_lcm",
   "title": { "ca": "Factors primers", "es": "Factores primos", "en": "Prime factors" },
+  "mode": "practice",
   "generate": { "kind": "prime_factors", "count": 12 }
 }

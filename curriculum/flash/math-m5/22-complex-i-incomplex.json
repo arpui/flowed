@@ -3,5 +3,6 @@
   "level": "m5",
   "competence": "m5.smd_convert",
   "title": { "ca": "Complex i incomplex", "es": "Complejo e incomplejo", "en": "Compound and simple units" },
+  "mode": "practice",
   "generate": { "kind": "complex_to_simple", "count": 12 }
 }

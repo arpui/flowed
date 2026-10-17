@@ -19,6 +19,9 @@
   };
   const BOX_MAX = 2; // caixa 2 = sabuda
   const ROUND_MAX = 10;
+  const PRACTICE_ROUND = 10; // targetes d'una ronda practice (les dona el servidor, llavor nova)
+  const PRACTICE_CLOSE = 2; // rondes bones en dies diferents que tanquen una llista practice
+  const PRACTICE_KEEP = 30; // rondes guardades per llista practice (les més recents)
   const TIMER_OPTIONS = [10, 20, 30]; // segons per paraula; false = sense límit
   const TIMER_DEFAULT = 20;
 
@@ -979,11 +982,36 @@
     return next;
   }
 
-  // Quantes paraules sabudes i si la llista està tancada.
+  // Quantes paraules sabudes i si la llista està tancada. Una llista practice (docs/ENCARREC-FLASH-PRACTICA.md)
+  // no té paraules fixes: compta les rondes bones en dies diferents (de PRACTICE_CLOSE).
   function listStatus(list, state) {
     const entry = listEntry(state, list.id);
+    if (isPractice(list)) {
+      const days = practiceDays(entry.rounds);
+      return { known: Math.min(days, PRACTICE_CLOSE), total: PRACTICE_CLOSE, closed: entry.closed_at != null || days >= PRACTICE_CLOSE };
+    }
     const known = list.words.filter((w) => ((entry.words[w.id] || {}).box || 0) >= BOX_MAX).length;
     return { known, total: list.words.length, closed: entry.closed_at != null };
+  }
+
+  // ---- llistes practice (docs/ENCARREC-FLASH-PRACTICA.md §2.3) ------------------
+  // Una ronda és bona amb 80 % o més a la primera (8 de 10). En enters: first · 5 ≥ total · 4.
+  const isPractice = (l) => !!l && l.mode === "practice";
+  const goodRound = (r) => r.total > 0 && r.first_try * 5 >= r.total * 4;
+  // Quants dies diferents tenen una ronda bona.
+  const practiceDays = (rounds) => new Set((rounds || []).filter(goodRound).map((r) => r.day)).size;
+  // Els encerts a la primera que fan una ronda bona de `total` cartes.
+  const needFirst = (total) => Math.ceil((total * 4) / 5);
+  // Una ronda practice acabada (també si la llista ja és tancada): es guarda, i la llista es tanca amb
+  // PRACTICE_CLOSE rondes bones en dies diferents. `round` = {first, total}.
+  function recordPractice(state, listId, round, day) {
+    const next = clone(state);
+    const list = next.lists[listId] || { words: {}, closed_at: null };
+    const rounds = (((list.practice || {}).rounds) || []).concat([{ day, first_try: round.first, total: round.total }]).slice(-PRACTICE_KEEP);
+    list.practice = { rounds };
+    if (list.closed_at == null && practiceDays(rounds) >= PRACTICE_CLOSE) list.closed_at = day;
+    next.lists[listId] = list;
+    return next;
   }
 
   // Paraules a mig camí (caixa 1).
@@ -994,7 +1022,11 @@
 
   function listEntry(state, listId) {
     const l = (state.lists || {})[listId] || {};
-    return { words: l.words || {}, closed_at: l.closed_at === undefined ? null : l.closed_at };
+    return {
+      words: l.words || {},
+      closed_at: l.closed_at === undefined ? null : l.closed_at,
+      rounds: (l.practice && l.practice.rounds) || [],
+    };
   }
 
   // Totes sabudes ⇒ llista tancada (closed_at = data).
@@ -1036,10 +1068,10 @@
     return a.slice(0, size);
   }
 
-  // Hi ha progrés a l'estat (alguna paraula vista o alguna ronda)?
+  // Hi ha progrés a l'estat (alguna paraula vista o alguna ronda practice)?
   function hasProgress(state) {
     const lists = (state && state.lists) || {};
-    return Object.values(lists).some((l) => Object.keys((l && l.words) || {}).length > 0);
+    return Object.values(lists).some((l) => Object.keys((l && l.words) || {}).length > 0 || (((l && l.practice) || {}).rounds || []).length > 0);
   }
 
   // Rondes fetes avui (no de repàs): el ⚡ de la barra en vol una.
@@ -1107,6 +1139,12 @@
     hasProgress,
     roundsOn,
     countRound,
+    PRACTICE_ROUND,
+    isPractice,
+    goodRound,
+    practiceDays,
+    needFirst,
+    recordPractice,
   };
 })();
 
@@ -1368,6 +1406,7 @@
     // Keep the scroll: re-rendering the menu used to jump to the top, hiding the row just picked.
     const keepScroll = view === "menu" && screen ? screen.scrollTop : 0;
     view = "menu";
+    roundTicket += 1; // una ronda practice que encara es carrega no s'obre des del menú
     round = null;
     card = null;
     clearAdvance();
@@ -1378,18 +1417,21 @@
     const spoken = lists.length > 0 && lists.every(isLangDrill);
     const sel = lists.find((l) => l.id === selected);
     const selClosed = sel ? C.listStatus(sel, state).closed : false;
+    const selPractice = C.isPractice(sel);
     stopAudio();
     const rows = lists
       .map((l) => {
         const st = C.listStatus(l, state);
         const pct = st.total ? Math.round((st.known / st.total) * 100) : 0;
         const off = !usable(l);
-        const cls = ["flash-row", st.closed ? "closed" : "", l.id === selected ? "sel" : ""].join(" ").trim();
+        const cls = ["flash-row", st.closed ? "closed" : "", l.id === selected ? "sel" : "", C.isPractice(l) ? "practice" : ""].join(" ").replace(/\s+/g, " ").trim();
+        // Practice: the good rounds, not words (docs/ENCARREC-FLASH-PRACTICA.md §2.3).
+        const count = C.isPractice(l) ? `rondes bones ${st.known}/${st.total}` : `${st.known}/${st.total}`;
         return `<button type="button" class="${cls}" data-list="${escText(l.id)}" aria-pressed="${l.id === selected}"${off ? " disabled" : ""}>
           <span class="flash-mark">${st.closed ? "✓" : ""}</span>
           <span class="flash-row-title">${escText(l.title)}${off ? ' <small class="flash-off">Cal la veu activada</small>' : ""}</span>
           <span class="flash-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
-          <span class="flash-count">${st.known}/${st.total}</span>
+          <span class="flash-count">${count}</span>
         </button>`;
       })
       .join("");
@@ -1406,7 +1448,7 @@
           <p class="flash-label">Llistes <span class="flash-hint-inline">· doble clic per començar</span></p>
           <div class="flash-lists">${rows || '<p class="flash-note">Encara no hi ha llistes.</p>'}</div>
           <div class="flash-actions">
-            <button type="button" class="primary" data-act="go"${sel && usable(sel) ? "" : " disabled"}>${selClosed ? "Repassa" : "Comença"}</button>
+            <button type="button" class="primary" data-act="go"${sel && usable(sel) ? "" : " disabled"}>${selClosed && !selPractice ? "Repassa" : "Comença"}</button>
           </div>
         </div>
       </div>`;
@@ -1452,17 +1494,41 @@
     };
   }
 
-  function startRound(listId, repassa) {
+  // Una ronda practice demana les seves cartes al servidor (llavor nova, cartes noves). `roundTicket`
+  // fa que només compti l'última petició (el menú o una altra llista la cancel·len).
+  let roundTicket = 0;
+
+  async function startRound(listId, repassa) {
     const list = data.lists.find((l) => l.id === listId);
     if (!list || !usable(list)) return renderMenu();
     selected = listId;
-    const review = repassa || C.listStatus(list, state).closed;
-    let words = review ? C.repassaRound(list) : C.buildRound(list, state);
-    if (!words.length) words = C.repassaRound(list);
-    if (!words.length) return renderMenu();
+    const ticket = ++roundTicket;
+    let words;
+    let review = false;
+    if (C.isPractice(list)) {
+      screen.innerHTML = '<div class="flash-panel"><p class="flash-note">Carregant…</p></div>';
+      const seed = Math.floor(Math.random() * 4294967296);
+      let res = null;
+      try {
+        res = await api(`/flash/practice?list=${encodeURIComponent(list.id)}&n=${C.PRACTICE_ROUND}&seed=${seed}`);
+      } catch (err) {
+        console.warn("flash: no es poden carregar les targetes de la ronda", err);
+      }
+      if (ticket !== roundTicket) return;
+      words = res && res.ok && Array.isArray(res.words) ? res.words : [];
+      if (!words.length) return renderMenu();
+    } else {
+      review = repassa || C.listStatus(list, state).closed;
+      words = review ? C.repassaRound(list) : C.buildRound(list, state);
+      if (!words.length) words = C.repassaRound(list);
+      if (!words.length) return renderMenu();
+    }
     round = {
       list,
       repassa: review,
+      practice: C.isPractice(list),
+      size: words.length,
+      wasClosed: C.listStatus(list, state).closed,
       dir: prefs.dir,
       timer: prefs.timer,
       known0: C.listStatus(list, state).known,
@@ -1697,7 +1763,7 @@
       } else {
         r.streak = 0;
       }
-      if (!r.repassa) {
+      if (!r.repassa && !r.practice) {
         state = C.recordResult(state, r.list.id, card.word.id, how, card.misses, today());
         state = C.closeIfDone(r.list, state, today());
         saveState();
@@ -1737,42 +1803,55 @@
     clearAdvance();
     stopAudio();
     view = "summary";
-    const st = C.listStatus(r.list, state);
-    const closedNow = st.closed;
-    const half = C.halfway(r.list, state);
-    const idx = data.lists.indexOf(r.list);
-    const nextOpen = data.lists.slice(idx + 1).find(isOpen) || null;
+    if (r.practice) state = C.recordPractice(state, r.list.id, { first: r.first, total: r.size }, today());
     if (!r.repassa) {
       selected = pickSelection(r.list.id);
       state = C.countRound(state, today()); // compta per al ⚡ d'avui
-      saveState();
     }
+    if (r.practice || !r.repassa) saveState();
+    const st = C.listStatus(r.list, state);
+    // Tancada en aquesta ronda (les practice ja tancades es repassen sense cap títol nou).
+    const justClosed = st.closed && !r.wasClosed && !r.repassa;
+    const half = C.halfway(r.list, state);
+    const idx = data.lists.indexOf(r.list);
+    const nextOpen = data.lists.slice(idx + 1).find(isOpen) || null;
     const avg = r.timed ? `${((r.timeSum / r.timed) / 1000).toFixed(1).replace(".", ",")} s` : "—";
     // Compta la ronda per a la traça del xat (una línia en tancar Flash).
-    session = session || { rounds: 0, first: 0, presented: 0, titles: [], known: 0, total: 0, math: false };
+    session = session || { rounds: 0, first: 0, presented: 0, titles: [], known: 0, total: 0, math: false, practice: false };
     session.math = isMath(r.list);
+    session.practice = r.practice;
     session.rounds += 1;
     session.first += r.first;
     session.presented += r.presented;
     if (!session.titles.includes(r.list.title)) session.titles.push(r.list.title);
     session.known = st.known;
     session.total = st.total;
+    const practiceSummary = r.practice
+      ? `<p class="flash-sum-first"><strong>${r.first} de ${r.size} a la primera</strong></p>
+          ${C.goodRound({ first_try: r.first, total: r.size })
+            ? `<p class="flash-good">✓ Ronda bona (${st.known} de ${st.total})</p>`
+            : `<p class="flash-note">Una ronda és bona amb ${C.needFirst(r.size)} de ${r.size} o més a la primera.</p>`}`
+      : "";
     screen.innerHTML = `
       <div class="flash-panel">
         <div class="flash-head">
-          <h2>${closedNow && !r.repassa ? "Llista completa ✓" : "Ronda acabada"}</h2>
+          <h2>${justClosed ? "Llista completa ✓" : "Ronda acabada"}</h2>
         </div>
         <div class="flash-body">
           <p class="flash-sum-title">${escText(r.list.title)}</p>
+          ${practiceSummary}
           <ul class="flash-stats">
-            <li><span>Sabudes</span><strong>${r.known0} → ${st.known} de ${st.total}</strong></li>
-            <li><span>A mig camí</span><strong>${half}</strong></li>
-            <li><span>Encerts a la primera</span><strong>${r.first}/${r.presented}</strong></li>
+            ${r.practice ? "" : `<li><span>Sabudes</span><strong>${r.known0} → ${st.known} de ${st.total}</strong></li>
+            <li><span>A mig camí</span><strong>${half}</strong></li>`}
+            ${r.practice ? "" : `<li><span>Encerts a la primera</span><strong>${r.first}/${r.presented}</strong></li>`}
             <li><span>Errors</span><strong>${r.errors}</strong></li>
             <li><span>Millor ratxa</span><strong>${r.best}</strong></li>
+            ${r.practice ? `<li><span>Rondes bones</span><strong>${st.known} de ${st.total}</strong></li>` : ""}
             ${r.timer ? `<li><span>Temps mitjà per ${noun(r.list)}</span><strong>${avg}</strong></li>` : ""}
           </ul>
-          <p class="flash-note">Una ${noun(r.list)} queda sabuda quan l'encertes a la primera en dues rondes.</p>
+          <p class="flash-note">${r.practice
+            ? `Una llista queda tancada amb ${st.total} rondes bones (${C.needFirst(r.size)} de ${r.size} o més a la primera) en dies diferents.`
+            : `Una ${noun(r.list)} queda sabuda quan l'encertes a la primera en dues rondes.`}</p>
           ${r.repassa ? '<p class="flash-note">Repàs: el progrés no canvia.</p>' : ""}
           <div class="flash-actions">
             <button type="button" class="primary" data-act="again">Una altra ronda</button>
@@ -1786,6 +1865,7 @@
   // Línia de la traça al xat: totes les rondes d'aquesta obertura de Flash.
   function traceText(s) {
     const who = s.titles.length === 1 ? s.titles[0] : `${s.titles.length} llistes`;
+    if (s.practice) return `⚡ Flash · ${who} — ${s.first}/${s.presented} a la primera · rondes bones ${s.known}/${s.total}`;
     if (s.math) return `⚡ Flash · ${who} — ${s.first}/${s.presented} a la primera · operacions sabudes ${s.known}/${s.total}`;
     return `⚡ Flash · ${who} — ${s.first}/${s.presented} a la primera · sabudes ${s.known}/${s.total}`;
   }

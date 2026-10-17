@@ -7,6 +7,7 @@
     "es": "Áreas de polígonos",
     "en": "Polygon areas"
   },
+  "mode": "practice",
   "generate": {
     "kind": "area_polygon_formula",
     "count": 12

@@ -3,5 +3,6 @@
   "level": "m7",
   "competence": "m7.pythagoras",
   "title": { "ca": "Teorema de Pitàgores", "es": "Teorema de Pitágoras", "en": "Pythagoras' theorem" },
+  "mode": "practice",
   "generate": { "kind": "pythagoras", "count": 12 }
 }

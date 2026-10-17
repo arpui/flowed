@@ -7,6 +7,7 @@
     "es": "Ecuaciones",
     "en": "Equations"
   },
+  "mode": "practice",
   "generate": {
     "kind": "equation",
     "count": 12

@@ -3,5 +3,6 @@
   "level": "m5",
   "competence": "m5.equations_simple",
   "title": { "ca": "Equacions", "es": "Ecuaciones", "en": "Equations" },
+  "mode": "practice",
   "generate": { "kind": "equation", "count": 12 }
 }

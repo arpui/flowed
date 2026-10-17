@@ -3,5 +3,6 @@
   "level": "m7",
   "competence": "m7.functions",
   "title": { "ca": "Taula de valors de y = mx + n", "es": "Tabla de valores de y = mx + n", "en": "Table of values of y = mx + n" },
+  "mode": "practice",
   "generate": { "kind": "linear_func", "count": 12 }
 }
