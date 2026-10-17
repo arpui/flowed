@@ -620,5 +620,215 @@
     "status": "reviewed",
     "source": "claude · 2026-09-24",
     "reviewed": "Albert · 2026-09-24"
+  },
+  {
+    "id": "a1.can_ability.041",
+    "competence": "a1.can_ability",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "very",
+      "well",
+      "swim",
+      "can",
+      "I"
+    ],
+    "context": "",
+    "answer": "I can swim very well.",
+    "also_accept": [],
+    "options": [],
+    "why": "Can + base verb. Can is the same for every person.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.042",
+    "competence": "a1.can_ability",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "I can swim.",
+    "context": "",
+    "answer": "I can't swim.",
+    "also_accept": [
+      "I cannot swim."
+    ],
+    "options": [],
+    "why": "Negative: can't (cannot) + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.043",
+    "competence": "a1.can_ability",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "languages",
+      "three",
+      "speak",
+      "can",
+      "she"
+    ],
+    "context": "",
+    "answer": "She can speak three languages.",
+    "also_accept": [],
+    "options": [],
+    "why": "Can does not change: she can, not she cans.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.044",
+    "competence": "a1.can_ability",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "She can drive a car.",
+    "context": "",
+    "answer": "She can't drive a car.",
+    "also_accept": [
+      "She cannot drive a car."
+    ],
+    "options": [],
+    "why": "Negative: can't (cannot) + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.045",
+    "competence": "a1.can_ability",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "window",
+      "the",
+      "open",
+      "can",
+      "you"
+    ],
+    "context": "",
+    "answer": "Can you open the window?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Can + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.046",
+    "competence": "a1.can_ability",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "We can come tomorrow.",
+    "context": "",
+    "answer": "We can't come tomorrow.",
+    "also_accept": [
+      "We cannot come tomorrow."
+    ],
+    "options": [],
+    "why": "Negative: can't (cannot) + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.047",
+    "competence": "a1.can_ability",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "keys",
+      "cannot",
+      "the",
+      "find",
+      "we"
+    ],
+    "context": "",
+    "answer": "We cannot find the keys.",
+    "also_accept": [],
+    "options": [],
+    "why": "Negative: cannot, written as one word, + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.048",
+    "competence": "a1.can_ability",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You can speak Spanish.",
+    "context": "",
+    "answer": "Can you speak Spanish?",
+    "also_accept": [],
+    "options": [],
+    "why": "Can + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.049",
+    "competence": "a1.can_ability",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "piano",
+      "play",
+      "can",
+      "they",
+      "the"
+    ],
+    "context": "",
+    "answer": "Can they play the piano?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Can + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.050",
+    "competence": "a1.can_ability",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "He can cook well.",
+    "context": "",
+    "answer": "Can he cook well?",
+    "also_accept": [],
+    "options": [],
+    "why": "Can + he + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.051",
+    "competence": "a1.can_ability",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "ride",
+      "bike",
+      "a",
+      "he",
+      "can"
+    ],
+    "context": "",
+    "answer": "He can ride a bike.",
+    "also_accept": [],
+    "options": [],
+    "why": "Can + base verb, with no to and no -s.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.can_ability.052",
+    "competence": "a1.can_ability",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "They can see the sea from here.",
+    "context": "",
+    "answer": "Can they see the sea from here?",
+    "also_accept": [],
+    "options": [],
+    "why": "Can + they + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

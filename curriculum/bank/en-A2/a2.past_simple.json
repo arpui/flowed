@@ -866,5 +866,229 @@
     "why": "'Spend' is irregular: past simple is 'spent'.",
     "status": "validated",
     "source": "claude · 2026-09-24"
+  },
+  {
+    "id": "a2.past_simple.063",
+    "competence": "a2.past_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "grandmother",
+      "visited",
+      "we",
+      "weekend",
+      "last",
+      "my"
+    ],
+    "context": "",
+    "answer": "We visited my grandmother last weekend.",
+    "also_accept": [
+      "Last weekend we visited my grandmother.",
+      "Last weekend, we visited my grandmother."
+    ],
+    "options": [],
+    "why": "A finished time in the past: visited (-ed), last weekend.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.064",
+    "competence": "a2.past_simple",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "I watched TV last night.",
+    "context": "",
+    "answer": "I didn't watch TV last night.",
+    "also_accept": [
+      "I did not watch TV last night."
+    ],
+    "options": [],
+    "why": "Negative past: didn't + base verb (no -ed).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.065",
+    "competence": "a2.past_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "party",
+      "did",
+      "come",
+      "the",
+      "not",
+      "she",
+      "to"
+    ],
+    "context": "",
+    "answer": "She did not come to the party.",
+    "also_accept": [],
+    "options": [],
+    "why": "Negative: did not + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.066",
+    "competence": "a2.past_simple",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "They played football yesterday.",
+    "context": "",
+    "answer": "They didn't play football yesterday.",
+    "also_accept": [
+      "They did not play football yesterday."
+    ],
+    "options": [],
+    "why": "Negative past: didn't + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.067",
+    "competence": "a2.past_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "film",
+      "enjoy",
+      "did",
+      "the",
+      "you"
+    ],
+    "context": "",
+    "answer": "Did you enjoy the film?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Did + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.068",
+    "competence": "a2.past_simple",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "She went to school by bus.",
+    "context": "",
+    "answer": "She didn't go to school by bus.",
+    "also_accept": [
+      "She did not go to school by bus."
+    ],
+    "options": [],
+    "why": "After didn't, the verb is the base form: go, not went.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.069",
+    "competence": "a2.past_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "early",
+      "to",
+      "yesterday",
+      "I",
+      "bed",
+      "went"
+    ],
+    "context": "",
+    "answer": "I went to bed early yesterday.",
+    "also_accept": [
+      "Yesterday I went to bed early.",
+      "Yesterday, I went to bed early."
+    ],
+    "options": [],
+    "why": "went is the irregular past of go.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.070",
+    "competence": "a2.past_simple",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You lived in Paris.",
+    "context": "",
+    "answer": "Did you live in Paris?",
+    "also_accept": [],
+    "options": [],
+    "why": "Did + subject + base verb (live).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.071",
+    "competence": "a2.past_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "May",
+      "a",
+      "car",
+      "new",
+      "in",
+      "they",
+      "bought"
+    ],
+    "context": "",
+    "answer": "They bought a new car in May.",
+    "also_accept": [
+      "In May they bought a new car.",
+      "In May, they bought a new car."
+    ],
+    "options": [],
+    "why": "bought is the irregular past of buy.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.072",
+    "competence": "a2.past_simple",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "He cooked dinner last night.",
+    "context": "",
+    "answer": "Did he cook dinner last night?",
+    "also_accept": [],
+    "options": [],
+    "why": "Did + he + base verb (cook).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.073",
+    "competence": "a2.past_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "arrive",
+      "did",
+      "he",
+      "when"
+    ],
+    "context": "",
+    "answer": "When did he arrive?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: When did + subject + base verb?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_simple.074",
+    "competence": "a2.past_simple",
+    "type": "transform",
+    "instruction": "Put it in the past.",
+    "sentence": "I have a cold.",
+    "context": "",
+    "answer": "I had a cold.",
+    "also_accept": [],
+    "options": [],
+    "why": "have becomes had: the irregular past.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

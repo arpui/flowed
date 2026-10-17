@@ -191,5 +191,48 @@ check("the parseable contract survives", /\*\*Correct version:\*\*\n"4\/5 \+ 4\/
 const fbSame = bankFeedback({ score: 10, verdict: "correct", note: "", correct_version: "4/5 + 4/12 = 1 2/15", given: "1 2/15", item: fracItem });
 check("the same form adds no equivalence line", !fbSame.includes("val el mateix"), fbSame);
 
+// ---- ENCARREC-LANG-L2-BANC: `order` and `transform` cards (language, Go) -----
+const orderItem = { id: "a1.verb_to_be.041", competence: "a1.verb_to_be", type: "order",
+  instruction: "Put the words in order.", words: ["you", "where", "live", "do"], context: "",
+  answer: "Where do you live?", also_accept: [], options: [], why: "Question word first, then do + subject + base verb.",
+  status: "validated" } as unknown as BankItem;
+const orderCard = bankExerciseCard(orderItem, 1, "Easy", "Verb to be");
+check("order card: the words in the given order, the sentence's own end mark, and the write line",
+  orderCard.includes("**Words:** you / where / live / do ?") && orderCard.includes("**Write the sentence:**"), orderCard);
+check("order card is a grammar card", orderCard.includes("Exercise 1: Grammar (Easy)"), orderCard);
+const orderStatement = { ...orderItem, answer: "I am a student.", words: ["a", "student", "am", "I"] } as unknown as BankItem;
+check("order card for a statement shows its full stop as the mark",
+  bankExerciseCard(orderStatement, 1, "Easy", "Verb to be").includes("**Words:** a / student / am / I ."));
+const orderNoMark = { ...orderItem, answer: "they are not tired", words: ["tired", "are", "they", "not"] } as unknown as BankItem;
+check("order card with no end mark adds none",
+  bankExerciseCard(orderNoMark, 1, "Easy", "Verb to be").includes("**Words:** tired / are / they / not\n"));
+
+const transformItem = { id: "a1.present_simple.061", competence: "a1.present_simple", type: "transform",
+  instruction: "Make it negative.", sentence: "He plays football.", context: "",
+  answer: "He doesn't play football.", also_accept: ["He does not play football."], options: [],
+  why: "With he/she/it: doesn't + base verb, no -s.", status: "validated" } as unknown as BankItem;
+const transformCard = bankExerciseCard(transformItem, 2, "Medium", "Present simple");
+check("transform card: the instruction, the sentence, and the write line",
+  transformCard.includes("Make it negative.\n\n**Sentence:** He plays football.") &&
+  transformCard.includes("**Write the new sentence:**"), transformCard);
+check("transform card has no marker the web composer would read as a gap",
+  !/Type your answer|just the missing word/.test(transformCard), transformCard);
+
+// Feedback: the same whole-sentence contract as `correct`, so the correction
+// line still parses and a contraction is the same answer as its long form.
+const orderWrong = { score: 3, verdict: "wrong", note: "Question word first, then do + subject + base verb.",
+  correct_version: "Where do you live?", item: orderItem } as unknown as BankGrade;
+const fbOrder = bankFeedback(orderWrong);
+check("order wrong: ❌ lead with the right sentence and the why",
+  fbOrder.includes('❌ Close! The correct form is "Where do you live?".') &&
+  fbOrder.includes('- ❌ → **"Where do you live?"** (Question word first'), fbOrder);
+check("order feedback keeps the Correct version and Score lines",
+  fbOrder.includes('**Correct version:**\n"Where do you live?"') && fbOrder.includes("**Score: 3/10**"), fbOrder);
+const transformOk = { score: 10, verdict: "correct", note: "", correct_version: "He doesn't play football.",
+  item: transformItem } as unknown as BankGrade;
+check("transform right: ✅ Perfect and no correction arrow",
+  bankFeedback(transformOk).includes('✅ Perfect! "He doesn\'t play football." is right.') &&
+  !bankFeedback(transformOk).includes("→"), bankFeedback(transformOk));
+
 console.log(failures === 0 ? "\nbank: all checks passed" : `\nbank: ${failures} failed`);
 process.exit(failures === 0 ? 0 : 1);

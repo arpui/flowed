@@ -558,5 +558,220 @@
     "why": "Present perfect for experience, no specific time given.",
     "status": "validated",
     "source": "claude · 2026-09-24"
+  },
+  {
+    "id": "a2.present_perfect_experience.041",
+    "competence": "a2.present_perfect_experience",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "Japan",
+      "been",
+      "I",
+      "have",
+      "to"
+    ],
+    "context": "",
+    "answer": "I have been to Japan.",
+    "also_accept": [],
+    "options": [],
+    "why": "Experience: have + been to (you have visited it at some time).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.042",
+    "competence": "a2.present_perfect_experience",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "I have seen this film.",
+    "context": "",
+    "answer": "I haven't seen this film.",
+    "also_accept": [
+      "I have not seen this film."
+    ],
+    "options": [],
+    "why": "Negative: haven't + past participle.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.043",
+    "competence": "a2.present_perfect_experience",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "eaten",
+      "ever",
+      "sushi",
+      "you",
+      "have"
+    ],
+    "context": "",
+    "answer": "Have you ever eaten sushi?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Have you ever + past participle?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.044",
+    "competence": "a2.present_perfect_experience",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "She has eaten shrimp.",
+    "context": "",
+    "answer": "She hasn't eaten shrimp.",
+    "also_accept": [
+      "She has not eaten shrimp."
+    ],
+    "options": [],
+    "why": "Negative: hasn't + past participle.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.045",
+    "competence": "a2.present_perfect_experience",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "snow",
+      "seen",
+      "has",
+      "never",
+      "she"
+    ],
+    "context": "",
+    "answer": "She has never seen snow.",
+    "also_accept": [],
+    "options": [],
+    "why": "never goes between has and the past participle.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.046",
+    "competence": "a2.present_perfect_experience",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You have been to Italy.",
+    "context": "",
+    "answer": "Have you been to Italy?",
+    "also_accept": [
+      "Have you ever been to Italy?"
+    ],
+    "options": [],
+    "why": "Have + subject + past participle.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.047",
+    "competence": "a2.present_perfect_experience",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "the",
+      "project",
+      "finished",
+      "already",
+      "we",
+      "have"
+    ],
+    "context": "",
+    "answer": "We have already finished the project.",
+    "also_accept": [],
+    "options": [],
+    "why": "already goes between have and the past participle.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.048",
+    "competence": "a2.present_perfect_experience",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "He has read the book.",
+    "context": "",
+    "answer": "Has he read the book?",
+    "also_accept": [],
+    "options": [],
+    "why": "Has + he + past participle.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.049",
+    "competence": "a2.present_perfect_experience",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "prize",
+      "won",
+      "a",
+      "ever",
+      "he",
+      "has"
+    ],
+    "context": "",
+    "answer": "Has he ever won a prize?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Has he ever + past participle?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.050",
+    "competence": "a2.present_perfect_experience",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "We have visited Rome.",
+    "context": "",
+    "answer": "We haven't visited Rome.",
+    "also_accept": [
+      "We have not visited Rome."
+    ],
+    "options": [],
+    "why": "Negative: haven't + past participle.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.051",
+    "competence": "a2.present_perfect_experience",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "visited",
+      "London",
+      "yet",
+      "not",
+      "have",
+      "they"
+    ],
+    "context": "",
+    "answer": "They have not visited London yet.",
+    "also_accept": [],
+    "options": [],
+    "why": "yet comes at the end of a negative sentence.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_perfect_experience.052",
+    "competence": "a2.present_perfect_experience",
+    "type": "transform",
+    "instruction": "Make it present perfect (experience, no time word).",
+    "sentence": "I went to Spain last year.",
+    "context": "",
+    "answer": "I have been to Spain.",
+    "also_accept": [],
+    "options": [],
+    "why": "A past time (last year) becomes an experience with no time word: have been to.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

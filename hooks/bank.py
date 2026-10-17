@@ -70,6 +70,36 @@ def _min_distance(got: str, answer: str) -> int:
 
 BLANK = re.compile(r"_{3,}")
 
+# Whole-sentence types (graded as `correct`): the learner writes the sentence.
+# `order` (ENCARREC-LANG-L2-BANC §2) puts given `words` in order; `transform`
+# rewrites a `sentence` (negative, question, tense...).
+SENTENCE_TYPES = ("correct", "order", "transform")
+
+
+def item_problems(item: dict) -> list[str]:
+    """Why a `order`/`transform` item cannot be served, [] when it is fine.
+    The bank is content, so this is run over every new item by the tests
+    (tests/test_bank_order_transform.py), not at serve time."""
+    t = item.get("type")
+    if t not in ("order", "transform"):
+        return []
+    out: list[str] = []
+    if not str(item.get("answer") or "").strip():
+        out.append("empty answer")
+    if not str(item.get("why") or "").strip():
+        out.append("no why")
+    if t == "order":
+        words = item.get("words") or []
+        tokens = re.findall(r"[a-z0-9']+", str(item.get("answer") or "").lower())
+        if sorted(str(w).lower() for w in words) != sorted(tokens):
+            out.append(f"words {words!r} are not the words of the answer")
+    else:
+        if not str(item.get("sentence") or "").strip():
+            out.append("transform without a sentence")
+        if not str(item.get("instruction") or "").strip():
+            out.append("transform without an instruction")
+    return out
+
 
 def extract_gap(sentence: str, got: str) -> str:
     """If she typed the whole sentence instead of just the gap, keep the gap.
@@ -266,7 +296,7 @@ def _same_lesson_other_word(candidate: str, item: dict, comp: dict | None) -> bo
 def _full_sentence(item: dict) -> str:
     """"Correct version:" always shows the whole sentence, filled in — a bare
     answer word ("plays") is not what the learner is meant to check against."""
-    if item["type"] in ("meaning", "translate", "correct"):
+    if item["type"] in ("meaning", "translate", "correct", "order", "transform"):
         return item["answer"]
     m = BLANK.search(item["sentence"])
     if not m:
@@ -630,7 +660,12 @@ def grade(item: dict, raw_answer: str, comp: dict | None = None) -> dict:
         return _grade_math(item, raw_answer)
     answers = [item["answer"], *item.get("also_accept", [])]
     full = _full_sentence(item)
-    if item["type"] == "correct":
+    # order (words put in order) and transform (a sentence rewritten) are
+    # whole-sentence answers too: graded word by word, as `correct` is.
+    # Contractions need no list of their own: canon() reads don't/doesn't/
+    # isn't/can't/won't as do not/does not/is not/cannot/will not, so both
+    # forms are the same words for these types.
+    if item["type"] in SENTENCE_TYPES:
         got_w = re.findall(r"[a-z0-9']+", canon(raw_answer))
         for target in answers:
             want_w = re.findall(r"[a-z0-9']+", canon(target))

@@ -932,5 +932,212 @@
     "status": "reviewed",
     "source": "claude · 2026-09-24",
     "reviewed": "Albert · 2026-09-24"
+  },
+  {
+    "id": "a1.present_simple.061",
+    "competence": "a1.present_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "football",
+      "I",
+      "like"
+    ],
+    "context": "",
+    "answer": "I like football.",
+    "also_accept": [],
+    "options": [],
+    "why": "Subject + base verb: I like.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.062",
+    "competence": "a1.present_simple",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "He plays football.",
+    "context": "",
+    "answer": "He doesn't play football.",
+    "also_accept": [
+      "He does not play football."
+    ],
+    "options": [],
+    "why": "With he/she/it: doesn't + base verb, no -s.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.063",
+    "competence": "a1.present_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "tennis",
+      "you",
+      "play",
+      "do"
+    ],
+    "context": "",
+    "answer": "Do you play tennis?",
+    "also_accept": [],
+    "options": [],
+    "why": "Questions with you use Do + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.064",
+    "competence": "a1.present_simple",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "We live in London.",
+    "context": "",
+    "answer": "We don't live in London.",
+    "also_accept": [
+      "We do not live in London."
+    ],
+    "options": [],
+    "why": "With I/you/we/they: don't + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.065",
+    "competence": "a1.present_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "in",
+      "a",
+      "shop",
+      "she",
+      "works"
+    ],
+    "context": "",
+    "answer": "She works in a shop.",
+    "also_accept": [],
+    "options": [],
+    "why": "With he/she/it, the verb takes -s: works.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.066",
+    "competence": "a1.present_simple",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "My sister likes fish.",
+    "context": "",
+    "answer": "My sister doesn't like fish.",
+    "also_accept": [
+      "My sister does not like fish."
+    ],
+    "options": [],
+    "why": "With he/she/it: doesn't, and the verb loses its -s.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.067",
+    "competence": "a1.present_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "live",
+      "he",
+      "does",
+      "where"
+    ],
+    "context": "",
+    "answer": "Where does he live?",
+    "also_accept": [],
+    "options": [],
+    "why": "With he/she/it, questions use does, and the verb has no -s.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.068",
+    "competence": "a1.present_simple",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You speak English.",
+    "context": "",
+    "answer": "Do you speak English?",
+    "also_accept": [],
+    "options": [],
+    "why": "Do + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.069",
+    "competence": "a1.present_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "eat",
+      "they",
+      "meat",
+      "not",
+      "do"
+    ],
+    "context": "",
+    "answer": "They do not eat meat.",
+    "also_accept": [],
+    "options": [],
+    "why": "Negative: do not + base verb (with he/she/it: does not).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.070",
+    "competence": "a1.present_simple",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "She lives near the park.",
+    "context": "",
+    "answer": "Does she live near the park?",
+    "also_accept": [],
+    "options": [],
+    "why": "Does + subject + base verb (no -s).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.071",
+    "competence": "a1.present_simple",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "start",
+      "time",
+      "does",
+      "film",
+      "what",
+      "the"
+    ],
+    "context": "",
+    "answer": "What time does the film start?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question word + does + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.present_simple.072",
+    "competence": "a1.present_simple",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "They watch TV every night.",
+    "context": "",
+    "answer": "Do they watch TV every night?",
+    "also_accept": [],
+    "options": [],
+    "why": "Do + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

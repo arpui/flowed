@@ -558,5 +558,219 @@
     "why": "Negative past continuous: wasn't + -ing.",
     "status": "validated",
     "source": "claude · 2026-09-24"
+  },
+  {
+    "id": "a2.past_continuous.041",
+    "competence": "a2.past_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "rang",
+      "phone",
+      "the",
+      "when",
+      "was",
+      "sleeping",
+      "I"
+    ],
+    "context": "",
+    "answer": "I was sleeping when the phone rang.",
+    "also_accept": [],
+    "options": [],
+    "why": "The long action: was + -ing. The short one, rang, is past simple.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.042",
+    "competence": "a2.past_continuous",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "He was reading a newspaper.",
+    "context": "",
+    "answer": "He wasn't reading a newspaper.",
+    "also_accept": [
+      "He was not reading a newspaper."
+    ],
+    "options": [],
+    "why": "Negative: wasn't + -ing.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.043",
+    "competence": "a2.past_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "at",
+      "six",
+      "were",
+      "they",
+      "playing",
+      "football"
+    ],
+    "context": "",
+    "answer": "They were playing football at six.",
+    "also_accept": [],
+    "options": [],
+    "why": "An action in progress at a time: were + -ing.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.044",
+    "competence": "a2.past_continuous",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "We were waiting for the train.",
+    "context": "",
+    "answer": "We weren't waiting for the train.",
+    "also_accept": [
+      "We were not waiting for the train."
+    ],
+    "options": [],
+    "why": "weren't is were not.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.045",
+    "competence": "a2.past_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "were",
+      "doing",
+      "at",
+      "you",
+      "nine",
+      "what"
+    ],
+    "context": "",
+    "answer": "What were you doing at nine?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: What were you doing at + time?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.046",
+    "competence": "a2.past_continuous",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "They were watching a film.",
+    "context": "",
+    "answer": "Were they watching a film?",
+    "also_accept": [],
+    "options": [],
+    "why": "Were + subject + -ing?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.047",
+    "competence": "a2.past_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "to",
+      "was",
+      "me",
+      "she",
+      "listening",
+      "not"
+    ],
+    "context": "",
+    "answer": "She was not listening to me.",
+    "also_accept": [],
+    "options": [],
+    "why": "Negative: was not + -ing.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.048",
+    "competence": "a2.past_continuous",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "She was cooking when we arrived.",
+    "context": "",
+    "answer": "Was she cooking when we arrived?",
+    "also_accept": [],
+    "options": [],
+    "why": "Was + she + -ing?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.049",
+    "competence": "a2.past_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "called",
+      "when",
+      "I",
+      "were",
+      "working",
+      "you"
+    ],
+    "context": "",
+    "answer": "Were you working when I called?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Were you + -ing?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.050",
+    "competence": "a2.past_continuous",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You were sleeping at midnight.",
+    "context": "",
+    "answer": "Were you sleeping at midnight?",
+    "also_accept": [],
+    "options": [],
+    "why": "Were + you + -ing?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.051",
+    "competence": "a2.past_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "all",
+      "afternoon",
+      "was",
+      "raining",
+      "it"
+    ],
+    "context": "",
+    "answer": "It was raining all afternoon.",
+    "also_accept": [],
+    "options": [],
+    "why": "Weather in progress: was raining.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.past_continuous.052",
+    "competence": "a2.past_continuous",
+    "type": "transform",
+    "instruction": "Put it in the past continuous.",
+    "sentence": "I am walking to school.",
+    "context": "",
+    "answer": "I was walking to school.",
+    "also_accept": [],
+    "options": [],
+    "why": "am becomes was, and the verb keeps -ing.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

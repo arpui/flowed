@@ -586,5 +586,227 @@
     "why": "Negative future with 'going to': isn't/aren't going to + base verb.",
     "status": "validated",
     "source": "claude · 2026-09-24"
+  },
+  {
+    "id": "a2.future_going_to_will.043",
+    "competence": "a2.future_going_to_will",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "next",
+      "year",
+      "going",
+      "to",
+      "move",
+      "are",
+      "we"
+    ],
+    "context": "",
+    "answer": "We are going to move next year.",
+    "also_accept": [
+      "Next year we are going to move.",
+      "Next year, we are going to move."
+    ],
+    "options": [],
+    "why": "going to: a plan that is already decided.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.044",
+    "competence": "a2.future_going_to_will",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "It is going to rain.",
+    "context": "",
+    "answer": "It isn't going to rain.",
+    "also_accept": [
+      "It is not going to rain."
+    ],
+    "options": [],
+    "why": "Negative: isn't going to + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.045",
+    "competence": "a2.future_going_to_will",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "tomorrow",
+      "sunny",
+      "be",
+      "will",
+      "it"
+    ],
+    "context": "",
+    "answer": "It will be sunny tomorrow.",
+    "also_accept": [
+      "Tomorrow it will be sunny.",
+      "Tomorrow, it will be sunny."
+    ],
+    "options": [],
+    "why": "will: a prediction, with no plan.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.046",
+    "competence": "a2.future_going_to_will",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "I will be late.",
+    "context": "",
+    "answer": "I won't be late.",
+    "also_accept": [
+      "I will not be late."
+    ],
+    "options": [],
+    "why": "won't is will not.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.047",
+    "competence": "a2.future_going_to_will",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "buy",
+      "a",
+      "to",
+      "car",
+      "going",
+      "are",
+      "you"
+    ],
+    "context": "",
+    "answer": "Are you going to buy a car?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Are you going to + base verb?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.048",
+    "competence": "a2.future_going_to_will",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "She is going to visit Paris.",
+    "context": "",
+    "answer": "Is she going to visit Paris?",
+    "also_accept": [],
+    "options": [],
+    "why": "Is + subject + going to + base verb?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.049",
+    "competence": "a2.future_going_to_will",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "call",
+      "later",
+      "you",
+      "I",
+      "will"
+    ],
+    "context": "",
+    "answer": "I will call you later.",
+    "also_accept": [],
+    "options": [],
+    "why": "will for a decision made at the moment of speaking.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.050",
+    "competence": "a2.future_going_to_will",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "They will win the match.",
+    "context": "",
+    "answer": "Will they win the match?",
+    "also_accept": [],
+    "options": [],
+    "why": "Will + subject + base verb?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.051",
+    "competence": "a2.future_going_to_will",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "win",
+      "going",
+      "is",
+      "to",
+      "not",
+      "she"
+    ],
+    "context": "",
+    "answer": "She is not going to win.",
+    "also_accept": [],
+    "options": [],
+    "why": "Negative: is not going to + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.052",
+    "competence": "a2.future_going_to_will",
+    "type": "transform",
+    "instruction": "Put it in the future with 'going to'.",
+    "sentence": "We play tennis tomorrow.",
+    "context": "",
+    "answer": "We are going to play tennis tomorrow.",
+    "also_accept": [
+      "We're going to play tennis tomorrow."
+    ],
+    "options": [],
+    "why": "A plan for tomorrow: are going to + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.053",
+    "competence": "a2.future_going_to_will",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "the",
+      "party",
+      "come",
+      "they",
+      "will",
+      "to"
+    ],
+    "context": "",
+    "answer": "Will they come to the party?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Will + subject + base verb?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.future_going_to_will.054",
+    "competence": "a2.future_going_to_will",
+    "type": "transform",
+    "instruction": "Put it in the future with 'will'.",
+    "sentence": "The shop opens at nine.",
+    "context": "",
+    "answer": "The shop will open at nine.",
+    "also_accept": [],
+    "options": [],
+    "why": "will + base verb for a future fact.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]
