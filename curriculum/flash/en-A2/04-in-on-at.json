@@ -8,7 +8,7 @@
     { "id": "monday", "prompt": "… Monday", "answer": ["on"], "options": ["in", "on", "at"] },
     { "id": "july", "prompt": "… July", "answer": ["in"], "options": ["in", "on", "at"] },
     { "id": "seven", "prompt": "… 7 o'clock", "answer": ["at"], "options": ["in", "on", "at"] },
-    { "id": "weekend", "prompt": "… the weekend", "answer": ["at"], "options": ["in", "on", "at"] },
+    { "id": "weekend", "prompt": "… the moment", "answer": ["at"], "options": ["in", "on", "at"] },
     { "id": "2010", "prompt": "… 2010", "answer": ["in"], "options": ["in", "on", "at"] },
     { "id": "night", "prompt": "… night", "answer": ["at"], "options": ["in", "on", "at"] },
     { "id": "morning", "prompt": "… the morning", "answer": ["in"], "options": ["in", "on", "at"] },
