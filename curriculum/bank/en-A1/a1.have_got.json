@@ -618,5 +618,218 @@
     "status": "reviewed",
     "source": "claude · 2026-09-24",
     "reviewed": "Albert · 2026-09-24"
+  },
+  {
+    "id": "a1.have_got.041",
+    "competence": "a1.have_got",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "new",
+      "bike",
+      "got",
+      "a",
+      "have",
+      "I"
+    ],
+    "context": "",
+    "answer": "I have got a new bike.",
+    "also_accept": [],
+    "options": [],
+    "why": "I/you/we/they: have got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.042",
+    "competence": "a1.have_got",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "He has got a phone.",
+    "context": "",
+    "answer": "He hasn't got a phone.",
+    "also_accept": [
+      "He has not got a phone."
+    ],
+    "options": [],
+    "why": "With he/she/it: hasn't got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.043",
+    "competence": "a1.have_got",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "three",
+      "cats",
+      "got",
+      "has",
+      "she"
+    ],
+    "context": "",
+    "answer": "She has got three cats.",
+    "also_accept": [],
+    "options": [],
+    "why": "He/she/it: has got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.044",
+    "competence": "a1.have_got",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "We have got a dog.",
+    "context": "",
+    "answer": "We haven't got a dog.",
+    "also_accept": [
+      "We have not got a dog."
+    ],
+    "options": [],
+    "why": "With I/you/we/they: haven't got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.045",
+    "competence": "a1.have_got",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "pen",
+      "a",
+      "got",
+      "have",
+      "you"
+    ],
+    "context": "",
+    "answer": "Have you got a pen?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Have + subject + got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.046",
+    "competence": "a1.have_got",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "My sister has got a bike.",
+    "context": "",
+    "answer": "My sister hasn't got a bike.",
+    "also_accept": [
+      "My sister has not got a bike."
+    ],
+    "options": [],
+    "why": "With he/she/it: hasn't got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.047",
+    "competence": "a1.have_got",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "car",
+      "we",
+      "have",
+      "not",
+      "a",
+      "got"
+    ],
+    "context": "",
+    "answer": "We have not got a car.",
+    "also_accept": [],
+    "options": [],
+    "why": "Negative: have not got (short form haven't got).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.048",
+    "competence": "a1.have_got",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You have got a sister.",
+    "context": "",
+    "answer": "Have you got a sister?",
+    "also_accept": [],
+    "options": [],
+    "why": "Have + subject + got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.049",
+    "competence": "a1.have_got",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "dog",
+      "a",
+      "got",
+      "has",
+      "he"
+    ],
+    "context": "",
+    "answer": "Has he got a dog?",
+    "also_accept": [],
+    "options": [],
+    "why": "With he/she/it, the question is Has + subject + got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.050",
+    "competence": "a1.have_got",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "She has got a brother.",
+    "context": "",
+    "answer": "Has she got a brother?",
+    "also_accept": [],
+    "options": [],
+    "why": "Has + she + got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.051",
+    "competence": "a1.have_got",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "garden",
+      "a",
+      "small",
+      "got",
+      "have",
+      "they"
+    ],
+    "context": "",
+    "answer": "They have got a small garden.",
+    "also_accept": [],
+    "options": [],
+    "why": "Plural subjects: have got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.have_got.052",
+    "competence": "a1.have_got",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "They have got a big house.",
+    "context": "",
+    "answer": "Have they got a big house?",
+    "also_accept": [],
+    "options": [],
+    "why": "Have + they + got.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

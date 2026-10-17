@@ -19,7 +19,7 @@ import { stepsV2CardTail } from "./steps.ts";
 export interface BankItem {
   id: string;
   competence: string;
-  type: "complete" | "choose" | "meaning" | "translate" | "correct" | "compute" | "compare" | "steps";
+  type: "complete" | "choose" | "meaning" | "translate" | "correct" | "order" | "transform" | "compute" | "compare" | "steps";
   instruction: string;
   /** Language items blank a "___" inside a sentence; math items carry a
    *  `problem` instead (DISSENY-MATEMATIQUES §4.1). */
@@ -33,6 +33,8 @@ export interface BankItem {
   also_accept: string[];
   options: string[];
   why: string;
+  /** order items only: the words to put in order (ENCARREC-LANG-L2-BANC §2). */
+  words?: string[];
   /** steps items only (WP2.2/§4.2): the expected worked solution. */
   method?: string;
   steps?: BankStep[];
@@ -162,6 +164,16 @@ export function bankExerciseCard(
   }
   if (item.type === "correct") {
     return `${head}\n\n**Sentence to correct:** "${item.sentence}"\n\n**Type the correct sentence:**`;
+  }
+  if (item.type === "order") {
+    // The words in the order the item gives them, and the sentence's own end
+    // mark ("?", "." or "!") as the only hint about its shape.
+    const end = item.answer.trim().slice(-1);
+    const mark = /[.?!]/.test(end) ? ` ${end}` : "";
+    return `${head}\n\n**Words:** ${(item.words ?? []).join(" / ")}${mark}\n\n**Write the sentence:**`;
+  }
+  if (item.type === "transform") {
+    return `${head}\n\n${item.instruction}\n\n**Sentence:** ${item.sentence}\n\n**Write the new sentence:**`;
   }
   return `${head}\n\n**Sentence:** ${item.sentence}\n\n**Type your answer (just the missing word):**`;
 }

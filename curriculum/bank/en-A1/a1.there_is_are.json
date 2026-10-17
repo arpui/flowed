@@ -626,5 +626,226 @@
     "status": "reviewed",
     "source": "claude · 2026-09-24",
     "reviewed": "Albert · 2026-09-24"
+  },
+  {
+    "id": "a1.there_is_are.041",
+    "competence": "a1.there_is_are",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "garden",
+      "in",
+      "the",
+      "a",
+      "cat",
+      "is",
+      "there"
+    ],
+    "context": "",
+    "answer": "There is a cat in the garden.",
+    "also_accept": [],
+    "options": [],
+    "why": "There is + a singular noun.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.042",
+    "competence": "a1.there_is_are",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "There is a bank near here.",
+    "context": "",
+    "answer": "There isn't a bank near here.",
+    "also_accept": [
+      "There is not a bank near here."
+    ],
+    "options": [],
+    "why": "Negative with a singular noun: there isn't a...",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.043",
+    "competence": "a1.there_is_are",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "room",
+      "chairs",
+      "in",
+      "two",
+      "there",
+      "the",
+      "are"
+    ],
+    "context": "",
+    "answer": "There are two chairs in the room.",
+    "also_accept": [],
+    "options": [],
+    "why": "There are + a plural noun.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.044",
+    "competence": "a1.there_is_are",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "There are five boys in the team.",
+    "context": "",
+    "answer": "There aren't five boys in the team.",
+    "also_accept": [
+      "There are not five boys in the team."
+    ],
+    "options": [],
+    "why": "Negative with a plural noun: there aren't...",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.045",
+    "competence": "a1.there_is_are",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "here",
+      "near",
+      "a",
+      "shop",
+      "there",
+      "is"
+    ],
+    "context": "",
+    "answer": "Is there a shop near here?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Is there + singular noun?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.046",
+    "competence": "a1.there_is_are",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "There is a museum in this town.",
+    "context": "",
+    "answer": "Is there a museum in this town?",
+    "also_accept": [],
+    "options": [],
+    "why": "Is there + singular noun?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.047",
+    "competence": "a1.there_is_are",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "class",
+      "no",
+      "the",
+      "in",
+      "students",
+      "are",
+      "there"
+    ],
+    "context": "",
+    "answer": "There are no students in the class.",
+    "also_accept": [],
+    "options": [],
+    "why": "No means not any: There are no + plural noun.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.048",
+    "competence": "a1.there_is_are",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "There are some biscuits on the plate.",
+    "context": "",
+    "answer": "There aren't any biscuits on the plate.",
+    "also_accept": [
+      "There are not any biscuits on the plate.",
+      "There are no biscuits on the plate."
+    ],
+    "options": [],
+    "why": "In negatives, some becomes any (or use no).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.049",
+    "competence": "a1.there_is_are",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "apples",
+      "any",
+      "are",
+      "there"
+    ],
+    "context": "",
+    "answer": "Are there any apples?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question with plurals: Are there any...?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.050",
+    "competence": "a1.there_is_are",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "There are two cinemas near the station.",
+    "context": "",
+    "answer": "Are there two cinemas near the station?",
+    "also_accept": [],
+    "options": [],
+    "why": "Are + there + plural noun.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.051",
+    "competence": "a1.there_is_are",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "fridge",
+      "some",
+      "is",
+      "there",
+      "milk",
+      "in",
+      "the"
+    ],
+    "context": "",
+    "answer": "There is some milk in the fridge.",
+    "also_accept": [],
+    "options": [],
+    "why": "Some goes with uncountable nouns, here with is.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.there_is_are.052",
+    "competence": "a1.there_is_are",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "There are some eggs in the fridge.",
+    "context": "",
+    "answer": "Are there any eggs in the fridge?",
+    "also_accept": [
+      "Are there some eggs in the fridge?"
+    ],
+    "options": [],
+    "why": "In questions, some usually becomes any.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

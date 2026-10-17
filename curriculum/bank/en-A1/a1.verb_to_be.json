@@ -618,5 +618,208 @@
     "status": "reviewed",
     "source": "claude · 2026-09-24",
     "reviewed": "Albert · 2026-09-24"
+  },
+  {
+    "id": "a1.verb_to_be.041",
+    "competence": "a1.verb_to_be",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "my",
+      "sister",
+      "is",
+      "she"
+    ],
+    "context": "",
+    "answer": "She is my sister.",
+    "also_accept": [],
+    "options": [],
+    "why": "Subject first, then is: She is my sister.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.042",
+    "competence": "a1.verb_to_be",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "It is cold today.",
+    "context": "",
+    "answer": "It isn't cold today.",
+    "also_accept": [
+      "It is not cold today."
+    ],
+    "options": [],
+    "why": "Add not after is. The short form is isn't.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.043",
+    "competence": "a1.verb_to_be",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "the",
+      "is",
+      "bank",
+      "where"
+    ],
+    "context": "",
+    "answer": "Where is the bank?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question word first, then is, then the subject: the bank.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.044",
+    "competence": "a1.verb_to_be",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You are from Spain.",
+    "context": "",
+    "answer": "Are you from Spain?",
+    "also_accept": [],
+    "options": [],
+    "why": "Swap the subject and the verb: Are you...?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.045",
+    "competence": "a1.verb_to_be",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "home",
+      "are",
+      "at",
+      "we"
+    ],
+    "context": "",
+    "answer": "We are at home.",
+    "also_accept": [],
+    "options": [],
+    "why": "Subject, then are, then the place.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.046",
+    "competence": "a1.verb_to_be",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "We are at school.",
+    "context": "",
+    "answer": "We aren't at school.",
+    "also_accept": [
+      "We are not at school."
+    ],
+    "options": [],
+    "why": "Add not after are. The short form is aren't.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.047",
+    "competence": "a1.verb_to_be",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "teacher",
+      "your",
+      "is",
+      "he"
+    ],
+    "context": "",
+    "answer": "Is he your teacher?",
+    "also_accept": [],
+    "options": [],
+    "why": "In a question, is goes before the subject: Is he...?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.048",
+    "competence": "a1.verb_to_be",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "Anna is my best friend.",
+    "context": "",
+    "answer": "Anna isn't my best friend.",
+    "also_accept": [
+      "Anna is not my best friend."
+    ],
+    "options": [],
+    "why": "Add not after is.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.049",
+    "competence": "a1.verb_to_be",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "tired",
+      "are",
+      "they",
+      "not"
+    ],
+    "context": "",
+    "answer": "They are not tired.",
+    "also_accept": [],
+    "options": [],
+    "why": "Not comes after the verb: are not.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.050",
+    "competence": "a1.verb_to_be",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "It is your bag.",
+    "context": "",
+    "answer": "Is it your bag?",
+    "also_accept": [],
+    "options": [],
+    "why": "Put is before it.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.051",
+    "competence": "a1.verb_to_be",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "late",
+      "am",
+      "I"
+    ],
+    "context": "",
+    "answer": "Am I late?",
+    "also_accept": [],
+    "options": [],
+    "why": "With I, the question is Am I...? (am goes first).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a1.verb_to_be.052",
+    "competence": "a1.verb_to_be",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "They are ready.",
+    "context": "",
+    "answer": "Are they ready?",
+    "also_accept": [],
+    "options": [],
+    "why": "Put are before they.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

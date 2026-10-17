@@ -894,5 +894,220 @@
     "why": "Negative present simple with I: don't + base verb.",
     "status": "validated",
     "source": "claude · 2026-09-24"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.065",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "now",
+      "a",
+      "book",
+      "reading",
+      "is",
+      "she"
+    ],
+    "context": "",
+    "answer": "She is reading a book now.",
+    "also_accept": [],
+    "options": [],
+    "why": "Now, at this moment: am/is/are + -ing.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.066",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "He works on Fridays.",
+    "context": "",
+    "answer": "He doesn't work on Fridays.",
+    "also_accept": [
+      "He does not work on Fridays."
+    ],
+    "options": [],
+    "why": "Routine negative: doesn't + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.067",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "to",
+      "work",
+      "usually",
+      "walk",
+      "I"
+    ],
+    "context": "",
+    "answer": "I usually walk to work.",
+    "also_accept": [],
+    "options": [],
+    "why": "Habits and routines use the present simple.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.068",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "transform",
+    "instruction": "Make it present continuous.",
+    "sentence": "I study English now.",
+    "context": "",
+    "answer": "I am studying English now.",
+    "also_accept": [
+      "I'm studying English now."
+    ],
+    "options": [],
+    "why": "Happening now: am + -ing (study, studying).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.069",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "moment",
+      "the",
+      "at",
+      "you",
+      "doing",
+      "what",
+      "are"
+    ],
+    "context": "",
+    "answer": "What are you doing at the moment?",
+    "also_accept": [],
+    "options": [],
+    "why": "Temporary action at the moment: are + -ing.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.070",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "They are watching TV.",
+    "context": "",
+    "answer": "Are they watching TV?",
+    "also_accept": [],
+    "options": [],
+    "why": "Now-happening question: Are they + -ing?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.071",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "Sundays",
+      "on",
+      "work",
+      "your",
+      "father",
+      "does"
+    ],
+    "context": "",
+    "answer": "Does your father work on Sundays?",
+    "also_accept": [],
+    "options": [],
+    "why": "A routine: does + subject + base verb.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.072",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "She is cooking dinner.",
+    "context": "",
+    "answer": "She isn't cooking dinner.",
+    "also_accept": [
+      "She is not cooking dinner."
+    ],
+    "options": [],
+    "why": "Continuous negative: isn't + -ing.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.073",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "the",
+      "bus",
+      "waiting",
+      "they",
+      "are",
+      "for"
+    ],
+    "context": "",
+    "answer": "They are waiting for the bus.",
+    "also_accept": [],
+    "options": [],
+    "why": "Happening now: are + -ing.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.074",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You like jazz.",
+    "context": "",
+    "answer": "Do you like jazz?",
+    "also_accept": [],
+    "options": [],
+    "why": "Like is a state verb, so it is not used in the continuous.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.075",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "100",
+      "degrees",
+      "at",
+      "boils",
+      "water"
+    ],
+    "context": "",
+    "answer": "Water boils at 100 degrees.",
+    "also_accept": [],
+    "options": [],
+    "why": "Facts and general truths use the present simple.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.present_simple_vs_continuous.076",
+    "competence": "a2.present_simple_vs_continuous",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "Tom is working in London.",
+    "context": "",
+    "answer": "Is Tom working in London?",
+    "also_accept": [],
+    "options": [],
+    "why": "Is + subject + -ing?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

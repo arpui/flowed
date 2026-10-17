@@ -586,5 +586,221 @@
     "why": "'Have to' expresses an external obligation or rule.",
     "status": "validated",
     "source": "claude · 2026-09-24"
+  },
+  {
+    "id": "a2.modals_ability_obligation.043",
+    "competence": "a2.modals_ability_obligation",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "wear",
+      "a",
+      "helmet",
+      "must",
+      "you"
+    ],
+    "context": "",
+    "answer": "You must wear a helmet.",
+    "also_accept": [],
+    "options": [],
+    "why": "must + base verb: a strong obligation.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.044",
+    "competence": "a2.modals_ability_obligation",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "You must smoke here.",
+    "context": "",
+    "answer": "You mustn't smoke here.",
+    "also_accept": [
+      "You must not smoke here."
+    ],
+    "options": [],
+    "why": "mustn't means it is not allowed.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.045",
+    "competence": "a2.modals_ability_obligation",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "eight",
+      "leave",
+      "at",
+      "have",
+      "we",
+      "to"
+    ],
+    "context": "",
+    "answer": "We have to leave at eight.",
+    "also_accept": [],
+    "options": [],
+    "why": "have to: an obligation from outside, with a to.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.046",
+    "competence": "a2.modals_ability_obligation",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "We have to go to school.",
+    "context": "",
+    "answer": "We don't have to go to school.",
+    "also_accept": [
+      "We do not have to go to school."
+    ],
+    "options": [],
+    "why": "don't have to means there is no obligation.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.047",
+    "competence": "a2.modals_ability_obligation",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "do",
+      "not",
+      "to",
+      "have",
+      "you",
+      "pay"
+    ],
+    "context": "",
+    "answer": "You do not have to pay.",
+    "also_accept": [],
+    "options": [],
+    "why": "Negative have to: no obligation (not the same as must not).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.048",
+    "competence": "a2.modals_ability_obligation",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "They must pay now.",
+    "context": "",
+    "answer": "Must they pay now?",
+    "also_accept": [],
+    "options": [],
+    "why": "Must + subject + base verb?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.049",
+    "competence": "a2.modals_ability_obligation",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "five",
+      "was",
+      "could",
+      "when",
+      "she",
+      "swim",
+      "she"
+    ],
+    "context": "",
+    "answer": "She could swim when she was five.",
+    "also_accept": [],
+    "options": [],
+    "why": "could: past ability, with no -s and no to.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.050",
+    "competence": "a2.modals_ability_obligation",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "He could play the piano when he was young.",
+    "context": "",
+    "answer": "He couldn't play the piano when he was young.",
+    "also_accept": [
+      "He could not play the piano when he was young."
+    ],
+    "options": [],
+    "why": "couldn't: past ability, negative.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.051",
+    "competence": "a2.modals_ability_obligation",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "today",
+      "I",
+      "this",
+      "finish",
+      "must"
+    ],
+    "context": "",
+    "answer": "Must I finish this today?",
+    "also_accept": [],
+    "options": [],
+    "why": "Question: Must I + base verb?",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.052",
+    "competence": "a2.modals_ability_obligation",
+    "type": "transform",
+    "instruction": "Make it a question.",
+    "sentence": "You should go to bed early.",
+    "context": "",
+    "answer": "Should you go to bed early?",
+    "also_accept": [],
+    "options": [],
+    "why": "Should + subject + base verb? (advice).",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.053",
+    "competence": "a2.modals_ability_obligation",
+    "type": "order",
+    "instruction": "Put the words in order.",
+    "words": [
+      "see",
+      "a",
+      "doctor",
+      "should",
+      "you"
+    ],
+    "context": "",
+    "answer": "You should see a doctor.",
+    "also_accept": [],
+    "options": [],
+    "why": "should gives advice; it is weaker than must.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
+  },
+  {
+    "id": "a2.modals_ability_obligation.054",
+    "competence": "a2.modals_ability_obligation",
+    "type": "transform",
+    "instruction": "Make it negative.",
+    "sentence": "She can drive.",
+    "context": "",
+    "answer": "She can't drive.",
+    "also_accept": [
+      "She cannot drive."
+    ],
+    "options": [],
+    "why": "can't: no ability.",
+    "status": "validated",
+    "source": "claude · 2026-10-17"
   }
 ]

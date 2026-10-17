@@ -1340,6 +1340,10 @@ def _bank_checkpoint_items(root, stem: str, cid: str, data_dir, today: str, used
     # from whichever field exists, and a math item is graded by the bank's own
     # grader (checkpoint_answer), never by the language normalizer.
     items = [it for it in items if "sentence" in it or "problem" in it]
+    # order/transform (ENCARREC-LANG-L2-BANC) are practised in Go and Review only:
+    # the level test's question has no slot for a word list or an instruction
+    # (a transform would read "Complete the sentence: She plays tennis.").
+    items = [it for it in items if it.get("type") not in ("order", "transform")]
     if not items:
         return []
     prog = bank_mod._load_progress(data_dir).get(cid, {})
