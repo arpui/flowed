@@ -882,7 +882,10 @@
     ],
     "context": "",
     "answer": "We visited my grandmother last weekend.",
-    "also_accept": [],
+    "also_accept": [
+      "Last weekend we visited my grandmother.",
+      "Last weekend, we visited my grandmother."
+    ],
     "options": [],
     "why": "A finished time in the past: visited (-ed), last weekend.",
     "status": "validated",
@@ -993,7 +996,10 @@
     ],
     "context": "",
     "answer": "I went to bed early yesterday.",
-    "also_accept": [],
+    "also_accept": [
+      "Yesterday I went to bed early.",
+      "Yesterday, I went to bed early."
+    ],
     "options": [],
     "why": "went is the irregular past of go.",
     "status": "validated",
@@ -1029,7 +1035,10 @@
     ],
     "context": "",
     "answer": "They bought a new car in May.",
-    "also_accept": [],
+    "also_accept": [
+      "In May they bought a new car.",
+      "In May, they bought a new car."
+    ],
     "options": [],
     "why": "bought is the irregular past of buy.",
     "status": "validated",

@@ -910,7 +910,10 @@
     ],
     "context": "",
     "answer": "She is reading a book now.",
-    "also_accept": [],
+    "also_accept": [
+      "Now she is reading a book.",
+      "Now, she is reading a book."
+    ],
     "options": [],
     "why": "Now, at this moment: am/is/are + -ing.",
     "status": "validated",

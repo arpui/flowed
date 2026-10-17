@@ -603,7 +603,10 @@
     ],
     "context": "",
     "answer": "We are going to move next year.",
-    "also_accept": [],
+    "also_accept": [
+      "Next year we are going to move.",
+      "Next year, we are going to move."
+    ],
     "options": [],
     "why": "going to: a plan that is already decided.",
     "status": "validated",
@@ -639,7 +642,10 @@
     ],
     "context": "",
     "answer": "It will be sunny tomorrow.",
-    "also_accept": [],
+    "also_accept": [
+      "Tomorrow it will be sunny.",
+      "Tomorrow, it will be sunny."
+    ],
     "options": [],
     "why": "will: a prediction, with no plan.",
     "status": "validated",
