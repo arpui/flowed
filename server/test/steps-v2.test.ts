@@ -2,16 +2,17 @@
 // Run with:
 //   node --experimental-strip-types server/test/steps-v2.test.ts
 //
-// The state machine (advance / retry / reveal-after-2) is pure; the grading
+// The state machine (advance / retry / reveal-after-3) is pure; the grading
 // itself is hooks/bank.py's (pinned in tests/test_bank_steps_v2.py). What is
 // pinned here: the transitions, the bounded retry, the note texts NOT looking
 // like graded feedback (no Score marker, no correction arrow — the prose
 // persistence fallback must stay asleep mid-exchange), the v2 card, the v2
 // feedback lead, and the agent.ts wiring.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import {
   stepsV2Init, stepsV2Handle, stepsV2Note, stepsV2Resume, stepsV2CardTail,
+  diagnoseStepLine, stepShape, stepTemplateLine,
   STEPS_V2_MAX_ATTEMPTS, type StepsV2State,
 } from "../src/steps.ts";
 import { bankExerciseCard, bankFeedback, type BankGrade, type BankItem } from "../src/bank.ts";
@@ -53,13 +54,17 @@ check("the retried step keeps its first wrong line", mv.result.first_wrong === "
 
 mv = stepsV2Handle(item, st, "near", "93 × 5 = 456");
 check("a near slip retries too (never advances a wrong value)", mv.kind === "retry" && mv.result.near === undefined, mv);
+check("the retry move carries the near flag for the note", mv.near === true, mv);
 mv = stepsV2Handle(item, st, "wrong", "93 × 9");
-check("second failure REVEALS and moves on", mv.kind === "reveal" && mv.done && st.stepIdx === 3, mv);
-check("reveal marks the step failed, attempts=2", mv.result.ok === false && mv.result.revealed === true && mv.result.attempts === 2, mv.result);
+check("second failure RETRIES again (three attempts per step)", mv.kind === "retry" && !mv.done && st.stepIdx === 2 && st.attempts === 2, mv);
+check("the second retry is not a near slip", mv.near === false, mv);
+mv = stepsV2Handle(item, st, "wrong", "93 × 8");
+check("third failure REVEALS and moves on", mv.kind === "reveal" && mv.done && st.stepIdx === 3, mv);
+check("reveal marks the step failed, attempts=3", mv.result.ok === false && mv.result.revealed === true && mv.result.attempts === 3, mv.result);
 check("reveal keeps the FIRST wrong line and its near flag",
   mv.result.first_wrong === "93 × 5 = 456" && mv.result.near === true, mv.result);
 check("the trace is complete after the last step", mv.done === true);
-check(STEPS_V2_MAX_ATTEMPTS === 2 ? "two attempts per step, then reveal" : "retry budget moved", STEPS_V2_MAX_ATTEMPTS === 2);
+check("the budget is three attempts", STEPS_V2_MAX_ATTEMPTS === 3, STEPS_V2_MAX_ATTEMPTS);
 
 // ---- the notes: never look like graded feedback -----------------------------
 st = stepsV2Init();
@@ -69,7 +74,10 @@ check("advance note names the step progress", adv.includes("Pas 1 de 3 correcte"
 check("advance note restates the problem", adv.includes("**Problema:** 93 × 25"), adv);
 mv = stepsV2Handle(item, st, "wrong", "banana");
 const rty = stepsV2Note(item, mv);
-check("retry note re-asks the pending step (now step 2)", rty.includes("pas 2 de 3") && rty.includes("torna-ho a provar"), rty);
+check("retry note re-asks the pending step (now step 2)", rty.includes("**Pas 2 de 3**") && rty.includes("Torna-ho a provar."), rty);
+check("first slip note shows the template (Escriu-ho així)", rty.includes("Escriu-ho així: `▢ × ▢`"), rty);
+check("first slip note restates the problem", rty.includes("**Problema:** 93 × 25"), rty);
+check("a correct line shows no hint", !adv.includes("Escriu-ho així") && !adv.includes("Et poso"), adv);
 for (const [name, note] of [["advance", adv], ["retry", rty]] as const) {
   check(`${name} note has NO Score marker (persistence fallback stays asleep)`, !/\*\*Score:\s*\d+\/10\*\*/.test(note), note);
   check(`${name} note has no correction arrow`, !/→\s*\*\*"/.test(note), note);
@@ -77,8 +85,10 @@ for (const [name, note] of [["advance", adv], ["retry", rty]] as const) {
 }
 st = stepsV2Init();
 stepsV2Handle(item, st, "wrong", "x");
-mv = stepsV2Handle(item, st, "wrong", "y");
+stepsV2Handle(item, st, "wrong", "y");
+mv = stepsV2Handle(item, st, "wrong", "z");
 const rev = stepsV2Note(item, mv);
+check("third failure reveals the step (note kind)", mv.kind === "reveal", mv.kind);
 check("reveal shows the expected line", rev.includes("`93 × 20 = 1860`") && rev.includes("Pas 2 de 3"), rev);
 check("reveal note has no Score marker", !/\*\*Score:\s*\d+\/10\*\*/.test(rev), rev);
 check("resume re-asks the pending step", stepsV2Resume(item, st).includes("pas 2 de 3"), stepsV2Resume(item, st));
@@ -104,6 +114,140 @@ check("retry note repeats the goal", stepsV2Note(gItem, gry).includes("Multiplic
 check("resume carries the goal", stepsV2Resume(gItem, gs).includes("Multiplica per les unitats"), stepsV2Resume(gItem, gs));
 const g1 = bankExerciseCard(gItem, 4, "Easy", "Multiplicacions");
 check("v1 card lists the goals", g1.includes("**Passos:**") && g1.includes("3. Suma els dos productes"), g1);
+
+// ---- the diagnosis, the template, the three-attempt notes ---------------------
+const bankSteps = (m: string): BankItem[] => {
+  const dir = new URL(`../../curriculum/bank/${m}/steps/`, import.meta.url);
+  return readdirSync(dir).filter((f) => f.endsWith(".json")).sort()
+    .flatMap((f) => JSON.parse(readFileSync(new URL(f, dir), "utf8")) as BankItem[]);
+};
+const bank = [...bankSteps("math-m4"), ...bankSteps("math-m5"), ...bankSteps("math-m7")];
+const byId = (id: string): BankItem => {
+  const it = bank.find((x) => x.id === id);
+  if (!it) throw new Error(`no bank item ${id}`);
+  return it;
+};
+const stepOf = (it: BankItem, n: number) => it.steps!.find((s) => s.n === n)!;
+const grp = byId("m7.props_grouping.001"); // 2 × 20 × 5, grouping
+const dis = byId("m5.distributive.001");   // 8 × (10 + 2)
+const cfc = byId("m7.props_factor.001");   // 8 × 3 + 8 × 2
+const mul = byId("m4.mult_2digit.031");    // 93 × 25
+const frc = byId("m4.frac_add_unlike.032"); // 1/3 + 10/12 = 1 1/6
+
+// the rules, in order, on real items
+check("rule 6: the learner wrote 2x20 → the problem's numbers",
+  diagnoseStepLine(grp, stepOf(grp, 1), "2x20") === "Fes servir els nombres del problema: 2, 20 i 5.",
+  diagnoseStepLine(grp, stepOf(grp, 1), "2x20"));
+check("rule 5 (grouping): the spec's exact sentence for (2 × 20) × 5",
+  diagnoseStepLine(grp, stepOf(grp, 1), "(2 × 20) × 5") ===
+    "Has agrupat el 2 i el 20. Busca els dos nombres que junts fan un resultat **rodó** (10, 100…).",
+  diagnoseStepLine(grp, stepOf(grp, 1), "(2 × 20) × 5"));
+check("rule 4: the same numbers without the parentheses",
+  diagnoseStepLine(grp, stepOf(grp, 1), "2 × 5 × 20") === "Hi falten els **parèntesis**: marca quins nombres van junts.",
+  diagnoseStepLine(grp, stepOf(grp, 1), "2 × 5 × 20"));
+check("rule 1: only the result, where the step is an operation",
+  diagnoseStepLine(grp, stepOf(grp, 1), "200") === "Aquí no cal el resultat: escriu l'**operació** del pas.");
+check("rule 3: the next step's line comes first",
+  (diagnoseStepLine(grp, stepOf(grp, 1), "10 × 20") ?? "").startsWith(
+    "Això és el pas següent. Primer: Propietat associativa i commutativa: agrupa"),
+  diagnoseStepLine(grp, stepOf(grp, 1), "10 × 20"));
+check("rule 3 on the distributive item (80 + 16 is step 2)",
+  (diagnoseStepLine(dis, stepOf(dis, 1), "80 + 16") ?? "").startsWith("Això és el pas següent. Primer: Propietat distributiva"));
+check("rule 2: the final answer before the last step names the goal (abbreviated)",
+  diagnoseStepLine(frc, stepOf(frc, 2), "1 1/6") === "Has saltat passos: primer suma els numeradors.",
+  diagnoseStepLine(frc, stepOf(frc, 2), "1 1/6"));
+check("rule 5b (distributive): the problem's numbers copied, not distributed",
+  diagnoseStepLine(dis, stepOf(dis, 1), "8 × (10 + 2)") === "Multiplica el de fora per **cada** nombre del parèntesi.",
+  diagnoseStepLine(dis, stepOf(dis, 1), "8 × (10 + 2)"));
+check("rule 5b (common factor): the problem's numbers copied, not factored",
+  diagnoseStepLine(cfc, stepOf(cfc, 1), "8 × 3 + 8 × 2") === "Treu fora el nombre que es repeteix.",
+  diagnoseStepLine(cfc, stepOf(cfc, 1), "8 × 3 + 8 × 2"));
+check("rule 7: no rule applies, the template sentence",
+  diagnoseStepLine(mul, stepOf(mul, 1), "93 × 25") === "Mira el motlle i omple'l amb els nombres del problema.");
+check("rule 6 with the step's own numbers, when they are not the problem's",
+  diagnoseStepLine(mul, stepOf(mul, 2), "93 × 6") === "Fes servir els nombres d'aquest pas: 93 i 5.",
+  diagnoseStepLine(mul, stepOf(mul, 2), "93 × 6"));
+check("a final bare-number step never names its result in a hint",
+  diagnoseStepLine(grp, stepOf(grp, 3), "201") === "Fes servir els nombres d'aquest pas: 10 i 20.",
+  diagnoseStepLine(grp, stepOf(grp, 3), "201"));
+check("an empty line has no diagnosis", diagnoseStepLine(grp, stepOf(grp, 1), "   ") === null);
+
+// the template
+check("stepShape: every number becomes ▢, parentheses spaced",
+  stepShape("(2 × 5) × 20") === "( ▢ × ▢ ) × ▢", stepShape("(2 × 5) × 20"));
+check("stepShape reveal=1 keeps the first number (spec example)",
+  stepShape("(2 × 5) × 20", 1) === "( 2 × ▢ ) × ▢", stepShape("(2 × 5) × 20", 1));
+check("stepShape handles mixed numbers and fractions", stepShape("1 1/6") === "▢ ▢/▢", stepShape("1 1/6"));
+check("the template of a bare final step shows the previous operation",
+  stepTemplateLine(grp, stepOf(grp, 3)) === "Calcula: `10 × 20 = ▢`", stepTemplateLine(grp, stepOf(grp, 3)));
+
+// the notes, attempt by attempt (spec §5)
+let hs = stepsV2Init();
+let hm = stepsV2Handle(grp, hs, "wrong", "2x20");
+const first = stepsV2Note(grp, hm);
+check("1st error: diagnosis first (❌)", first.startsWith("❌ Fes servir els nombres del problema: 2, 20 i 5."), first);
+check("1st error: the problem, the step and the template (spec §5 shape)",
+  first.includes("**Problema:** 2 × 20 × 5\n**Pas 1 de 3** — Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis).") &&
+  first.includes("Escriu-ho així: `( ▢ × ▢ ) × ▢`") && first.endsWith("Torna-ho a provar."), first);
+hm = stepsV2Handle(grp, hs, "wrong", "(2 × 20) × 5");
+const second = stepsV2Note(grp, hm);
+check("2nd error: the new diagnosis and the template with its first number",
+  second.startsWith("❌ Has agrupat el 2 i el 20.") && second.includes("Et poso el primer nombre: `( 2 × ▢ ) × ▢`") &&
+  second.endsWith("Torna-ho a provar."), second);
+check("2nd error: no Escriu-ho així (that is the 1st error's line)", !second.includes("Escriu-ho així"), second);
+hm = stepsV2Handle(grp, hs, "wrong", "2 × 5 × 20");
+const third = stepsV2Note(grp, hm);
+check("3rd error: the step is revealed (❌ El pas 1 de 3 és …)", hm.kind === "reveal" &&
+  third.startsWith("❌ El pas 1 de 3 és: `(2 × 5) × 20 = 200`."), third);
+for (const [name, note] of [["1st", first], ["2nd", second], ["reveal", third]] as const) {
+  check(`${name} note has NO Score marker (persistence fallback stays asleep)`, !/\*\*Score:\s*\d+\/10\*\*/.test(note), note);
+}
+// a line with no rule: the first slip gets the template sentence, the second
+// (no specific diagnosis) gets the plain "not this step" line
+hs = stepsV2Init();
+stepsV2Handle(mul, hs, "wrong", "93 × 25");
+const plain1 = stepsV2Note(mul, stepsV2Handle(mul, hs, "wrong", "93 × 25"));
+check("no-rule 2nd error keeps the plain line, with the template number shown",
+  plain1.startsWith("❌ Aquesta línia no és el pas 1 de 3.") && plain1.includes("Et poso el primer nombre: `93 × ▢`"), plain1);
+// a near slip: the near lead stays, the template is added, no diagnosis
+hs = stepsV2Init();
+const nearNote = stepsV2Note(mul, stepsV2Handle(mul, hs, "near", "93 × 20 = 1870"));
+check("near slip: 🟡 lead, template, no ❌ diagnosis",
+  nearNote.startsWith("🟡 Gairebé, pas 1 de 3: el resultat és a un dígit del que toca.") &&
+  nearNote.includes("Escriu-ho així: `▢ × ▢`") && !nearNote.includes("❌"), nearNote);
+
+// every bank steps item: stepShape / diagnosis / template do not break and
+// the template carries as many blanks as the step has numbers
+const sweepFails: string[] = [];
+let swept = 0;
+for (const it of bank) {
+  for (const s of it.steps ?? []) {
+    swept += 1;
+    const where = `${it.id} step ${s.n}`;
+    const nums = (s.expect.split("=")[0]!.match(/\d+(?:[.,]\d+)?/g) ?? []).length;
+    const blanks0 = (stepShape(s.expect).match(/▢/g) ?? []).length;
+    const blanks1 = (stepShape(s.expect, 1).match(/▢/g) ?? []).length;
+    const bare = /^\d+$/.test(s.expect.trim());
+    if (!bare && blanks0 !== nums) sweepFails.push(`${where}: blanks ${blanks0} ≠ numbers ${nums} (${s.expect})`);
+    if (!bare && blanks1 !== Math.max(0, nums - 1)) sweepFails.push(`${where}: reveal=1 blanks ${blanks1} (${s.expect})`);
+    for (const line of [s.expect, "banana", "1", "0 + 0"]) {
+      try {
+        const d = diagnoseStepLine(it, s, line);
+        if (typeof d !== "string" || d.length === 0) sweepFails.push(`${where}: no diagnosis for "${line}"`);
+      } catch (e) {
+        sweepFails.push(`${where}: diagnose("${line}") threw ${String(e)}`);
+      }
+    }
+    try {
+      const tpl = stepTemplateLine(it, s, 0);
+      if (!tpl.includes("▢")) sweepFails.push(`${where}: template without ▢ (${tpl})`);
+    } catch (e) {
+      sweepFails.push(`${where}: template threw ${String(e)}`);
+    }
+  }
+}
+check(`every bank steps item (m4, m5, m7): shape, diagnosis and template hold (${swept} steps)`,
+  sweepFails.length === 0 && swept >= 90, sweepFails.slice(0, 5));
 
 // ---- the final feedback (v2 shape) ------------------------------------------
 const gNear: BankGrade = {
