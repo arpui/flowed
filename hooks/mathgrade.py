@@ -134,6 +134,10 @@ def _normalize(text) -> str:
     if text is None:
         return ""
     s = str(text).strip().translate(_OPS)
+    # Children type "2x20" / "(2x5)x20" for a product (2026-10-17, Albert). Only between a
+    # number (or a closing parenthesis) and a number: parse_expr has no letters, and the
+    # algebraic path (parse_poly) does not come through here.
+    s = re.sub(r"(?<=[\d)])\s*[xX]\s*(?=\d)", "*", s)
     s = s.replace("^", "**")  # "^" is BitXor in Python's AST; we mean power
     s = re.sub(r"(?<=\d),(?=\d)", ".", s)  # decimal comma
     if _THOUSANDS.search(s):

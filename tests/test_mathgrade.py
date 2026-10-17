@@ -442,3 +442,18 @@ class TestCLI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TimesAsLetterX(unittest.TestCase):
+    """2026-10-17 (Albert): children type x for a product; "(2x5)x20" is step 1 of 2 × 20 × 5."""
+
+    def test_x_between_numbers_is_a_product(self):
+        self.assertEqual(mg.parse_expr("2x20").value, 40)
+        self.assertEqual(mg.parse_expr("(2x5)x20").value, 200)
+        self.assertEqual(mg.parse_expr("3 X 4").value, 12)
+        self.assertEqual(mg.grade_step("(2 × 5) × 20", "(2x5)x20")["verdict"], "correct")
+
+    def test_algebra_keeps_its_x(self):
+        self.assertEqual(mg.grade_algebraic("5x + 5", "5 + 5x")["verdict"], "correct")
+        with self.assertRaises(mg.ParseError):
+            mg.parse_expr("x + 2")
