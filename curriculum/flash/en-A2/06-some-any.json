@@ -1,0 +1,25 @@
+{
+  "id": "en-A2.flash.some-any",
+  "level": "A2",
+  "kind": "drill",
+  "competence": "a2.countable_uncountable",
+  "title": { "ca": "Some o any", "es": "Some o any", "en": "Some or any" },
+  "items": [
+    { "id": "tea", "prompt": "I'd like … tea, please.", "answer": ["some"], "options": ["some", "any"] },
+    { "id": "bread", "prompt": "Is there … bread in the kitchen?", "answer": ["any"], "options": ["some", "any"] },
+    { "id": "eggs", "prompt": "There are … eggs in the fridge.", "answer": ["some"], "options": ["some", "any"] },
+    { "id": "sugar", "prompt": "We don't have … sugar.", "answer": ["any"], "options": ["some", "any"] },
+    { "id": "questions", "prompt": "Do you have … questions?", "answer": ["any"], "options": ["some", "any"] },
+    { "id": "cake", "prompt": "Would you like … cake?", "answer": ["some"], "options": ["some", "any"] },
+    { "id": "milk", "prompt": "She didn't buy … milk.", "answer": ["any"], "options": ["some", "any"] },
+    { "id": "water", "prompt": "Can I have … water, please?", "answer": ["some"], "options": ["some", "any"] },
+    { "id": "biscuits", "prompt": "Are there … biscuits left?", "answer": ["any"], "options": ["some", "any"] },
+    { "id": "chairs", "prompt": "There aren't … chairs.", "answer": ["any"], "options": ["some", "any"] },
+    { "id": "friends", "prompt": "I have … friends in London.", "answer": ["some"], "options": ["some", "any"] },
+    { "id": "money", "prompt": "Have you got … money?", "answer": ["any"], "options": ["some", "any"] },
+    { "id": "help", "prompt": "He wants … help with his homework.", "answer": ["some"], "options": ["some", "any"] },
+    { "id": "emails", "prompt": "Did they send … emails?", "answer": ["any"], "options": ["some", "any"] },
+    { "id": "apples", "prompt": "Let's buy … apples.", "answer": ["some"], "options": ["some", "any"] },
+    { "id": "brothers", "prompt": "I haven't got … brothers.", "answer": ["any"], "options": ["some", "any"] }
+  ]
+}

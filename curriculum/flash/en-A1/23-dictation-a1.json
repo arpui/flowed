@@ -1,0 +1,24 @@
+{
+  "id": "en-A1.flash.dictation-a1",
+  "level": "A1",
+  "kind": "dictation",
+  "title": { "ca": "Dictat A1", "es": "Dictado A1", "en": "Dictation A1" },
+  "items": [
+    { "id": "thursday", "say": "Thursday", "answer": ["Thursday"] },
+    { "id": "my-sister", "say": "my sister", "answer": ["my sister"] },
+    { "id": "i-am-twelve", "say": "I am twelve", "answer": ["I am twelve"] },
+    { "id": "good-morning", "say": "Good morning", "answer": ["Good morning"] },
+    { "id": "see-you-monday", "say": "See you on Monday", "answer": ["See you on Monday"] },
+    { "id": "cold-today", "say": "It is cold today", "answer": ["It is cold today"] },
+    { "id": "brother-ten", "say": "My brother is ten", "answer": ["My brother is ten"] },
+    { "id": "have-cat", "say": "I have a cat", "answer": ["I have a cat"] },
+    { "id": "thank-you", "say": "Thank you very much", "answer": ["Thank you very much"] },
+    { "id": "teacher", "say": "She is a teacher", "answer": ["She is a teacher"] },
+    { "id": "live-london", "say": "We live in London", "answer": ["We live in London"] },
+    { "id": "how-old", "say": "How old are you?", "answer": ["How old are you?"] },
+    { "id": "birthday", "say": "Happy birthday", "answer": ["Happy birthday"] },
+    { "id": "like-apples", "say": "I like apples", "answer": ["I like apples"] },
+    { "id": "help-me", "say": "Can you help me?", "answer": ["Can you help me?"] },
+    { "id": "shop-open", "say": "The shop is open", "answer": ["The shop is open"] }
+  ]
+}

@@ -33,6 +33,7 @@ import {
   generatedWords,
   genCount,
   isSimplestText,
+  langItems,
   loadFlashLists,
   mathListProblems,
   mathWords,
@@ -106,6 +107,11 @@ const badFiles = listFiles.filter((f) => {
   try {
     const raw = JSON.parse(read("curriculum", "flash", f));
     if (f.startsWith("math-")) return !raw || typeof raw !== "object" || mathListProblems(raw).length > 0;
+    // A drill or dictation list (docs/ENCARREC-LANG-L1-FLASH.md §2): every item is valid, and there are some.
+    if (raw && (raw.kind === "drill" || raw.kind === "dictation")) {
+      const { items, problems } = langItems(raw, raw.kind);
+      return items.length === 0 || problems.length > 0;
+    }
     return !raw || !Array.isArray(raw.words) || raw.words.length === 0;
   } catch {
     return true;
@@ -114,20 +120,22 @@ const badFiles = listFiles.filter((f) => {
 check("every list file is valid JSON with words", badFiles.length === 0, badFiles);
 check("one list per valid file under curriculum/flash/en-*", listsCa.length === enFiles.length - badFiles.filter((f) => f.startsWith("en-")).length, listsCa.map((l) => l.id));
 check("list ids are unique", new Set(listsCa.map((l) => l.id)).size === listsCa.length);
-check("every list is A1 and titled", listsCa.every((l) => l.level === "A1" && l.title.length > 0));
+check("every list is A1 or A2 and titled", listsCa.every((l) => /^A[12]$/.test(l.level) && l.title.length > 0));
+check("every list's level is its folder's (en-A1 → A1, en-A2 → A2)", enFiles.every((f) => JSON.parse(read("curriculum", "flash", f)).level === f.slice(3, 5)));
 check("every list has words", listsCa.every((l) => l.words.length > 0), listsCa.map((l) => l.words.length));
 for (const l of listsCa) {
   const ids = l.words.map((w) => w.id);
   check(`word ids unique in ${l.id}`, new Set(ids).size === ids.length);
   check(`every word has a target in ${l.id}`, l.words.every((w) => w.target.length > 0 && w.target.every((t) => t.length > 0)));
 }
-const bothLangs = listsCa.every((l, i) => l.words.every((w, j) => w.native.length > 0 && (listsEs[i]?.words[j]?.native.length ?? 0) > 0));
+// Translation lists only: a drill or dictation list has no native forms (its items are English).
+const bothLangs = listsCa.every((l, i) => !!l.kind || l.words.every((w, j) => w.native.length > 0 && (listsEs[i]?.words[j]?.native.length ?? 0) > 0));
 check("every word has a non-empty native form in ca and es", bothLangs);
 check("ca and es give the same words", listsCa.every((l, i) => l.words.every((w, j) => w.id === listsEs[i]?.words[j]?.id)));
 const firstCa = listsCa[0]?.words[0];
 const firstEs = listsEs[0]?.words[0];
 check("native forms are resolved to one language, not both", firstCa?.native.join() === "mare" && firstEs?.native.join() === "madre");
-check("language lists carry no math fields", listsCa.every((l) => !("kind" in l) && l.words.every((w) => !("prompt" in w))));
+check("translation lists carry no math fields; drill and dictation lists carry only their own", listsCa.every((l) => (l.kind === undefined ? l.words.every((w) => !("prompt" in w) && !("say" in w)) : l.kind === "drill" || l.kind === "dictation")));
 
 // ---- math lists (docs/ENCARREC-FLASH-MATH.md) ---------------------------------
 console.log("math lists");
@@ -421,6 +429,89 @@ console.log("round dots and summary");
   check("known count for the summary: 0 → 1", C.listStatus(LIST, C.emptyState()).known === 0 && C.listStatus(LIST, s).known === 1);
 }
 
+// ---- drill and dictation (docs/ENCARREC-LANG-L1-FLASH.md §2, §5) ---------------
+console.log("language drill and dictation");
+{
+  const d = (a: string, accepted: string[]) => C.checkDrill(a, accepted).ok;
+  const dict = (a: string, accepted: string[]) => C.checkDictation(a, accepted).ok;
+  check("drill: case, spaces and final punctuation do not count", d("  WENT ", ["went"]) && d("Went.", ["went"]) && d("went!", ["went"]));
+  check("drill: the curly apostrophe is the straight one (don’t = don't)", d("don’t", ["don't"]) && d("don't", ["don’t"]));
+  check("drill: no article taken off (the form practised is the exact one)", !d("the apple", ["apple"]) && !d("apple", ["an apple"]) && !d("eat", ["to eat"]) && d("to eat", ["to eat"]));
+  check("drill: a and an are different answers", d("an", ["an"]) && !d("a", ["an"]) && !d("an", ["a"]));
+  check("drill: accents are not folded (cafe is not café)", !d("cafe", ["café"]) && d("café", ["café"]));
+  check("drill: an alternative accepted form counts and is named", C.checkDrill("travelling", ["travelling", "traveling"]).form === "travelling" && d("traveling", ["travelling", "traveling"]));
+  check("drill: a wrong form is not ok, an empty one is not ok", !d("wnt", ["went"]) && !d("", ["went"]) && !d("   ", ["went"]));
+  check("dictation: punctuation and capitals are ignored", dict("i am twelve!", ["I am twelve"]) && dict("See you on Monday.", ["See you on Monday"]) && dict("how old are you", ["How old are you?"]));
+  check("dictation: a hyphen is a space (twenty-one = twenty one)", dict("twenty one", ["twenty-one"]) && dict("twenty-one", ["twenty one"]));
+  check("dictation: a wrong word, or a missing one, is not ok", !dict("I am eleven", ["I am twelve"]) && !dict("I am", ["I am twelve"]));
+  check("dictation: accents still count (cafe is not Café)", !dict("cafe", ["Café"]) && dict("CAFÉ.", ["Café"]));
+  check("dictation: the apostrophe is kept (Im is not I'm)", !dict("Im going", ["I'm going"]) && dict("I’m going.", ["I'm going"]));
+  check("hintFor drill: first letter and dashes, no article stripped", C.hintFor("drill", "went", null, null) === "w _ _ _" && C.hintFor("drill", "an", null, null) === "a _");
+  check("hintFor dictation: first letter and dashes, words separated by /", C.hintFor("dictation", "Thursday", null, null) === "t _ _ _ _ _ _ _" && C.hintFor("dictation", "my sister", null, null).includes(" / "));
+  check("choice of a drill: the picked button must be the answer", C.checkChoice("a", ["an"]).ok === false && C.checkChoice("an", ["an"]).ok === true);
+
+  // Validation: a bad item is dropped (as math does), the good ones stay, ids are unique.
+  const bad = {
+    kind: "drill",
+    items: [
+      { id: "ok", prompt: "go → past", answer: ["went"] },
+      { id: "ok", prompt: "go → past again", answer: ["went"] },
+      { id: "", prompt: "x", answer: ["x"] },
+      { id: "noans", prompt: "x", answer: [] },
+      { id: "noprompt", answer: ["x"] },
+      { id: "fewopts", prompt: "… apple", answer: ["an"], options: ["an"] },
+      { id: "notinopts", prompt: "… apple", answer: ["the"], options: ["a", "an"] },
+      { id: "okchoice", prompt: "… apple", answer: ["an"], options: ["a", "an"] },
+    ],
+  };
+  const lb = langItems(bad, "drill");
+  check("items: keeps the valid ones, drops the bad ones and a repeated id", lb.items.map((i) => i.id).join() === "ok,okchoice" && lb.problems.length === 6, lb.problems);
+  check("items: a drill keeps its prompt and options; a dictation keeps its say", lb.items[1]?.options?.join() === "a,an" && lb.items[0]?.prompt === "go → past");
+  const badDict = { kind: "dictation", items: [{ id: "a", say: "Hello", answer: ["Hello"] }, { id: "b", say: "Bye", answer: ["Bye"], options: ["Bye", "Hi"] }, { id: "c", answer: ["x"] }] };
+  check("items: a dictation without options; one with options or without say is dropped", langItems(badDict, "dictation").items.map((i) => i.id).join() === "a");
+
+  const langDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-lang-"));
+  try {
+    const dir = path.join(langDir, "curriculum", "flash", "en-Z1");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "01-drill.json"), JSON.stringify({ id: "en-Z1.flash.drill", level: "Z1", title: { ca: "Drill", es: "Drill", en: "Drill" }, ...bad }));
+    fs.writeFileSync(path.join(dir, "02-dict.json"), JSON.stringify({ id: "en-Z1.flash.dict", level: "Z1", kind: "dictation", title: { ca: "Dict", es: "Dict", en: "Dict" }, items: badDict.items }));
+    fs.writeFileSync(path.join(dir, "03-mixed.json"), JSON.stringify({ id: "en-Z1.flash.mixed", level: "Z1", kind: "drill", generate: { kind: "op" }, items: bad.items }));
+    const got = loadFlashLists(langDir, "curriculum/flash/en-*", "ca");
+    const drill = got.find((l) => l.id === "en-Z1.flash.drill") as any;
+    const dict2 = got.find((l) => l.id === "en-Z1.flash.dict") as any;
+    check("a drill list loads with kind drill, its valid items, and no native forms", drill?.kind === "drill" && drill.words.length === 2 && drill.words[1].options?.join() === "a,an" && drill.words[0].prompt === "go → past" && drill.words[0].native.length === 0, drill);
+    check("a dictation list loads with kind dictation and the say of each item", dict2?.kind === "dictation" && dict2.words.length === 1 && dict2.words[0].say === "Hello" && dict2.words[0].prompt === undefined, dict2);
+    check("a drill with generate too is read as a drill (kind wins, no skip by the math rule)", got.some((l) => l.id === "en-Z1.flash.mixed" && l.kind === "drill" && l.words.length === 2));
+  } finally {
+    fs.rmSync(langDir, { recursive: true, force: true });
+  }
+
+  // The shipped lists: every drill and dictation item is valid, A1 and A2 each have their lists.
+  const shipped = listsCa.filter((l) => l.kind === "drill" || l.kind === "dictation");
+  check("shipped drill and dictation lists: 11 lists (A1 4, A2 7), each with items", shipped.length === 11 && shipped.every((l) => l.words.length >= 12 && l.words.length <= 20 || l.kind === "dictation" && l.words.length >= 10), shipped.map((l) => `${l.id}:${l.words.length}`));
+  check("shipped: 4 new A1 lists (20…23) and 7 A2 lists (01…07), by level", listsCa.filter((l) => l.level === "A1" && l.kind).length === 4 && listsCa.filter((l) => l.level === "A2" && l.kind).length === 7);
+  check("shipped: A1 has 16 lists in all (12 translation + 4), A2 has 7", listsCa.filter((l) => l.level === "A1").length === 16 && listsCa.filter((l) => l.level === "A2").length === 7);
+
+  // The level of an A2 learner: only the A2 lists.
+  const a2Dir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-a2-"));
+  try {
+    fs.writeFileSync(path.join(a2Dir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "English", current_level: "A2" } }));
+    const a2 = flashListsResponse(root, a2Dir) as any;
+    check("an A2 learner sees only the A2 lists (the A1 ones are not theirs)", a2.level === "A2" && a2.lists.length === 7 && a2.lists.every((l: List) => l.level === "A2"), a2.lists.map((l: List) => l.id));
+    check("the A2 drill lists come with their kind and items", a2.lists.filter((l: List) => l.kind === "drill").length === 6 && a2.lists.filter((l: List) => l.kind === "dictation").length === 1);
+  } finally {
+    fs.rmSync(a2Dir, { recursive: true, force: true });
+  }
+
+  // The client: the drill and the dictation wiring, and the voice rules (docs/ENCARREC-LANG-L1-FLASH.md §2).
+  const fjs = read("web", "flash.js");
+  check("flash.js: a dictation reads its sentence through /api/math/say, at most three times a card", fjs.includes("${API}/math/say?") && /SAY_MAX = 3/.test(fjs) && fjs.includes("card.plays >= SAY_MAX"));
+  check("flash.js: the voice state comes from /api/math/tts-state; a dictation with no voice is off, with the note", fjs.includes('api("/math/tts-state")') && fjs.includes("Cal la veu activada") && fjs.includes("usable(l)") && fjs.includes("usable(list)"));
+  check("flash.js: the direction selector stays out when every list is drill or dictation", fjs.includes("const spoken = lists.length > 0 && lists.every(isLangDrill)") && fjs.includes("${math || spoken ? \"\" :"));
+  check("flash.js: a drill answer goes to checkDrill, a dictation to checkDictation", fjs.includes("C.checkDrill(text, card.accepted)") && fjs.includes("C.checkDictation(text, card.accepted)"));
+}
+
 // ---- manifest and profile --------------------------------------------------
 console.log("manifest and profile");
 const manifest = JSON.parse(read("config", "domain.json"));
@@ -442,16 +533,17 @@ try {
   writeProfile({ native_language: "Catalan", target_language: "English", current_level: "A1" });
   const ca = flashListsResponse(root, dataDir) as any;
   check("language profile: enabled, ca, English, A1", ca.ok === true && ca.enabled === true && ca.nativeCode === "ca" && ca.target === "English" && ca.level === "A1" && ca.native === "Catalan");
-  check("language profile: all the lists", Array.isArray(ca.lists) && ca.lists.length === listsCa.length);
+  const a1Lists = listsCa.filter((l) => l.level === "A1");
+  check("language profile: all the lists of its level (A1), not the A2 ones", Array.isArray(ca.lists) && ca.lists.length === a1Lists.length && a1Lists.length > 0);
   const mother = ca.lists[0].words.find((w: Word) => w.id === "mother");
   check("words carry only the native forms of the learner", mother && JSON.stringify(mother.native) === '["mare"]' && JSON.stringify(mother.target) === '["mother","mum","mom"]', mother);
-  check("lists are ordered by level, then file name", ca.lists.map((l: List) => l.id).join() === listsCa.map((l) => l.id).join() && ca.lists[0]?.id === "en-A1.flash.family", ca.lists.map((l: List) => l.id));
+  check("lists are ordered by level, then file name", ca.lists.map((l: List) => l.id).join() === a1Lists.map((l) => l.id).join() && ca.lists[0]?.id === "en-A1.flash.family", ca.lists.map((l: List) => l.id));
 
   writeProfile({ native_language: "castellano", target_language: "English", current_level: "A1" });
   const es = flashListsResponse(root, dataDir) as any;
   check("castellano profile: nativeCode es, madre", es.nativeCode === "es" && es.lists[0].words.find((w: Word) => w.id === "mother").native.join() === "madre");
 
-  check("language profile: no math lists", ca.lists.every((l: List & { kind?: string }) => l.kind === undefined && !l.id.startsWith("math-")));
+  check("language profile: no math lists", ca.lists.every((l: List & { kind?: string }) => l.kind !== "math" && !l.id.startsWith("math-")));
 
   writeProfile({ native_language: "Catalan", target_language: "English", current_level: "m5" });
   const math = flashListsResponse(root, dataDir) as any;

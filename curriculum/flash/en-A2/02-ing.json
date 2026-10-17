@@ -1,0 +1,25 @@
+{
+  "id": "en-A2.flash.ing",
+  "level": "A2",
+  "kind": "drill",
+  "competence": "a2.infinitive_gerund",
+  "title": { "ca": "Forma -ing", "es": "Forma -ing", "en": "The -ing form" },
+  "items": [
+    { "id": "run", "prompt": "run → -ing", "answer": ["running"] },
+    { "id": "make", "prompt": "make → -ing", "answer": ["making"] },
+    { "id": "swim", "prompt": "swim → -ing", "answer": ["swimming"] },
+    { "id": "lie", "prompt": "lie → -ing", "answer": ["lying"] },
+    { "id": "write", "prompt": "write → -ing", "answer": ["writing"] },
+    { "id": "stop", "prompt": "stop → -ing", "answer": ["stopping"] },
+    { "id": "sit", "prompt": "sit → -ing", "answer": ["sitting"] },
+    { "id": "die", "prompt": "die → -ing", "answer": ["dying"] },
+    { "id": "get", "prompt": "get → -ing", "answer": ["getting"] },
+    { "id": "begin", "prompt": "begin → -ing", "answer": ["beginning"] },
+    { "id": "play", "prompt": "play → -ing", "answer": ["playing"] },
+    { "id": "see", "prompt": "see → -ing", "answer": ["seeing"] },
+    { "id": "travel", "prompt": "travel → -ing", "answer": ["travelling", "traveling"] },
+    { "id": "put", "prompt": "put → -ing", "answer": ["putting"] },
+    { "id": "cook", "prompt": "cook → -ing", "answer": ["cooking"] },
+    { "id": "dance", "prompt": "dance → -ing", "answer": ["dancing"] }
+  ]
+}

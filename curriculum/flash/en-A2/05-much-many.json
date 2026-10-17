@@ -1,0 +1,25 @@
+{
+  "id": "en-A2.flash.much-many",
+  "level": "A2",
+  "kind": "drill",
+  "competence": "a2.countable_uncountable",
+  "title": { "ca": "Much o many", "es": "Much o many", "en": "Much or many" },
+  "items": [
+    { "id": "milk", "prompt": "There isn't … milk.", "answer": ["much"], "options": ["much", "many"] },
+    { "id": "friends", "prompt": "How … friends have you got?", "answer": ["many"], "options": ["much", "many"] },
+    { "id": "money", "prompt": "I don't have … money.", "answer": ["much"], "options": ["much", "many"] },
+    { "id": "apples", "prompt": "There are … apples in the box.", "answer": ["many"], "options": ["much", "many"] },
+    { "id": "sugar", "prompt": "How … sugar do you want?", "answer": ["much"], "options": ["much", "many"] },
+    { "id": "homework", "prompt": "She doesn't have … homework.", "answer": ["much"], "options": ["much", "many"] },
+    { "id": "cousins", "prompt": "They don't have … cousins.", "answer": ["many"], "options": ["much", "many"] },
+    { "id": "time", "prompt": "Do you have … time?", "answer": ["much"], "options": ["much", "many"] },
+    { "id": "bread", "prompt": "We didn't eat … bread.", "answer": ["much"], "options": ["much", "many"] },
+    { "id": "brothers", "prompt": "How … brothers do you have?", "answer": ["many"], "options": ["much", "many"] },
+    { "id": "chairs", "prompt": "There aren't … chairs in the room.", "answer": ["many"], "options": ["much", "many"] },
+    { "id": "photos", "prompt": "I didn't take … photos.", "answer": ["many"], "options": ["much", "many"] },
+    { "id": "water", "prompt": "How … water is there in the bottle?", "answer": ["much"], "options": ["much", "many"] },
+    { "id": "people", "prompt": "There are not … people here.", "answer": ["many"], "options": ["much", "many"] },
+    { "id": "traffic", "prompt": "Is there … traffic today?", "answer": ["much"], "options": ["much", "many"] },
+    { "id": "eggs", "prompt": "How … eggs do we need?", "answer": ["many"], "options": ["much", "many"] }
+  ]
+}

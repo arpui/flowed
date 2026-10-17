@@ -1,0 +1,27 @@
+{
+  "id": "en-A2.flash.comparatives",
+  "level": "A2",
+  "kind": "drill",
+  "competence": "a2.comparatives_superlatives",
+  "title": { "ca": "Comparatius", "es": "Comparativos", "en": "Comparatives" },
+  "items": [
+    { "id": "big", "prompt": "big → comparative", "answer": ["bigger"] },
+    { "id": "good", "prompt": "good → comparative", "answer": ["better"] },
+    { "id": "beautiful", "prompt": "beautiful → comparative", "answer": ["more beautiful"] },
+    { "id": "happy", "prompt": "happy → comparative", "answer": ["happier"] },
+    { "id": "bad", "prompt": "bad → comparative", "answer": ["worse"] },
+    { "id": "small", "prompt": "small → comparative", "answer": ["smaller"] },
+    { "id": "expensive", "prompt": "expensive → comparative", "answer": ["more expensive"] },
+    { "id": "easy", "prompt": "easy → comparative", "answer": ["easier"] },
+    { "id": "far", "prompt": "far → comparative", "answer": ["further", "farther"] },
+    { "id": "hot", "prompt": "hot → comparative", "answer": ["hotter"] },
+    { "id": "late", "prompt": "late → comparative", "answer": ["later"] },
+    { "id": "interesting", "prompt": "interesting → comparative", "answer": ["more interesting"] },
+    { "id": "tall", "prompt": "tall → comparative", "answer": ["taller"] },
+    { "id": "heavy", "prompt": "heavy → comparative", "answer": ["heavier"] },
+    { "id": "busy", "prompt": "busy → comparative", "answer": ["busier"] },
+    { "id": "funny", "prompt": "funny → comparative", "answer": ["funnier"] },
+    { "id": "important", "prompt": "important → comparative", "answer": ["more important"] },
+    { "id": "well", "prompt": "well → comparative", "answer": ["better"] }
+  ]
+}

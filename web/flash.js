@@ -93,8 +93,38 @@
     return [...s].map((c, i) => (c === " " ? "/" : i === 0 ? c : "_")).join(" ");
   }
 
+  // Drill i dictat (llistes kind "drill" / "dictation"): la forma exacta, sense treure articles ni accents.
+  // La correcció és la de normalize(); el dictat, a més, ignora la puntuació (normalizeDictation).
+  function normalizeDictation(s) {
+    return normalize(String(s ?? "").replace(/’/g, "'").replace(/[-–—]/g, " ").replace(/[^\p{L}\p{N}' ]+/gu, " "));
+  }
+
+  // Pista del 2n error de drill i dictat: primera lletra i guions, sense treure cap article.
+  function hintExact(form) {
+    return [...normalize(form)].map((c, i) => (c === " " ? "/" : i === 0 ? c : "_")).join(" ");
+  }
+
+  // Igual que check() però sense treure articles ni accents: la forma exacta és la que es practica.
+  function checkText(answer, accepted, norm) {
+    const a = norm(answer);
+    if (!a) return { ok: false, exact: false, form: null };
+    for (const raw of accepted) {
+      if (a === norm(raw)) return { ok: true, exact: true, form: raw };
+    }
+    return { ok: false, exact: false, form: null };
+  }
+
+  function checkDrill(answer, accepted) {
+    return checkText(answer, accepted, normalize);
+  }
+
+  function checkDictation(answer, accepted) {
+    return checkText(answer, accepted, normalizeDictation);
+  }
+
   // Pista segons el tipus: fracció → el denominador (?/8); choice → cap (ja hi ha l'opció desactivada).
   function hintFor(kind, target, lang, mode) {
+    if (kind === "drill" || kind === "dictation") return hintExact(target);
     if (kind === "fraction") {
       const m = /\/(\d+)$/.exec(String(target));
       return m ? `?/${m[1]}` : "?";
@@ -1045,6 +1075,10 @@
     addReturn,
     roundLabel,
     checkNumber,
+    checkDrill,
+    checkDictation,
+    normalizeDictation,
+    hintExact,
     parseFraction,
     isSimplest,
     checkFraction,
@@ -1090,6 +1124,11 @@
   // Llistes de math (kind "math"): operació → resultat, sense direcció ni article.
   const isMath = (l) => !!l && l.kind === "math";
   const noun = (l) => (isMath(l) ? "operació" : "paraula");
+  // Drill (escriu la forma) i dictat (escolta i escriu): sense direcció ni article (docs/ENCARREC-LANG-L1-FLASH.md §2).
+  const isLangDrill = (l) => !!l && (l.kind === "drill" || l.kind === "dictation");
+  // Un dictat sense veu activada no es pot fer: surt desactivat al menú.
+  const usable = (l) => !(l.kind === "dictation" && !ttsOn);
+  const SAY_MAX = 3; // reproduccions del dictat per targeta
   const TIMEOUT_PAUSE_MS = 2000; // temps esgotat: passa sola a la següent
   // Respostes que s'escriuen de més d'una manera: si no és la forma habitual, es mostra.
   const FORM_KINDS = ["fraction", "pair", "factorization", "algebraic", "sexagesimal"];
@@ -1107,6 +1146,9 @@
   let session = null; // rondes fetes des d'obrir Flash (per a la traça al xat)
   let advanceTimer = 0;
   let clockTimer = 0;
+  let ttsOn = false; // dictat: la veu és activada al servidor (/api/math/tts-state)
+  let ttsLang = null; // la llengua de la veu, com la diu el servidor
+  let audio = null; // la reproducció del dictat en curs
 
   // ---- persistència per visitant (tot dins try/catch) ----------------------
   function loadPrefs() {
@@ -1226,6 +1268,45 @@
     clockTimer = 0;
   }
 
+  function stopAudio() {
+    if (audio) audio.pause();
+    audio = null;
+  }
+
+  // Dictat: la frase es llegeix amb la veu del servidor (com app.js, /api/math/say). Màxim SAY_MAX per targeta.
+  function paintPlays() {
+    const b = q("#flash-say");
+    const p = q("#flash-plays");
+    if (b) b.disabled = card.plays >= SAY_MAX;
+    if (p) p.textContent = `${card.plays} de ${SAY_MAX} reproduccions`;
+  }
+
+  function playSay() {
+    if (!card || card.kind !== "dictation" || card.plays >= SAY_MAX) return;
+    card.plays += 1;
+    paintPlays();
+    stopAudio();
+    const params = new URLSearchParams({ text: card.say.slice(0, 400) });
+    if (ttsLang) params.set("lang", ttsLang);
+    const a = new Audio(`${API}/math/say?${params.toString()}`);
+    audio = a;
+    a.play().catch(() => {
+      /* la reproducció automàtica pot estar bloquejada: el botó 🔊 la fa sonar */
+    });
+  }
+
+  // La veu, només quan hi ha un dictat a les llistes. Sense servidor, no hi ha veu.
+  async function speechOn() {
+    try {
+      const r = await api("/math/tts-state");
+      ttsLang = r && r.language ? r.language : null;
+      return !!(r && r.enabled);
+    } catch {
+      ttsLang = null;
+      return false;
+    }
+  }
+
   // Comença el compte enrere de la targeta (només si hi ha límit).
   function startTimer() {
     stopClock();
@@ -1255,14 +1336,15 @@
   // Després d'una ronda: la llista tancada cedeix la selecció a la següent oberta.
   function pickSelection(prev) {
     const lists = data.lists;
+    const ok = (l) => isOpen(l) && usable(l);
     const cur = lists.find((l) => l.id === prev);
-    if (cur && isOpen(cur)) return cur.id;
+    if (cur && ok(cur)) return cur.id;
     if (cur) {
-      const after = lists.slice(lists.indexOf(cur) + 1).find(isOpen);
+      const after = lists.slice(lists.indexOf(cur) + 1).find(ok);
       if (after) return after.id;
     }
-    const first = lists.find(isOpen);
-    return (first || lists[0] || { id: null }).id;
+    const first = lists.find(ok);
+    return (first || lists.find(usable) || lists[0] || { id: null }).id;
   }
 
   function dirButton(key) {
@@ -1292,16 +1374,20 @@
     stopClock();
     const lists = data.lists;
     const math = lists.length > 0 && lists.every(isMath);
+    // La direcció només afecta les de traducció: sense cap, no surt.
+    const spoken = lists.length > 0 && lists.every(isLangDrill);
     const sel = lists.find((l) => l.id === selected);
     const selClosed = sel ? C.listStatus(sel, state).closed : false;
+    stopAudio();
     const rows = lists
       .map((l) => {
         const st = C.listStatus(l, state);
         const pct = st.total ? Math.round((st.known / st.total) * 100) : 0;
+        const off = !usable(l);
         const cls = ["flash-row", st.closed ? "closed" : "", l.id === selected ? "sel" : ""].join(" ").trim();
-        return `<button type="button" class="${cls}" data-list="${escText(l.id)}" aria-pressed="${l.id === selected}">
+        return `<button type="button" class="${cls}" data-list="${escText(l.id)}" aria-pressed="${l.id === selected}"${off ? " disabled" : ""}>
           <span class="flash-mark">${st.closed ? "✓" : ""}</span>
-          <span class="flash-row-title">${escText(l.title)}</span>
+          <span class="flash-row-title">${escText(l.title)}${off ? ' <small class="flash-off">Cal la veu activada</small>' : ""}</span>
           <span class="flash-bar" aria-hidden="true"><span style="width:${pct}%"></span></span>
           <span class="flash-count">${st.known}/${st.total}</span>
         </button>`;
@@ -1313,14 +1399,14 @@
           <h2>⚡ Flash <span class="flash-sub">${escText(math ? "Matemàtiques" : data.target)} · ${escText(data.level)}</span></h2>
         </div>
         <div class="flash-body">
-          ${math ? "" : `<p class="flash-label">Direcció</p>
+          ${math || spoken ? "" : `<p class="flash-label">Direcció</p>
           <div class="flash-seg" role="group" aria-label="Direcció">${dirButton("nt")}${dirButton("tn")}${dirButton("mix")}</div>`}
           <p class="flash-label">Temps per ${noun(lists[0] || {})}</p>
           <div class="flash-seg" role="group" aria-label="Temps per ${noun(lists[0] || {})}">${timeButton(false)}${C.TIMER_OPTIONS.map(timeButton).join("")}</div>
           <p class="flash-label">Llistes <span class="flash-hint-inline">· doble clic per començar</span></p>
           <div class="flash-lists">${rows || '<p class="flash-note">Encara no hi ha llistes.</p>'}</div>
           <div class="flash-actions">
-            <button type="button" class="primary" data-act="go"${sel ? "" : " disabled"}>${selClosed ? "Repassa" : "Comença"}</button>
+            <button type="button" class="primary" data-act="go"${sel && usable(sel) ? "" : " disabled"}>${selClosed ? "Repassa" : "Comença"}</button>
           </div>
         </div>
       </div>`;
@@ -1330,10 +1416,12 @@
   // ---- ronda ---------------------------------------------------------------
   function makeCard(item) {
     const math = isMath(round.list);
-    const dir = math ? "nt" : round.dir === "mix" ? (Math.random() < 0.5 ? "nt" : "tn") : round.dir;
+    const drill = isLangDrill(round.list); // sense direcció: la forma (drill) o el dictat
+    const dir = math || drill ? "nt" : round.dir === "mix" ? (Math.random() < 0.5 ? "nt" : "tn") : round.dir;
     const w = item.word;
     const nt = dir === "nt";
-    const kind = math ? w.answer_kind || "number" : "text"; // number | fraction | unit | choice | pair, or text (language)
+    // number | fraction | unit | choice | pair (math); drill | dictation | choice (drill lists); text (translation)
+    const kind = math ? w.answer_kind || "number" : drill ? (w.options ? "choice" : round.list.kind) : "text";
     return {
       word: w,
       figure: math && w.figure ? w.figure : null, // drawn above the prompt
@@ -1341,15 +1429,18 @@
       dot: item.dot,
       dir,
       math,
+      listKind: round.list.kind || null, // undefined (translation), math, drill, dictation
       kind,
       rule: w.form || "value", // fraction: value | simplest
       mode: math && w.answer_kind === "sexagesimal" ? w.mode || (/[°']/.test(w.target[0] || "") ? "angle" : "time") : null,
       unit: math && w.unit ? w.unit : "", // unit kind: shown outside the box
       options: kind === "choice" ? (w.options || []).slice() : [],
       off: [], // choice: the buttons that were wrong
-      prompt: (math ? w.prompt : nt ? w.native[0] : w.target[0]) || "—",
+      say: kind === "dictation" ? w.say : null, // dictation: the sentence to hear
+      plays: 0, // dictation: how many times the voice has read it
+      prompt: (math || drill ? w.prompt || "" : nt ? w.native[0] : w.target[0]) || "—",
       accepted: nt ? w.target : w.native,
-      lang: math ? null : nt ? TARGET_CODE : data.nativeCode,
+      lang: math || drill ? null : nt ? TARGET_CODE : data.nativeCode,
       limit: round.timer || 0, // segons; 0 = sense límit
       start: Date.now(),
       misses: 0,
@@ -1363,7 +1454,7 @@
 
   function startRound(listId, repassa) {
     const list = data.lists.find((l) => l.id === listId);
-    if (!list) return renderMenu();
+    if (!list || !usable(list)) return renderMenu();
     selected = listId;
     const review = repassa || C.listStatus(list, state).closed;
     let words = review ? C.repassaRound(list) : C.buildRound(list, state);
@@ -1402,21 +1493,25 @@
   function renderCard() {
     view = "card";
     const choice = card.kind === "choice";
-    const dirLabel = card.math
-      ? choice ? "Tria" : card.kind === "pair" ? "Escriu les coordenades"
-        : card.kind === "factorization" ? "Escriu els factors primers"
-        : card.kind === "algebraic" ? "Escriu l'expressió reduïda"
-        : card.kind === "sexagesimal" ? (card.mode === "angle" ? "Escriu l'angle" : "Escriu el temps")
-        : "Calcula"
-      : card.dir === "nt"
-        ? `Escriu-ho en ${data.target}`
-        : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
+    const dirLabel = card.listKind === "dictation" ? "Escolta i escriu"
+      : card.listKind === "drill" ? (choice ? "Tria" : "Escriu la forma")
+      : card.math
+        ? choice ? "Tria" : card.kind === "pair" ? "Escriu les coordenades"
+          : card.kind === "factorization" ? "Escriu els factors primers"
+          : card.kind === "algebraic" ? "Escriu l'expressió reduïda"
+          : card.kind === "sexagesimal" ? (card.mode === "angle" ? "Escriu l'angle" : "Escriu el temps")
+          : "Calcula"
+        : card.dir === "nt"
+          ? `Escriu-ho en ${data.target}`
+          : `Escriu-ho en ${NATIVE_NAME[data.nativeCode] || data.nativeCode}`;
     const input = card.kind === "fraction"
       ? ' aria-label="Fracció"'
       : card.kind === "pair" ? ' aria-label="Coordenades"'
       : card.kind === "factorization" ? ' aria-label="Descomposició en factors"'
       : card.kind === "algebraic" ? ' aria-label="Expressió"'
       : card.kind === "sexagesimal" ? ' aria-label="Temps o angle"'
+      : card.listKind === "dictation" ? ' aria-label="Dictat"'
+      : card.listKind === "drill" ? ' aria-label="Resposta"'
       : card.math ? ' inputmode="numeric" aria-label="Resultat"' : ' aria-label="Traducció"';
     const buttons = choice
       ? `<div class="flash-choices" id="flash-choices" role="group" aria-label="Opcions">${card.options
@@ -1433,7 +1528,10 @@
         <div class="flash-stage${card.prompt.length > 40 ? " flash-long" : ""}" id="flash-stage">
           <p class="flash-dir">${escText(dirLabel)}</p>
           ${card.figure ? `<div class="flash-fig${card.figure.type === "parallels" || card.figure.type === "number_line" ? " flash-fig--wide" : ""}">${C.figureSvg(card.figure)}</div>` : ""}
-          <div class="flash-word">${escText(card.prompt)}</div>
+          ${card.kind === "dictation"
+            ? `<button type="button" class="flash-say" id="flash-say" data-act="say" aria-label="Escolta-ho de nou"><span aria-hidden="true">🔊</span></button>
+          <p class="flash-plays" id="flash-plays" aria-live="polite"></p>`
+            : `<div class="flash-word">${escText(card.prompt)}</div>`}
           <div class="flash-timer ok" id="flash-timer"${card.limit ? "" : " hidden"}>
             <div class="flash-tbar"><i id="flash-tbar"></i></div>
             <span class="flash-tsec" id="flash-tsec"></span>
@@ -1451,6 +1549,10 @@
     paintProgress();
     paintCard(null);
     startTimer();
+    if (card.kind === "dictation") {
+      playSay(); // en obrir-se, la frase sona una vegada
+      paintPlays();
+    }
     if (choice) focusChoice();
     else q("#flash-input").focus();
   }
@@ -1521,7 +1623,9 @@
   function attempt(text) {
     if (!card || card.done || card.kind === "choice" || !String(text).trim()) return;
     let res;
-    if (!card.math) res = C.check(text, card.accepted, card.lang);
+    if (card.listKind === "drill") res = C.checkDrill(text, card.accepted);
+    else if (card.listKind === "dictation") res = C.checkDictation(text, card.accepted);
+    else if (!card.math) res = C.check(text, card.accepted, card.lang);
     else if (card.kind === "fraction") res = C.checkFraction(text, card.accepted, card.rule);
     else if (card.kind === "unit") res = C.checkNumber(C.stripUnit(text, card.unit), card.accepted);
     else if (card.kind === "pair") res = C.checkPair(text, card.accepted);
@@ -1618,6 +1722,7 @@
 
   function advance() {
     clearAdvance();
+    stopAudio();
     if (!round) return renderMenu();
     if (!round.queue.length) return finishRound();
     const item = round.queue.shift();
@@ -1630,6 +1735,7 @@
     const r = round;
     stopClock();
     clearAdvance();
+    stopAudio();
     view = "summary";
     const st = C.listStatus(r.list, state);
     const closedNow = st.closed;
@@ -1744,6 +1850,8 @@
         return startRound(round ? round.list.id : selected, false);
       case "start":
         return startRound(t.dataset.list, false);
+      case "say":
+        return playSay();
     }
   }
 
@@ -1773,6 +1881,7 @@
     const wasOpen = isFlashOpen();
     clearAdvance();
     stopClock();
+    stopAudio();
     round = null;
     card = null;
     if (session && session.rounds > 0) appendTrace(traceText(session));
@@ -1801,6 +1910,7 @@
       screen.innerHTML = `<div class="flash-panel"><div class="flash-head"><h2>⚡ Flash</h2></div><p class="flash-note">Flash no està disponible per a aquest perfil.</p></div>`;
       return;
     }
+    ttsOn = data.lists.some((l) => l.kind === "dictation") ? await speechOn() : false;
     stateKey = `flowed.flash.v1|${window.__FLOWED_DOMAIN || "language"}|${data.target}|${data.nativeCode}`;
     state = loadState(stateKey);
     state = await loadServerState(state);

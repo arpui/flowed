@@ -1045,9 +1045,49 @@ def _flash_math_ids(raw: dict) -> list[str]:
     return ids
 
 
+# Drill and dictation lists of a language level (docs/ENCARREC-LANG-L1-FLASH.md §2): `kind` and `items`.
+# Mirror of langItemProblem / langItems in server/src/flash.ts: the same ids, the same drops.
+LANG_KINDS = ("drill", "dictation")
+
+
+def _lang_item_ok(kind: str, item: dict) -> bool:
+    if not isinstance(item.get("id"), str) or not item["id"].strip():
+        return False
+    answer = _math_strings(item.get("answer"))
+    if not answer:
+        return False
+    if kind == "drill" and (not isinstance(item.get("prompt"), str) or not item["prompt"].strip()):
+        return False
+    if kind == "dictation" and (not isinstance(item.get("say"), str) or not item["say"].strip()):
+        return False
+    if "options" in item:
+        if kind == "dictation":
+            return False
+        options = _math_strings(item["options"])
+        if len(options) < 2 or answer[0] not in options:
+            return False
+    return True
+
+
+def _lang_item_ids(raw: dict, kind: str) -> list[str]:
+    """The ids of a drill or dictation list's valid items; a repeated id keeps the first."""
+    ids, seen = [], set()
+    for it in (raw.get("items") if isinstance(raw.get("items"), list) else []):
+        item = it if isinstance(it, dict) else {}
+        if not _lang_item_ok(kind, item):
+            continue
+        wid = item["id"].strip()
+        if wid in seen:
+            continue
+        seen.add(wid)
+        ids.append(wid)
+    return ids
+
+
 def flash_lists(root: str | os.PathLike, stem: str | None) -> list[dict]:
     """The level's Flash lists: curriculum/flash/<stem>/*.json, as {id, words: [word ids]}.
-    A math list (`generate` or `items`) counts its generated or valid ids; one with both is skipped."""
+    A math list (`generate` or `items`) counts its generated or valid ids; one with both is skipped.
+    A drill or dictation list (`kind`) counts its valid items."""
     if not stem:
         return []
     out = []
@@ -1056,14 +1096,17 @@ def flash_lists(root: str | os.PathLike, stem: str | None) -> list[dict]:
         raw = _read_json(f, None)
         if not isinstance(raw, dict):
             continue
-        if "generate" in raw and "items" in raw:
-            continue
-        if "generate" in raw or "items" in raw:
-            words = _flash_math_ids(raw)
-        elif isinstance(raw.get("words"), list):
-            words = [str(w["id"]) for w in raw["words"] if isinstance(w, dict) and w.get("id")]
+        if raw.get("kind") in LANG_KINDS:
+            words = _lang_item_ids(raw, raw["kind"])
         else:
-            continue
+            if "generate" in raw and "items" in raw:
+                continue
+            if "generate" in raw or "items" in raw:
+                words = _flash_math_ids(raw)
+            elif isinstance(raw.get("words"), list):
+                words = [str(w["id"]) for w in raw["words"] if isinstance(w, dict) and w.get("id")]
+            else:
+                continue
         out.append({"id": str(raw.get("id") or f.stem), "words": words})
     return out
 

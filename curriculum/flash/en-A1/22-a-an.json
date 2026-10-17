@@ -1,0 +1,25 @@
+{
+  "id": "en-A1.flash.a-an",
+  "level": "A1",
+  "kind": "drill",
+  "competence": "a1.articles_plurals",
+  "title": { "ca": "A o an", "es": "A o an", "en": "A or an" },
+  "items": [
+    { "id": "apple", "prompt": "… apple", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "umbrella", "prompt": "… umbrella", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "hour", "prompt": "… hour", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "university", "prompt": "… university", "answer": ["a"], "options": ["a", "an"] },
+    { "id": "book", "prompt": "… book", "answer": ["a"], "options": ["a", "an"] },
+    { "id": "orange", "prompt": "… orange", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "egg", "prompt": "… egg", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "uniform", "prompt": "… uniform", "answer": ["a"], "options": ["a", "an"] },
+    { "id": "teacher", "prompt": "… teacher", "answer": ["a"], "options": ["a", "an"] },
+    { "id": "elephant", "prompt": "… elephant", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "hat", "prompt": "… hat", "answer": ["a"], "options": ["a", "an"] },
+    { "id": "ice-cream", "prompt": "… ice cream", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "honest", "prompt": "… honest person", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "dog", "prompt": "… dog", "answer": ["a"], "options": ["a", "an"] },
+    { "id": "uncle", "prompt": "… uncle", "answer": ["an"], "options": ["a", "an"] },
+    { "id": "year", "prompt": "… year", "answer": ["a"], "options": ["a", "an"] }
+  ]
+}

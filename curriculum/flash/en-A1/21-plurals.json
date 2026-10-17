@@ -1,0 +1,27 @@
+{
+  "id": "en-A1.flash.plurals",
+  "level": "A1",
+  "kind": "drill",
+  "competence": "a1.articles_plurals",
+  "title": { "ca": "Plurals", "es": "Plurales", "en": "Plurals" },
+  "items": [
+    { "id": "child", "prompt": "child → plural", "answer": ["children"] },
+    { "id": "box", "prompt": "box → plural", "answer": ["boxes"] },
+    { "id": "baby", "prompt": "baby → plural", "answer": ["babies"] },
+    { "id": "man", "prompt": "man → plural", "answer": ["men"] },
+    { "id": "tooth", "prompt": "tooth → plural", "answer": ["teeth"] },
+    { "id": "bus", "prompt": "bus → plural", "answer": ["buses"] },
+    { "id": "city", "prompt": "city → plural", "answer": ["cities"] },
+    { "id": "woman", "prompt": "woman → plural", "answer": ["women"] },
+    { "id": "mouse", "prompt": "mouse → plural", "answer": ["mice"] },
+    { "id": "foot", "prompt": "foot → plural", "answer": ["feet"] },
+    { "id": "knife", "prompt": "knife → plural", "answer": ["knives"] },
+    { "id": "day", "prompt": "day → plural", "answer": ["days"] },
+    { "id": "potato", "prompt": "potato → plural", "answer": ["potatoes"] },
+    { "id": "watch", "prompt": "watch → plural", "answer": ["watches"] },
+    { "id": "person", "prompt": "person → plural", "answer": ["people"] },
+    { "id": "sheep", "prompt": "sheep → plural", "answer": ["sheep"] },
+    { "id": "wife", "prompt": "wife → plural", "answer": ["wives"] },
+    { "id": "leaf", "prompt": "leaf → plural", "answer": ["leaves"] }
+  ]
+}

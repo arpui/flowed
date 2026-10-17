@@ -1,0 +1,25 @@
+{
+  "id": "en-A1.flash.third-person",
+  "level": "A1",
+  "kind": "drill",
+  "competence": "a1.present_simple",
+  "title": { "ca": "Tercera persona (-s)", "es": "Tercera persona (-s)", "en": "Third person (-s)" },
+  "items": [
+    { "id": "play", "prompt": "play → he …", "answer": ["he plays"] },
+    { "id": "watch", "prompt": "watch → she …", "answer": ["she watches"] },
+    { "id": "study", "prompt": "study → it …", "answer": ["it studies"] },
+    { "id": "have", "prompt": "have → he …", "answer": ["he has"] },
+    { "id": "go", "prompt": "go → she …", "answer": ["she goes"] },
+    { "id": "do", "prompt": "do → he …", "answer": ["he does"] },
+    { "id": "fly", "prompt": "fly → it …", "answer": ["it flies"] },
+    { "id": "wash", "prompt": "wash → she …", "answer": ["she washes"] },
+    { "id": "teach", "prompt": "teach → he …", "answer": ["he teaches"] },
+    { "id": "buy", "prompt": "buy → she …", "answer": ["she buys"] },
+    { "id": "carry", "prompt": "carry → he …", "answer": ["he carries"] },
+    { "id": "enjoy", "prompt": "enjoy → it …", "answer": ["it enjoys"] },
+    { "id": "finish", "prompt": "finish → she …", "answer": ["she finishes"] },
+    { "id": "catch", "prompt": "catch → he …", "answer": ["he catches"] },
+    { "id": "say", "prompt": "say → she …", "answer": ["she says"] },
+    { "id": "live", "prompt": "live → it …", "answer": ["it lives"] }
+  ]
+}

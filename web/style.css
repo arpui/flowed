@@ -1061,6 +1061,22 @@ nav#commands button[hidden] { display: none; }
 }
 .flash-choice kbd { font: inherit; font-size: 0.8rem; opacity: 0.6; border: 1px solid currentColor; border-radius: 6px; padding: 0 6px; }
 .flash-choice:disabled { cursor: default; opacity: 0.55; }
+/* Dictat (docs/ENCARREC-LANG-L1-FLASH.md §2): el 🔊 gros de la targeta, i el recompte de reproduccions. */
+.flash-say {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 1px solid rgba(244, 241, 234, 0.4);
+  background: var(--flash-bg);
+  color: var(--flash-ink);
+  font-size: 3.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.flash-say:disabled { cursor: default; opacity: 0.45; }
+.flash-plays { margin: 0; font-size: 0.85rem; opacity: 0.7; }
+.flash-row:disabled { cursor: default; opacity: 0.5; }
+.flash-off { font-size: 0.8rem; font-weight: normal; opacity: 0.85; margin-left: 4px; }
 .flash-choice.wrong { text-decoration: line-through; border-color: var(--flash-err); }
 .flash-choice.right { border-color: var(--flash-ok); background: var(--flash-good); }
 

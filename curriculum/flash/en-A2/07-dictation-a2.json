@@ -1,0 +1,22 @@
+{
+  "id": "en-A2.flash.dictation-a2",
+  "level": "A2",
+  "kind": "dictation",
+  "title": { "ca": "Dictat A2", "es": "Dictado A2", "en": "Dictation A2" },
+  "items": [
+    { "id": "market", "say": "She went to the market", "answer": ["She went to the market"] },
+    { "id": "travel", "say": "I'm going to travel next summer", "answer": ["I'm going to travel next summer"] },
+    { "id": "raining", "say": "It was raining when we arrived", "answer": ["It was raining when we arrived"] },
+    { "id": "scotland", "say": "He has never been to Scotland", "answer": ["He has never been to Scotland"] },
+    { "id": "car", "say": "They bought a new car last year", "answer": ["They bought a new car last year"] },
+    { "id": "taller", "say": "My brother is taller than me", "answer": ["My brother is taller than me"] },
+    { "id": "no-money", "say": "We didn't have any money", "answer": ["We didn't have any money"] },
+    { "id": "table", "say": "There are some apples on the table", "answer": ["There are some apples on the table"] },
+    { "id": "film", "say": "Did you see the film yesterday?", "answer": ["Did you see the film yesterday?"] },
+    { "id": "party", "say": "I can't come to the party on Friday", "answer": ["I can't come to the party on Friday"] },
+    { "id": "meet", "say": "Let's meet at the bus stop", "answer": ["Let's meet at the bus stop"] },
+    { "id": "snow", "say": "I think it's going to snow", "answer": ["I think it's going to snow"] },
+    { "id": "early", "say": "We should leave early", "answer": ["We should leave early"] },
+    { "id": "reading", "say": "He was reading when I called", "answer": ["He was reading when I called"] }
+  ]
+}

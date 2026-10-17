@@ -42,14 +42,17 @@ export interface FlashWordView {
   form?: "value" | "simplest"; // math, fraction kind
   mode?: SexaMode; // math, sexagesimal kind: the notation of the answer (time or angle)
   figure?: Figure; // math: drawn as SVG above the prompt (docs/ENCARREC-M5-E3-FIGURES.md)
+  say?: string; // dictation: the sentence the voice reads (the card shows only the speaker)
 }
+
+export type LangKind = "drill" | "dictation";
 
 export interface FlashListView {
   id: string;
   level: string;
   title: string;
   words: FlashWordView[];
-  kind?: "math"; // absent for language lists
+  kind?: "math" | LangKind; // absent for translation lists
 }
 
 /** Expands a path whose segments may hold a `*` (e.g. `curriculum/flash/en-*`)
@@ -84,7 +87,8 @@ function expandDirGlob(root: string, pattern: string): string[] {
 }
 
 /** Every list under the directories `dirGlob` matches, ordered by level and
- *  then file name. Each word carries its native forms in `code` only. */
+ *  then file name. Each word carries its native forms in `code` only. Drill and
+ *  dictation lists (docs/ENCARREC-LANG-L1-FLASH.md §2) carry their items instead. */
 export function loadFlashLists(root: string, dirGlob: string, code: NativeCode): FlashListView[] {
   const out: Array<{ file: string; list: FlashListView }> = [];
   for (const dir of expandDirGlob(root, dirGlob)) {
@@ -102,19 +106,23 @@ export function loadFlashLists(root: string, dirGlob: string, code: NativeCode):
         continue; // a broken list is skipped, the others still load
       }
       const title = asRecord(raw.title);
+      const lang = raw.kind === "drill" || raw.kind === "dictation" ? raw.kind : null;
       // A math list has `generate` or `items` (docs/ENCARREC-FLASH-MATH.md §2); both at once is ambiguous: skipped.
-      if ("generate" in raw && "items" in raw) continue;
-      const math = "generate" in raw || "items" in raw;
-      const words: FlashWordView[] = math
-        ? mathWords(raw).words.map(mathView)
-        : (Array.isArray(raw.words) ? raw.words : []).map((w) => {
-            const word = asRecord(w);
-            return {
-              id: String(word.id ?? ""),
-              target: strings(word.target),
-              native: strings(asRecord(word.native)[code]),
-            };
-          });
+      // A drill or dictation list (kind) has `items` of its own (docs/ENCARREC-LANG-L1-FLASH.md §2).
+      if (lang === null && "generate" in raw && "items" in raw) continue;
+      const math = lang === null && ("generate" in raw || "items" in raw);
+      const words: FlashWordView[] = lang
+        ? langItems(raw, lang).items.map(langView)
+        : math
+          ? mathWords(raw).words.map(mathView)
+          : (Array.isArray(raw.words) ? raw.words : []).map((w) => {
+              const word = asRecord(w);
+              return {
+                id: String(word.id ?? ""),
+                target: strings(word.target),
+                native: strings(asRecord(word.native)[code]),
+              };
+            });
       out.push({
         file,
         list: {
@@ -122,7 +130,7 @@ export function loadFlashLists(root: string, dirGlob: string, code: NativeCode):
           level: String(raw.level ?? ""),
           title: String(title[code] ?? title.en ?? ""),
           words,
-          ...(math ? { kind: "math" as const } : {}),
+          ...(math ? { kind: "math" as const } : lang ? { kind: lang } : {}),
         },
       });
     }
@@ -242,6 +250,74 @@ export function expandGenerate(gen: unknown): MathWord[] {
     }
   }
   return out;
+}
+
+// ---- language drill and dictation (docs/ENCARREC-LANG-L1-FLASH.md §2) -----------
+// drill: items {id, prompt, answer[], options?}; the prompt is shown in English, the answer is the form.
+// dictation: items {id, say, answer[]}; the voice says `say`, the learner writes it.
+// An item is kept when its id is text, it has an answer, its prompt (drill) or say (dictation) is text, and a
+// choice's options hold the answer. The first of two with the same id is kept. Mirror in hooks/curriculum.py
+// (_lang_item_ids): the same ids, the same drops.
+
+/** An item of a drill or dictation list, as the lists write it. */
+export interface LangItem {
+  id: string;
+  prompt?: string; // drill: what the card shows
+  say?: string; // dictation: what the voice reads
+  target: string[]; // the accepted answers (the first is the one shown)
+  options?: string[]; // drill, choice: the buttons
+}
+
+/** Why a drill or dictation item is wrong, or null when it is fine. */
+function langItemProblem(kind: LangKind, item: JsonRecord): string | null {
+  if (typeof item.id !== "string" || !item.id.trim()) return "sense id";
+  if (!strings(item.answer).length) return "sense resposta";
+  if (kind === "drill" && (typeof item.prompt !== "string" || !item.prompt.trim())) return "sense enunciat";
+  if (kind === "dictation" && (typeof item.say !== "string" || !item.say.trim())) return "sense say";
+  if (item.options !== undefined) {
+    if (kind === "dictation") return "el dictat no porta opcions";
+    const options = strings(item.options);
+    if (options.length < 2) return "choice sense almenys dues opcions";
+    if (!options.includes(strings(item.answer)[0] ?? "")) return `${strings(item.answer)[0]} no és una de les opcions`;
+  }
+  return null;
+}
+
+/** The items of a drill or dictation list, and what was left out of it. */
+export function langItems(raw: JsonRecord, kind: LangKind): { items: LangItem[]; problems: string[] } {
+  const items: LangItem[] = [];
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  for (const it of Array.isArray(raw.items) ? raw.items : []) {
+    const item = asRecord(it);
+    const problem = langItemProblem(kind, item);
+    if (problem) {
+      problems.push(`ítem ${JSON.stringify(item.id ?? "?")}: ${problem}`);
+      continue;
+    }
+    const id = String(item.id).trim();
+    if (seen.has(id)) {
+      problems.push(`ítem ${JSON.stringify(id)}: id repetit`);
+      continue;
+    }
+    seen.add(id);
+    const out: LangItem = { id, target: strings(item.answer) };
+    if (kind === "drill") out.prompt = String(item.prompt).trim();
+    else out.say = String(item.say).trim();
+    if (item.options !== undefined) out.options = strings(item.options);
+    items.push(out);
+  }
+  return { items, problems };
+}
+
+/** A drill or dictation item as the client gets it: a drill shows its prompt and answers its form; a
+ *  dictation has no text on the card, only the sentence to hear. */
+function langView(i: LangItem): FlashWordView {
+  const v: FlashWordView = { id: i.id, target: i.target, native: [] };
+  if (i.prompt !== undefined) v.prompt = i.prompt;
+  if (i.say !== undefined) v.say = i.say;
+  if (i.options !== undefined) v.options = i.options;
+  return v;
 }
 
 // ---- fractions (answer_kind fraction) -------------------------------------------

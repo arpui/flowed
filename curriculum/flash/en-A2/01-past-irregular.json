@@ -1,0 +1,29 @@
+{
+  "id": "en-A2.flash.past-irregular",
+  "level": "A2",
+  "kind": "drill",
+  "competence": "a2.past_simple",
+  "title": { "ca": "Passat irregular", "es": "Pasado irregular", "en": "Irregular past" },
+  "items": [
+    { "id": "go", "prompt": "go → past", "answer": ["went"] },
+    { "id": "buy", "prompt": "buy → past", "answer": ["bought"] },
+    { "id": "see", "prompt": "see → past", "answer": ["saw"] },
+    { "id": "eat", "prompt": "eat → past", "answer": ["ate"] },
+    { "id": "take", "prompt": "take → past", "answer": ["took"] },
+    { "id": "write", "prompt": "write → past", "answer": ["wrote"] },
+    { "id": "make", "prompt": "make → past", "answer": ["made"] },
+    { "id": "have", "prompt": "have → past", "answer": ["had"] },
+    { "id": "get", "prompt": "get → past", "answer": ["got"] },
+    { "id": "come", "prompt": "come → past", "answer": ["came"] },
+    { "id": "run", "prompt": "run → past", "answer": ["ran"] },
+    { "id": "drink", "prompt": "drink → past", "answer": ["drank"] },
+    { "id": "find", "prompt": "find → past", "answer": ["found"] },
+    { "id": "think", "prompt": "think → past", "answer": ["thought"] },
+    { "id": "tell", "prompt": "tell → past", "answer": ["told"] },
+    { "id": "sleep", "prompt": "sleep → past", "answer": ["slept"] },
+    { "id": "meet", "prompt": "meet → past", "answer": ["met"] },
+    { "id": "read", "prompt": "read → past", "answer": ["read"] },
+    { "id": "begin", "prompt": "begin → past", "answer": ["began"] },
+    { "id": "speak", "prompt": "speak → past", "answer": ["spoke"] }
+  ]
+}
