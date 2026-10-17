@@ -135,9 +135,9 @@ def _normalize(text) -> str:
         return ""
     s = str(text).strip().translate(_OPS)
     # Children type "2x20" / "(2x5)x20" for a product (2026-10-17, Albert). Only between a
-    # number (or a closing parenthesis) and a number: parse_expr has no letters, and the
+    # number (or a closing parenthesis) and a number or an opening one: parse_expr has no letters, and the
     # algebraic path (parse_poly) does not come through here.
-    s = re.sub(r"(?<=[\d)])\s*[xX]\s*(?=\d)", "*", s)
+    s = re.sub(r"(?<=[\d)])\s*[xX]\s*(?=[\d(])", "*", s)
     s = s.replace("^", "**")  # "^" is BitXor in Python's AST; we mean power
     s = re.sub(r"(?<=\d),(?=\d)", ".", s)  # decimal comma
     if _THOUSANDS.search(s):
@@ -291,6 +291,33 @@ def _render(node):
 
 def _form(node) -> str:
     return _render(node)[0]
+
+
+def _grouping(node) -> str:
+    """The form WITH its grouping: each + or × node keeps its two children (in either order),
+    so "(2 × 5) × 20" and "20 × (5 × 2)" agree but "(2 × 20) × 5" does not. `_form` flattens
+    the chains on purpose (commutative-associative reordering is free there), which makes it
+    blind to the grouping a "group first" step asks for (2026-10-17, Albert)."""
+    if isinstance(node, ast.BinOp):
+        l, r = _grouping(node.left), _grouping(node.right)
+        name = type(node.op).__name__
+        if isinstance(node.op, (ast.Add, ast.Mult)):
+            l, r = sorted((l, r))
+        return f"{name}({l},{r})"
+    if isinstance(node, ast.UnaryOp):
+        return f"{type(node.op).__name__}({_grouping(node.operand)})"
+    return _render(node)[0]
+
+
+def grouping_of(text) -> str:
+    """`_grouping` of an expression's text (same normalization and checks as parse_expr)."""
+    s = _normalize(text)
+    try:
+        tree = ast.parse(s, mode="eval")
+    except SyntaxError as e:
+        raise ParseError(f"cannot parse {text!r}") from e
+    _validate(tree.body)
+    return _grouping(tree.body)
 
 
 # ---------------------------------------------------------------- units -----
@@ -464,17 +491,28 @@ def grade_step(expected, line, strict_form=False) -> dict:
         raise ParseError("a step line may contain at most one '='")
 
     sides = {}
+    raw = {}
     if "=" in text:
         left, right = text.rsplit("=", 1)
         sides["left"] = parse_expr(left)
         sides["right"] = parse_expr(right)
+        raw = {"left": left, "right": right}
     else:
         sides["line"] = parse_expr(text)
+        raw = {"line": text}
 
-    def matches(p):
-        return p.form == exp.form if exp_is_form else p.value == exp.value
+    # An expected form with parentheses names a grouping (the point of an associative step):
+    # the line must group the same numbers together, not only reach the same flattened form.
+    exp_grouping = grouping_of(_value_part(expected)) if exp_is_form and "(" in str(expected) else None
 
-    matched = [name for name, p in sides.items() if matches(p)]
+    def matches(name, p):
+        if not exp_is_form:
+            return p.value == exp.value
+        if p.form != exp.form:
+            return False
+        return exp_grouping is None or grouping_of(raw[name]) == exp_grouping
+
+    matched = [name for name, p in sides.items() if matches(name, p)]
     detail = {name: {"value": str(p.value), "form": p.form} for name, p in sides.items()}
     if matched:
         return _verdict(10, "correct", "", expected=exp.form,

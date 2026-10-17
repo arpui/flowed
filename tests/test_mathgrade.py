@@ -457,3 +457,19 @@ class TimesAsLetterX(unittest.TestCase):
         self.assertEqual(mg.grade_algebraic("5x + 5", "5 + 5x")["verdict"], "correct")
         with self.assertRaises(mg.ParseError):
             mg.parse_expr("x + 2")
+
+
+class StepGrouping(unittest.TestCase):
+    """2026-10-17 (Albert): "(2x20)x5" passed step 1 of 2 × 20 × 5 ("group the round pair":
+    (2 × 5) × 20) because the flattened form ignores the parentheses."""
+
+    def test_the_expected_grouping_is_required(self):
+        self.assertEqual(mg.grade_step("(2 × 5) × 20", "(2x20)x5")["verdict"], "wrong")
+        self.assertEqual(mg.grade_step("(2 × 5) × 20", "(2 × 20) × 5 = 200")["verdict"], "wrong")
+
+    def test_the_same_grouping_in_any_order_passes(self):
+        for line in ("(2x5)x20", "20 × (5 × 2)", "20x(2x5) = 200", "(5 · 2) · 20"):
+            self.assertEqual(mg.grade_step("(2 × 5) × 20", line)["verdict"], "correct", line)
+
+    def test_no_parentheses_expected_keeps_free_reordering(self):
+        self.assertEqual(mg.grade_step("20 + 30 + 4 + 5", "20 + 4 + 30 + 5")["verdict"], "correct")
