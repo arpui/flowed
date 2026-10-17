@@ -24,6 +24,11 @@
   const PRACTICE_KEEP = 30; // rondes guardades per llista practice (les més recents)
   const TIMER_OPTIONS = [10, 20, 30]; // segons per paraula; false = sense límit
   const TIMER_DEFAULT = 20;
+  const SPRINT_OPTIONS = [60, 120, 180]; // contrarellotge: 1, 2 o 3 minuts (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2)
+  const SPRINT_DEFAULT = 120;
+  const SPRINT_LOT = 20; // cartes per lot de /api/flash/practice en una contrarellotge
+  const SPRINT_PREFETCH = 5; // quan en queden tantes del lot, es demana el següent
+  const SPRINT_KEEP = 30; // execucions guardades per llista (les més recents)
 
   // Minúscules, espais col·lapsats, sense puntuació final.
   function normalize(s) {
@@ -1071,7 +1076,7 @@
   // Hi ha progrés a l'estat (alguna paraula vista o alguna ronda practice)?
   function hasProgress(state) {
     const lists = (state && state.lists) || {};
-    return Object.values(lists).some((l) => Object.keys((l && l.words) || {}).length > 0 || (((l && l.practice) || {}).rounds || []).length > 0);
+    return Object.values(lists).some((l) => Object.keys((l && l.words) || {}).length > 0 || (((l && l.practice) || {}).rounds || []).length > 0 || (((l && l.sprint) || {}).runs || []).length > 0);
   }
 
   // Rondes fetes avui (no de repàs): el ⚡ de la barra en vol una.
@@ -1085,6 +1090,47 @@
     next.rounds_by_day = next.rounds_by_day || {};
     next.rounds_by_day[day] = (Number(next.rounds_by_day[day]) || 0) + 1;
     return next;
+  }
+
+  // ---- contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md) -----------------------------
+  // Només les llistes de math que el servidor marca (sprint: true): totes les cartes són de número o d'unitat.
+  const sprintable = (l) => !!l && l.kind === "math" && l.sprint === true;
+  // La durada guardada: 60, 120 o 180 segons; qualsevol altra cosa, la per defecte.
+  const sprintPref = (v) => (SPRINT_OPTIONS.includes(Number(v)) ? Number(v) : SPRINT_DEFAULT);
+  // 102 segons → "1:42". Els segons que falten s'arrodoneixen amunt (el 0 és 0:00).
+  function clockText(sec) {
+    const s = Math.max(0, Math.ceil(sec));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }
+  // Barreja (Fisher–Yates) sense que la primera carta sigui la darrera vista (lastId). Dins d'una passada
+  // no es repeteix cap carta; la mateixa carta no surt dues vegades seguides entre passades.
+  function shuffleNoRepeat(words, lastId, rand = Math.random) {
+    const a = words.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    if (a.length > 1 && a[0].id === lastId) [a[0], a[1]] = [a[1], a[0]];
+    return a;
+  }
+  // Una resposta de la contrarellotge: com la de la ronda normal (número, o número amb la unitat).
+  function checkSprint(text, accepted, unit) {
+    return checkNumber(stripUnit(text, unit), accepted).ok;
+  }
+  // Una execució acabada: es guarda (les SPRINT_KEEP més recents) i el rècord de la durada és el de més encerts.
+  // record és true només quan supera un rècord anterior: la primera execució no n'és cap.
+  function recordSprint(state, listId, run, day) {
+    const next = clone(state);
+    const list = next.lists[listId] || { words: {}, closed_at: null };
+    const prev = (list.sprint && list.sprint.best) || {};
+    const key = String(run.seconds);
+    const before = prev[key];
+    const record = before !== undefined && run.correct > before;
+    const best = { ...prev, [key]: before === undefined || record ? run.correct : before };
+    const runs = (((list.sprint || {}).runs) || []).concat([{ day, seconds: run.seconds, done: run.done, correct: run.correct }]).slice(-SPRINT_KEEP);
+    list.sprint = { best, runs };
+    next.lists[listId] = list;
+    return { state: next, record, best: best[key] };
   }
 
   globalThis.FlashCore = {
@@ -1145,6 +1191,16 @@
     practiceDays,
     needFirst,
     recordPractice,
+    SPRINT_OPTIONS,
+    SPRINT_DEFAULT,
+    SPRINT_LOT,
+    SPRINT_PREFETCH,
+    sprintable,
+    sprintPref,
+    clockText,
+    shuffleNoRepeat,
+    checkSprint,
+    recordSprint,
   };
 })();
 
@@ -1157,6 +1213,8 @@
   const TARGET_CODE = "en"; // les llistes són d'anglès (en-*)
   const NATIVE_NAME = { ca: "català", es: "castellà" };
   const PREFS_KEY = "flowed.flash.prefs";
+  const SPRINT_KEY = "flowed.flash.sprint"; // la durada de la contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2)
+  const SPRINT_ERRORS = 20; // errades que es llisten al resum d'una contrarellotge
   const DIR_LABEL = { nt: "Natiu → idioma", tn: "Idioma → natiu", mix: "Barrejat" };
   const TIME_LABEL = { off: "Desactivat", 10: "10 s", 20: "20 s", 30: "30 s" };
   // Llistes de math (kind "math"): operació → resultat, sense direcció ni article.
@@ -1187,6 +1245,8 @@
   let ttsOn = false; // dictat: la veu és activada al servidor (/api/math/tts-state)
   let ttsLang = null; // la llengua de la veu, com la diu el servidor
   let audio = null; // la reproducció del dictat en curs
+  let sprint = null; // la contrarellotge en curs (o la que acaba de sortir, per al resum)
+  let sprintSec = loadSprintPref(); // 60, 120 o 180
 
   // ---- persistència per visitant (tot dins try/catch) ----------------------
   function loadPrefs() {
@@ -1201,6 +1261,23 @@
   function savePrefs() {
     try {
       localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch {
+      /* la pàgina funciona igual */
+    }
+  }
+
+  // La durada de la contrarellotge, per visitant. Sense emmagatzematge, la per defecte.
+  function loadSprintPref() {
+    try {
+      return C.sprintPref(localStorage.getItem(SPRINT_KEY));
+    } catch {
+      return C.sprintPref(null);
+    }
+  }
+
+  function saveSprintPref() {
+    try {
+      localStorage.setItem(SPRINT_KEY, String(sprintSec));
     } catch {
       /* la pàgina funciona igual */
     }
@@ -1390,6 +1467,10 @@
     return `<button type="button" data-dir="${key}" aria-pressed="${on}">${escText(DIR_LABEL[key])}</button>`;
   }
 
+  function sprintButton(v) {
+    return `<button type="button" data-sprint="${v}" aria-pressed="${sprintSec === v}">${v / 60} min</button>`;
+  }
+
   function timeButton(v) {
     const key = v === false ? "off" : String(v);
     return `<button type="button" data-timer="${key}" aria-pressed="${prefs.timer === v}">${escText(TIME_LABEL[key])}</button>`;
@@ -1409,6 +1490,7 @@
     roundTicket += 1; // una ronda practice que encara es carrega no s'obre des del menú
     round = null;
     card = null;
+    sprint = null; // una contrarellotge es deixa (no es guarda) en tornar al menú
     clearAdvance();
     stopClock();
     const lists = data.lists;
@@ -1449,6 +1531,8 @@
           <div class="flash-lists">${rows || '<p class="flash-note">Encara no hi ha llistes.</p>'}</div>
           <div class="flash-actions">
             <button type="button" class="primary" data-act="go"${sel && usable(sel) ? "" : " disabled"}>${selClosed && !selPractice ? "Repassa" : "Comença"}</button>
+            ${C.sprintable(sel) ? `<button type="button" data-act="sprint">⏱ Contrarellotge</button>
+            <div class="flash-seg" role="group" aria-label="Durada de la contrarellotge">${C.SPRINT_OPTIONS.map(sprintButton).join("")}</div>` : ""}
           </div>
         </div>
       </div>`;
@@ -1862,6 +1946,211 @@
       </div>`;
   }
 
+  // ---- contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md) -------------------------------
+  // Tantes operacions com es pugui en un temps fix. Cap correcció ni pista fins al final; Enter buit = salta.
+  // La llista no canvia (ni caixes ni tancament); l'execució compta com a ronda per al ⚡ d'avui.
+
+  // Un lot de cartes de /api/flash/practice (llavor nova). Només entra a la contrarellotge `s` si és la que s'està fent.
+  function sprintFetch(s) {
+    if (s.fetching) return s.fetching;
+    const seed = Math.floor(Math.random() * 4294967296);
+    s.fetching = api(`/flash/practice?list=${encodeURIComponent(s.list.id)}&n=${C.SPRINT_LOT}&seed=${seed}`).then(
+      (res) => {
+        s.fetching = null;
+        const words = res && res.ok && Array.isArray(res.words) ? res.words : [];
+        if (sprint === s) s.deck.push(...words);
+        return words.length > 0;
+      },
+      (err) => {
+        s.fetching = null;
+        console.warn("flash: no es poden carregar les cartes de la contrarellotge", err);
+        return false;
+      },
+    );
+    return s.fetching;
+  }
+
+  async function startSprint(listId, seconds) {
+    const list = data.lists.find((l) => l.id === listId);
+    if (!C.sprintable(list)) return renderMenu();
+    selected = listId;
+    sprintSec = seconds;
+    const s = { list, seconds, deck: [], last: null, start: 0, done: 0, correct: 0, skipped: 0, wrong: [], card: null, fetching: null, over: false, record: false, best: 0 };
+    sprint = s;
+    stopClock();
+    clearAdvance();
+    stopAudio();
+    if (C.isPractice(list)) {
+      // El primer lot abans de començar el temps.
+      view = "sprint";
+      screen.innerHTML = '<div class="flash-panel"><p class="flash-note">Carregant…</p></div>';
+      const ok = await sprintFetch(s);
+      if (sprint !== s) return; // el menú, o una altra contrarellotge
+      if (!ok) return renderMenu();
+    }
+    s.start = Date.now();
+    renderSprintFrame();
+    clockTimer = setInterval(tickSprint, 200);
+    tickSprint();
+    sprintNext();
+  }
+
+  function renderSprintFrame() {
+    view = "sprint";
+    const s = sprint;
+    screen.innerHTML = `
+      <div class="flash-panel flash-play flash-sprint">
+        <div class="flash-top">
+          <button type="button" class="ghost" data-act="menu">‹ Menú</button>
+          <span class="flash-prog" id="flash-prog"></span>
+        </div>
+        <div class="flash-timer ok" id="flash-timer">
+          <span class="flash-clock" id="flash-clock">${C.clockText(s.seconds)}</span>
+          <div class="flash-tbar"><i id="flash-tbar"></i></div>
+        </div>
+        <div class="flash-stage" id="flash-stage">
+          <p class="flash-dir">${escText(s.list.title)} · sense correcció</p>
+          <div id="flash-figure"></div>
+          <div class="flash-word" id="flash-word"></div>
+        </div>
+        <form class="flash-form" id="flash-form" autocomplete="off">
+          <input id="flash-input" type="text" inputmode="numeric" aria-label="Resultat" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <span class="flash-unit" id="flash-unit" hidden></span>
+          <button type="submit" class="primary">Següent</button>
+        </form>
+        <p class="flash-note">Enter buit: la salta, no compta com a errada.</p>
+      </div>`;
+    paintSprintCount();
+  }
+
+  function paintSprintCount() {
+    const p = q("#flash-prog");
+    if (p && sprint) p.textContent = `${sprint.done} fetes`;
+  }
+
+  // El compte enrere: la barra, el to i els segons. Al zero, s'acaba (la targeta a mig escriure no compta).
+  function tickSprint() {
+    const s = sprint;
+    if (!s || s.over) return stopClock();
+    const left = C.timeLeft(s.start, Date.now(), s.seconds);
+    const box = q("#flash-timer");
+    if (box) box.className = `flash-timer ${C.timerTone(left)}`;
+    const bar = q("#flash-tbar");
+    if (bar) bar.style.width = `${C.barPct(left, s.seconds)}%`;
+    const clock = q("#flash-clock");
+    if (clock) clock.textContent = C.clockText(left);
+    if (left <= 0) endSprint();
+  }
+
+  // La carta següent. Practice: del lot, i el següent lot es demana abans que s'acabi. Memory: la barreja de la llista.
+  async function sprintNext() {
+    const s = sprint;
+    if (!s || s.over) return;
+    const practice = C.isPractice(s.list);
+    if (practice && s.deck.length <= C.SPRINT_PREFETCH && !s.fetching) sprintFetch(s);
+    if (!s.deck.length) {
+      if (!practice) {
+        s.deck = C.shuffleNoRepeat(s.list.words, s.last);
+      } else {
+        const ok = await sprintFetch(s);
+        if (sprint !== s || s.over) return;
+        if (!ok || !s.deck.length) return endSprint(); // sense cartes (sense xarxa): es dona per acabada
+      }
+    }
+    const w = s.deck.shift();
+    s.last = w.id;
+    s.card = { prompt: w.prompt || "", unit: w.unit || "", accepted: w.target.slice(), figure: w.figure || null };
+    paintSprintCard();
+  }
+
+  function paintSprintCard() {
+    const s = sprint;
+    const c = s && s.card;
+    if (!c || !q("#flash-word")) return;
+    q("#flash-word").textContent = c.prompt || "—";
+    q("#flash-stage").classList.toggle("flash-long", c.prompt.length > 40);
+    q("#flash-figure").innerHTML = c.figure
+      ? `<div class="flash-fig${c.figure.type === "parallels" || c.figure.type === "number_line" ? " flash-fig--wide" : ""}">${C.figureSvg(c.figure)}</div>`
+      : "";
+    const unit = q("#flash-unit");
+    unit.textContent = c.unit;
+    unit.hidden = !c.unit;
+    const input = q("#flash-input");
+    input.value = "";
+    input.focus();
+    paintSprintCount();
+  }
+
+  // Enter: la resposta es guarda i surt la següent a l'instant, sense dir si és bona. Buit: es salta.
+  function sprintSubmit(text) {
+    const s = sprint;
+    if (!s || s.over || !s.card) return;
+    const c = s.card;
+    const t = String(text ?? "").trim();
+    s.card = null;
+    if (!t) {
+      s.skipped += 1;
+    } else {
+      s.done += 1;
+      if (C.checkSprint(t, c.accepted, c.unit)) s.correct += 1;
+      else s.wrong.push({ prompt: c.prompt, typed: t, answer: c.accepted[0] + (c.unit ? ` ${c.unit}` : "") });
+    }
+    paintSprintCount();
+    sprintNext();
+  }
+
+  // Acaba l'execució: es guarda (rècord de la durada, ronda d'avui) i surt el resum.
+  function endSprint() {
+    const s = sprint;
+    if (!s || s.over) return;
+    s.over = true;
+    s.card = null;
+    stopClock();
+    clearAdvance();
+    const day = today();
+    const res = C.recordSprint(state, s.list.id, { seconds: s.seconds, done: s.done, correct: s.correct }, day);
+    state = C.countRound(res.state, day);
+    saveState();
+    s.record = res.record;
+    s.best = res.best;
+    view = "sprint-summary";
+    renderSprintSummary();
+  }
+
+  function renderSprintSummary() {
+    const s = sprint;
+    const min = `${s.seconds / 60} min`;
+    const shown = s.wrong.slice(0, SPRINT_ERRORS);
+    const more = s.wrong.length - shown.length;
+    const errors = s.wrong.length
+      ? `<p class="flash-label">Errades</p>
+          <ul class="flash-errors">${shown.map((e) => `<li><span class="flash-err-op">${escText(e.prompt)}</span> — has posat <strong>${escText(e.typed)}</strong> → <strong>${escText(e.answer)}</strong></li>`).join("")}</ul>
+          ${more > 0 ? `<p class="flash-note">i ${more} més</p>` : ""}`
+      : '<p class="flash-note">Cap errada.</p>';
+    screen.innerHTML = `
+      <div class="flash-panel">
+        <div class="flash-head">
+          <h2>Contrarellotge acabada</h2>
+        </div>
+        <div class="flash-body">
+          <p class="flash-sum-title">${escText(s.list.title)} · ${min}</p>
+          <p class="flash-sum-first"><strong>${s.done ? `${s.correct} de ${s.done} bé` : "Cap operació feta"}</strong></p>
+          ${s.record ? '<p class="flash-good">🏆 Nou rècord!</p>' : ""}
+          <ul class="flash-stats">
+            <li><span>Operacions fetes</span><strong>${s.done}</strong></li>
+            <li><span>Rècord de ${min}</span><strong>${s.best} bé</strong></li>
+            ${s.skipped ? `<li><span>Saltades</span><strong>${s.skipped}</strong></li>` : ""}
+          </ul>
+          ${errors}
+          <p class="flash-note">El progrés de la llista no canvia.</p>
+          <div class="flash-actions">
+            <button type="button" class="primary" data-act="sprint-again">Un altre cop</button>
+            <button type="button" data-act="menu">Menú</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
   // Línia de la traça al xat: totes les rondes d'aquesta obertura de Flash.
   function traceText(s) {
     const who = s.titles.length === 1 ? s.titles[0] : `${s.titles.length} llistes`;
@@ -1897,7 +2186,7 @@
   }
 
   function onClick(e) {
-    const t = e.target.closest ? e.target.closest("[data-act],[data-dir],[data-timer],[data-list],[data-choice]") : null;
+    const t = e.target.closest ? e.target.closest("[data-act],[data-dir],[data-timer],[data-sprint],[data-list],[data-choice]") : null;
     if (!t) return;
     if (t.dataset.choice !== undefined) return choose(Number(t.dataset.choice));
     if (t.dataset.dir) {
@@ -1908,6 +2197,11 @@
     if (t.dataset.timer) {
       prefs.timer = t.dataset.timer === "off" ? false : Number(t.dataset.timer);
       savePrefs();
+      return renderMenu();
+    }
+    if (t.dataset.sprint) {
+      sprintSec = C.sprintPref(t.dataset.sprint);
+      saveSprintPref();
       return renderMenu();
     }
     if (t.dataset.list && !t.dataset.act) {
@@ -1930,6 +2224,10 @@
         return startRound(round ? round.list.id : selected, false);
       case "start":
         return startRound(t.dataset.list, false);
+      case "sprint":
+        return startSprint(selected, sprintSec);
+      case "sprint-again":
+        return sprint ? startSprint(sprint.list.id, sprint.seconds) : renderMenu();
       case "say":
         return playSay();
     }
@@ -1938,6 +2236,7 @@
   function onSubmit(e) {
     if (!e.target || e.target.id !== "flash-form") return;
     e.preventDefault();
+    if (view === "sprint") return sprintSubmit(q("#flash-input").value);
     if (!card) return;
     if (card.done) return advance();
     attempt(q("#flash-input").value);
@@ -1964,6 +2263,7 @@
     stopAudio();
     round = null;
     card = null;
+    sprint = null;
     if (session && session.rounds > 0) appendTrace(traceText(session));
     session = null;
     if (screen) screen.hidden = true;

@@ -445,6 +445,14 @@ class PracticeLists(unittest.TestCase):
         fp = self.level_with(self.rounds(("2026-10-01", 10, 10), ("2026-10-02", 10, 10)), lid="math-m5.flash.taules")
         self.assertEqual(fp["closed"], 0)
 
+    def test_a_contrarellotge_record_changes_no_progress(self):
+        # docs/ENCARREC-FLASH-CONTRARELLOTGE.md §5: a sprint keeps no boxes and closes nothing; flash_progress ignores it.
+        sprint = {"best": {"60": 7}, "runs": [{"day": "2026-10-01", "seconds": 60, "done": 10, "correct": 7}]}
+        self.assertEqual(self.level_with({"words": {}, "closed_at": None, "sprint": sprint})["closed"], 0)
+        self.assertEqual(self.level_with({"words": {}, "closed_at": "2026-10-03", "sprint": sprint})["closed"], 1)
+        self.assertEqual(self.level_with({**self.rounds(("2026-10-01", 8, 10), ("2026-10-02", 8, 10)), "sprint": sprint})["closed"], 1)
+        self.assertEqual(self.level_with({"words": {}, "closed_at": None, "sprint": sprint}, lid="math-m5.flash.taules")["closed"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

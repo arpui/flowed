@@ -964,6 +964,13 @@ nav#commands button[hidden] { display: none; }
 .flash-count { font-size: 0.85rem; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .flash-row.practice { grid-template-columns: 20px 1fr 90px auto; } /* "rondes bones 1/2" is wider than a count */
 .flash-good { margin: 0; font-weight: 600; color: var(--flash-ok); }
+/* Contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §3-4): el compte enrere gran, i les errades del resum. */
+.flash-clock { font-size: 2.2rem; font-weight: 700; line-height: 1; min-width: 3.4ch; font-variant-numeric: tabular-nums; }
+.flash-timer.warn .flash-clock { color: var(--flash-amber); }
+.flash-timer.err .flash-clock { color: var(--flash-err); }
+.flash-timer:has(.flash-clock) { gap: 14px; }
+.flash-errors { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; font-size: 0.95rem; }
+.flash-err-op { font-variant-numeric: tabular-nums; }
 .flash-sum-first { margin: 0; font-size: 1.1rem; }
 
 .flash-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.9rem; }

@@ -54,6 +54,7 @@ export interface FlashListView {
   words: FlashWordView[];
   kind?: "math" | LangKind; // absent for translation lists
   mode?: "practice"; // absent = memory (docs/ENCARREC-FLASH-PRACTICA.md §2)
+  sprint?: true; // math list every card of which is a number or unit answer (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2)
 }
 
 /** Expands a path whose segments may hold a `*` (e.g. `curriculum/flash/en-*`)
@@ -143,6 +144,7 @@ export function loadFlashLists(root: string, dirGlob: string, code: NativeCode):
         words,
         ...(math ? { kind: "math" as const } : lang ? { kind: lang } : {}),
         ...(mode === "practice" ? { mode } : {}),
+        ...(math && sprintable(raw, mode, words) ? { sprint: true as const } : {}),
       },
     });
   }
@@ -2196,6 +2198,38 @@ export function listMode(raw: JsonRecord): "memory" | "practice" {
   return Object.hasOwn(GEN_ROOM, kind) ? "memory" : "practice";
 }
 
+// ---- contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2) --------------------------------------
+// A math list runs as a timed sprint only when every card is answered by a number or a unit (typed, no
+// choice, fraction, pair…). A memory list is judged by its cards. A practice list has no fixed cards, so its
+// cards are sampled: SPRINT_SEEDS rounds of PRACTICE_MAX cards, memoized (the generators are pure, so the
+// answer is the same every time). Mixed lists (bars_read: number and choice cards) are not eligible.
+const SPRINT_ANSWER_KINDS: readonly string[] = ["number", "unit"];
+const SPRINT_SEEDS = 60;
+const sprintMemo = new Map<string, boolean>();
+
+/** Whether a math list can be run as a contrarellotge. `words` are the list's own cards (a memory list). */
+export function sprintable(raw: JsonRecord, mode: "memory" | "practice", words: readonly FlashWordView[]): boolean {
+  if (mode === "memory") return words.length > 0 && words.every((w) => SPRINT_ANSWER_KINDS.includes(w.answer_kind ?? "number"));
+  const gen = asRecord(raw.generate);
+  const key = `${String(raw.id ?? "")}|${JSON.stringify(gen)}`;
+  const hit = sprintMemo.get(key);
+  if (hit !== undefined) return hit;
+  let seen = 0;
+  let ok = true;
+  for (let s = 1; s <= SPRINT_SEEDS && ok; s++) {
+    for (const w of practiceWords(gen, s * 7919, PRACTICE_MAX)) {
+      seen += 1;
+      if (!SPRINT_ANSWER_KINDS.includes(w.answer_kind ?? "number")) {
+        ok = false;
+        break;
+      }
+    }
+  }
+  const out = ok && seen > 0;
+  sprintMemo.set(key, out);
+  return out;
+}
+
 /** The kind of a `generate` block: "op" when it is absent, null or "op"; else the kind as written. */
 function generateKind(gen: JsonRecord): unknown {
   return gen.kind === undefined || gen.kind === null || gen.kind === "op" ? "op" : gen.kind;
@@ -2458,13 +2492,28 @@ export interface FlashPracticeRound {
   total: number; // cards in the round (the repeated ones not counted)
 }
 
+export interface FlashSprintRun {
+  day: string;
+  seconds: number; // 60, 120 or 180
+  done: number; // answered (right or wrong); skipped cards are not counted
+  correct: number;
+}
+
+export interface FlashSprintState {
+  best: Record<string, number>; // seconds → the most correct answers in one run of that length
+  runs: FlashSprintRun[]; // the most recent SPRINT_KEEP runs
+}
+
 export interface FlashListState {
   words: Record<string, FlashWordState>;
   closed_at: string | null;
   practice?: { rounds: FlashPracticeRound[] }; // practice lists only (docs/ENCARREC-FLASH-PRACTICA.md §2.2)
+  sprint?: FlashSprintState; // math lists (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §5)
 }
 
 const PRACTICE_KEEP = 30; // the most recent rounds kept per practice list
+export const SPRINT_SECONDS: readonly number[] = [60, 120, 180]; // the durations of a contrarellotge (1, 2, 3 min)
+const SPRINT_KEEP = 30; // the most recent contrarellotge runs kept per list
 
 export interface FlashState {
   version: 1;
@@ -2500,6 +2549,29 @@ function practiceRounds(value: unknown): FlashPracticeRound[] {
   return rounds.slice(-PRACTICE_KEEP);
 }
 
+/** A list's contrarellotge record that fits the shape: the bests of the known durations and the runs that fit
+ *  (a day, a known duration, 0 ≤ correct ≤ done). Undefined when the value is not an object. */
+function sprintState(value: unknown): FlashSprintState | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const best: Record<string, number> = {};
+  const b = asRecord(asRecord(value).best);
+  for (const s of SPRINT_SECONDS) {
+    const c = count(b[String(s)]);
+    if (c !== null) best[String(s)] = c;
+  }
+  const runs: FlashSprintRun[] = [];
+  for (const r of Array.isArray(asRecord(value).runs) ? (asRecord(value).runs as unknown[]) : []) {
+    const x = asRecord(r);
+    const d = day(x.day);
+    const done = count(x.done);
+    const correct = count(x.correct);
+    if (d === null || done === null || correct === null || correct > done) continue;
+    if (typeof x.seconds !== "number" || !SPRINT_SECONDS.includes(x.seconds)) continue;
+    runs.push({ day: d, seconds: x.seconds, done, correct });
+  }
+  return { best, runs: runs.slice(-SPRINT_KEEP) };
+}
+
 /** Keeps what fits the shape and drops the rest: an unknown list id, a word
  *  whose box is outside 0..2, or any field of the wrong type. A body that is
  *  not a state at all gives an empty state. `practiceIds` (when given) are the
@@ -2524,6 +2596,8 @@ export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<strin
     }
     const list: FlashListState = { words, closed_at: day(e.closed_at) };
     if (e.practice !== undefined && (!practiceIds || practiceIds.has(listId))) list.practice = { rounds: practiceRounds(asRecord(e.practice).rounds) };
+    const sprint = sprintState(e.sprint);
+    if (sprint) list.sprint = sprint;
     out.lists[listId] = list;
   }
   for (const [d, n] of Object.entries(asRecord(body.rounds_by_day))) {

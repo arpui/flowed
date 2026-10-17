@@ -50,6 +50,7 @@ import {
   listMode,
   practiceWords,
   flashPracticeResponse,
+  sprintable,
   type MathWord,
 } from "../src/flash.ts";
 
@@ -2186,6 +2187,126 @@ console.log("practice lists");
   const fjs2 = read("web", "flash.js");
   check("flash.js: a practice round asks /api/flash/practice for ten cards with a new seed", fjs2.includes("/flash/practice?list=") && fjs2.includes("Math.random() * 4294967296") && fjs2.includes("PRACTICE_ROUND"));
   check("flash.js: a practice round is not recorded as words; the menu shows the good rounds", fjs2.includes("!r.repassa && !r.practice") && fjs2.includes("rondes bones ${st.known}/${st.total}") && fjs2.includes("C.recordPractice("));
+}
+
+// ---- contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md) ----------------
+console.log("contrarellotge");
+{
+  // §2 eligibility: only lists whose every card is a number or a unit answer.
+  const memW = (kinds: string[]) => kinds.map((k, i) => ({ id: `w${i}`, target: ["1"], native: [], answer_kind: k as AnswerKind }));
+  check("sprint: a memory list is eligible when all its cards are number or unit", sprintable({}, "memory", memW(["number", "unit", "number"])));
+  check("sprint: a memory list with one choice, fraction or pair card is not, and an empty one is not", !sprintable({}, "memory", memW(["number", "choice"])) && !sprintable({}, "memory", memW(["fraction"])) && !sprintable({}, "memory", memW(["pair"])) && !sprintable({}, "memory", []));
+  check("sprint: a practice list of a number generator is eligible; a choice generator is not",
+    sprintable({ id: "x", generate: { kind: "mult", params: { digits: [2, 1] } } }, "practice", []) && !sprintable({ id: "y", generate: { kind: "compare_numbers" } }, "practice", []));
+
+  const sprintIds = (lvl: string) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-sprint-"));
+    try {
+      fs.writeFileSync(path.join(dir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "Math", current_level: lvl } }));
+      return (flashListsResponse(root, dir) as any).lists as any[];
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  };
+  const m5 = sprintIds("m5");
+  const byId = (lists: any[], id: string) => lists.find((l) => l.id === id);
+  check("sprint: /lists marks the number and unit lists, the taules included, and not the choice, fraction or pair ones",
+    byId(m5, "math-m5.flash.taules")?.sprint === true && byId(m5, "math-m5.flash.mult-2x1")?.sprint === true &&
+    byId(m5, "math-m5.flash.unitats-de-mesura")?.sprint === true && byId(m5, "math-m5.flash.comparar-nombres-grans")?.sprint === undefined &&
+    byId(m5, "math-m5.flash.coordenades")?.sprint === undefined && byId(m5, "math-m5.flash.fraccions-amb-el-mateix-denominador")?.sprint === undefined);
+  check("sprint: a list that mixes number and choice cards is not eligible (bars_read)", byId(m5, "math-m5.flash.diagrames-de-barres")?.sprint === undefined);
+  const counts = ["m5", "m6", "m7"].map((lvl) => sprintIds(lvl).filter((l) => l.sprint === true).length);
+  check("sprint: 58 lists are eligible over m5, m6 and m7 (20 + 17 + 21)", counts.join("+") === "20+17+21", counts);
+  const langDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-sprint-lang-"));
+  try {
+    fs.writeFileSync(path.join(langDir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "English", current_level: "A1" } }));
+    const langLists = (flashListsResponse(root, langDir) as any).lists as any[];
+    check("sprint: no language list is a sprint list", langLists.length > 0 && langLists.every((l) => l.sprint === undefined));
+  } finally {
+    fs.rmSync(langDir, { recursive: true, force: true });
+  }
+  // A memory list of its own: a mixed one is not eligible, a number-only one is.
+  const mixDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-sprint-mix-"));
+  try {
+    fs.mkdirSync(path.join(mixDir, "curriculum", "flash", "mix"), { recursive: true });
+    const write = (name: string, raw: unknown) => fs.writeFileSync(path.join(mixDir, "curriculum", "flash", "mix", name), JSON.stringify(raw));
+    write("a-numbers.json", { id: "t.numbers", level: "m5", title: { ca: "n" }, kind: "math", items: [{ id: "a", prompt: "3 + 4", answer: ["7"] }, { id: "b", prompt: "5 × 2", answer: ["10"] }] });
+    write("b-mixed.json", { id: "t.mixed", level: "m5", title: { ca: "m" }, kind: "math", items: [{ id: "a", prompt: "3 + 4", answer: ["7"] }, { id: "b", prompt: "Quin és?", answer: ["x"], answer_kind: "choice", options: ["x", "y"] }] });
+    const got = Object.fromEntries(loadFlashLists(mixDir, "curriculum/flash/mix", "ca").map((l) => [l.id, l.sprint]));
+    check("sprint: loadFlashLists marks a number-only memory list and leaves a mixed one out", got["t.numbers"] === true && got["t.mixed"] === undefined, got);
+  } finally {
+    fs.rmSync(mixDir, { recursive: true, force: true });
+  }
+
+  // §5 the client's pure helpers (web/flash.js, FlashCore).
+  check("sprint: the clock reads m:ss and rounds the seconds up (102 → 1:42, 9 → 0:09, 0 → 0:00)", C.clockText(102) === "1:42" && C.clockText(9.2) === "0:10" && C.clockText(0) === "0:00" && C.clockText(-1) === "0:00");
+  check("sprint: the duration is 60, 120 or 180 and 120 by default", C.sprintPref("60") === 60 && C.sprintPref(180) === 180 && C.sprintPref(null) === 120 && C.sprintPref(45) === 120 && JSON.stringify(C.SPRINT_OPTIONS) === "[60,120,180]");
+  check("sprint: an answer is checked like a round card (56 and 56 cm² for cm², not 54)", C.checkSprint("56", ["56"], "") && C.checkSprint("56 cm²", ["56"], "cm²") && C.checkSprint("56cm2", ["56"], "cm²") && !C.checkSprint("54", ["56"], "") && !C.checkSprint("56 cm", ["56"], "cm²") && !C.checkSprint("", ["56"], ""));
+  const deal = (ids: string[], last: string | null, rand: () => number = Math.random) => C.shuffleNoRepeat(ids.map((id) => ({ id })), last, rand).map((w: any) => w.id);
+  check("sprint: a shuffle keeps every card once", JSON.stringify(deal(["a", "b", "c", "d"], null).slice().sort()) === '["a","b","c","d"]');
+  check("sprint: a new pass never starts with the card just seen", deal(["a", "b", "c"], "b", () => 0).join("") === "cba" && deal(["a", "b"], "a", () => 0)[0] === "b");
+  let repeats = 0;
+  let last: string | null = null;
+  let passes = 0;
+  for (let i = 0; i < 300; i++) {
+    const pass = deal(["a", "b", "c", "d", "e"], last);
+    if (pass.length !== 5 || new Set(pass).size !== 5) passes = -1;
+    if (pass[0] === last) repeats += 1;
+    last = pass[pass.length - 1];
+    passes += 1;
+  }
+  check("sprint: 300 passes of five cards never repeat a card in a row, each pass a permutation", repeats === 0 && passes === 300, { repeats, passes });
+
+  // Records: the best correct count per duration, the runs (30 at most), nothing else touched.
+  const L = "math-m5.flash.taules";
+  let st: any = C.emptyState();
+  st = C.recordPractice(st, "math-m5.flash.mult-2x1", { first: 8, total: 10 }, "2026-10-01");
+  st.lists[L] = { words: { t1: { box: 1, seen: 1, first_try: 1, misses: 0, last: "2026-10-01" } }, closed_at: null };
+  const r1 = C.recordSprint(st, L, { seconds: 60, done: 40, correct: 34 }, "2026-10-02");
+  check("sprint record: the first run is no record, and its correct count is the best of that duration", r1.record === false && r1.best === 34);
+  const r2 = C.recordSprint(r1.state, L, { seconds: 60, done: 40, correct: 30 }, "2026-10-03");
+  check("sprint record: a lower run is no record and keeps the best", r2.record === false && r2.best === 34);
+  const r3 = C.recordSprint(r2.state, L, { seconds: 60, done: 40, correct: 35 }, "2026-10-04");
+  check("sprint record: a higher run beats the record", r3.record === true && r3.best === 35);
+  const r4 = C.recordSprint(r3.state, L, { seconds: 120, done: 40, correct: 20 }, "2026-10-04");
+  check("sprint record: a 2 min run has its own record (the first, so not one)", r4.record === false && r4.best === 20 && r4.state.lists[L].sprint.best["60"] === 35);
+  check("sprint record: the boxes, closed_at and the practice rounds stay as they were", JSON.stringify(r4.state.lists[L].words) === JSON.stringify(st.lists[L].words) && r4.state.lists[L].closed_at === null && JSON.stringify(r4.state.lists["math-m5.flash.mult-2x1"]) === JSON.stringify(st.lists["math-m5.flash.mult-2x1"]));
+  check("sprint record: the runs are kept with their day, duration, done and correct", JSON.stringify(r4.state.lists[L].sprint.runs.slice(-1)) === '[{"day":"2026-10-04","seconds":120,"done":40,"correct":20}]' && r3.state.lists[L].sprint.runs.length === 3);
+  let many: any = C.emptyState();
+  for (let i = 0; i < 35; i++) many = C.recordSprint(many, L, { seconds: 60, done: 10, correct: i % 10 }, "2026-10-01").state;
+  check("sprint record: at most 30 runs are kept, the most recent", many.lists[L].sprint.runs.length === 30 && many.lists[L].sprint.runs[29].correct === 34 % 10);
+  check("sprint: a run counts as a round of the day, and a state with only runs has progress", C.hasProgress(r1.state) && !C.hasProgress(C.emptyState()) && C.countRound(r1.state, "2026-10-02").rounds_by_day["2026-10-02"] === 1);
+  check("sprint: the menu's eligibility uses the flag from /lists", C.sprintable({ kind: "math", sprint: true }) && !C.sprintable({ kind: "math" }) && !C.sprintable({ kind: "drill", sprint: true }) && !C.sprintable(undefined));
+
+  // §5 the server's sanitize keeps a valid sprint record and drops the rest.
+  const sanBody = {
+    version: 1,
+    lists: {
+      [L]: { words: {}, closed_at: null, sprint: {
+        best: { "60": 34, "90": 5, "120": -1 },
+        runs: [
+          { day: "2026-10-01", seconds: 60, done: 40, correct: 34 },
+          { day: "2026-10-01", seconds: 90, done: 40, correct: 34 }, // a duration that does not exist
+          { day: "2026-10-02", seconds: 60, done: 10, correct: 11 }, // more right than done
+          { day: "yesterday", seconds: 60, done: 10, correct: 3 }, // a bad day
+          { day: "2026-10-03", seconds: 180, done: 12, correct: 9 },
+        ],
+      } },
+      "math-m5.flash.mult-2x1": { words: {}, closed_at: null, sprint: 5 },
+    },
+    rounds_by_day: {},
+  };
+  const kept = sanitizeFlashState(sanBody, new Set([L, "math-m5.flash.mult-2x1"]), new Set());
+  check("sanitize sprint: the valid bests and runs are kept, the bad ones dropped", JSON.stringify(kept.lists[L]?.sprint) === JSON.stringify({ best: { "60": 34 }, runs: [{ day: "2026-10-01", seconds: 60, done: 40, correct: 34 }, { day: "2026-10-03", seconds: 180, done: 12, correct: 9 }] }), kept.lists[L]?.sprint);
+  check("sanitize sprint: a value that is not an object gives no sprint key", !("sprint" in (kept.lists["math-m5.flash.mult-2x1"] ?? {})));
+  const capSprint = sanitizeFlashState({ version: 1, lists: { [L]: { words: {}, closed_at: null, sprint: { best: {}, runs: Array.from({ length: 40 }, (_, i) => ({ day: "2026-10-01", seconds: 60, done: 10, correct: i % 10 })) } } } }, new Set([L]));
+  check("sanitize sprint: the last 30 runs are kept", capSprint.lists[L]?.sprint?.runs.length === 30 && capSprint.lists[L]?.sprint?.runs[29]?.correct === 39 % 10);
+  check("sanitize sprint: a list without a sprint key has none", !("sprint" in (sanitizeFlashState({ version: 1, lists: { [L]: { words: {}, closed_at: null } } }, new Set([L])).lists[L] ?? {})));
+
+  // The client's wiring (the round code is the same as before: the sprint has its own path).
+  const fjs3 = read("web", "flash.js");
+  check("flash.js: the menu offers the contrarellotge only for an eligible list, with 1, 2 and 3 min", fjs3.includes('C.sprintable(sel) ? `<button type="button" data-act="sprint">') && fjs3.includes("C.SPRINT_OPTIONS.map(sprintButton)"));
+  check("flash.js: the sprint asks /api/flash/practice for lots of 20 with a new seed, and does not touch the boxes or closing", fjs3.includes("n=${C.SPRINT_LOT}&seed=${seed}") && fjs3.includes("const record = before !== undefined") && !/recordResult\(state, s\./.test(fjs3) && fjs3.includes('flowed.flash.sprint'));
 }
 
 if (failures) {
