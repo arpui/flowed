@@ -127,15 +127,14 @@ class AuditMixTest(unittest.TestCase):
         self.assertIn('sessions/sessions.db  session[s1].title  "FlowEd · Language"  (other domain\'s brand', out)
         self.assertNotIn("session[s0]", out)
 
-    def test_math_results_file_in_language_profile_is_flagged(self):
+    def test_results_files_are_not_checked(self):
+        # persist-session.py names every domain's results "-math-learn-" (core naming): not a finding.
         p = language_profile(self.home)
         (p / "results" / "alex-math-learn-session-002.md").write_text(
             "# Math Learning Session - session-002\n", encoding="utf-8")
         code, out, _ = run(self.home, "alex-en")
-        self.assertEqual(code, 1, out)
-        self.assertIn("results/alex-math-learn-session-002.md  (file name)", out)
-        self.assertIn("results/alex-math-learn-session-002.md  header line 1", out)
-        self.assertNotIn("results/alex-learn-session-001.md", out)  # the clean file is not reported
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("results/", out)
 
     def test_domain_field_contradicting_levels_is_flagged(self):
         p = math_profile(self.home)

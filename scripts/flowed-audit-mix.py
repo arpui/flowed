@@ -19,9 +19,10 @@ Per profile:
      categories, pattern ids ("<category>_..."), skill keys, competence ids
      ("m5.area_perimeter", "a1.vocab_family"), level codes ("m5", "A1"), Flash
      list ids ("math-m5.flash.taules", "en-A1.flash.family");
-  3. results/*.md: the file name (e.g. "-math-" in a language profile) and the
-     first lines (the other domain's label, e.g. "Math Learning Session");
-  4. sessions/sessions.db: session titles with the other domain's brand.
+  3. sessions/sessions.db: session titles with the other domain's brand.
+
+results/*.md is not checked: hooks/persist-session.py names and heads every
+domain's results file "-math-learn-" / "Math Learning Session" (core naming).
 
 The vocabularies come from hooks/db_schema.py (categories, skill keys) and
 config/domain.json (levels, Flash prefixes, labels): one source of truth, so
@@ -272,28 +273,7 @@ def audit_profile(pdir: Path, manifest: dict, vocabs: dict[str, Vocab], levels: 
             continue
         scan_json(data, "", f.name, own, foreigns, findings)
 
-    markers = {m for v in foreigns for m in v.file_markers}
     title_re = word_re([w for v in foreigns for w in v.title_words])
-    results = pdir / "results"
-    if results.is_dir():
-        for f in sorted(results.glob("*.md")):
-            rel = f"results/{f.name}"
-            name = f.name.lower()
-            for m in sorted(markers):
-                if f"-{m}-" in name:
-                    findings.append(Finding(rel, "(file name)", f.name, f"'-{m}-' is the other domain's file name"))
-                    break
-            try:
-                head = read_head(f)
-            except OSError as e:
-                findings.append(Finding(rel, "-", "", f"unreadable: {e}"))
-                continue
-            lines = [l for l in head.splitlines() if l.strip()][:RESULTS_HEAD_LINES]
-            for i, line in enumerate(lines, 1):
-                if title_re is not None and title_re.search(line):
-                    findings.append(Finding(rel, f"header line {i}", line.strip()[:160],
-                                            "other domain's label in the header"))
-                    break
 
     db = pdir / "sessions" / "sessions.db"
     if db.is_file():
