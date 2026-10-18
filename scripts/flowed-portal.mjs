@@ -461,7 +461,18 @@ function upstreamCookie(req) {
   return kept.join("; ")
 }
 
-async function proxyTo(req, prof, api) {
+// La pàgina principal d'un perfil porta el marcador del portal (docs/ENCARREC-P4-FLASH-INICI.md §2): la web
+// mostra el 🏠 només amb ell. multi = l'alumne té més d'un perfil a la sessió (anar a /switch, no a /logout).
+function portalMarker(multi) {
+  return `<script>window.__FLOWED_PORTAL={multi:${multi ? "true" : "false"}}</script>`
+}
+
+function isMainPage(req) {
+  const p = new URL(req.url).pathname
+  return req.method === "GET" && (p === "/" || p === "/index.html")
+}
+
+async function proxyTo(req, prof, api, multi) {
   const password = readPassword(prof)
   if (password === null) return api ? jsonErr(503, "perfil sense contrasenya") : unavailablePage()
 
@@ -498,6 +509,12 @@ async function proxyTo(req, prof, api) {
   for (const [k, v] of upstream.headers) {
     if (DROP_RESPONSE.has(k.toLowerCase())) continue
     resHeaders.append(k, v)
+  }
+  const type = upstream.headers.get("content-type") || ""
+  if (isMainPage(req) && upstream.status === 200 && type.includes("text/html")) {
+    // Només la pàgina principal: el marcador va just abans de </head>; res més canvia.
+    const text = await upstream.text()
+    return new Response(text.replace("</head>", portalMarker(multi) + "</head>"), { status: upstream.status, headers: resHeaders })
   }
   return new Response(upstream.body, { status: upstream.status, headers: resHeaders })
 }
@@ -539,7 +556,10 @@ const server = serve({
 
       const session = getSession(req)
       const prof = session ? activeProfiles().find((x) => x.id === session.p) : null
-      if (prof) return await proxyTo(req, prof, api)
+      if (prof) {
+        const multi = activeProfiles().filter((x) => session.c.includes(x.id)).length > 1
+        return await proxyTo(req, prof, api, multi)
+      }
 
       if (api) return jsonErr(401, "sense sessió")
       if (getPending(req)) return redirect("/switch")

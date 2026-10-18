@@ -154,6 +154,8 @@ header {
   font-size: 1rem;
 }
 .ghost:disabled { opacity: 0.4; cursor: default; }
+/* 🏠 only behind the portal (docs/ENCARREC-P4-FLASH-INICI.md §2): the hidden attribute must win over .ghost. */
+button.home-btn[hidden] { display: none; }
 
 main {
   flex: 1;

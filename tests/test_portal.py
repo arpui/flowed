@@ -79,6 +79,11 @@ class FakeProfile:
                     self.wfile.write(b"data: two\n\n")
                     self.wfile.flush()
                     return
+                if self.path in ("/", "/index.html"):
+                    # the main page: an HTML shell with a </head>, like web/index.html behind server/src/http.ts
+                    page = (f"<!doctype html><html><head><title>fake</title></head>"
+                            f"<body>profile={outer.tag} path={self.path}</body></html>")
+                    return self._send(200, page.encode(), {"Content-Type": "text/html; charset=utf-8"})
                 self._send(200, f"profile={outer.tag} path={self.path}".encode())
 
             def do_POST(self):
@@ -264,7 +269,7 @@ class EntryAndLoginTest(PortalCase):
         status, hdrs, body = request(self.portal_port, "GET", "/", cookie=token)
         # the fake profile only answers 200 when the portal's Authorization is right
         self.assertEqual(status, 200)
-        self.assertEqual(body, b"profile=A path=/")
+        self.assertIn(b"profile=A path=/", body)
         self.assertEqual(header_values(hdrs, "www-authenticate"), [])
 
     def test_health_endpoint(self):
@@ -302,7 +307,7 @@ class ProfileChoiceTest(PortalCase):
         session = cookie_from(hdrs)
         status, _, body = request(self.portal_port, "GET", "/", cookie=session)
         self.assertEqual(status, 200)
-        self.assertEqual(body, b"profile=N2 path=/")
+        self.assertIn(b"profile=N2 path=/", body)
 
     def test_choice_is_limited_to_the_matching_candidates(self):
         pending = cookie_from(self.login("nes", PW_SHARED)[1])
@@ -317,7 +322,7 @@ class ProfileChoiceTest(PortalCase):
         token = self.session_for("nes", PW_OTHER)
         status, _, body = request(self.portal_port, "GET", "/", cookie=token)
         self.assertEqual(status, 200)
-        self.assertEqual(body, b"profile=N3 path=/")
+        self.assertIn(b"profile=N3 path=/", body)
 
     def test_switch_from_a_session_with_one_profile_goes_home(self):
         token = self.session_for("ana", PW_ANA)
@@ -362,7 +367,7 @@ class SessionTest(PortalCase):
         bob_status, _, _ = self.login("bob", PW_BOB)
         self.assertEqual(bob_status, 303)
         status, _, body = request(self.portal_port, "GET", "/", cookie=ana)
-        self.assertEqual(body, b"profile=A path=/")
+        self.assertIn(b"profile=A path=/", body)
 
 
 @unittest.skipUnless(BUN_OK, "bun not installed")
@@ -428,7 +433,7 @@ class ProxyTest(PortalCase):
         self._wait_healthy()
         token = self.session_for("ana", PW_ANA)
         status, _, body = request(self.portal_port, "GET", "/", cookie=token)
-        self.assertEqual(body, b"profile=A path=/")
+        self.assertIn(b"profile=A path=/", body)
 
 
 @unittest.skipUnless(BUN_OK, "bun not installed")
@@ -454,6 +459,51 @@ class RateLimitAndSecrecyTest(PortalCase):
         text = self.log_path.read_text(encoding="utf-8")
         for secret in (PW_ANA, PW_SHARED, PW_OTHER, PW_BOB, "wrong-guess-3311"):
             self.assertNotIn(secret, text)
+
+
+class PortalMarkerTest(PortalCase):
+    """docs/ENCARREC-P4-FLASH-INICI.md §2: the main page of a profile carries window.__FLOWED_PORTAL={multi}."""
+
+    MARK_FALSE = "<script>window.__FLOWED_PORTAL={multi:false}</script>"
+    MARK_TRUE = "<script>window.__FLOWED_PORTAL={multi:true}</script>"
+
+    def test_one_profile_main_page_says_multi_false_just_before_head_end(self):
+        token = self.session_for("ana", PW_ANA)
+        status, hdrs, body = request(self.portal_port, "GET", "/", cookie=token)
+        self.assertEqual(status, 200)
+        text = body.decode("utf-8")
+        self.assertEqual(text.count("window.__FLOWED_PORTAL="), 1)
+        self.assertIn(self.MARK_FALSE + "</head>", text)
+        self.assertIn("text/html", " ".join(header_values(hdrs, "content-type")))
+        # nothing else changes: without the marker it is the page the profile served
+        self.assertEqual(text.replace(self.MARK_FALSE, ""), "<!doctype html><html><head><title>fake</title></head><body>profile=A path=/</body></html>")
+
+    def test_index_html_gets_the_marker_too(self):
+        token = self.session_for("ana", PW_ANA)
+        status, _, body = request(self.portal_port, "GET", "/index.html", cookie=token)
+        self.assertEqual(status, 200)
+        self.assertIn(self.MARK_FALSE, body.decode("utf-8"))
+
+    def test_two_profiles_behind_the_session_say_multi_true(self):
+        status, hdrs, _ = self.login("nes", PW_SHARED)
+        pending = cookie_from(hdrs)
+        status, hdrs, _ = request(self.portal_port, "POST", "/choose", body="profile=nes-en", cookie=pending)
+        self.assertEqual(status, 303)
+        token = cookie_from(hdrs)
+        status, _, body = request(self.portal_port, "GET", "/", cookie=token)
+        self.assertEqual(status, 200)
+        text = body.decode("utf-8")
+        self.assertIn(self.MARK_TRUE + "</head>", text)
+        self.assertNotIn("multi:false", text)
+
+    def test_other_paths_and_api_are_not_touched(self):
+        token = self.session_for("ana", PW_ANA)
+        for path in ("/api/flash/lists", "/style.css", "/some/page.html"):
+            status, _, body = request(self.portal_port, "GET", path, cookie=token)
+            self.assertEqual(status, 200, path)
+            self.assertNotIn("window.__FLOWED_PORTAL", body.decode("utf-8"), path)
+        status, _, body = request(self.portal_port, "POST", "/", body="x=1", cookie=token)
+        self.assertNotIn("window.__FLOWED_PORTAL", body.decode("utf-8"))
 
 
 if __name__ == "__main__":

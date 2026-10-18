@@ -6,6 +6,33 @@
 // server/test/flash.test.ts carrega amb vm; i la interfície, que només corre quan
 // hi ha un document i usa api() d'app.js.
 
+// ---- claus de localStorage per perfil (docs/ENCARREC-P4-FLASH-INICI.md §3) --
+// Al portal tots els perfils comparteixen origen (i per tant localStorage): cada clau du el nom del
+// perfil (window.__FLOWED_PROFILE, injectat per http.ts). Sense ell (o sense window), les claus antigues.
+// Migració: només als ports directes (sense window.__FLOWED_PORTAL), i una vegada: les claus antigues
+// passen a la del perfil i s'esborren. Pel portal no es toca res.
+// window.flowedKey(k) la torna; app.js l'usa abans de carregar-se, per això aquest bloc va primer.
+(function () {
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return;
+  const profile = typeof window.__FLOWED_PROFILE === "string" ? window.__FLOWED_PROFILE.trim() : "";
+  window.flowedKey = (key) => (profile ? `${profile}|${key}` : key);
+  if (!profile || window.__FLOWED_PORTAL) return;
+  try {
+    const old = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && /^(math\.|flowed\.flash\.)/.test(k)) old.push(k);
+    }
+    for (const k of old) {
+      const nk = `${profile}|${k}`;
+      if (localStorage.getItem(nk) === null) localStorage.setItem(nk, localStorage.getItem(k));
+      localStorage.removeItem(k);
+    }
+  } catch {
+    /* sense emmagatzematge: res a migrar */
+  }
+})();
+
 // ---- nucli pur -------------------------------------------------------------
 (function () {
   "use strict";
@@ -1252,7 +1279,7 @@
   // ---- persistència per visitant (tot dins try/catch) ----------------------
   function loadPrefs() {
     try {
-      return C.migratePrefs(JSON.parse(localStorage.getItem(PREFS_KEY) || "null"));
+      return C.migratePrefs(JSON.parse(localStorage.getItem(window.flowedKey(PREFS_KEY)) || "null"));
     } catch {
       /* sense emmagatzematge: valors per defecte */
     }
@@ -1261,7 +1288,7 @@
 
   function savePrefs() {
     try {
-      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+      localStorage.setItem(window.flowedKey(PREFS_KEY), JSON.stringify(prefs));
     } catch {
       /* la pàgina funciona igual */
     }
@@ -1270,7 +1297,7 @@
   // La durada de la contrarellotge, per visitant. Sense emmagatzematge, la per defecte.
   function loadSprintPref() {
     try {
-      return C.sprintPref(localStorage.getItem(SPRINT_KEY));
+      return C.sprintPref(localStorage.getItem(window.flowedKey(SPRINT_KEY)));
     } catch {
       return C.sprintPref(null);
     }
@@ -1278,7 +1305,7 @@
 
   function saveSprintPref() {
     try {
-      localStorage.setItem(SPRINT_KEY, String(sprintSec));
+      localStorage.setItem(window.flowedKey(SPRINT_KEY), String(sprintSec));
     } catch {
       /* la pàgina funciona igual */
     }
@@ -1297,7 +1324,7 @@
   // El progrés és al servidor (data/flash-db.json). El navegador en guarda una
   // còpia, i una marca si l'última pujada ha fallat (aleshores és més nova que el servidor).
   function pendingKey() {
-    return `${stateKey}|pending`;
+    return window.flowedKey(`${stateKey}|pending`);
   }
 
   function readPending() {
@@ -1335,7 +1362,7 @@
 
   function saveState() {
     try {
-      localStorage.setItem(stateKey, JSON.stringify(state));
+      localStorage.setItem(window.flowedKey(stateKey), JSON.stringify(state));
     } catch {
       /* la pàgina funciona igual */
     }
@@ -1512,6 +1539,7 @@
     // La direcció només afecta les de traducció: sense cap, no surt.
     const spoken = lists.length > 0 && lists.every(isLangDrill);
     const sprintOn = prefs.mode === "sprint"; // docs/ENCARREC-FLASH-P3-MODES.md §2
+    const canSprint = lists.some(C.sprintable); // sense cap llista elegible, la contrarellotge no es pot triar (P4 §3)
     const sel = lists.find((l) => l.id === selected);
     const selClosed = sel ? C.listStatus(sel, state).closed : false;
     const selPractice = C.isPractice(sel);
@@ -1542,7 +1570,7 @@
         <div class="flash-body">
           <p class="flash-label">Mode</p>
           <div class="flash-mode">
-            <div class="flash-seg" role="group" aria-label="Mode">${modeButton("normal")}${modeButton("sprint")}</div>
+            <div class="flash-seg" role="group" aria-label="Mode">${modeButton("normal")}${canSprint ? modeButton("sprint") : ""}</div>
             ${sprintOn ? `<div class="flash-seg" role="group" aria-label="Durada de la contrarellotge">${C.SPRINT_OPTIONS.map(sprintButton).join("")}</div>` : ""}
           </div>
           ${math || spoken ? "" : `<p class="flash-label">Direcció</p>
@@ -1550,7 +1578,7 @@
           ${sprintOn ? "" : `<p class="flash-label">Temps per ${noun(lists[0] || {})}</p>
           <div class="flash-seg" role="group" aria-label="Temps per ${noun(lists[0] || {})}">${timeButton(false)}${C.TIMER_OPTIONS.map(timeButton).join("")}</div>`}
           <p class="flash-label">Llistes <span class="flash-hint-inline">· doble clic per començar</span></p>
-          <div class="flash-lists">${rows || '<p class="flash-note">Encara no hi ha llistes.</p>'}</div>
+          <div class="flash-lists">${rows || `<p class="flash-note">${escText(`Encara no hi ha llistes de Flash per al nivell ${data.level || "—"}`)}</p>`}</div>
           <div class="flash-actions">
             ${sprintOn
               ? `<button type="button" class="primary" data-act="sprint"${sel && C.sprintable(sel) ? "" : " disabled"}>⏱ Comença</button>`
@@ -2357,8 +2385,13 @@
     }
     ttsOn = data.lists.some((l) => l.kind === "dictation") ? await speechOn() : false;
     stateKey = `flowed.flash.v1|${window.__FLOWED_DOMAIN || "language"}|${data.target}|${data.nativeCode}`;
-    state = loadState(stateKey);
+    state = loadState(window.flowedKey(stateKey));
     state = await loadServerState(state);
+    // Una contrarellotge recordada sense cap llista elegible (p. ex. una llengua) cau a Normal: mai un menú buit (P4 §3).
+    if (prefs.mode === "sprint" && !data.lists.some(C.sprintable)) {
+      prefs.mode = "normal";
+      savePrefs();
+    }
     selected = pickSelection(null);
     renderMenu();
   }

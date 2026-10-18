@@ -1148,6 +1148,35 @@ check("http.ts serves GET /api/flash/lists", http.includes('p === "/api/flash/li
 check("index.html has the Flash button after Review and loads flash.js",
   /data-cmd="math-review"[\s\S]*data-cmd="math-flash"/.test(index) && index.includes('src="/flash.js"'));
 check("app.js hides Flash unless __FLOWED_FLASH", app.includes("!window.__FLOWED_FLASH"));
+// P4 §3: every browser storage key is per profile (the portal shares one origin between profiles).
+check("http.ts injects window.__FLOWED_PROFILE (the profile dir name)", http.includes("window.__FLOWED_PROFILE=${JSON.stringify(path.basename(opts.dataDir()))}"));
+check("flash.js defines window.flowedKey and migrates old keys only when not behind the portal",
+  flashJs.includes("window.flowedKey = (key) => (profile ? `${profile}|${key}` : key)") && flashJs.includes("if (!profile || window.__FLOWED_PORTAL) return;"));
+check("flash.js: prefs, sprint duration and Flash progress keys go through flowedKey",
+  flashJs.includes("localStorage.getItem(window.flowedKey(PREFS_KEY))") && flashJs.includes("localStorage.setItem(window.flowedKey(PREFS_KEY)") &&
+  flashJs.includes("localStorage.getItem(window.flowedKey(SPRINT_KEY))") && flashJs.includes("localStorage.setItem(window.flowedKey(SPRINT_KEY)") &&
+  flashJs.includes("loadState(window.flowedKey(stateKey))") && flashJs.includes("localStorage.setItem(window.flowedKey(stateKey)") &&
+  flashJs.includes("window.flowedKey(`${stateKey}|pending`)"));
+check("app.js: session and debug keys go through fk (flowedKey), no raw math.* key left",
+  app.includes('fk("math.session")') && app.includes('fk("math.debug")') && !/localStorage\.\w+\("math\./.test(app));
+// P4 §3: a remembered Contrarellotge with no eligible list (a language profile) falls back to Normal, and the
+// Contrarellotge button is not shown then.
+// Cross-profile guard (docs/ENCARREC-P4-FLASH-INICI.md §4): every call says which profile the page is, and a 409
+// from another profile reloads the page instead of going on.
+check("app.js api() sends x-flowed-profile, and the SSE URL carries ?profile=",
+  app.includes('"x-flowed-profile": PROFILE') && app.includes("?profile=${enc(PROFILE)}") && http.includes("profileMismatch(req, path.basename(opts.dataDir()))"));
+check("app.js api(): a profile_mismatch 409 alerts and reloads, and sends nothing more",
+  app.includes('body.error === "profile_mismatch"') && app.includes("Has canviat de perfil en una altra pestanya. Torna a carregar.") && app.includes("location.reload();"));
+// Every storage call in the browser code takes a key from flowedKey (or a variable built from it): a literal key
+// would leak between profiles behind the portal (one origin for all of them).
+check("web/*.js: no localStorage call with a literal key (every key is per profile)",
+  !/localStorage\.(getItem|setItem|removeItem)\(\s*["'`]/.test(app + flashJs) && !/sessionStorage/.test(app + flashJs));
+check("flash.js: an empty list says Encara no hi ha llistes de Flash per al nivell X (no blank area)",
+  flashJs.includes("Encara no hi ha llistes de Flash per al nivell ${data.level"));
+check("flash.js: openFlash drops a remembered Contrarellotge to Normal when no list is eligible",
+  /prefs\.mode === "sprint" && !data\.lists\.some\(C\.sprintable\)\)\s*\{\s*prefs\.mode = "normal";/.test(flashJs));
+check("flash.js: the Contrarellotge button is rendered only when some list is eligible",
+  flashJs.includes("const canSprint = lists.some(C.sprintable)") && flashJs.includes('${canSprint ? modeButton("sprint") : ""}'));
 check("app.js: Flash after Review in the language bar", app.includes('"math-review", "math-flash"'));
 check("app.js: Flash toggles the drill, no agent turn", app.includes('b.dataset.cmd === "math-flash"') && app.includes("toggleFlash();"));
 check("app.js: any other bar button closes Flash first", app.includes("closeFlash();"));

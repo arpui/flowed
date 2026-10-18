@@ -9,6 +9,7 @@ import type { Agent } from "./agent";
 import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
 import { skillKeysFor } from "./tools";
+import { profileMismatch } from "./profile";
 import { flashConfig, flashListsResponse, flashPracticeResponse, flashStateResponse, saveFlashState } from "./flash";
 
 export interface HttpConfig {
@@ -312,6 +313,12 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       const url = new URL(req.url);
       const p = url.pathname;
 
+      // Before any API handler: a stale tab of another profile writes nothing here.
+      if (p.startsWith("/api")) {
+        const mismatch = profileMismatch(req, path.basename(opts.dataDir()));
+        if (mismatch) return mismatch;
+      }
+
       // SSE must be authorized too (the browser reuses basic-auth creds).
       if (p === "/api/event") {
         if (!authorized(req)) return unauth();
@@ -397,7 +404,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             .replace("🧮</text>", `${favicon}</text>`)
             .replace(
               "</head>",
-              `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};window.__FLOWED_OPEN=${JSON.stringify(open)};window.__FLOWED_BRAND=${JSON.stringify(brand + " · " + label)};window.__FLOWED_HIDDEN=${JSON.stringify(hidden)};window.__FLOWED_FLASH=${flashOn};</script></head>`
+              `<script>window.__FLOWED_DOMAIN=${JSON.stringify(dom)};window.__FLOWED_OPEN=${JSON.stringify(open)};window.__FLOWED_BRAND=${JSON.stringify(brand + " · " + label)};window.__FLOWED_HIDDEN=${JSON.stringify(hidden)};window.__FLOWED_FLASH=${flashOn};window.__FLOWED_PROFILE=${JSON.stringify(path.basename(opts.dataDir()))};</script></head>`
             );
         }
         return new Response(body, {

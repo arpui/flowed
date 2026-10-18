@@ -11,9 +11,11 @@ const AGENT = "learner";
 // Learner-clean view: command chips show icon only, successful skill/bash
 // tool chips are hidden (status messages + errors always visible). Debug mode
 // (?debug=1 or triple-click the brand) reveals command text + all tool chips.
+// Claus de localStorage per perfil (flowedKey, de flash.js; docs/ENCARREC-P4-FLASH-INICI.md §3).
+const fk = (k) => (window.flowedKey ? window.flowedKey(k) : k);
 const DEBUG =
   new URLSearchParams(location.search).get("debug") === "1" ||
-  localStorage.getItem("math.debug") === "1";
+  localStorage.getItem(fk("math.debug")) === "1";
 
 const $ = (s) => document.querySelector(s);
 const messagesEl = $("#messages");
@@ -42,7 +44,7 @@ const skillDotEl = $("#skill-dot");
 
 const enc = encodeURIComponent;
 
-let sessionId = localStorage.getItem("math.session") || null;
+let sessionId = localStorage.getItem(fk("math.session")) || null;
 let busy = false;
 let nearBottom = true;
 let lastActivity = 0;
@@ -669,6 +671,8 @@ function setBusy(b) {
   expandBtn.disabled = b;
   for (const btn of document.querySelectorAll("#commands button")) btn.disabled = b;
   $("#new-session").disabled = b;
+  const hb = $("#home-btn");
+  if (hb) hb.disabled = b;
   statusEl.textContent = b ? "el tutor està pensant…" : statusEl.dataset.online || "offline";
   // Focus mode: hide the practice-mode nav while a turn is running so it
   // doesn't break the question → answer flow. Purely visual, trivially
@@ -935,14 +939,25 @@ function addUserMsg(text) {
   return div;
 }
 
+// Every call says which profile this page is (X-Flowed-Profile): a tab left open on another profile
+// (the portal cookie moved on) gets 409 from the server and writes nothing (docs/ENCARREC-P4-FLASH-INICI.md §4).
+const PROFILE = window.__FLOWED_PROFILE || "";
 async function api(path, opts = {}) {
   const doFetch = () =>
     fetch(API + path, {
       method: opts.method || "GET",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...(PROFILE ? { "x-flowed-profile": PROFILE } : {}) },
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
   let res = await doFetch();
+  if (res.status === 409) {
+    const body = await res.json().catch(() => null);
+    if (body && body.error === "profile_mismatch") {
+      alert("Has canviat de perfil en una altra pestanya. Torna a carregar.");
+      location.reload();
+      return new Promise(() => {}); // res més: la pàgina es recarrega
+    }
+  }
   if (res.status === 401) {
     // browser shows the basic-auth prompt on the retry
     res = await doFetch();
@@ -1026,12 +1041,12 @@ async function ensureSession() {
       if (resume) return;
     }
     sessionId = null;
-    localStorage.removeItem("math.session");
+    localStorage.removeItem(fk("math.session"));
   }
   const s = await api("/session", { method: "POST", body: { title: window.__FLOWED_BRAND || "FlowEd" } });
   sessionId = s.id || s.info?.id;
   if (!sessionId) throw new Error("no s'ha pogut crear la sessió");
-  localStorage.setItem("math.session", sessionId);
+  localStorage.setItem(fk("math.session"), sessionId);
 }
 
 async function renderHistory() {
@@ -1165,7 +1180,7 @@ async function newSession(opts) {
   if (busy && !skipConfirm) return;
   if (!skipConfirm && !confirm("Tancar aquesta sessió i en començar una de nova?")) return;
   sessionId = null;
-  localStorage.removeItem("math.session");
+  localStorage.removeItem(fk("math.session"));
   messagesEl.innerHTML = "";
   renderedMsgs.clear();
   pendingParts.clear();
@@ -1224,7 +1239,8 @@ let esTries = 0;
 function openSSE() {
   if (es) return;
   try {
-    es = new EventSource(API + "/event");
+    // EventSource cannot set headers: the profile goes in the query (the server reads both).
+    es = new EventSource(API + "/event" + (PROFILE ? `?profile=${enc(PROFILE)}` : ""));
   } catch {
     es = null;
     setTimeout(openSSE, 5000);
@@ -2122,6 +2138,39 @@ document.querySelectorAll("#commands button").forEach((b) =>
 );
 $("#new-session").addEventListener("click", newSession);
 
+// 🏠 (docs/ENCARREC-P4-FLASH-INICI.md §2): només amb el portal (window.__FLOWED_PORTAL). Acaba la sessió com
+// 🏁 End (la mateixa comanda), espera com a màxim 20 s, i torna a la tria de perfil (/switch) o surt (/logout).
+const homeBtn = $("#home-btn");
+const portalInfo = window.__FLOWED_PORTAL || null;
+if (portalInfo && homeBtn) {
+  const multi = !!portalInfo.multi;
+  homeBtn.hidden = false;
+  homeBtn.title = multi ? "Inici" : "Surt";
+  homeBtn.setAttribute("aria-label", homeBtn.title);
+  homeBtn.addEventListener("click", goHome);
+}
+// Hi ha activitat a la sessió? Si no, no cal acabar-la. Un error de xarxa compta com a «sí» (s'acaba igualment).
+async function sessionHasActivity() {
+  if (!sessionId) return false;
+  try {
+    const list = await api(`/session/${enc(sessionId)}/message?limit=1`);
+    return Array.isArray(list) && list.length > 0;
+  } catch {
+    return true;
+  }
+}
+async function goHome() {
+  if (busy) return;
+  if (!confirm("Vols acabar la sessió i tornar a l'inici?")) return;
+  closeFlash(); // com el botó de la barra: Flash es tanca abans de la comanda
+  if (await sessionHasActivity()) {
+    const dom = window.__FLOWED_DOMAIN === "language" ? "fluent" : "math";
+    const ended = runCommand(dom + "-end");
+    await Promise.race([ended, new Promise((resolve) => setTimeout(resolve, 20000))]);
+  }
+  location.href = portalInfo && portalInfo.multi ? "/switch" : "/logout";
+}
+
 // Triple-click the brand toggles debug mode (reveals command text + tool chips).
 {
   const brand = document.querySelector(".brand");
@@ -2135,8 +2184,8 @@ $("#new-session").addEventListener("click", newSession);
       timer = setTimeout(() => (clicks = 0), 600);
       if (clicks >= 3) {
         clicks = 0;
-        const on = localStorage.getItem("math.debug") === "1";
-        localStorage.setItem("math.debug", on ? "0" : "1");
+        const on = localStorage.getItem(fk("math.debug")) === "1";
+        localStorage.setItem(fk("math.debug"), on ? "0" : "1");
         location.reload();
       }
     });
