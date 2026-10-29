@@ -1108,7 +1108,8 @@ def _lang_item_ids(raw: dict, kind: str) -> list[str]:
 def flash_lists(root: str | os.PathLike, stem: str | None) -> list[dict]:
     """The level's Flash lists: curriculum/flash/<stem>/*.json, as {id, words: [word ids], mode}.
     A math list (`generate` or `items`) counts its generated or valid ids; one with both is skipped.
-    A drill or dictation list (`kind`) counts its valid items. mode is 'practice' or 'memory'."""
+    A drill or dictation list (`kind`) counts its valid items. mode is 'practice' or 'memory'.
+    A list with a `sheet` block is marked `sheet` (docs/ENCARREC-FLASH-FULL.md §2): a test, not a list to learn."""
     if not stem:
         return []
     out = []
@@ -1130,7 +1131,8 @@ def flash_lists(root: str | os.PathLike, stem: str | None) -> list[dict]:
                 words = [str(w["id"]) for w in raw["words"] if isinstance(w, dict) and w.get("id")]
             else:
                 continue
-        out.append({"id": str(raw.get("id") or f.stem), "words": words, "mode": mode})
+        # A sheet (docs/ENCARREC-FLASH-FULL.md §2) is listed like the server lists it, marked: flash_progress does not count it.
+        out.append({"id": str(raw.get("id") or f.stem), "words": words, "mode": mode, **({"sheet": True} if "sheet" in raw else {})})
     return out
 
 
@@ -1161,7 +1163,8 @@ def flash_progress(root: str | os.PathLike | None, cur: dict, data_dir: str | os
     A list with no words is never closed. A word added to a closed list reopens it, since
     the word has no box yet. `met` is true when there is no requirement (share 0 or no lists)."""
     share = int(cur["meta"].get("flash_share") or 0)
-    lists = flash_lists(root or Path(__file__).resolve().parent.parent, stem or cur["meta"].get("stem"))
+    # A sheet is a test: it neither closes nor counts (docs/ENCARREC-FLASH-FULL.md §2).
+    lists = [fl for fl in flash_lists(root or Path(__file__).resolve().parent.parent, stem or cur["meta"].get("stem")) if not fl.get("sheet")]
     db = _read_json(Path(data_dir) / FLASH_DB, {}) if data_dir else {}
     db_lists = db.get("lists") if isinstance(db, dict) and isinstance(db.get("lists"), dict) else {}
     closed = 0

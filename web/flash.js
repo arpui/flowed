@@ -56,6 +56,8 @@
   const SPRINT_LOT = 20; // cartes per lot de /api/flash/practice en una contrarellotge
   const SPRINT_PREFETCH = 5; // quan en queden tantes del lot, es demana el següent
   const SPRINT_KEEP = 30; // execucions guardades per llista (les més recents)
+  const SHEET_KEEP = 50; // proves de full guardades per llista (les més recents) (docs/ENCARREC-FLASH-FULL.md §3)
+  const SHEET_COL_MIN = 150; // px: una columna del full no és més estreta (docs/ENCARREC-FLASH-FULL.md §4)
 
   // Minúscules, espais col·lapsats, sense puntuació final.
   function normalize(s) {
@@ -1104,7 +1106,7 @@
   // Hi ha progrés a l'estat (alguna paraula vista o alguna ronda practice)?
   function hasProgress(state) {
     const lists = (state && state.lists) || {};
-    return Object.values(lists).some((l) => Object.keys((l && l.words) || {}).length > 0 || (((l && l.practice) || {}).rounds || []).length > 0 || (((l && l.sprint) || {}).runs || []).length > 0);
+    return Object.values(lists).some((l) => Object.keys((l && l.words) || {}).length > 0 || (((l && l.practice) || {}).rounds || []).length > 0 || (((l && l.sprint) || {}).runs || []).length > 0 || (((l && l.sheet) || {}).history || []).length > 0);
   }
 
   // Rondes fetes avui (no de repàs): el ⚡ de la barra en vol una.
@@ -1159,6 +1161,55 @@
     list.sprint = { best, runs };
     next.lists[listId] = list;
     return { state: next, record, best: best[key] };
+  }
+
+  // ---- prova de full (docs/ENCARREC-FLASH-FULL.md) ------------------------------------
+  // Una llista sheet (sheet: {n, cols, seconds}) és una prova: no té caixes ni tancament. Les cartes són de número
+  // i es corregeixen amb checkNumber, el mateix corrector de les operacions de la ronda i la contrarellotge.
+  const isSheet = (l) => !!l && !!l.sheet;
+  // Les columnes que hi caben (com a molt les del full, i com a mínim una).
+  const sheetCols = (width, cols) => Math.max(1, Math.min(cols, Math.floor(width / SHEET_COL_MIN)));
+  // La graella va columna a columna: les primeres `rows` cartes són la primera columna. Enter i ↓ van a la carta
+  // següent (al final d'una columna, la primera de la següent); ↑ a la de sobre. Al final no es mou.
+  function sheetStep(i, dir, n, rows) {
+    if (dir === "down") return i + 1 < n ? i + 1 : i;
+    return i % rows > 0 ? i - 1 : i;
+  }
+  // La correcció del full: el recompte, i per carta el seu estat ("ok", "err" amb la resposta de l'alumne, "blank").
+  // answers[i] és el text de la carta i (buit = en blanc). cards[i].accepted és la resposta (la primera, la que es mostra).
+  function sheetGrade(cards, answers) {
+    let correct = 0;
+    let answered = 0;
+    const cells = cards.map((c, i) => {
+      const typed = String((answers || [])[i] ?? "").trim();
+      if (!typed) return { state: "blank", typed: "", answer: c.accepted[0] };
+      answered += 1;
+      if (checkNumber(typed, c.accepted).ok) {
+        correct += 1;
+        return { state: "ok", typed, answer: c.accepted[0] };
+      }
+      return { state: "err", typed, answer: c.accepted[0] };
+    });
+    return { correct, answered, n: cards.length, cells };
+  }
+  // Un full acabat: es guarda (els SHEET_KEEP més recents), i el millor és el de més encerts. record és true només
+  // quan supera un millor anterior: el primer full no n'és cap (com a la contrarellotge).
+  function recordSheet(state, listId, run, day) {
+    const next = clone(state);
+    const list = next.lists[listId] || { words: {}, closed_at: null };
+    const prev = list.sheet || { history: [], best: 0 };
+    const record = prev.history.length > 0 && run.correct > prev.best;
+    const best = Math.max(prev.best, run.correct);
+    const history = prev.history.concat([{ date: day, correct: run.correct, answered: run.answered, n: run.n, seconds: run.seconds }]).slice(-SHEET_KEEP);
+    list.sheet = { history, best };
+    next.lists[listId] = list;
+    return { state: next, record, best };
+  }
+  // El millor i el darrer resultat d'un full, per al menú (null si encara no n'hi ha cap).
+  function sheetLine(state, listId) {
+    const s = ((state.lists || {})[listId] || {}).sheet;
+    if (!s || !s.history || !s.history.length) return null;
+    return { best: s.best, last: s.history[s.history.length - 1].correct };
   }
 
   globalThis.FlashCore = {
@@ -1229,6 +1280,13 @@
     shuffleNoRepeat,
     checkSprint,
     recordSprint,
+    isSheet,
+    SHEET_COL_MIN,
+    sheetCols,
+    sheetStep,
+    sheetGrade,
+    recordSheet,
+    sheetLine,
   };
 })();
 
@@ -1275,6 +1333,7 @@
   let audio = null; // la reproducció del dictat en curs
   let sprint = null; // la contrarellotge en curs (o la que acaba de sortir, per al resum)
   let sprintSec = loadSprintPref(); // 60, 120 o 180
+  let sheet = null; // la prova de full en curs, o l'acabada (per al resum) (docs/ENCARREC-FLASH-FULL.md §4)
 
   // ---- persistència per visitant (tot dins try/catch) ----------------------
   function loadPrefs() {
@@ -1532,6 +1591,7 @@
     round = null;
     card = null;
     sprint = null; // una contrarellotge es deixa (no es guarda) en tornar al menú
+    sheet = null; // un full a mig fer tampoc (no es guarda)
     clearAdvance();
     stopClock();
     const lists = data.lists;
@@ -1546,6 +1606,7 @@
     stopAudio();
     const rows = lists
       .map((l) => {
+        if (C.isSheet(l)) return sheetRow(l, sprintOn);
         const st = C.listStatus(l, state);
         const pct = st.total ? Math.round((st.known / st.total) * 100) : 0;
         const off = !usable(l);
@@ -1635,6 +1696,7 @@
   async function startRound(listId, repassa) {
     const list = data.lists.find((l) => l.id === listId);
     if (!list || !usable(list)) return renderMenu();
+    if (C.isSheet(list)) return openSheet(list.id); // una prova de full no és una ronda (docs/ENCARREC-FLASH-FULL.md §4)
     selected = listId;
     const ticket = ++roundTicket;
     let words;
@@ -2232,6 +2294,192 @@
     if (again) again.focus({ preventScroll: true });
   }
 
+  // ---- prova de full (docs/ENCARREC-FLASH-FULL.md §4) ---------------------------------
+  // Una llista sheet: n operacions en cols columnes contra el rellotge. L'alumne les omple en l'ordre que vulgui; cap
+  // correcció fins al final. El resultat només es guarda en acabar (un full interromput no compta).
+  const sheetClock = (sec) => (sec % 60 === 0 ? `${sec / 60} min` : C.clockText(sec));
+  const sheetWordsTime = (sec) => (sec % 60 === 0 ? `${sec / 60} ${sec === 60 ? "minut" : "minuts"}` : `${sec} segons`);
+
+  // La fila del menú: la icona 📝, les operacions i el temps, i el millor i el darrer resultat si n'hi ha. Sense barra ni compte.
+  function sheetRow(l, sprintOn) {
+    const noSprint = sprintOn && !C.sprintable(l); // la contrarellotge no té fulls (ja té el seu temps)
+    const line = C.sheetLine(state, l.id);
+    const cls = ["flash-row", "sheet", l.id === selected ? "sel" : ""].join(" ").replace(/\s+/g, " ").trim();
+    const note = noSprint ? ' <small class="flash-off">no disponible en contrarellotge</small>' : "";
+    const sub = `${l.sheet.n} operacions · ${sheetClock(l.sheet.seconds)}${line ? ` · Millor: ${line.best} · Darrer: ${line.last}` : ""}`;
+    return `<button type="button" class="${cls}" data-list="${escText(l.id)}" aria-pressed="${l.id === selected}"${noSprint ? " disabled" : ""}>
+          <span class="flash-mark" aria-hidden="true">📝</span>
+          <span class="flash-row-title">${escText(l.title)}${note}<small class="flash-sheet-sub">${escText(sub)}</small></span>
+        </button>`;
+  }
+
+  // Les cartes del full (llavor nova, les mateixes per a tot el full). El temps no arrenca fins a Comença.
+  async function openSheet(listId) {
+    const list = data.lists.find((l) => l.id === listId);
+    if (!C.isSheet(list)) return renderMenu();
+    selected = listId;
+    const seed = Math.floor(Math.random() * 4294967296);
+    const s = { list, seed, cards: [], answers: [], seconds: list.sheet.seconds, start: 0, started: false, over: false, grade: null, record: false, best: 0, cols: list.sheet.cols, rows: 1 };
+    sheet = s;
+    stopClock();
+    clearAdvance();
+    stopAudio();
+    view = "sheet-start";
+    screen.innerHTML = '<div class="flash-panel"><p class="flash-note">Carregant…</p></div>';
+    let res = null;
+    try {
+      res = await api(`/flash/sheet?list=${encodeURIComponent(list.id)}&seed=${seed}`);
+    } catch (err) {
+      console.warn("flash: no es pot carregar el full", err);
+    }
+    if (sheet !== s) return; // el menú, o un altre full
+    if (!res || !res.ok || !Array.isArray(res.words) || !res.words.length) return renderMenu();
+    s.cards = res.words.map((w) => ({ prompt: w.prompt || "", accepted: (w.target || []).slice() }));
+    renderSheetStart();
+  }
+
+  // La pantalla breu: "60 multiplicacions, 2 minuts. Omple les que puguis, en l'ordre que vulguis." i Comença.
+  function renderSheetStart() {
+    view = "sheet-start";
+    const s = sheet;
+    screen.innerHTML = `
+      <div class="flash-panel">
+        <div class="flash-top"><button type="button" class="ghost" data-act="menu">‹ Menú</button></div>
+        <div class="flash-head"><h2>${escText(s.list.title)}</h2></div>
+        <div class="flash-body">
+          <p class="flash-sum-first"><strong>${s.cards.length} ${escText(s.list.sheet.noun)}, ${sheetWordsTime(s.seconds)}.</strong> Omple les que puguis, en l'ordre que vulguis.</p>
+          <div class="flash-actions"><button type="button" class="primary" data-act="sheet-start">Comença</button></div>
+        </div>
+      </div>`;
+    const go = q('[data-act="sheet-start"]');
+    if (go) go.focus({ preventScroll: true });
+  }
+
+  // Una casella per carta, en ordre de llista: la graella les posa columna a columna (layoutSheet).
+  function renderSheet() {
+    view = "sheet";
+    const s = sheet;
+    screen.innerHTML = `
+      <div class="flash-panel flash-play flash-sheet">
+        <div class="flash-sheet-bar">
+          <div class="flash-top">
+            <button type="button" class="ghost" data-act="menu">‹ Menú</button>
+            <span class="flash-prog" id="flash-prog"></span>
+            <button type="button" class="primary flash-done" data-act="sheet-done">He acabat</button>
+          </div>
+          <div class="flash-timer ok" id="flash-timer">
+            <span class="flash-clock" id="flash-clock">${C.clockText(s.seconds)}</span>
+            <div class="flash-tbar"><i id="flash-tbar"></i></div>
+          </div>
+        </div>
+        <div class="flash-sheet-grid" id="flash-grid" role="group" aria-label="${escText(s.list.title)}">
+          ${s.cards.map((c, i) => `<label class="flash-sheet-cell"><span class="flash-sheet-q">${escText(c.prompt)} =</span><input class="flash-sheet-in" type="text" inputmode="numeric" autocomplete="off" autocapitalize="off" spellcheck="false" data-i="${i}" aria-label="${escText(c.prompt)}" value="${escText(s.answers[i] ?? "")}"></label>`).join("")}
+        </div>
+      </div>`;
+    layoutSheet();
+    paintSheetCount();
+  }
+
+  // Quantes columnes hi caben (mínim SHEET_COL_MIN px cada una) i quantes files en surten. La graella és columna a
+  // columna, així que només canvia l'estil de files: les cartes i el seu ordre són els mateixos.
+  function layoutSheet() {
+    const s = sheet;
+    const grid = q("#flash-grid");
+    if (!s || !grid) return;
+    s.cols = grid.clientWidth ? C.sheetCols(grid.clientWidth, s.list.sheet.cols) : s.list.sheet.cols;
+    s.rows = Math.ceil(s.cards.length / s.cols);
+    grid.style.gridTemplateRows = `repeat(${s.rows}, auto)`;
+  }
+
+  // Les cartes contestades del full, al peu de la pantalla ("de 60").
+  function paintSheetCount() {
+    const p = q("#flash-prog");
+    if (!p || !sheet) return;
+    const filled = sheet.answers.filter((a) => String(a ?? "").trim() !== "").length;
+    p.textContent = `${filled} de ${sheet.cards.length}`;
+  }
+
+  // Enter o ↓ / ↑ entre caselles; Tab és l'ordre del DOM (que és el de les cartes). Només el full.
+  function sheetFocus(i) {
+    const el = q(`.flash-sheet-in[data-i="${i}"]`);
+    if (el) el.focus();
+  }
+
+  // Comença: el temps arrenca i el full es mostra.
+  function startSheet() {
+    const s = sheet;
+    if (!s || s.started || s.over) return;
+    s.started = true;
+    s.start = Date.now();
+    renderSheet();
+    clockTimer = setInterval(tickSheet, 200);
+    tickSheet();
+    sheetFocus(0);
+  }
+
+  // El compte enrere del full. Al zero, s'acaba tal com està.
+  function tickSheet() {
+    const s = sheet;
+    if (!s || s.over || !s.started) return stopClock();
+    const seconds = s.list.sheet.seconds;
+    const left = C.timeLeft(s.start, Date.now(), seconds);
+    const box = q("#flash-timer");
+    if (box) box.className = `flash-timer ${C.timerTone(left)}`;
+    const bar = q("#flash-tbar");
+    if (bar) bar.style.width = `${C.barPct(left, seconds)}%`;
+    const clock = q("#flash-clock");
+    if (clock) clock.textContent = C.clockText(left);
+    if (left <= 0) finishSheet();
+  }
+
+  // Lliurat (o temps esgotat): es corregeix tot, es guarda (la llista, el millor i el darrer) i surt el resum.
+  function finishSheet() {
+    const s = sheet;
+    if (!s || s.over) return;
+    s.over = true;
+    stopClock();
+    const grade = C.sheetGrade(s.cards, s.answers);
+    const res = C.recordSheet(state, s.list.id, { correct: grade.correct, answered: grade.answered, n: grade.n, seconds: s.list.sheet.seconds }, today());
+    state = res.state;
+    saveState();
+    s.grade = grade;
+    s.record = res.record;
+    s.best = res.best;
+    renderSheetSummary();
+  }
+
+  // El resultat gran, les errades i les blanques, i el full corregit: verd la bona, vermell la teva amb la bona al costat,
+  // gris la bona si era en blanc.
+  function sheetCellHtml(card, cell) {
+    const typed = cell.state === "blank" ? "" : `<span class="flash-sheet-val">${escText(cell.typed)}</span>`;
+    const right = cell.state === "ok" ? "" : `<span class="flash-sheet-right">${escText(cell.answer)}</span>`;
+    return `<div class="flash-sheet-cell ${cell.state}"><span class="flash-sheet-q">${escText(card.prompt)} =</span>${typed}${right}</div>`;
+  }
+
+  function renderSheetSummary() {
+    view = "sheet-summary";
+    const s = sheet;
+    const g = s.grade;
+    screen.innerHTML = `
+      <div class="flash-panel flash-sheet">
+        <div class="flash-head"><h2>Full acabat</h2></div>
+        <div class="flash-body">
+          <p class="flash-sum-title">${escText(s.list.title)} · ${sheetClock(s.list.sheet.seconds)}</p>
+          <p class="flash-sheet-total"><strong>${g.correct}</strong> / ${g.n} correctes</p>
+          ${s.record ? '<p class="flash-good">🏆 Nou rècord!</p>' : ""}
+          <p class="flash-note">Respostes: ${g.answered} · Errors: ${g.answered - g.correct} · En blanc: ${g.n - g.answered}</p>
+          <div class="flash-sheet-grid flash-sheet-done" id="flash-grid" aria-label="Correcció">${g.cells.map((c, i) => sheetCellHtml(s.cards[i], c)).join("")}</div>
+          <div class="flash-actions">
+            <button type="button" class="primary" data-act="sheet-again">Un altre full</button>
+            <button type="button" data-act="menu">Tornar</button>
+          </div>
+        </div>
+      </div>`;
+    layoutSheet();
+    const again = q('[data-act="sheet-again"]');
+    if (again) again.focus({ preventScroll: true });
+  }
+
   // Línia de la traça al xat: totes les rondes d'aquesta obertura de Flash.
   function traceText(s) {
     const who = s.titles.length === 1 ? s.titles[0] : `${s.titles.length} llistes`;
@@ -2264,6 +2512,18 @@
     screen.addEventListener("click", onClick);
     screen.addEventListener("submit", onSubmit);
     screen.addEventListener("keydown", onKey);
+    screen.addEventListener("input", onInput);
+    window.addEventListener("resize", () => {
+      if (sheet && (view === "sheet" || view === "sheet-summary")) layoutSheet();
+    });
+  }
+
+  // Cada casella del full guarda el seu text (per corregir-lo en acabar, i per al recompte del peu).
+  function onInput(e) {
+    const t = e.target;
+    if (view !== "sheet" || !sheet || !t || !t.classList || !t.classList.contains("flash-sheet-in")) return;
+    sheet.answers[Number(t.dataset.i)] = t.value;
+    paintSheetCount();
   }
 
   function onClick(e) {
@@ -2315,6 +2575,12 @@
         return startSprint(selected, sprintSec);
       case "sprint-again":
         return sprint ? startSprint(sprint.list.id, sprint.seconds) : renderMenu();
+      case "sheet-start":
+        return startSheet();
+      case "sheet-done":
+        return finishSheet();
+      case "sheet-again":
+        return sheet ? openSheet(sheet.list.id) : renderMenu();
       case "say":
         return playSay();
     }
@@ -2333,6 +2599,15 @@
     if (e.key === "Escape") {
       if (view === "menu") closeFlash();
       else renderMenu();
+      return;
+    }
+    // prova de full: Enter o ↓ a la casella de sota, ↑ a la de sobre (docs/ENCARREC-FLASH-FULL.md §4)
+    if (view === "sheet" && sheet && e.target && e.target.classList && e.target.classList.contains("flash-sheet-in")) {
+      const dir = e.key === "Enter" || e.key === "ArrowDown" ? "down" : e.key === "ArrowUp" ? "up" : null;
+      if (dir) {
+        e.preventDefault();
+        sheetFocus(C.sheetStep(Number(e.target.dataset.i), dir, sheet.cards.length, sheet.rows));
+      }
       return;
     }
     // contrarellotge amb botons: 1..n també trien (docs/ENCARREC-FLASH-P3-MODES.md §3)
@@ -2357,6 +2632,7 @@
     round = null;
     card = null;
     sprint = null;
+    sheet = null;
     if (session && session.rounds > 0) appendTrace(traceText(session));
     session = null;
     if (screen) screen.hidden = true;

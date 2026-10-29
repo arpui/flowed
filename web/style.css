@@ -1120,6 +1120,48 @@ nav#commands button[hidden] { display: none; }
 }
 .flash-sum-title { margin: 0; font-weight: 600; }
 
+/* ---- Flash: prova de full (docs/ENCARREC-FLASH-FULL.md §4) ---- */
+.flash-row.sheet { grid-template-columns: 20px 1fr; } /* sense barra ni compte: la icona i el títol */
+.flash-sheet-sub { display: block; margin-top: 2px; font-size: 0.8rem; font-weight: normal; opacity: 0.8; }
+.flash-done { padding: 6px 12px; border-radius: 10px; }
+/* La barra de dalt (menú, comptador, He acabat i el temps) es queda a la vista mentre es omple el full. */
+.flash-sheet-bar { position: sticky; top: 0; z-index: 2; background: var(--flash-bg); display: flex; flex-direction: column; gap: 8px; padding: 4px 0 6px; }
+/* Columna a columna: la primera columna són les primeres cartes; les files les fixa layoutSheet (inline). */
+.flash-sheet-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px 12px;
+  width: 100%;
+  min-width: 0;
+}
+.flash-sheet-cell { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; min-width: 0; font-variant-numeric: tabular-nums; }
+.flash-sheet-q { white-space: nowrap; font-size: 1rem; }
+.flash-sheet-in {
+  flex: 1 1 3em;
+  min-width: 2.4em;
+  max-width: 4.5em;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(244, 241, 234, 0.35);
+  background: var(--flash-bg);
+  color: var(--flash-ink);
+  font: inherit;
+  text-align: center;
+}
+.flash-sheet-in:focus { outline: 2px solid var(--flash-ok); outline-offset: 1px; }
+.flash-sheet-in:disabled { opacity: 0.6; }
+.flash-sheet-done .flash-sheet-cell { padding: 4px 6px; border-radius: 8px; background: rgba(244, 241, 234, 0.08); }
+.flash-sheet-cell.ok { background: var(--flash-good); }
+.flash-sheet-cell.err { background: rgba(240, 138, 120, 0.22); }
+.flash-sheet-cell.blank { opacity: 0.7; }
+.flash-sheet-val { font-weight: 600; }
+.flash-sheet-cell.err .flash-sheet-val { color: var(--flash-err); text-decoration: line-through; }
+.flash-sheet-right { font-weight: 700; color: var(--flash-ok); }
+.flash-sheet-cell.blank .flash-sheet-right { color: var(--flash-ink); }
+.flash-sheet-total { margin: 0; font-size: 1.1rem; }
+.flash-sheet-total strong { font-size: 2.6rem; line-height: 1; font-weight: 700; margin-right: 4px; }
+
 @keyframes flash-good {
   from { background: var(--flash-good); }
   to { background: var(--flash-panel); }

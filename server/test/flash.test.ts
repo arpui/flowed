@@ -51,6 +51,9 @@ import {
   practiceWords,
   flashPracticeResponse,
   sprintable,
+  sheetCheck,
+  sheetWords,
+  flashSheetResponse,
   type MathWord,
 } from "../src/flash.ts";
 
@@ -209,10 +212,11 @@ check("math lists have no language entries (the lists are per domain)", listsMat
   check("math list ids are unique across the domain", new Set(listsMath.map((l) => l.id)).size === listsMath.length);
   const m5Files = mathFiles.filter((f) => f.startsWith("math-m5/"));
   const numbers = m5Files.map((f) => Number(f.split("/")[1]?.slice(0, 2)));
-  check("m5 files are numbered 01, 02, 03 (multiplications) and 10..35 (the 26 generators)", numbers.join() === [1, 2, 3, ...Array.from({ length: 26 }, (_, i) => i + 10)].join(), numbers);
+  // 04 is the full of the tables (docs/ENCARREC-FLASH-FULL.md §2): a sheet, not a generator.
+  check("m5 files are numbered 01, 02, 03 (multiplications), 04 (the full) and 10..35 (the 26 generators)", numbers.join() === [1, 2, 3, 4, ...Array.from({ length: 26 }, (_, i) => i + 10)].join(), numbers);
   const gen = m5Files.map((f) => JSON.parse(read("curriculum", "flash", f)));
   check("every m5 list has the three titles and a level m5", gen.every((r) => r.level === "m5" && r.title && r.title.ca && r.title.es && r.title.en));
-  const e4 = gen.slice(3);
+  const e4 = gen.filter((r) => !("sheet" in r)).slice(3);
   check("the 26 generated m5 lists (10..35) take a generate block of count 12", e4.length === 26 && e4.every((r) => r.generate && r.generate.kind && r.generate.count === 12 && !("items" in r)));
   const comps = gen.filter((r) => "competence" in r);
   check("every competence named by an m5 list exists in math-m5.md", comps.length > 0 && comps.every((r) => compIds.has(r.competence)), comps.map((r) => r.competence));
@@ -2107,7 +2111,7 @@ console.log("practice lists");
   const practice = allMath.filter((f) => listMode(rawOf(f)) === "practice");
   const memory = allMath.filter((f) => listMode(rawOf(f)) === "memory");
   check("practice: every generated m5, m6 and m7 list is practice except the tables and the GEN_ROOM kinds",
-    practice.length === 79 && memory.length === 8 && memory.every((f) => isTaules(f) || groomKinds.includes(String(kindOf(rawOf(f))))) &&
+    practice.length === 79 && memory.length === 9 && memory.every((f) => isTaules(f) || "sheet" in rawOf(f) || groomKinds.includes(String(kindOf(rawOf(f))))) &&
     practice.every((f) => !isTaules(f) && !groomKinds.includes(String(kindOf(rawOf(f))))),
     { practice: practice.length, memory: memory.length });
   check("practice: no practice list has a kind with a small room (GEN_ROOM)", practice.every((f) => !groomKinds.includes(String(kindOf(rawOf(f))))));
@@ -2368,6 +2372,151 @@ console.log("contrarellotge");
   const styleP3 = read("web", "style.css");
   check("§3 the CSS: the form hides on a choice card, the small figure is 96 px, the mode row wraps", styleP3.includes(".flash-form[hidden] { display: none; }") && styleP3.includes(".flash-err-fig { width: 96px;") && styleP3.includes(".flash-mode { display: flex; flex-wrap: wrap;"));
 }
+
+  // ---- docs/ENCARREC-FLASH-FULL.md (the full: n cards, all different, against the clock) -------------------
+  console.log("prova de full");
+  const fullRaw = JSON.parse(read("curriculum", "flash", "math-m5", "04-full-taules.json"));
+  const fullChecked = sheetCheck(fullRaw);
+  const fullSpec = "spec" in fullChecked ? fullChecked.spec : null; // the shipped list is valid (checked below)
+  check("full §2: the shipped list is a valid sheet: 60 cards, 4 columns, 120 s, called multiplicacions", JSON.stringify(fullSpec) === JSON.stringify({ n: 60, cols: 4, seconds: 120, noun: "multiplicacions" }), fullChecked);
+  check("full §2: the shipped list has no problems (mathListProblems), and no mode", mathListProblems(fullRaw).length === 0 && !("mode" in fullRaw));
+  const badSheets: Array<[string, Record<string, unknown>]> = [
+    ["n of 0", { ...fullRaw, sheet: { n: 0, cols: 4, seconds: 120 } }],
+    ["n more than the generator's cards", { ...fullRaw, sheet: { n: 200, cols: 4, seconds: 120 } }],
+    ["n not a whole number", { ...fullRaw, sheet: { n: 1.5, cols: 4, seconds: 120 } }],
+    ["cols 0", { ...fullRaw, sheet: { n: 60, cols: 0, seconds: 120 } }],
+    ["cols 7", { ...fullRaw, sheet: { n: 60, cols: 7, seconds: 120 } }],
+    ["seconds 5", { ...fullRaw, sheet: { n: 60, cols: 4, seconds: 5 } }],
+    ["seconds 1801", { ...fullRaw, sheet: { n: 60, cols: 4, seconds: 1801 } }],
+    ["a practice mode", { ...fullRaw, mode: "practice" }],
+    ["items instead of generate", { id: "x", level: "m5", title: { ca: "x" }, sheet: { n: 1, cols: 1, seconds: 60 }, items: [{ id: "a", prompt: "2 + 2", answer: ["4"] }] }],
+    ["a kind with choice answers", { ...fullRaw, generate: { kind: "angle_type", count: 12 }, sheet: { n: 4, cols: 2, seconds: 60 } }],
+    ["an unknown kind", { ...fullRaw, generate: { kind: "nope", count: 12 }, sheet: { n: 4, cols: 2, seconds: 60 } }],
+    ["a drill kind", { ...fullRaw, kind: "drill" }],
+    ["a sheet that is not an object", { ...fullRaw, sheet: 60 }],
+  ];
+  for (const [name, raw] of badSheets) check(`full §2: refused: ${name}`, "problem" in sheetCheck(raw), sheetCheck(raw));
+
+  // §3: the cards come from the list's own generator, all different, ids s1…sN, the same seed the same sheet.
+  const fullCards = sheetWords(fullRaw, 4242, 60);
+  check("full §3: 60 distinct cards, ids s1…s60, each a number with no answer kind of its own", fullCards.length === 60 && new Set(fullCards.map((w) => w.prompt)).size === 60 && fullCards[0]?.id === "s1" && fullCards[59]?.id === "s60" && fullCards.every((w) => w.target.length === 1 && !w.answer_kind), fullCards.length);
+  check("full §3: each card is a × b with both factors from 2 to 10, and the target is the product", fullCards.every((w) => {
+    const m = /^(\d+) × (\d+)$/.exec(w.prompt);
+    return !!m && Number(m[1]) >= 2 && Number(m[1]) <= 10 && Number(m[2]) >= 2 && Number(m[2]) <= 10 && w.target[0] === String(Number(m[1]) * Number(m[2]));
+  }));
+  check("full §3: the same seed gives the same sheet, another seed another one", JSON.stringify(sheetWords(fullRaw, 4242, 60)) === JSON.stringify(fullCards) && JSON.stringify(sheetWords(fullRaw, 4243, 60)) !== JSON.stringify(fullCards));
+  check("full §3: both orders are on the sheet (7 × 8 and 8 × 7 can both come, as on paper)", new Set(fullCards.map((w) => w.prompt)).size === 60 && sheetWords(fullRaw, 1, 81).some((w) => w.prompt === "7 × 8") && sheetWords(fullRaw, 1, 81).some((w) => w.prompt === "8 × 7"));
+
+  const fDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-full-"));
+  try {
+    fs.writeFileSync(path.join(fDir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "Math", current_level: "m5" } }));
+    const lists = flashListsResponse(root, fDir) as any;
+    const full = lists.lists.find((l: any) => l.id === "math-m5.flash.full_taules");
+    check("full §3 /lists: the sheet carries {n, cols, seconds, noun}, no words, no mode, and no contrarellotge", !!full && JSON.stringify(full.sheet) === JSON.stringify(fullSpec) && full.words.length === 0 && !("mode" in full) && !("sprint" in full), full);
+    const sheetOne = flashSheetResponse(root, fDir, "math-m5.flash.full_taules", "7") as any;
+    const sheetSame = flashSheetResponse(root, fDir, "math-m5.flash.full_taules", "7") as any;
+    const sheetOther = flashSheetResponse(root, fDir, "math-m5.flash.full_taules", "8") as any;
+    check("full §3 route: 200, 60 cards s1…s60 with a number answer; the same seed the same sheet, another seed another", sheetOne.status === 200 && sheetOne.body.ok === true && sheetOne.body.words.length === 60 && sheetOne.body.words[59].id === "s60" && sheetOne.body.words[0].answer_kind === "number" && JSON.stringify(sheetOne.body.words) === JSON.stringify(sheetSame.body.words) && JSON.stringify(sheetOne.body.words) !== JSON.stringify(sheetOther.body.words) && JSON.stringify(sheetOne.body.sheet) === JSON.stringify(fullSpec), sheetOne.body);
+    const refused = [
+      ["a practice list", flashSheetResponse(root, fDir, "math-m5.flash.mult-2x1", "7") as any, 404],
+      ["a memory list", flashSheetResponse(root, fDir, "math-m5.flash.taules", "7") as any, 404],
+      ["an unknown list", flashSheetResponse(root, fDir, "math-m5.flash.nope", "7") as any, 404],
+      ["no seed", flashSheetResponse(root, fDir, "math-m5.flash.full_taules", null) as any, 400],
+      ["a seed out of range", flashSheetResponse(root, fDir, "math-m5.flash.full_taules", "4294967296") as any, 400],
+    ] as const;
+    check("full §3 route: refused for a memory, practice or unknown list, and for a bad seed", refused.every(([, r, st]) => r.status === st && r.body.ok === false), refused.map(([n, r]) => `${n}:${r.status}`));
+    fs.writeFileSync(path.join(fDir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "Math", current_level: "m6" } }));
+    check("full §3 route: a sheet of another level is refused (404), and not listed", (flashSheetResponse(root, fDir, "math-m5.flash.full_taules", "7") as any).status === 404 && !(flashListsResponse(root, fDir) as any).lists.some((l: any) => l.id === "math-m5.flash.full_taules"));
+  } finally {
+    fs.rmSync(fDir, { recursive: true, force: true });
+  }
+
+  // A sheet of another operation, with no code of its own: sums of 40 in 3 columns, 90 s (docs/ENCARREC-FLASH-FULL.md §1, §6).
+  const sumRoot = fs.mkdtempSync(path.join(os.tmpdir(), "flash-sums-"));
+  try {
+    fs.mkdirSync(path.join(sumRoot, "config"), { recursive: true });
+    fs.copyFileSync(path.join(root, "config", "domain.json"), path.join(sumRoot, "config", "domain.json"));
+    const dir = path.join(sumRoot, "curriculum", "flash", "math-t9");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "01-sumes.json"), JSON.stringify({ id: "math-t9.flash.sumes40", level: "t9", title: { ca: "Sumes", en: "Sums" }, generate: { op: "+", a: { from: 1, to: 20 }, b: { from: 1, to: 20 } }, sheet: { n: 40, cols: 3, seconds: 90 } }));
+    fs.writeFileSync(path.join(dir, "02-too-many.json"), JSON.stringify({ id: "math-t9.flash.too-many", level: "t9", title: { ca: "Massa" }, generate: { op: "+", a: [1], b: [1] }, sheet: { n: 5, cols: 3, seconds: 90 } }));
+    const pDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-sums-p-"));
+    try {
+      fs.writeFileSync(path.join(pDir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "Catalan", target_language: "Math", current_level: "t9" } }));
+      const got = flashListsResponse(sumRoot, pDir) as any;
+      const sums = got.lists.find((l: any) => l.id === "math-t9.flash.sumes40");
+      check("full §1: a sums sheet (40 in 3 columns, 90 s) is listed with its own sheet block, called sumes", JSON.stringify(sums?.sheet) === JSON.stringify({ n: 40, cols: 3, seconds: 90, noun: "sumes" }) && sums.words.length === 0, sums);
+      check("full §2: a sheet with more cards than the generator has is left out, and the reason is given", !got.lists.some((l: any) => l.id === "math-t9.flash.too-many") && mathListProblems(JSON.parse(fs.readFileSync(path.join(dir, "02-too-many.json"), "utf8"))).some((p: string) => p.includes("més que les cartes")));
+      const sumRes = flashSheetResponse(sumRoot, pDir, "math-t9.flash.sumes40", "99") as any;
+      const sumWords: Array<{ prompt: string; target: string[]; id: string }> = sumRes.body.words ?? [];
+      check("full §3 with a sums sheet: 40 distinct sums a + b, the target is the sum, ids s1…s40",
+        sumRes.status === 200 && sumWords.length === 40 && new Set(sumWords.map((w) => w.prompt)).size === 40 && sumWords.every((w) => {
+          const m = /^(\d+) \+ (\d+)$/.exec(w.prompt);
+          return !!m && w.target[0] === String(Number(m[1]) + Number(m[2]));
+        }) && sumWords[39]?.id === "s40", sumRes.body);
+    } finally {
+      fs.rmSync(pDir, { recursive: true, force: true });
+    }
+  } finally {
+    fs.rmSync(sumRoot, { recursive: true, force: true });
+  }
+
+  // §5 progress: the sheet's runs are kept for a sheet list only, and the last 50, with the shape checked.
+  const runOk = (day: string, correct: number, answered = correct + 1) => ({ date: day, correct, answered, n: 60, seconds: 120 });
+  const sheetBody = {
+    version: 1,
+    lists: {
+      "math-m5.flash.full_taules": { words: {}, closed_at: null, sheet: { history: [
+        runOk("2026-10-01", 47, 50),
+        runOk("2026-10-02", 52, 53),
+        { date: "2026-10-02", correct: 60, answered: 50, n: 60, seconds: 120 }, // more right than answered: dropped
+        { date: "2026-10-03", correct: 3, answered: 61, n: 60, seconds: 120 }, // more answered than n: dropped
+        { date: "yesterday", correct: 1, answered: 1, n: 60, seconds: 120 }, // a bad day: dropped
+      ], best: 40 } },
+      "math-m5.flash.taules": { words: {}, closed_at: null, sheet: { history: [runOk("2026-10-01", 9, 9)], best: 9 } },
+    },
+    rounds_by_day: {},
+  };
+  const sheetIds = new Set(["math-m5.flash.full_taules", "math-m5.flash.taules"]);
+  const keptSheet = sanitizeFlashState(sheetBody, sheetIds, new Set(), new Set(["math-m5.flash.full_taules"]));
+  check("full §5 sanitize: the valid runs are kept, the bad ones dropped, and the best is the most right", JSON.stringify(keptSheet.lists["math-m5.flash.full_taules"]?.sheet) === JSON.stringify({ history: [runOk("2026-10-01", 47, 50), runOk("2026-10-02", 52, 53)], best: 52 }), keptSheet.lists["math-m5.flash.full_taules"]?.sheet);
+  check("full §5 sanitize: a list that is not a sheet loses its sheet record", !("sheet" in (keptSheet.lists["math-m5.flash.taules"] ?? {})));
+  check("full §5 sanitize: without the sheet ids, the record is kept as the other records are", "sheet" in (sanitizeFlashState(sheetBody, sheetIds).lists["math-m5.flash.taules"] ?? {}));
+  const longSheet = { version: 1, lists: { "math-m5.flash.full_taules": { words: {}, closed_at: null, sheet: { history: Array.from({ length: 60 }, (_, i) => runOk("2026-10-01", i % 60, 60)), best: 0 } } } };
+  const cappedSheet = sanitizeFlashState(longSheet, new Set(["math-m5.flash.full_taules"]), new Set(), new Set(["math-m5.flash.full_taules"])).lists["math-m5.flash.full_taules"]?.sheet;
+  check("full §5 sanitize: the last 50 runs are kept, and the best is the most right of them", cappedSheet?.history.length === 50 && cappedSheet?.history[0]?.correct === 10 && cappedSheet?.best === 59, cappedSheet?.history.length);
+  check("full §5 sanitize: sprint and practice are untouched by a sheet", sanitizeFlashState({ version: 1, lists: { "math-m5.flash.full_taules": { words: {}, closed_at: null, sheet: "nope" } } }, new Set(["math-m5.flash.full_taules"]), new Set(), new Set(["math-m5.flash.full_taules"])).lists["math-m5.flash.full_taules"]?.sheet === undefined);
+  check("full: a sprint never offers a sheet", sprintable({ id: "x", sheet: { n: 60, cols: 4, seconds: 120 }, generate: { kind: "mult", count: 81, params: { digits: [1, 1], max: 10, both_orders: true } } }, "memory", [{ id: "a", target: ["1"], native: ["1"], answer_kind: "number" }]) === false);
+
+  // The client's pure core: the grade, the columns, the keys, the record, the menu line.
+  const gradeCards = [{ prompt: "7 × 8", accepted: ["56"] }, { prompt: "3 × 4", accepted: ["12"] }, { prompt: "9 × 9", accepted: ["81"] }, { prompt: "2 × 5", accepted: ["10"] }];
+  const grade = C.sheetGrade(gradeCards, ["56", "13", "", " 10,0 "]);
+  check("full §4 grade: the same check as the operations (56 and 10,0 right), 13 wrong with the answer, blank with the answer; counts correct, answered, n", grade.correct === 2 && grade.answered === 3 && grade.n === 4 && grade.cells.map((c: any) => c.state).join() === "ok,err,blank,ok" && grade.cells[1].typed === "13" && grade.cells[1].answer === "12" && grade.cells[2].answer === "81", grade);
+  check("full §4 columns: a 390 px phone gets 2 columns, a 608 px desk 4, a 2000 px screen still 4, and never less than 1", C.sheetCols(358, 4) === 2 && C.sheetCols(608, 4) === 4 && C.sheetCols(2000, 4) === 4 && C.sheetCols(0, 4) === 1);
+  check("full §4 keys: Enter and ↓ go to the card below (the next column's first at the foot), ↑ to the one above, and nothing moves past the ends", C.sheetStep(14, "down", 60, 15) === 15 && C.sheetStep(59, "down", 60, 15) === 59 && C.sheetStep(15, "up", 60, 15) === 15 && C.sheetStep(16, "up", 60, 15) === 15 && C.sheetStep(3, "down", 4, 2) === 3);
+  let fs1 = C.emptyState();
+  check("full §5: a sheet is not a list of words: no progress from the menu line yet", C.sheetLine(fs1, "math-m5.flash.full_taules") === null && !C.hasProgress(fs1));
+  const r1 = C.recordSheet(fs1, "math-m5.flash.full_taules", { correct: 47, answered: 50, n: 60, seconds: 120 }, "2026-10-01");
+  const r2 = C.recordSheet(r1.state, "math-m5.flash.full_taules", { correct: 45, answered: 46, n: 60, seconds: 120 }, "2026-10-02");
+  const r3 = C.recordSheet(r2.state, "math-m5.flash.full_taules", { correct: 52, answered: 55, n: 60, seconds: 120 }, "2026-10-03");
+  check("full §5: the first run is no record, a better one is, and the menu line gives the best and the last", r1.record === false && r2.record === false && r3.record === true && r3.best === 52 && JSON.stringify(C.sheetLine(r3.state, "math-m5.flash.full_taules")) === JSON.stringify({ best: 52, last: 52 }) && C.hasProgress(r1.state) === true && C.isSheet({ sheet: { n: 60 } }) && !C.isSheet({ id: "x" }));
+  check("full §5: a sheet changes no word box and closes nothing", !("words" in (r3.state.lists["math-m5.flash.full_taules"] ?? {})) || Object.keys(r3.state.lists["math-m5.flash.full_taules"].words).length === 0);
+
+  // The client's wiring (the interface is a page; the pieces are checked by their text, as the rest of this file does).
+  const fjsFull = read("web", "flash.js");
+  const finishBody = (/function finishSheet\(\) \{[\s\S]*?\n  \}/.exec(fjsFull) ?? [""])[0];
+  const drawBody = (/function renderSheet\(\) \{[\s\S]*?\n  \}/.exec(fjsFull) ?? [""])[0];
+  check("full §3 client: the cards come from /api/flash/sheet with a new seed, and the start screen is shown before the clock", fjsFull.includes("/flash/sheet?list=${encodeURIComponent(list.id)}&seed=${seed}") && fjsFull.includes("Math.random() * 4294967296") && fjsFull.indexOf("function openSheet") < fjsFull.indexOf("function renderSheetStart"));
+  check("full §4 client: the start screen says the count, the time and the instruction, and Comença starts the clock", fjsFull.includes("Omple les que puguis, en l'ordre que vulguis.") && fjsFull.includes('data-act="sheet-start">Comença') && /function startSheet\(\) \{[\s\S]*?s\.start = Date\.now\(\)/.test(fjsFull));
+  check("full §4 client: no correction while the sheet runs (renderSheet and the typing never grade)", !drawBody.includes("sheetGrade") && !/function onInput[\s\S]*?sheetGrade/.test(fjsFull));
+  check("full §4 client: a finished sheet is graded by the one check (sheetGrade → checkNumber) and saved once; no word box, no closing", fjsFull.includes("C.sheetGrade(s.cards, s.answers)") && !finishBody.includes("recordResult") && !finishBody.includes("closeIfDone") && finishBody.includes("C.recordSheet(state, s.list.id") && finishBody.includes("saveState()"));
+  check("full §4 client: the summary has the big count, the errors and blanks line, Un altre full and Tornar", fjsFull.includes('<strong>${g.correct}</strong> / ${g.n} correctes') && fjsFull.includes("Respostes: ${g.answered} · Errors: ${g.answered - g.correct} · En blanc: ${g.n - g.answered}") && fjsFull.includes('data-act="sheet-again">Un altre full') && fjsFull.includes('data-act="menu">Tornar'));
+  check("full §4 client: the menu row shows the 📝 icon, the operations and the time, and the best and last when there are some", fjsFull.includes('<span class="flash-mark" aria-hidden="true">📝</span>') && fjsFull.includes("${l.sheet.n} operacions · ${sheetClock(l.sheet.seconds)}") && fjsFull.includes("· Millor: ${line.best} · Darrer: ${line.last}"));
+  check("full §4 client: Enter and the arrows move between the cells (C.sheetStep), the grid is column by column", fjsFull.includes("C.sheetStep(Number(e.target.dataset.i), dir, sheet.cards.length, sheet.rows)") && !fjsFull.includes("const first = q"));
+  check("full §4 client: the menu's sheet row is not in the contrarellotge and a sheet's state key is the profile's", fjsFull.includes("const noSprint = sprintOn && !C.sprintable(l)") && fjsFull.includes("window.flowedKey(stateKey)") );
+  const cssFull = read("web", "style.css");
+  check("full §4 css: the grid is column by column (grid-auto-flow: column) and the columns are as wide as they fit", /\.flash-sheet-grid \{[^}]*grid-auto-flow: column;/.test(cssFull) && /\.flash-sheet-grid \{[^}]*minmax\(0, 1fr\)/.test(cssFull));
+  check("http.ts serves GET /api/flash/sheet through flashSheetResponse", read("server", "src", "http.ts").includes('p === "/api/flash/sheet"') && read("server", "src", "http.ts").includes("flashSheetResponse(opts.root"));
 
 if (failures) {
   console.log(`\n${failures} FAILED`);

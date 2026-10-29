@@ -17,7 +17,7 @@ Una llista Flash de math nova, `curriculum/flash/math-m5/04-full-taules.json`:
   "id": "math-m5.flash.full_taules",
   "level": "m5",
   "title": { "ca": "Full de taules (60 en 2 min)", "es": "Hoja de tablas (60 en 2 min)", "en": "Times tables sheet (60 in 2 min)" },
-  "generate": { "kind": "mult", "count": 81, "params": { "digits": [1, 1], "max": 10, "both_orders": true } },
+  "generate": { "kind": "mult", "count": 64, "params": { "digits": [1, 1], "max": 9, "both_orders": true } },
   "sheet": { "n": 60, "cols": 4, "seconds": 120 }
 }
 ```

@@ -39,14 +39,14 @@ def server_math_lists(root: Path = REPO_ROOT) -> list[dict]:
     """The lists as server/src/flash.ts serves them (id, word ids and mode), read by node."""
     return node_json(
         f"m.loadFlashLists({json.dumps(str(root))}, 'curriculum/flash/math-*', 'ca')"
-        ".map((l) => ({ id: l.id, words: l.words.map((w) => w.id), mode: l.mode ?? 'memory' }))"
+        ".map((l) => ({ id: l.id, words: l.words.map((w) => w.id), mode: l.mode ?? 'memory', sheet: !!l.sheet }))"
     )
 
 
 def python_math_lists(root: Path) -> list[dict]:
     out = []
     for stem in sorted(p.name for p in (root / "curriculum" / "flash").glob("math-*") if p.is_dir()):
-        out.extend(cu.flash_lists(root, stem))
+        out.extend({**l, "sheet": bool(l.get("sheet"))} for l in cu.flash_lists(root, stem))
     return out
 
 
@@ -141,7 +141,7 @@ class MathListIds(unittest.TestCase):
 
     def test_m5_has_the_tables_the_explicit_list_and_the_generated_ones(self):
         lists = {l["id"]: l["words"] for l in cu.flash_lists(REPO_ROOT, "math-m5")}
-        self.assertEqual(len(lists), 29)  # §6: 3 multiplication lists (01..03, kind mult) + 26 generated (10..35, E4)
+        self.assertEqual(len(lists), 30)  # §6: 3 multiplication lists (01..03, kind mult) + 26 generated (10..35, E4) + the full (04, a sheet)
         self.assertEqual(len(lists["math-m5.flash.arrodonir"]), 12)
         # docs/ENCARREC-FLASH-PRACTICA.md §3: the tables are 81 cards under their own id
         self.assertEqual(lists["math-m5.flash.taules"], [f"g{i}" for i in range(1, 82)])
@@ -269,7 +269,7 @@ class M5FlashGate(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.cur = cu.load_curriculum(REPO_ROOT / "curriculum" / "math-m5.md")
-        cls.lists = cu.flash_lists(REPO_ROOT, "math-m5")
+        cls.lists = [l for l in cu.flash_lists(REPO_ROOT, "math-m5") if not l.get("sheet")]  # a sheet is a test (docs/ENCARREC-FLASH-FULL.md §2)
 
     def close(self, n):
         """A data dir where the first n lists are closed and the rest are untouched: a memory list by its words
@@ -415,7 +415,7 @@ class PracticeLists(unittest.TestCase):
         memory = sorted(l["id"] for l in allm if l["mode"] == "memory")
         self.assertEqual(sum(1 for l in allm if l["mode"] == "practice"), 79)
         self.assertEqual(memory, sorted([
-            "math-m5.flash.taules", "math-m6.flash.taules-repas", "math-m7.flash.taules-repas",
+            "math-m5.flash.full_taules", "math-m5.flash.taules", "math-m6.flash.taules-repas", "math-m7.flash.taules-repas",
             "math-m7.flash.proporcionalitat-directa-o-inversa", "math-m7.flash.punts-notables-del-triangle",
             "math-m7.flash.tipus-de-variable", "math-m7.flash.probabilitat-de-laplace", "math-m7.flash.suma-dels-angles-interiors",
         ]))
@@ -452,6 +452,34 @@ class PracticeLists(unittest.TestCase):
         self.assertEqual(self.level_with({"words": {}, "closed_at": "2026-10-03", "sprint": sprint})["closed"], 1)
         self.assertEqual(self.level_with({**self.rounds(("2026-10-01", 8, 10), ("2026-10-02", 8, 10)), "sprint": sprint})["closed"], 1)
         self.assertEqual(self.level_with({"words": {}, "closed_at": None, "sprint": sprint}, lid="math-m5.flash.taules")["closed"], 0)
+
+
+class SheetLists(unittest.TestCase):
+    """docs/ENCARREC-FLASH-FULL.md §2: a sheet is a test. It is listed (marked `sheet`, as the server lists it),
+    but flash_progress does not count it: it neither closes nor adds to the total or to flash_share."""
+
+    def test_flash_progress_ignores_the_sheet_and_counts_the_rest(self):
+        lists = {l["id"]: l for l in cu.flash_lists(REPO_ROOT, "math-m5")}
+        self.assertTrue(lists["math-m5.flash.full_taules"]["sheet"])
+        self.assertNotIn("sheet", lists["math-m5.flash.taules"])
+        cur = cu.parse_curriculum("---\n---\n")
+        cur["meta"]["stem"] = "math-m5"
+        cur["meta"]["flash_share"] = 60
+        known = lambda ids: {w: {"box": cu.FLASH_KNOWN_BOX, "seen": 1, "first_try": 1, "misses": 0, "last": "2026-10-16"} for w in ids}
+        sheet_entry = {"words": known(lists["math-m5.flash.full_taules"]["words"]), "closed_at": "2026-10-16",
+                       "sheet": {"history": [{"date": "2026-10-16", "correct": 60, "answered": 60, "n": 60, "seconds": 120}], "best": 60}}
+        with tempfile.TemporaryDirectory() as data:
+            (Path(data) / cu.FLASH_DB).write_text(json.dumps({"version": 1, "lists": {"math-m5.flash.full_taules": sheet_entry}}), encoding="utf8")
+            fp = cu.flash_progress(REPO_ROOT, cur, data, "math-m5")
+            self.assertEqual(fp["total"], 29)
+            self.assertEqual(fp["closed"], 0)
+            (Path(data) / cu.FLASH_DB).write_text(json.dumps({"version": 1, "lists": {
+                "math-m5.flash.full_taules": sheet_entry,
+                "math-m5.flash.taules": {"words": known(lists["math-m5.flash.taules"]["words"]), "closed_at": None},
+            }}), encoding="utf8")
+            fp = cu.flash_progress(REPO_ROOT, cur, data, "math-m5")
+        self.assertEqual(fp["total"], 29)
+        self.assertEqual(fp["closed"], 1)  # the table list counts, the full does not
 
 
 if __name__ == "__main__":

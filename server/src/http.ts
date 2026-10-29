@@ -10,7 +10,7 @@ import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
 import { skillKeysFor } from "./tools";
 import { profileMismatch } from "./profile";
-import { flashConfig, flashListsResponse, flashPracticeResponse, flashStateResponse, saveFlashState } from "./flash";
+import { flashConfig, flashListsResponse, flashPracticeResponse, flashSheetResponse, flashStateResponse, saveFlashState } from "./flash";
 
 export interface HttpConfig {
   root: string;
@@ -433,6 +433,12 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       if (p === "/api/flash/practice") {
         if (req.method !== "GET") return json({ ok: false, error: "mètode no permès" }, 405);
         const r = flashPracticeResponse(opts.root, opts.dataDir(), url.searchParams.get("list") ?? "", url.searchParams.get("n"), url.searchParams.get("seed"));
+        return json(r.body, r.status);
+      }
+      // Flash full (docs/ENCARREC-FLASH-FULL.md §3): the cards of a sheet list, a new seed for each sheet.
+      if (p === "/api/flash/sheet") {
+        if (req.method !== "GET") return json({ ok: false, error: "mètode no permès" }, 405);
+        const r = flashSheetResponse(opts.root, opts.dataDir(), url.searchParams.get("list") ?? "", url.searchParams.get("seed"));
         return json(r.body, r.status);
       }
       // Flash progress (data/flash-db.json): read whole, written whole (atomic).

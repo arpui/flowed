@@ -55,6 +55,7 @@ export interface FlashListView {
   kind?: "math" | LangKind; // absent for translation lists
   mode?: "practice"; // absent = memory (docs/ENCARREC-FLASH-PRACTICA.md §2)
   sprint?: true; // math list every card of which is a number, unit or choice answer (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2, -P3 §3)
+  sheet?: SheetSpec; // a timed sheet of n cards in cols columns (docs/ENCARREC-FLASH-FULL.md §2); the cards come from /api/flash/sheet
 }
 
 /** Expands a path whose segments may hold a `*` (e.g. `curriculum/flash/en-*`)
@@ -121,6 +122,12 @@ export function loadFlashLists(root: string, dirGlob: string, code: NativeCode):
     // A math list has `generate` or `items` (docs/ENCARREC-FLASH-MATH.md §2); both at once is ambiguous: skipped.
     // A drill or dictation list (kind) has `items` of its own (docs/ENCARREC-LANG-L1-FLASH.md §2).
     if (lang === null && "generate" in raw && "items" in raw) continue;
+    // A sheet (docs/ENCARREC-FLASH-FULL.md §2) that is not valid is left out, with a note in the log (once per problem).
+    const sheet = "sheet" in raw ? sheetCheck(raw) : null;
+    if (sheet && "problem" in sheet) {
+      warnOnce(`${file}: ${sheet.problem}`);
+      continue;
+    }
     const math = lang === null && ("generate" in raw || "items" in raw);
     const words: FlashWordView[] = lang
       ? langItems(raw, lang).items.map(langView)
@@ -145,6 +152,7 @@ export function loadFlashLists(root: string, dirGlob: string, code: NativeCode):
         ...(math ? { kind: "math" as const } : lang ? { kind: lang } : {}),
         ...(mode === "practice" ? { mode } : {}),
         ...(math && sprintable(raw, mode, words) ? { sprint: true as const } : {}),
+        ...(sheet && "spec" in sheet ? { sheet: sheet.spec } : {}),
       },
     });
   }
@@ -2198,6 +2206,113 @@ export function listMode(raw: JsonRecord): "memory" | "practice" {
   return Object.hasOwn(GEN_ROOM, kind) ? "memory" : "practice";
 }
 
+// ---- prova de full (docs/ENCARREC-FLASH-FULL.md §2–§3) --------------------------------
+// A `sheet` list is a test, not a list to learn: `n` cards, all different, in `cols` columns, against the clock
+// (`seconds`). Its cards are the list's own generator (`generate`): a kind through drawWords, the op form through
+// expandGenerate. Only number answers (the browser corrects them with checkNumber), and no `mode`: it is not practice.
+// A sheet that is not valid is left out of /lists, with a note in the log (warnOnce).
+
+export interface SheetSpec {
+  n: number;
+  cols: number;
+  seconds: number;
+  noun: string; // what the cards are called on the start screen: multiplicacions, sumes, restes, divisions, operacions
+}
+const SHEET_COLS = [1, 6] as const;
+const SHEET_SECONDS = [10, 1800] as const;
+const OP_NOUN: Record<MathOp, string> = { "+": "sumes", "−": "restes", "×": "multiplicacions", ":": "divisions" };
+const warned = new Set<string>();
+
+/** A problem is logged once, not on every request that reads the lists. */
+function warnOnce(problem: string): void {
+  if (warned.has(problem)) return;
+  warned.add(problem);
+  console.warn(`flash: llista de full no vàlida, saltada (${problem})`);
+}
+
+/** The cards a sheet list can give: the op form's results, or the kind's cards drawn with its room. */
+function sheetPool(raw: JsonRecord): MathWord[] {
+  const gen = asRecord(raw.generate);
+  const kind = generateKind(gen);
+  if (kind === "op") return expandGenerate(raw.generate);
+  if (typeof kind !== "string" || !GENERATORS.has(kind)) return [];
+  return drawWords(gen, mulberry32(fnv1a(String(raw.id ?? ""))), genRoom(kind), "s");
+}
+
+const sheetMemo = new Map<string, { count: number; numbers: boolean }>();
+/** How many cards the list's generator can give, and whether they all take a number. Memoized: the generators are pure. */
+function sheetRoom(raw: JsonRecord): { count: number; numbers: boolean } {
+  const key = `${String(raw.id ?? "")}|${JSON.stringify(raw.generate ?? null)}`;
+  const hit = sheetMemo.get(key);
+  if (hit) return hit;
+  const pool = sheetPool(raw);
+  const room = { count: pool.length, numbers: pool.every((w) => (w.answer_kind ?? "number") === "number") };
+  sheetMemo.set(key, room);
+  return room;
+}
+
+/** What the cards are called: by the generator's kind or operator (OP_NOUN), else operacions. */
+function sheetNoun(raw: JsonRecord): string {
+  const gen = asRecord(raw.generate);
+  if (gen.kind === "mult") return "multiplicacions";
+  const op = normalizeOp(gen.op);
+  return op ? OP_NOUN[op] : "operacions";
+}
+
+/** The sheet block of a list, checked: { spec } when it is a valid sheet, else { problem } (in Catalan, for the log). */
+export function sheetCheck(raw: JsonRecord): { spec: SheetSpec } | { problem: string } {
+  const s = asRecord(raw.sheet);
+  if (!("generate" in raw) || "items" in raw || raw.kind !== undefined) return { problem: "sheet només en una llista de generate, sense items ni kind" };
+  if (raw.mode !== undefined) return { problem: "sheet no pot tenir mode (no és practica)" };
+  const { n, cols, seconds } = s;
+  if (!Number.isInteger(cols) || (cols as number) < SHEET_COLS[0] || (cols as number) > SHEET_COLS[1]) return { problem: "sheet.cols ha de ser un enter de 1 a 6" };
+  if (!Number.isInteger(seconds) || (seconds as number) < SHEET_SECONDS[0] || (seconds as number) > SHEET_SECONDS[1]) return { problem: "sheet.seconds ha de ser un enter de 10 a 1800" };
+  if (!Number.isInteger(n) || (n as number) < 1) return { problem: "sheet.n ha de ser un enter de 1 o més" };
+  const room = sheetRoom(raw);
+  if (room.count === 0) return { problem: "sheet: el generador no dona cap carta" };
+  if (!room.numbers) return { problem: "sheet: totes les cartes han de tenir resposta numèrica" };
+  if ((n as number) > room.count) return { problem: `sheet.n ${n} és més que les cartes del generador (${room.count})` };
+  return { spec: { n: n as number, cols: cols as number, seconds: seconds as number, noun: sheetNoun(raw) } };
+}
+
+/** The `n` cards of a sheet (ids s1…sN), drawn from `seed`: the same seed, the same sheet. All different. */
+export function sheetWords(raw: JsonRecord, seed: number, n: number): MathWord[] {
+  const gen = asRecord(raw.generate);
+  const kind = generateKind(gen);
+  let words: MathWord[];
+  if (kind === "op") {
+    const pool = expandGenerate(raw.generate);
+    const rng = mulberry32(seed);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+    }
+    words = pool.slice(0, n);
+  } else if (typeof kind === "string" && GENERATORS.has(kind)) {
+    words = drawWords(gen, mulberry32(seed), Math.min(n, genRoom(kind)), "s");
+  } else {
+    return [];
+  }
+  return words.map((w, i) => ({ ...w, id: `s${i + 1}` }));
+}
+
+/** GET /api/flash/sheet?list=<id>&seed=<enter>: the cards of a sheet list (the list's n, at most its room), with its
+ *  sheet block. The list must be a valid sheet of the learner's level, the same filter as /lists. Same seed, same sheet. */
+export function flashSheetResponse(root: string, dataDir: string, listId: string, seedRaw: string | null): { status: number; body: JsonRecord } {
+  const { level, cfg } = flashContext(root, dataDir);
+  if (!cfg.enabled || !cfg.dir) return { status: 404, body: { ok: false, error: "Flash no està activat per a aquest perfil" } };
+  const seed = seedRaw !== null && /^\d+$/.test(seedRaw) ? Number(seedRaw) : NaN;
+  if (!Number.isInteger(seed) || seed > 0xffffffff) return { status: 400, body: { ok: false, error: "cal una llavor (un enter de 0 a 4294967295)" } };
+  const hit = readFlashFiles(root, cfg.dir).find(({ raw }) =>
+    String(raw.id ?? "") === listId &&
+    "sheet" in raw &&
+    (!level || String(raw.level ?? "").trim().toUpperCase() === level));
+  const checked = hit ? sheetCheck(hit.raw) : null;
+  if (!hit || !checked || !("spec" in checked)) return { status: 404, body: { ok: false, error: "aquesta llista no és una prova de full o no és del teu nivell" } };
+  const words = sheetWords(hit.raw, seed, checked.spec.n).map(mathView);
+  return { status: 200, body: { ok: true, list: listId, sheet: checked.spec, words } };
+}
+
 // ---- contrarellotge (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §2, docs/ENCARREC-FLASH-P3-MODES.md §3) ----
 // A math list runs as a timed sprint only when every card is answered by a number, a unit (typed) or a
 // choice (one tap on an option). Fraction, pair, factorization, algebraic and sexagesimal cards are not
@@ -2210,6 +2325,7 @@ const sprintMemo = new Map<string, boolean>();
 
 /** Whether a math list can be run as a contrarellotge. `words` are the list's own cards (a memory list). */
 export function sprintable(raw: JsonRecord, mode: "memory" | "practice", words: readonly FlashWordView[]): boolean {
+  if ("sheet" in raw) return false; // a sheet has its own clock (docs/ENCARREC-FLASH-FULL.md §4)
   if (mode === "memory") return words.length > 0 && words.every((w) => SPRINT_ANSWER_KINDS.includes(w.answer_kind ?? "number"));
   const gen = asRecord(raw.generate);
   const key = `${String(raw.id ?? "")}|${JSON.stringify(gen)}`;
@@ -2342,7 +2458,9 @@ export function mathListProblems(raw: JsonRecord): string[] {
   if ("generate" in raw && "items" in raw) return ["té generate i items: en cal un de sol"];
   if (!("generate" in raw) && !("items" in raw)) return ["no té ni generate ni items"];
   const { words, problems } = mathWords(raw);
-  return words.length || problems.length ? problems : ["no té cap ítem"];
+  const own = words.length || problems.length ? problems : ["no té cap ítem"];
+  const sheet = "sheet" in raw ? sheetCheck(raw) : null;
+  return sheet && "problem" in sheet ? [...own, sheet.problem] : own;
 }
 
 export interface FlashConfig {
@@ -2449,7 +2567,8 @@ export function flashListsResponse(root: string, dataDir: string): JsonRecord {
   // Only the lists of the level being worked on (2026-10-17, Albert: an m5 learner saw m6/m7 too).
   const lists = (level ? all.filter((l) => String(l.level ?? "").trim().toUpperCase() === level) : all)
     // A practice list has no fixed words: its cards come from /api/flash/practice, a new set each round.
-    .map((l) => (l.mode === "practice" ? { ...l, words: [] } : l));
+    // A sheet's cards come from /api/flash/sheet, a new set each time (docs/ENCARREC-FLASH-FULL.md §3).
+    .map((l) => (l.mode === "practice" || l.sheet ? { ...l, words: [] } : l));
   return { ok: true, enabled: true, native, nativeCode: code, target, level, lists };
 }
 
@@ -2505,14 +2624,29 @@ export interface FlashSprintState {
   runs: FlashSprintRun[]; // the most recent SPRINT_KEEP runs
 }
 
+export interface FlashSheetRun {
+  date: string;
+  correct: number; // right
+  answered: number; // filled in (right or wrong); the blank ones are n - answered
+  n: number;
+  seconds: number;
+}
+
+export interface FlashSheetState {
+  history: FlashSheetRun[]; // the most recent SHEET_KEEP runs
+  best: number; // the most right answers in one run
+}
+
 export interface FlashListState {
   words: Record<string, FlashWordState>;
   closed_at: string | null;
   practice?: { rounds: FlashPracticeRound[] }; // practice lists only (docs/ENCARREC-FLASH-PRACTICA.md §2.2)
   sprint?: FlashSprintState; // math lists (docs/ENCARREC-FLASH-CONTRARELLOTGE.md §5)
+  sheet?: FlashSheetState; // sheet lists only (docs/ENCARREC-FLASH-FULL.md §3)
 }
 
 const PRACTICE_KEEP = 30; // the most recent rounds kept per practice list
+const SHEET_KEEP = 50; // the most recent sheet runs kept per sheet list (docs/ENCARREC-FLASH-FULL.md §3)
 export const SPRINT_SECONDS: readonly number[] = [60, 120, 180]; // the durations of a contrarellotge (1, 2, 3 min)
 const SPRINT_KEEP = 30; // the most recent contrarellotge runs kept per list
 
@@ -2573,11 +2707,33 @@ function sprintState(value: unknown): FlashSprintState | undefined {
   return { best, runs: runs.slice(-SPRINT_KEEP) };
 }
 
+/** A sheet list's runs that fit the shape (a day, 1 ≤ n, 0 ≤ correct ≤ answered ≤ n, a duration ≥ 1), the most
+ *  recent SHEET_KEEP. `best` is the stored one or the most right in the kept runs, whichever is more. */
+function sheetState(value: unknown): FlashSheetState | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const history: FlashSheetRun[] = [];
+  for (const r of Array.isArray(asRecord(value).history) ? (asRecord(value).history as unknown[]) : []) {
+    const x = asRecord(r);
+    const d = day(x.date);
+    const n = count(x.n);
+    const answered = count(x.answered);
+    const correct = count(x.correct);
+    const seconds = count(x.seconds);
+    if (d === null || n === null || answered === null || correct === null || seconds === null) continue;
+    if (n < 1 || seconds < 1 || answered > n || correct > answered) continue;
+    history.push({ date: d, correct, answered, n, seconds });
+  }
+  const kept = history.slice(-SHEET_KEEP);
+  const stored = count(asRecord(value).best) ?? 0;
+  return { history: kept, best: Math.max(stored, ...kept.map((r) => r.correct)) };
+}
+
 /** Keeps what fits the shape and drops the rest: an unknown list id, a word
  *  whose box is outside 0..2, or any field of the wrong type. A body that is
  *  not a state at all gives an empty state. `practiceIds` (when given) are the
- *  lists that may keep `practice` rounds; the others lose them. */
-export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<string>, practiceIds?: ReadonlySet<string>): FlashState {
+ *  lists that may keep `practice` rounds; the others lose them. `sheetIds`
+ *  (when given) are the sheet lists, the only ones that keep a `sheet` record. */
+export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<string>, practiceIds?: ReadonlySet<string>, sheetIds?: ReadonlySet<string>): FlashState {
   const out = emptyFlashState();
   const body = asRecord(raw);
   if (body.version !== 1) return out;
@@ -2599,6 +2755,8 @@ export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<strin
     if (e.practice !== undefined && (!practiceIds || practiceIds.has(listId))) list.practice = { rounds: practiceRounds(asRecord(e.practice).rounds) };
     const sprint = sprintState(e.sprint);
     if (sprint) list.sprint = sprint;
+    const sheet = sheetState(e.sheet);
+    if (sheet && (!sheetIds || sheetIds.has(listId))) list.sheet = sheet;
     out.lists[listId] = list;
   }
   for (const [d, n] of Object.entries(asRecord(body.rounds_by_day))) {
@@ -2609,12 +2767,16 @@ export function sanitizeFlashState(raw: unknown, knownListIds: ReadonlySet<strin
 }
 
 /** The lists the profile's domain runs (none when Flash is off there): all of them, and the practice ones. */
-function flashListInfo(root: string, dataDir: string): { ids: Set<string>; practice: Set<string> } {
+function flashListInfo(root: string, dataDir: string): { ids: Set<string>; practice: Set<string>; sheet: Set<string> } {
   const profile = readJson(path.join(dataDir, "learner-profile.json"));
   const cfg = flashConfig(readJson(path.join(root, "config", "domain.json")), profileDomain(profile));
-  if (!cfg.enabled || !cfg.dir) return { ids: new Set(), practice: new Set() };
+  if (!cfg.enabled || !cfg.dir) return { ids: new Set(), practice: new Set(), sheet: new Set() };
   const lists = loadFlashLists(root, cfg.dir, "ca");
-  return { ids: new Set(lists.map((l) => l.id)), practice: new Set(lists.filter((l) => l.mode === "practice").map((l) => l.id)) };
+  return {
+    ids: new Set(lists.map((l) => l.id)),
+    practice: new Set(lists.filter((l) => l.mode === "practice").map((l) => l.id)),
+    sheet: new Set(lists.filter((l) => l.sheet).map((l) => l.id)),
+  };
 }
 
 /** The ids of the lists the profile's domain runs (none when Flash is off there). */
@@ -2631,7 +2793,7 @@ export function readFlashState(root: string, dataDir: string): FlashState {
     raw = null;
   }
   const info = flashListInfo(root, dataDir);
-  return sanitizeFlashState(raw, info.ids, info.practice);
+  return sanitizeFlashState(raw, info.ids, info.practice, info.sheet);
 }
 
 /** Writes the whole state atomically: a temporary file, then rename. */
@@ -2661,7 +2823,7 @@ export function saveFlashState(root: string, dataDir: string, body: unknown): { 
     return { status: 400, body: { ok: false, error: "cal un objecte JSON amb l'estat de Flash (versió 1)" } };
   }
   const info = flashListInfo(root, dataDir);
-  const state = sanitizeFlashState(body, info.ids, info.practice);
+  const state = sanitizeFlashState(body, info.ids, info.practice, info.sheet);
   writeFlashState(dataDir, state);
   return { status: 200, body: { ok: true, state } };
 }
