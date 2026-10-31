@@ -10,6 +10,7 @@ import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
 import { skillKeysFor } from "./tools";
 import { profileMismatch } from "./profile";
+import { domainOfDataDir } from "./taxonomy";
 import { flashConfig, flashListsResponse, flashPracticeResponse, flashSheetResponse, flashStateResponse, saveFlashState } from "./flash";
 
 export interface HttpConfig {
@@ -365,18 +366,8 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
         // its button bar (same rule as hooks/domain.py: explicit field, else
         // level scale).
         if (rel === "index.html") {
-          let dom = "math";
-          try {
-            const prof = JSON.parse(fs.readFileSync(path.join(opts.dataDir(), "learner-profile.json"), "utf8"));
-            const explicit = String(prof?.domain ?? "").trim().toLowerCase();
-            if (explicit) dom = explicit;
-            else {
-              const lv = String(prof?.learner?.current_level ?? prof?.learner?.target_level ?? "").trim().toUpperCase();
-              if (/^[A-C][12]$/.test(lv)) dom = "language";
-            }
-          } catch {
-            /* no profile — math default */
-          }
+          // Same rule as hooks/domain.py (taxonomy.ts domainOfProfile).
+          const dom = domainOfDataDir(opts.dataDir());
           const s = String(body);
           // The domain's open practices (manifest `open_practices`): the web
           // hides the buttons of the ones it does not run.
@@ -541,16 +532,7 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
       // WP5.2: TTS follows the DOMAIN (config/domain.json `tts`), not the
       // machine config alone — a language profile hears voices even when the
       // fork's config/fluent.json keeps them off for math.
-      const domOfProfile = (): string => {
-        try {
-          const prof = JSON.parse(fs.readFileSync(path.join(opts.dataDir(), "learner-profile.json"), "utf8"));
-          const explicit = String(prof?.domain ?? "").trim().toLowerCase();
-          if (explicit) return explicit;
-          const lv = String(prof?.learner?.current_level ?? prof?.learner?.target_level ?? "").trim().toUpperCase();
-          if (/^[A-C][12]$/.test(lv)) return "language";
-        } catch { /* no profile — math default */ }
-        return "math";
-      };
+      const domOfProfile = (): string => domainOfDataDir(opts.dataDir());
       const ttsForDomain = (): TtsConfig => {
         const base = opts.tts ?? DEFAULT_TTS;
         try {

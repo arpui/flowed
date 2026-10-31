@@ -5,6 +5,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { domainOfProfile } from "./taxonomy.ts";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -2478,12 +2479,7 @@ export function flashConfig(manifest: unknown, domain: string): FlashConfig {
 /** The domain a profile is on (same rule as http.ts and hooks/domain.py:
  *  explicit field, else a CEFR level means language). */
 export function profileDomain(profile: unknown): string {
-  const prof = asRecord(profile);
-  const explicit = String(prof.domain ?? "").trim().toLowerCase();
-  if (explicit) return explicit;
-  const learner = asRecord(prof.learner);
-  const lv = String(learner.current_level ?? learner.target_level ?? "").trim().toUpperCase();
-  return /^[A-C][12]$/.test(lv) ? "language" : "math";
+  return domainOfProfile(profile);
 }
 
 function readJson(file: string): JsonRecord {

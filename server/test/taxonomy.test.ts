@@ -40,6 +40,15 @@ check("level A1 → language", domainOfDataDir(profile("en", { learner: { curren
 check("level m7 → math", domainOfDataDir(profile("m", { learner: { current_level: "m7" } })) === "math");
 check("explicit domain wins", domainOfDataDir(profile("x", { domain: "language", learner: { current_level: "m7" } })) === "language");
 check("no profile → math (the manifest default)", domainOfDataDir(path.join(tmp, "nope")) === "math");
+// 2026-10-31 (Albert, production): a language profile whose current_level is not on the scale read "Math"
+// and got no Flash lists; hooks/domain.py falls through to target_level, the server must too.
+for (const cur of ["", "{A1|A2|B1|B2|C1|C2}", "pre-A1", null]) {
+  check(`current_level ${JSON.stringify(cur)} + target A1 → language`,
+    domainOfDataDir(profile(`fall-${String(cur).length}`, { learner: { current_level: cur, target_level: "A1" } })) === "language");
+}
+check("unknown explicit domain is ignored", domainOfDataDir(profile("ue", { domain: "english", learner: { current_level: "A1" } })) === "language");
+check("lower-case a1 → language", domainOfDataDir(profile("lc", { learner: { current_level: "a1" } })) === "language");
+check("odd current_level + target m5 → math", domainOfDataDir(profile("fm", { learner: { current_level: "?", target_level: "m5" } })) === "math");
 
 // ---- categories ---------------------------------------------------------------
 check("math: tenses is not a math category", normalizeCategory("tenses") === null);

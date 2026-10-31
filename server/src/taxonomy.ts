@@ -14,21 +14,34 @@ import path from "node:path";
 export const isLanguage = (domain?: string | null): boolean =>
   String(domain ?? "").trim().toLowerCase() === "language";
 
-/** The profile's domain: explicit `domain` field, else the level scale
- *  (A1..C2 → language, m1..m7 → math), else math. Same rule as
- *  hooks/domain.py domain_for_profile. Never throws. */
-export function domainOfDataDir(dataDir: string): string {
-  try {
-    const prof = JSON.parse(fs.readFileSync(path.join(dataDir, "learner-profile.json"), "utf8"));
-    const explicit = String(prof?.domain ?? "").trim().toLowerCase();
-    if (explicit) return explicit;
-    const lv = String(prof?.learner?.current_level ?? prof?.learner?.target_level ?? "").trim().toUpperCase();
-    if (/^M\d/.test(lv)) return "math";
+/** The domains of config/domain.json (tests/test_taxonomy.py keeps the list in sync). */
+export const KNOWN_DOMAINS: readonly string[] = ["math", "language"];
+
+/** The domain of a parsed learner profile: explicit `domain` field, else the level scale of
+ *  current_level, else of target_level (A1..C2 → language, m1..m7 → math), else math. Same rule
+ *  as hooks/domain.py domain_for_profile (an explicit domain counts only if known): a current_level that is empty, a placeholder or off the
+ *  scale falls through to target_level (2026-10-31: a language profile like that read "Math" and
+ *  got no Flash lists). The only copy of the rule on the server. Never throws. */
+export function domainOfProfile(profile: unknown): string {
+  const prof = (profile && typeof profile === "object" ? profile : {}) as Record<string, unknown>;
+  const explicit = String(prof.domain ?? "").trim().toLowerCase();
+  if (KNOWN_DOMAINS.includes(explicit)) return explicit; // an unknown one ("english") is ignored, as in domain.py
+  const learner = (prof.learner && typeof prof.learner === "object" ? prof.learner : {}) as Record<string, unknown>;
+  for (const v of [learner.current_level, learner.target_level]) {
+    const lv = String(v ?? "").trim().toUpperCase();
+    if (/^M[1-7]$/.test(lv)) return "math";
     if (/^[A-C][12]$/.test(lv)) return "language";
-  } catch {
-    /* no profile: the default below */
   }
   return "math";
+}
+
+/** The domain of the profile in `dataDir` (domainOfProfile of its learner-profile.json). */
+export function domainOfDataDir(dataDir: string): string {
+  try {
+    return domainOfProfile(JSON.parse(fs.readFileSync(path.join(dataDir, "learner-profile.json"), "utf8")));
+  } catch {
+    return "math"; // no profile: the default
+  }
 }
 
 // ---- language skills ---------------------------------------------------------

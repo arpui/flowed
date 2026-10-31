@@ -83,6 +83,13 @@ class LanguageTaxonomyTest(unittest.TestCase):
 class TsMirrorTest(unittest.TestCase):
     """server/src/taxonomy.ts must say what db_schema.py says."""
 
+    def test_known_domains(self):
+        m = re.search(r"export const KNOWN_DOMAINS: readonly string\[\] = \[(.*?)\];", TS, re.S)
+        self.assertIsNotNone(m)
+        ts = sorted(re.findall(r'"([^"]+)"', m.group(1)))
+        manifest = json.loads((REPO_ROOT / "config" / "domain.json").read_text(encoding="utf-8"))
+        self.assertEqual(ts, sorted(manifest["domains"]))
+
     def test_skill_keys(self):
         self.assertEqual(_ts_array("LANGUAGE_SKILL_KEYS"), D.LANGUAGE_SKILL_KEYS)
 
