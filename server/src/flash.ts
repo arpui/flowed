@@ -2549,7 +2549,10 @@ function flashContext(root: string, dataDir: string) {
   const learner = asRecord(profile.learner);
   const native = String(learner.native_language ?? "").trim();
   // The course level, as the path computes it; without a curriculum, the declared current level.
-  const level = (courseLevel(root, dataDir, learner) ?? String(learner.current_level ?? "")).trim().toUpperCase();
+  // No course found: the current level, or the target one when the current is empty or off the scale
+  // (2026-10-31: current_level "" showed every level's lists).
+  const onScale = (v: unknown) => (lvlIndex(v) === 99 ? "" : String(v).trim());
+  const level = (courseLevel(root, dataDir, learner) ?? (onScale(learner.current_level) || onScale(learner.target_level) || String(learner.current_level ?? ""))).trim().toUpperCase();
   const cfg = flashConfig(readJson(path.join(root, "config", "domain.json")), profileDomain(profile));
   return { native, code: nativeCode(native), target: String(learner.target_language ?? "").trim(), level, cfg };
 }

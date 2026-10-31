@@ -14,7 +14,7 @@ import {
   toolsForDomain, ERROR_CATEGORIES, SKILL_KEYS,
 } from "../src/tools.ts";
 import {
-  domainOfDataDir, normalizeLanguageCategory, normalizeLanguageSkill,
+  domainOfDataDir, languageLabel, normalizeLanguageCategory, normalizeLanguageSkill,
   LANGUAGE_ERROR_CATEGORIES, LANGUAGE_SKILL_KEYS,
 } from "../src/taxonomy.ts";
 import { skillDebts, lessonSkillSlot, trackedSkillsFor, slotSkillsFor, parseFeedback } from "../src/pacing.ts";
@@ -49,6 +49,12 @@ for (const cur of ["", "{A1|A2|B1|B2|C1|C2}", "pre-A1", null]) {
 check("unknown explicit domain is ignored", domainOfDataDir(profile("ue", { domain: "english", learner: { current_level: "A1" } })) === "language");
 check("lower-case a1 → language", domainOfDataDir(profile("lc", { learner: { current_level: "a1" } })) === "language");
 check("odd current_level + target m5 → math", domainOfDataDir(profile("fm", { learner: { current_level: "?", target_level: "m5" } })) === "math");
+
+// The shell shows the language taught (2026-10-31).
+check("languageLabel: English / anglès / en → English", ["English", "anglès", "en", " Inglés "].every((t) => languageLabel(t) === "English"));
+check("languageLabel: french → Français", languageLabel("french") === "Français");
+check("languageLabel: unknown is capitalised", languageLabel("portuguès") === "Portuguès");
+check("languageLabel: empty or placeholder → null", languageLabel("") === null && languageLabel("{LANGUAGE_YOU_WANT_TO_LEARN}") === null && languageLabel(undefined) === null);
 
 // ---- categories ---------------------------------------------------------------
 check("math: tenses is not a math category", normalizeCategory("tenses") === null);

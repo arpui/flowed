@@ -44,6 +44,23 @@ export function domainOfDataDir(dataDir: string): string {
   }
 }
 
+/** The name of a taught language as the shell shows it next to the brand ("FlowEd · English"), in that
+ *  language. The profile may say "English", "anglès", "inglés" or "en"; an empty value or the template's
+ *  placeholder gives null (the shell keeps the domain label). 2026-10-31, Albert: show the language taught. */
+const LANGUAGE_NAMES: Record<string, string> = {
+  en: "English", english: "English", "anglès": "English", angles: "English", "inglés": "English", ingles: "English",
+  fr: "Français", french: "Français", "francès": "Français", "francés": "Français", "français": "Français",
+  de: "Deutsch", german: "Deutsch", "alemany": "Deutsch", "alemán": "Deutsch", deutsch: "Deutsch",
+  it: "Italiano", italian: "Italiano", "italià": "Italiano", "italiano": "Italiano",
+  es: "Español", spanish: "Español", "castellà": "Español", "español": "Español", castellano: "Español",
+  ca: "Català", catalan: "Català", "català": "Català", "catalán": "Català",
+};
+export function languageLabel(target: unknown): string | null {
+  const raw = String(target ?? "").trim();
+  if (!raw || raw.includes("{")) return null;
+  return LANGUAGE_NAMES[raw.toLowerCase()] ?? raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
 // ---- language skills ---------------------------------------------------------
 export const LANGUAGE_SKILL_KEYS = ["writing", "speaking", "vocabulary", "reading", "grammar", "listening"] as const;
 export const DEFAULT_LANGUAGE_SKILL_KEY = "writing";

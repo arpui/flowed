@@ -10,7 +10,7 @@ import { resumeState, type SessionService } from "./session";
 import { synthesise, voiceFor, DEFAULT_TTS, type TtsConfig } from "./tts";
 import { skillKeysFor } from "./tools";
 import { profileMismatch } from "./profile";
-import { domainOfDataDir } from "./taxonomy";
+import { domainOfDataDir, languageLabel } from "./taxonomy";
 import { flashConfig, flashListsResponse, flashPracticeResponse, flashSheetResponse, flashStateResponse, saveFlashState } from "./flash";
 
 export interface HttpConfig {
@@ -383,6 +383,8 @@ export function serve(opts: HttpConfig, hub: SSEHub): { stop: () => void } {
             if (Array.isArray(d?.open_practices)) open = d.open_practices.map(String);
             if (d?.brand) brand = String(d.brand);
             if (d?.domain_label) label = String(d.domain_label);
+            // A language profile shows the language it teaches ("FlowEd · English"), not the domain.
+            if (dom === "language") label = languageLabel(readTargetLanguage(opts.dataDir())) ?? label;
             if (Array.isArray(d?.hidden_commands)) hidden = d.hidden_commands.map(String);
             if (d?.favicon) favicon = String(d.favicon);
             flashOn = flashConfig(man, dom).enabled;

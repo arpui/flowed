@@ -519,6 +519,17 @@ console.log("language drill and dictation");
     fs.rmSync(a2Dir, { recursive: true, force: true });
   }
 
+  // 2026-10-31 (production): a language profile with current_level "" and target A1 (and target_language in
+  // Catalan) was taken for math and, once that was fixed, got every level's lists. It gets the A1 ones.
+  const oddDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-odd-"));
+  try {
+    fs.writeFileSync(path.join(oddDir, "learner-profile.json"), JSON.stringify({ learner: { native_language: "català", target_language: "anglès", current_level: "", target_level: "A1" } }));
+    const odd = flashListsResponse(root, oddDir) as any;
+    check("current_level empty + target A1: Flash on, level A1, the 16 A1 lists", odd.enabled === true && odd.level === "A1" && odd.lists.length === 16 && odd.lists.every((l: List) => l.level === "A1"), [odd.enabled, odd.level, odd.lists.length]);
+  } finally {
+    fs.rmSync(oddDir, { recursive: true, force: true });
+  }
+
   // The client: the drill and the dictation wiring, and the voice rules (docs/ENCARREC-LANG-L1-FLASH.md §2).
   const fjs = read("web", "flash.js");
   check("flash.js: a dictation reads its sentence through /api/math/say, at most three times a card", fjs.includes("${API}/math/say?") && /SAY_MAX = 3/.test(fjs) && fjs.includes("card.plays >= SAY_MAX"));
