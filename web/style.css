@@ -660,6 +660,9 @@ button#send.cant-next { opacity: 0.45; }
 .path-item .bar { grid-column: 1 / -1; height: 5px; }
 .path-state { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
 .path-item.st-unseen .path-name { color: var(--muted); }
+/* go_active: an active competence not started yet reads as normal text; a sleeping one is faded. */
+.path.has-go .path-item.st-unseen:not(.asleep) .path-name { color: inherit; }
+.path-item.asleep { opacity: 0.5; }
 .path-item.st-consolidated .path-state,
 .path-item.st-mastered .path-state { color: var(--accent); font-weight: 600; }
 /* "Resting for today" (hooks/curriculum.py rested_today): reuses the existing

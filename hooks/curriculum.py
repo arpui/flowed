@@ -2242,6 +2242,7 @@ def path_view(cur: dict, path: dict, as_of: str, cfg: dict = CFG, data_dir=None,
         sections[-1]["items"].append({
             "id": r["id"], "name": r["name"], "core": r["core"], "state": r["state"],
             "label": "💤 adormida" if r.get("asleep") else LABEL[r["state"]],
+            "asleep": bool(r.get("asleep")),
             "n": r["n"], "need": r["need"], "depth": r["depth"], "resting": bool(r.get("resting_today")),
             "pct": r.get("display_pct"),
             # Only the fact that it is running low, never the count: this is the
@@ -2263,6 +2264,10 @@ def path_view(cur: dict, path: dict, as_of: str, cfg: dict = CFG, data_dir=None,
         "now": [{"id": c, "name": by_id[c]["name"]} for c in now],
         "review": [{"id": c, "name": by_id[c]["name"]} for c in due],
         "sections": sections,
+        # With go_active: the competences the Go works on (2026-11-03, Albert: in Stats it was not clear
+        # which ones would come up). Empty without the key.
+        "go_active": ([{"id": r["id"], "name": r["name"]} for r in rows if not r.get("asleep")]
+                      if any(r.get("asleep") for r in rows) else []),
     }
     if data_dir:
         view["checkpoint_run"] = checkpoint_status(data_dir)

@@ -183,6 +183,14 @@ class GoActiveTest(unittest.TestCase):
                     fh.write(json.dumps(rec) + "\n")
             self.assertEqual(set(seen), set(GO), sorted(set(GO) - set(seen)))
 
+    def test_the_path_view_lists_the_go_competences_by_name(self):
+        # 2026-11-03 (Albert): in Stats it was not clear which competences the Go would bring.
+        view = cu.path_view(self.cur, cu.new_path(self.cur), TODAY)
+        self.assertEqual({x["id"] for x in view["go_active"]}, set(GO))
+        self.assertTrue(all(x["name"] for x in view["go_active"]))
+        items = [it for s in view["sections"] for it in s["items"]]
+        self.assertTrue(all(it["asleep"] == (it["id"] not in GO) for it in items))
+
     def test_the_go_path_ids_are_the_level_ids(self):
         # the Go note and the bank look competences up by id: every active id has bank items
         for cid in GO:

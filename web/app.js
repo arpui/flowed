@@ -1545,19 +1545,22 @@ function renderPath(p) {
     ? `<p class="path-line">🎯 Ara treballes: <strong>${names(p.now)}</strong></p>` : "";
   const review = Array.isArray(p.review) && p.review.length
     ? `<p class="path-line">🔁 Per repassar: ${names(p.review)}</p>` : "";
+  // go_active (docs/ENCARREC-M7-GO-FOCUS.md): which competences the Go works on; the rest sleep (💤).
+  const goActive = Array.isArray(p.go_active) && p.go_active.length
+    ? `<p class="path-line">🎲 Al Go (${p.go_active.length}): ${names(p.go_active)}. La resta, 💤 adormides fins que s'activin.</p>` : "";
   const groups = (Array.isArray(p.sections) ? p.sections : []).map((s) => `
     <div class="path-group"><h4>${esc(s.name)}</h4>${(s.items || []).map((it) => `
-      <div class="path-item st-${esc(it.state)}${it.resting ? " resting" : ""}${it.bank_low ? " bank-low" : ""}"${it.bank_low ? ' title="Queden pocs exercicis nous d\'aquest tema"' : ""}>
+      <div class="path-item st-${esc(it.state)}${it.asleep ? " asleep" : ""}${it.resting ? " resting" : ""}${it.bank_low ? " bank-low" : ""}"${it.bank_low ? ' title="Queden pocs exercicis nous d\'aquest tema"' : ""}>
         <span class="path-name">${esc(it.name)}${it.core ? "" : ' <span class="chip">extra</span>'}</span>
         <span class="path-state">${esc(it.label)}${it.resting ? " · ⏸ avui" : ""}</span>
         <div class="bar"><i style="width:${pathBarPct(it)}%"></i></div>
       </div>`).join("")}</div>`).join("");
-  return `<section class="path">
+  return `<section class="path${goActive ? " has-go" : ""}">
     <h3>El teu camí cap al ${esc(p.level)}</h3>
     ${Array.isArray(p.certified) && p.certified.length ? `<p class="path-line path-levels">${p.certified.map((c) => `<span class="chip">${esc(c.level)} ✓</span>`).join(" ")} <span class="chip">${esc(p.level)} en curs</span></p>` : ""}
     <div class="path-head"><div class="bar big"><i style="width:${pct}%"></i></div><strong>${esc(Math.round(pct))}%</strong></div>
     <p class="path-line">Assolides <strong>${esc(p.core_done)}</strong> de ${esc(p.core_total)} · en curs ${esc(p.in_progress)} · per començar ${esc(p.unseen)}</p>
-    ${now}${review}
+    ${now}${review}${goActive}
     <p class="path-line path-check">${pathCheckpointText(p)}</p>
     ${pathCheckpointOffer(p) ? `<p><button class="primary" data-start-checkpoint>🧪 ${esc(pathCheckpointOffer(p).label)}</button></p>` : ""}
     ${pathFlashRow(p.flash)}

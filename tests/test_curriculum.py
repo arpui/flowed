@@ -615,7 +615,7 @@ class PathViewTest(unittest.TestCase):
         self.assertIsNone(v["promotion"])
         self.assertTrue(v["sections"])
         it = v["sections"][0]["items"][0]
-        self.assertEqual(set(it), {"id", "name", "core", "state", "label", "n", "need", "depth", "pct", "resting", "bank_low"})
+        self.assertEqual(set(it), {"id", "name", "core", "state", "label", "n", "need", "depth", "pct", "resting", "bank_low", "asleep"})
         self.assertEqual(json.loads(json.dumps(v)), v)  # serialisable
 
     def test_details_for_the_teacher_are_apart(self):
