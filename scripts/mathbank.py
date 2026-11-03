@@ -58,6 +58,15 @@ Steps validation before writing (fail loudly, on top of the rules above):
     the evaluator — the same two-path rule);
   * `error_class` is one of the 12 canonical classes; step `n` is sequential.
 
+ENCARREC-M7-GO-FOCUS adds two types and one optional field:
+  * `set`: the answer is a LIST of whole numbers ("1, 2, 23, 46"), graded as a set
+    (mathgrade.grade_list): order, separators and repeats do not matter;
+  * `factorization`: the answer is a prime factorisation ("2^3 · 3^2 · 5"), graded by
+    its prime powers (mathgrade.grade_factorization);
+  * `spec` (set, factorization, and word choices such as "primer"/"compost"): what the
+    answer is, in a form the validator recomputes ("divisors:46", "primes:30:50",
+    "fac:360", "prime:91", "divides:6:84"). Without a spec those items are refused.
+
 Validation before writing (fail loudly, never emit a bad item):
   * the problem string parses with mathgrade.parse_expr and its value equals
     the template's own Fraction computation (two independent paths);
@@ -2138,7 +2147,596 @@ def laplace(rng: random.Random) -> dict:
     }
 
 
+# ------------------------------------------- m7 Go focus (ENCARREC-M7-GO-FOCUS) ---
+# Families for the four active blocks. A `set` or a `factorization` item carries a
+# `spec` (e.g. "divisors:46", "primes:30:50", "fac:360") from which the validator
+# RECOMPUTES the answer: the template and the check never share one code path. A
+# `choose` with word options carries a `spec` too ("prime:91", "divides:6:84").
+# Divisions in problems are written "÷" (the grader's notation), products "·" or "×".
+
+def _divisors(n: int) -> list[int]:
+    return [d for d in range(1, n + 1) if n % d == 0]
+
+
+def _lcm_all(nums) -> int:
+    out = 1
+    for v in nums:
+        out = _lcm(out, v)
+    return out
+
+
+def _ca_join(items) -> str:
+    items = [str(x) for x in items]
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " i " + items[-1]
+
+
+def spec_set(spec: str) -> frozenset:
+    """The set a `set` item's answer must be, recomputed from its spec."""
+    kind, _, rest = str(spec).partition(":")
+    a = rest.split(":") if rest else []
+    try:
+        if kind == "divisors":
+            return frozenset(_divisors(int(a[0])))
+        if kind == "multiples":
+            d, k = int(a[0]), int(a[1])
+            return frozenset(d * i for i in range(1, k + 1))
+        if kind == "primes":  # strictly between the two numbers
+            lo, hi = int(a[0]), int(a[1])
+            return frozenset(p for p in range(lo + 1, hi) if mathgrade._is_prime(p))
+        if kind == "divisible":
+            n = int(a[0])
+            return frozenset(x for x in (int(t) for t in a[1].split(",")) if n % x == 0)
+        if kind == "digit":  # the digits that can replace the blank '_' so the number is divisible
+            pat, d = a[0], int(a[1])
+            out = set()
+            for x in range(10):
+                if pat[0] == "_" and x == 0:
+                    continue
+                if int(pat.replace("_", str(x))) % d == 0:
+                    out.add(x)
+            return frozenset(out)
+    except (ValueError, IndexError) as e:
+        raise GenError(f"spec {spec!r}: {e}") from e
+    raise GenError(f"spec de llista desconegut: {spec!r}")
+
+
+def spec_label(spec: str) -> str:
+    """The word a `choose` item with word options must answer, recomputed from its spec."""
+    kind, _, rest = str(spec).partition(":")
+    a = rest.split(":") if rest else []
+    try:
+        if kind == "prime":
+            return "primer" if mathgrade._is_prime(int(a[0])) else "compost"
+        if kind == "divides":  # 'divides:d:N' -> is N a multiple of d?
+            d, n = int(a[0]), int(a[1])
+            return "Sí" if n % d == 0 else "No"
+    except (ValueError, IndexError) as e:
+        raise GenError(f"spec {spec!r}: {e}") from e
+    raise GenError(f"spec d'opcions desconegut: {spec!r}")
+
+
+def _is_text_choice_item(item: dict) -> bool:
+    """Same rule as hooks/bank.py `_is_text_choice`: options with no digit."""
+    opts = item.get("options") or []
+    return bool(opts) and not any(re.search(r"\d", str(o)) for o in opts)
+
+
+# -- integers: the long variant (5 to 8 operations, nested parentheses) ---------
+
+def integers_combined_long(rng: random.Random) -> dict:
+    """Integers, long: 5 to 8 operations (4 to 6 binary ones, plus powers), with
+    parentheses inside parentheses. Every division is exact and the value is in
+    -300..300. The why names the innermost parenthesis and the order to follow."""
+    powers = [(2, 2), (2, 3), (3, 2), (2, 4), (10, 2)]
+    for _ in range(4000):
+        n_bin = rng.randint(4, 6)
+        n_pow = rng.randint(0, 2)
+        if not 5 <= n_bin + n_pow <= 8:
+            continue
+        leaves = []
+        for i in range(n_bin + 1):
+            if i < n_pow:
+                b, e = rng.choice(powers)
+                if rng.random() < 0.3:
+                    leaves.append((f"(-{b})^{e}", Fraction((-b) ** e), 0, None))
+                else:
+                    leaves.append((f"{b}^{e}", Fraction(b ** e), 0, None))
+                continue
+            v = rng.randint(1, 12)
+            if rng.random() < 0.35:
+                leaves.append((f"({-v})", Fraction(-v), 0, None))
+            else:
+                leaves.append((str(v), Fraction(v), 0, None))
+        rng.shuffle(leaves)
+
+        def build(lo: int, hi: int):
+            if hi - lo == 1:
+                return leaves[lo]
+            cut = rng.randint(lo + 1, hi - 1)
+            left, right = build(lo, cut), build(cut, hi)
+            if left is None or right is None:
+                return None
+            op = rng.choice(["+", "-", "·", "·", "÷"])
+            lv, rv = left[1], right[1]
+            if op == "÷":
+                if rv == 0 or lv.denominator != 1 or rv.denominator != 1 or lv % rv != 0:
+                    return None
+                val = lv / rv
+            elif op == "·":
+                val = lv * rv
+            elif op == "-":
+                val = lv - rv
+            else:
+                val = lv + rv
+            if abs(val) > 300 or val == 0:  # a zero sub-result or a unit factor gives it away
+                return None
+            if op == "·" and (abs(lv) == 1 or abs(rv) == 1):
+                return None
+            def wrap(node):
+                return f"({node[0]})" if node[2] > 0 else node[0]
+            depth = 1 + max(left[2], right[2])
+            text = f"{wrap(left)} {op} {wrap(right)}"
+            inner = left[3] if left[2] >= right[2] and left[2] > 0 else right[3] if right[2] > 0 else None
+            if depth == 1:
+                inner = (text, val)
+            return (text, val, depth, inner)
+
+        node = build(0, len(leaves))
+        if node is None or node[2] < 3 or node[1].denominator != 1:
+            continue
+        text, value = node[0], node[1]
+        inner_text, inner_val = node[3]
+        why = (f"Primer el parèntesi més interior: ({inner_text}) = {inner_val}. Després, de dins cap a fora: "
+               "les potències, després les multiplicacions i divisions, i al final les sumes i restes. "
+               f"Un parèntesi es calcula abans de l'operació que el conté. Resultat: {value}.")
+        return {
+            "type": "compute",
+            "instruction": "Calcula respectant els parèntesis (de dins cap a fora), les potències i els signes.",
+            "problem": text,
+            "answer": str(int(value)),
+            "also_accept": [],
+            "options": [],
+            "value": Fraction(value),
+            "why": why,
+        }
+    raise GenError("integers_combined_long: no valid expression in 4000 draws")
+
+
+# -- powers: the exponent rules, and the exponents 0 and 1 ------------------------
+
+def _pow_one(b: int, e: int) -> str:
+    """The result as ONE power, the way the learner writes it (0 and 1 are not powers)."""
+    if e == 0:
+        return "1"
+    if e == 1:
+        return str(b)
+    return f"{b}^{e}"
+
+
+def powers_rules(rng: random.Random) -> dict:
+    """Powers with one base: the product adds the exponents, the quotient subtracts them,
+    a power of a power multiplies them; exponent 1 and exponent 0 (x^1 = x, x^0 = 1).
+    The answer is ONE power ('2^7'); its value is accepted too."""
+    shape = rng.randrange(5)
+    b = rng.choice([2, 3, 5, 7, 10])
+    instr = "Aplica les propietats de les potències i escriu el resultat com una sola potència."
+    if shape == 0:
+        m, n = rng.randint(1, 6), rng.randint(2, 6)
+        e = m + n
+        problem = f"{b}^{m} · {b}^{n}"
+        why = (f"La base és la mateixa: en multiplicar se sumen els exponents. {m} + {n} = {e}, "
+               f"així que {b}^{m} · {b}^{n} = {b}^{e}.")
+    elif shape == 1:
+        n = rng.randint(1, 4)
+        m = rng.randint(n + 1, 8)
+        e = m - n
+        problem = f"{b}^{m} ÷ {b}^{n}"
+        why = (f"La base és la mateixa: en dividir es resten els exponents. {m} - {n} = {e}, "
+               f"així que {b}^{m} ÷ {b}^{n} = {b}^{e}.")
+    elif shape == 2:
+        m, n = rng.randint(2, 3), rng.randint(2, 3)
+        e = m * n
+        problem = f"({b}^{m})^{n}"
+        why = (f"Potència de potència: es multipliquen els exponents. {m} · {n} = {e}, "
+               f"així que ({b}^{m})^{n} = {b}^{e}.")
+    elif shape == 3:
+        c = rng.choice([x for x in [2, 3, 5, 7, 10] if x != b])
+        problem = f"{b}^1 · {c}^0"
+        e = 1
+        why = (f"Exponent 1: {b}^1 = {b}, qualsevol nombre elevat a 1 és ell mateix. Exponent 0: "
+               f"{c}^0 = 1, qualsevol base (diferent de zero) elevada a 0 val 1. Així que {b} · 1 = {b}.")
+        return {
+            "type": "compute", "instruction": instr, "problem": problem, "answer": str(b),
+            "also_accept": [], "options": [], "value": Fraction(b), "why": why,
+        }
+    else:
+        m, n = rng.randint(2, 5), rng.randint(2, 5)
+        k = rng.randint(1, min(m + n - 1, 6))
+        e = m + n - k
+        problem = f"{b}^{m} · {b}^{n} ÷ {b}^{k}"
+        why = (f"Mateixa base: primer se sumen els exponents del producte, {m} + {n} = {m + n}, i després "
+               f"es resta l'exponent del divisor, {m + n} - {k} = {e}. Així que el resultat és {b}^{e}.")
+    return {
+        "type": "compute", "instruction": instr, "problem": problem, "answer": _pow_one(b, e),
+        "also_accept": [str(b ** e)], "options": [], "value": Fraction(b ** e), "why": why,
+    }
+
+
+def powers_base(rng: random.Random) -> dict:
+    """Changing the base to join powers: a power of a product (a · b)^n = a^n · b^n, a power
+    of a fraction, and two powers of one prime written with different bases (4^3 · 2^5 =
+    2^6 · 2^5 = 2^11). The answer is one power (or a product of powers); its value is accepted."""
+    shape = rng.randrange(3)
+    if shape == 0:
+        a, b = rng.sample([2, 3, 5, 7], 2)
+        n = rng.choice([2, 3])
+        problem = f"({a} · {b})^{n}"
+        answer = f"{a}^{n} · {b}^{n}"
+        value = Fraction((a * b) ** n)
+        why = (f"La potència d'un producte és el producte de les potències: ({a} · {b})^{n} = {a}^{n} · {b}^{n}. "
+               f"Cada factor s'eleva a {n} per separat, i després es multipliquen.")
+        return {"type": "compute", "instruction": "Aplica la potència d'un producte. Escriu el resultat com a producte de potències.",
+                "problem": problem, "answer": answer, "also_accept": [str((a * b) ** n)], "options": [],
+                "value": value, "why": why}
+    if shape == 1:
+        a, b = rng.sample([2, 3, 4, 5, 6], 2)
+        a, b = min(a, b), max(a, b)  # a < b: the fraction is below 1, so the answer is a plain fraction
+        n = rng.choice([2, 3])
+        frac = Fraction(a ** n, b ** n)
+        problem = f"({a}/{b})^{n}"
+        answer = _fmt_frac(frac)
+        why = (f"La potència d'una fracció eleva el numerador i el denominador per separat: "
+               f"({a}/{b})^{n} = {a}^{n} / {b}^{n} = {a ** n}/{b ** n}.")
+        return {"type": "compute", "instruction": "Eleva la fracció a la potència. Escriu el resultat com a fracció irreductible.",
+                "problem": problem, "answer": answer, "also_accept": [], "options": [],
+                "value": frac, "why": why}
+    p = rng.choice([2, 3, 5])
+    k1, k2 = rng.sample([1, 2, 3], 2)
+    x, y = rng.randint(1, 4), rng.randint(1, 4)
+    if rng.random() < 0.5:
+        e = k1 * x + k2 * y
+        op, sym = "·", "·"
+        verb = "En multiplicar, quan la base és la mateixa, se sumen els exponents"
+    else:
+        if k1 * x - k2 * y < 1:
+            x, y = y, x
+        e = k1 * x - k2 * y
+        if e < 1:
+            return powers_base(rng)
+        op, sym = "÷", "÷"
+        verb = "En dividir, quan la base és la mateixa, es resten els exponents"
+    b1, b2 = p ** k1, p ** k2
+    problem = f"{b1}^{x} {sym} {b2}^{y}"
+    if op == "÷":
+        middle = f"{k1 * x} - {k2 * y} = {e}"
+    else:
+        middle = f"{k1 * x} + {k2 * y} = {e}"
+    why = (f"Canvia totes les bases a la mateixa: {b1} = {p}^{k1} i {b2} = {p}^{k2}. Llavors "
+           f"({p}^{k1})^{x} = {p}^{k1 * x} i ({p}^{k2})^{y} = {p}^{k2 * y} (potència de potència). "
+           f"{verb}: {middle}. Així que el resultat és {p}^{e}.")
+    return {"type": "compute", "instruction": "Fes que totes les bases siguin la mateixa, aplica les propietats i escriu el resultat com una sola potència.",
+            "problem": problem, "answer": _pow_one(p, e), "also_accept": [str(p ** e)], "options": [],
+            "value": Fraction(p ** e), "why": why}
+
+
+# -- divisibility -------------------------------------------------------------
+
+_DIV_RULE = {
+    2: "acaba en xifra parell",
+    3: "la suma de les xifres és múltiple de 3",
+    4: "les dues últimes xifres formen un múltiple de 4",
+    5: "acaba en 0 o 5",
+    6: "és divisible per 2 i per 3 alhora",
+    8: "les tres últimes xifres formen un múltiple de 8",
+    9: "la suma de les xifres és múltiple de 9",
+    10: "acaba en 0",
+    11: "la suma de les xifres de lloc senar menys la de lloc parell és múltiple de 11 (0 inclòs)",
+}
+
+
+def _div_detail(n: int, d: int) -> str:
+    digits = str(n)
+    if d in (2, 5, 10):
+        return f"l'última xifra és {n % 10}"
+    if d == 4:
+        return f"les dues últimes xifres són {n % 100:02d}"
+    if d == 8:
+        return f"les tres últimes xifres són {n % 1000:03d}"
+    if d in (3, 9):
+        return f"la suma de les xifres és {sum(int(c) for c in digits)}"
+    if d == 6:
+        return f"és parell (última xifra {n % 10}) i la suma de les xifres és {sum(int(c) for c in digits)}"
+    alt = sum(int(c) * (1 if (len(digits) - 1 - i) % 2 == 0 else -1) for i, c in enumerate(digits))
+    return f"alternant les xifres des de la dreta dona {alt}"
+
+
+def _div_why(n: int, d: int) -> str:
+    return f"Criteri del {d}: {_DIV_RULE[d]}. Per a {n}: {_div_detail(n, d)}."
+
+
+def divisibility_rules(rng: random.Random) -> dict:
+    """The divisibility criteria 2 to 11, applied: a list of numbers that divide a
+    number (a set), the digit that makes a number with a blank divisible (a set), or a
+    yes/no question about one criterion (a choice)."""
+    shape = rng.randrange(3)
+    if shape == 0:
+        L = [2, 3, 4, 5, 6, 8, 9, 10, 11]
+        for _ in range(500):
+            n = rng.randint(100, 9999)
+            hits = [d for d in L if n % d == 0]
+            if 2 <= len(hits) <= 7:
+                break
+        else:
+            raise GenError("divisibility_rules: no number with 2 to 7 divisors in the list")
+        why = " ".join(_div_why(n, d) for d in hits[:3]) + (
+            f" Els altres no compleixen el seu criteri: {n} no és múltiple de " + ", ".join(
+                str(d) for d in L if d not in hits) + ".")
+        return {"type": "set", "instruction": "Aplica els criteris de divisibilitat. Escriu els nombres de la llista que són divisors.",
+                "problem": f"Per quins d'aquests nombres és divisible {n}: " + ", ".join(str(d) for d in L) + "?",
+                "answer": ", ".join(str(d) for d in hits), "also_accept": [], "options": [],
+                "value": None, "why": why, "spec": f"divisible:{n}:{','.join(str(d) for d in L)}"}
+    if shape == 1:
+        d = rng.choice([2, 3, 5, 9])
+        a = rng.randint(1, 9)
+        if d in (2, 5):
+            pat = f"{a}{rng.randint(0, 9)}_"
+            rule = f"Criteri del {d}: {_DIV_RULE[d]}."
+        else:
+            c = rng.randint(0, 9)
+            pat = f"{a}_{c}"
+            rule = (f"Criteri del {d}: {_DIV_RULE[d]}. Sense la xifra que falta, la suma és {a + c}; "
+                    f"la xifra que falta ha de fer que el total sigui múltiple de {d}.")
+        digits = spec_set(f"digit:{pat}:{d}")
+        if not 1 <= len(digits) <= 5:
+            raise GenError("divisibility_rules: a blank with a useless set")
+        return {"type": "set", "instruction": "Quina xifra falta? Escriu-les totes les que serveixen.",
+                "problem": f"Quina xifra pot anar al lloc del _ perquè {pat} sigui divisible per {d}?",
+                "answer": ", ".join(str(x) for x in sorted(digits)), "also_accept": [], "options": [],
+                "value": None, "why": rule + f" Les xifres que serveixen són {_ca_join(sorted(digits))}.",
+                "spec": f"digit:{pat}:{d}"}
+    d = rng.choice([2, 3, 4, 5, 6, 8, 9, 10, 11])
+    n = rng.randint(100, 9999)
+    if rng.random() < 0.5:
+        n = (n // d) * d or d * 100
+    ok = n % d == 0
+    problem = f"És {n} divisible per {d}?" if rng.random() < 0.5 else f"És {d} divisor de {n}?"
+    return {"type": "choose", "instruction": "Aplica el criteri de divisibilitat i contesta.",
+            "problem": problem, "answer": "Sí" if ok else "No", "also_accept": [],
+            "options": ["Sí", "No"], "value": None, "why": _div_why(n, d), "spec": f"divides:{d}:{n}"}
+
+
+# -- divisors, multiples, primes -------------------------------------------------
+
+_WORD_N = {4: "quatre", 5: "cinc", 6: "sis"}
+
+
+def divisors_multiples(rng: random.Random) -> dict:
+    """Divisors and multiples: all the divisors of a number (a set), the first multiples
+    of a number (a set), the multiples in a range and the nearest multiple (compute, with
+    the arithmetic), and whether a number is a multiple of another (a choice)."""
+    shape = rng.randrange(5)
+    if shape == 0:
+        for _ in range(500):
+            n = rng.randint(12, 120)
+            if 4 <= len(_divisors(n)) <= 8:
+                break
+        divs = _divisors(n)
+        pairs = "; ".join(f"{d} · {n // d} = {n}" for d in divs if d * d <= n)
+        why = (f"Un divisor de {n} és un nombre que hi cap exactament. Es troben en parelles que multipliquen {n}: "
+               f"{pairs}. Així, D({n}) = {{{', '.join(str(d) for d in divs)}}}.")
+        return {"type": "set", "instruction": "Escriu tots els divisors del nombre, de menor a major.",
+                "problem": f"Escriu tots els divisors de {n}", "answer": ", ".join(str(d) for d in divs),
+                "also_accept": [], "options": [], "value": None, "why": why, "spec": f"divisors:{n}"}
+    if shape == 1:
+        d, k = rng.randint(2, 15), rng.choice([4, 5, 6])
+        mult = [d * i for i in range(1, k + 1)]
+        why = (f"Un múltiple de {d} és el resultat de multiplicar-lo per 1, 2, 3…: "
+               + ", ".join(f"{d} · {i} = {d * i}" for i in range(1, k + 1)) + ".")
+        return {"type": "set", "instruction": "Escriu els primers múltiples, de menor a major.",
+                "problem": f"Escriu els {_WORD_N[k]} primers múltiples de {d}",
+                "answer": ", ".join(str(m) for m in mult), "also_accept": [], "options": [],
+                "value": None, "why": why, "spec": f"multiples:{d}:{k}"}
+    if shape == 2:
+        d = rng.randint(3, 12)
+        N = rng.randint(60, 400)
+        m = N // d
+        why = (f"El múltiple més gran de {d} que no passa de {N} és {m * d} = {d} · {m}. Els múltiples són "
+               f"{d} · 1, {d} · 2… fins a {d} · {m}: n'hi ha {m}.")
+        return {"type": "compute", "instruction": "Compta els múltiples que hi ha dins del rang (1 i el límit inclosos).",
+                "problem": f"Quants múltiples de {d} hi ha entre 1 i {N}?", "answer": str(m),
+                "also_accept": [], "options": [], "expression": f"{m * d} ÷ {d}",
+                "value": Fraction(m), "why": why}
+    if shape == 3:
+        for _ in range(500):
+            d, N = rng.randint(3, 15), rng.randint(20, 300)
+            lo = (N // d) * d
+            hi = lo + d
+            if N - lo != hi - N and lo > 0:
+                break
+        else:
+            raise GenError("divisors_multiples: no nearest multiple without a tie")
+        closest = lo if N - lo < hi - N else hi
+        other = hi if closest == lo else lo
+        m = closest // d
+        why = (f"{d} · {m} = {closest}. Els múltiples veïns són {lo} i {hi}. {N} està a {abs(N - closest)} "
+               f"de {closest} i a {abs(N - other)} de {other}, així que {closest} és el més proper.")
+        return {"type": "compute", "instruction": "Troba el múltiple més proper: mira els dos múltiples que envolten el nombre.",
+                "problem": f"Quin és el múltiple de {d} més proper a {N}?", "answer": str(closest),
+                "also_accept": [], "options": [], "expression": f"{d} × {m}",
+                "value": Fraction(closest), "why": why}
+    d, n = rng.randint(2, 12), rng.randint(20, 200)
+    if rng.random() < 0.5:
+        n = (n // d) * d or d * 20
+    ok = n % d == 0
+    if rng.random() < 0.5:
+        problem = f"És {n} múltiple de {d}?"
+    else:
+        problem = f"És {d} divisor de {n}?"
+    why = (f"{n} ÷ {d} = {n // d} exacte, així que {n} és múltiple de {d} (i {d} és divisor de {n})."
+           if ok else f"{n} ÷ {d} = {n // d} i sobra {n % d}: no és exacte, així que {n} no és múltiple de {d}.")
+    return {"type": "choose", "instruction": "Contesta sí o no i justifica-ho amb la divisió.",
+            "problem": problem, "answer": "Sí" if ok else "No", "also_accept": [],
+            "options": ["Sí", "No"], "value": None, "why": why, "spec": f"divides:{d}:{n}"}
+
+
+def primes_mixed(rng: random.Random) -> dict:
+    """Prime and composite numbers: is a number prime or composite (a choice, with the
+    reason), the primes between two numbers (a set, by the sieve), the largest two-digit
+    number divisible by several numbers, and the smallest three-digit one (compute)."""
+    shape = rng.randrange(4)
+    if shape == 0:
+        n = rng.randint(4, 150)
+        if mathgrade._is_prime(n):
+            why = (f"Cap dels primers fins a l'arrel de {n} (≈ {math.isqrt(n)}) no hi cap exactament: "
+                   f"{n} només es divideix per 1 i per ell mateix, així que és primer.")
+        else:
+            a = next(d for d in range(2, n) if n % d == 0)
+            why = f"{n} = {a} · {n // a}: té un divisor a part d'1 i d'ell mateix, així que és compost."
+        return {"type": "choose", "instruction": "Decideix si és primer o compost, i per què.",
+                "problem": f"És {n} primer o compost?", "answer": "primer" if mathgrade._is_prime(n) else "compost",
+                "also_accept": [], "options": ["primer", "compost"], "value": None, "why": why,
+                "spec": f"prime:{n}"}
+    if shape == 1:
+        lo = rng.randint(10, 60)
+        hi = lo + rng.randint(10, 20)
+        primes = sorted(spec_set(f"primes:{lo}:{hi}"))
+        if not 2 <= len(primes) <= 7:
+            raise GenError("primes_mixed: a range with a useless count of primes")
+        why = (f"Garbell d'Eratòstenes: escriu els nombres de {lo + 1} a {hi - 1}, tatxa els múltiples de 2 "
+               "(menys el 2), després els de 3, de 5 i de 7. Els que no es tatxen no tenen cap divisor "
+               "entre 2 i ells mateixos: són primers.")
+        return {"type": "set", "instruction": "Escriu els nombres primers de l'interval (els extrems no compten).",
+                "problem": f"Escriu els nombres primers entre {lo} i {hi}",
+                "answer": ", ".join(str(p) for p in primes), "also_accept": [], "options": [],
+                "value": None, "why": why, "spec": f"primes:{lo}:{hi}"}
+    if shape == 2:
+        for _ in range(300):
+            a, b = rng.sample([2, 3, 4, 5, 6, 7, 9], 2)
+            L = _lcm(a, b)
+            if 10 <= L <= 99:
+                break
+        else:
+            raise GenError("primes_mixed: no pair")
+        k = 99 // L
+        ans = L * k
+        why = (f"Ha de ser múltiple de {a} i de {b} alhora: el mcm({a}, {b}) = {L} n'és el primer. El més gran "
+               f"de dues xifres és {L} · {k} = {ans}, perquè {L} · {k + 1} ja té tres xifres.")
+        return {"type": "compute", "instruction": "Pensa en el mcm dels dos nombres i busca el múltiple més gran de dues xifres.",
+                "problem": f"Quin és el nombre de dues xifres més gran divisible per {a} i per {b}?",
+                "answer": str(ans), "also_accept": [], "options": [], "expression": f"{L} × {k}",
+                "value": Fraction(ans), "why": why}
+    for _ in range(300):
+        nums = sorted(rng.sample([2, 3, 4, 5, 6, 7, 8, 9], rng.choice([2, 3])))
+        L = _lcm_all(nums)
+        if L <= 900:
+            break
+    else:
+        raise GenError("primes_mixed: no triple")
+    k = -(-100 // L)
+    ans = L * k
+    why = (f"El mcm de {_ca_join(nums)} és {L}. Els múltiples de {L} són {L}, {2 * L}, {3 * L}… i el primer que "
+           f"no és més petit que 100 és {L} · {k} = {ans}.")
+    return {"type": "compute", "instruction": "Troba el mcm i busca el primer múltiple de tres xifres.",
+            "problem": f"Quin és el nombre més petit de tres xifres que és múltiple de {_ca_join(nums)}?",
+            "answer": str(ans), "also_accept": [], "options": [], "expression": f"{L} × {k}",
+            "value": Fraction(ans), "why": why}
+
+
+# -- factorisation -------------------------------------------------------------
+
+def prime_factorization(rng: random.Random) -> dict:
+    """Prime factorisation: write a number as a product of primes (a factorisation: the
+    same primes and exponents in any order), or build a number from its prime factors
+    (compute)."""
+    if rng.random() < 0.6:
+        for _ in range(500):
+            n = rng.randint(12, 999)
+            if not mathgrade._is_prime(n):
+                break
+        else:
+            raise GenError("prime_factorization: no composite")
+        chain = []
+        left = n
+        ladder = []
+        while left > 1:
+            p = next(d for d in range(2, left + 1) if left % d == 0)
+            ladder.append(p)
+            nxt = left // p
+            chain.append(f"{left} ÷ {p} = {nxt}")
+            left = nxt
+        why = ("Divideix pel primer primer que hi cap, i repeteix amb el quocient fins a arribar a 1: "
+               + "; ".join(chain) + f". Els primers que has usat són {', '.join(str(p) for p in ladder)}; "
+               f"agrupa els repetits en potències: {_fac_str(n)}.")
+        return {"type": "factorization", "instruction": "Descompon en factors primers. Escriu-los amb potències i ·.",
+                "problem": f"Descompon {n} en factors primers", "answer": _fac_str(n),
+                "also_accept": [], "options": [], "value": None, "why": why, "spec": f"fac:{n}"}
+    chosen = sorted(rng.sample([2, 3, 5, 7, 11], rng.choice([2, 3])))
+    parts = [(p, rng.choice([1, 1, 2])) for p in chosen]
+    expr = " × ".join(f"{p}^{e}" if e > 1 else str(p) for p, e in parts)
+    shown = " · ".join(f"{p}^{e}" if e > 1 else str(p) for p, e in parts)
+    value = 1
+    steps = []
+    for p, e in parts:
+        pv = p ** e
+        if not steps:
+            steps.append(f"{p}^{e} = {pv}" if e > 1 else str(pv))
+        else:
+            steps.append(f"{value} · {pv} = {value * pv}")
+        value *= pv
+    why = (f"Calcula cada potència i després multiplica, de dos en dos: {'; '.join(steps)}. "
+           f"El nombre és {value}.")
+    return {"type": "compute", "instruction": "Quin nombre és el producte d'aquests factors primers?",
+            "problem": f"Quin nombre és {shown}?", "answer": str(value), "also_accept": [], "options": [],
+            "expression": expr, "value": Fraction(value), "why": why}
+
+
+# -- rajoles (MCD) --------------------------------------------------------------
+
+def gcd_tiles(rng: random.Random) -> dict:
+    """Tiles: the largest square tile that covers a floor without cutting (the MCD of its
+    two sides, in cm), and how many of them are needed (the quotient of the sides)."""
+    shape = rng.randrange(2)
+    for _ in range(500):
+        g = rng.randint(2, 30)
+        p, q = rng.sample(range(2, 10), 2)
+        if math.gcd(p, q) != 1:
+            continue
+        a, b = g * p, g * q
+        if 20 <= a <= 500 and 20 <= b <= 500:
+            break
+    else:
+        raise GenError("gcd_tiles: no floor")
+    if shape == 0:
+        expr = _prod_str(_fac(g))
+        why = (f"{a} = {_fac_str(a)} i {b} = {_fac_str(b)}. El costat de la rajola ha de cabre un nombre exacte de "
+               f"vegades en les dues mides, així que és un divisor comú de {a} i {b}; el més gran és el MCD: "
+               f"els factors comuns amb el menor exponent, {expr} = {g}.")
+        return {"type": "compute", "instruction": "Calcula el MCD dels dos costats del terra (per descomposició).",
+                "problem": f"Un terra fa {a} cm × {b} cm. Quants centímetres fa el costat de la rajola quadrada més gran que el cobreix sense tallar-ne cap?",
+                "answer": str(g), "also_accept": [], "options": [], "expression": expr,
+                "value": Fraction(g), "why": why}
+    why = (f"La rajola fa {g} cm de costat. A la llargada hi caben {a} : {g} = {p} rajoles, i a l'amplada "
+           f"{b} : {g} = {q}. En total {p} · {q} = {p * q} rajoles.")
+    return {"type": "compute", "instruction": "Amb la rajola més gran possible, quantes rajoles cal posar?",
+            "problem": f"Un terra fa {a} cm × {b} cm. Amb la rajola quadrada més gran possible, quantes rajoles en calen?",
+            "answer": str(p * q), "also_accept": [], "options": [], "expression": f"{p} × {q}",
+            "value": Fraction(p * q), "why": why}
+
+
+M7_GO_FAMILIES = {
+    "integers_combined_long": integers_combined_long,
+    "powers_rules": powers_rules,
+    "powers_base": powers_base,
+    "divisibility_rules": divisibility_rules,
+    "divisors_multiples": divisors_multiples,
+    "primes_mixed": primes_mixed,
+    "prime_factorization": prime_factorization,
+    "gcd_tiles": gcd_tiles,
+}
+
+
 M7_FAMILIES = {
+    **M7_GO_FAMILIES,
     "integers_combined": integers_combined,
     "gcd_lcm_problems": gcd_lcm_problems,
     "frac_combined": frac_combined,
@@ -3260,7 +3858,7 @@ def competence_exists(curriculum_path: Path, competence_id: str) -> bool:
 
 REQUIRED_FIELDS = ("id", "competence", "type", "instruction", "problem", "answer",
                    "also_accept", "options", "why", "status", "source")
-ITEM_TYPES = ("compute", "choose", "compare", "steps")
+ITEM_TYPES = ("compute", "choose", "compare", "steps", "set", "factorization")
 _ID_RE = re.compile(r"^[A-Za-z0-9_.-]+\.\d{3,}$")
 
 STEPS_REQUIRED_FIELDS = ("id", "competence", "type", "instruction", "problem",
@@ -3418,6 +4016,52 @@ def _validate_steps_item(item: dict) -> list[str]:
     return errs
 
 
+def _validate_spec_item(item: dict) -> list[str]:
+    """A `set` item's answer is the set its spec names; a `factorization` item's answer is
+    the factorisation of the number its spec names (and that number is in the problem)."""
+    spec = str(item.get("spec", ""))
+    if not spec:
+        return ["set/factorization item without a spec (its answer must be recomputed)"]
+    try:
+        if item["type"] == "set":
+            want = spec_set(spec)
+            if not want:
+                return [f"spec {spec!r} names an empty set"]
+            got = mathgrade.parse_list(item["answer"])
+            if got != want:
+                return [f"answer {item['answer']!r} is not the set of {spec!r}"]
+            return []
+        kind, _, rest = spec.partition(":")
+        if kind != "fac":
+            return [f"factorization spec must be fac:N, got {spec!r}"]
+        n = int(rest)
+        got = mathgrade.parse_factorization(item["answer"])
+        if got != _fac(n):
+            return [f"answer {item['answer']!r} is not the factorisation of {n}"]
+        if str(n) not in str(item["problem"]):
+            return [f"the problem does not say the number {n}"]
+        return []
+    except (GenError, mathgrade.ParseError, ValueError) as e:
+        return [f"spec {spec!r} / answer {item.get('answer')!r}: {e}"]
+
+
+def _validate_text_choice(item: dict) -> list[str]:
+    """A word choice ('primer' / 'compost', 'Sí' / 'No'): the answer is one of the options
+    and is the label its spec names."""
+    errs: list[str] = []
+    if item["answer"] not in item["options"]:
+        errs.append(f"answer {item['answer']!r} not in options {item['options']!r}")
+    if len(set(item["options"])) != len(item["options"]):
+        errs.append(f"repeated options {item['options']!r}")
+    try:
+        label = spec_label(str(item.get("spec", "")))
+    except GenError as e:
+        return errs + [str(e)]
+    if item["answer"] != label:
+        errs.append(f"answer {item['answer']!r} contradicts its spec ({label!r})")
+    return errs
+
+
 def validate_item(item: dict) -> list[str]:
     """Every invariant an item must satisfy before it may be written. Returns
     a list of problems (empty = good). Never trusts the template."""
@@ -3445,6 +4089,13 @@ def validate_item(item: dict) -> list[str]:
                 mathgrade.parse_poly(a)
             except mathgrade.ParseError as e:
                 errs.append(f"also_accept {a!r} does not parse: {e}")
+
+    # m7 Go focus (ENCARREC-M7-GO-FOCUS §4): a list is a SET, a factorisation a multiset
+    # of primes, a word choice a label. Each is recomputed from its `spec`.
+    if item["type"] in ("set", "factorization"):
+        return errs + _validate_spec_item(item)
+    if item["type"] == "choose" and _is_text_choice_item(item):
+        return errs + _validate_text_choice(item)
 
     if item["type"] == "compare":
         sides = item["problem"].split("?")
@@ -3622,6 +4273,8 @@ def build_item(family: str, rng: random.Random, competence_id: str, seq: int,
     }
     if cand.get("expression"):
         item["expression"] = cand["expression"]
+    if cand.get("spec"):
+        item["spec"] = cand["spec"]
     errs = validate_item(item)
     if errs:
         raise GenError(f"{family}: generated an invalid item: " + "; ".join(errs))

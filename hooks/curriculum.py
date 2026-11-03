@@ -167,6 +167,8 @@ def parse_curriculum(text: str) -> dict:
     for k in ("version", "pass_mark", "carry_mark", "checkpoint_items", "ready_share", "flash_share"):
         if k in meta:
             meta[k] = int(meta[k])
+    if "go_active" in meta:  # ENCARREC-M7-GO-FOCUS: the ids that the Go may offer (the rest are asleep)
+        meta["go_active"] = [x.strip() for x in str(meta["go_active"]).split(",") if x.strip()]
     comps: list[dict] = []
     retired: list[str] = []
     section = ""
@@ -294,6 +296,12 @@ def validate_curriculum(cur: dict) -> list[str]:
         if not c["section"].lower().startswith("vocab") and not c["tags"]:
             out.append(f"{c['id']}: sense Tags (les respostes no es podran assignar a aquesta competència)")
     m = cur["meta"]
+    if "go_active" in m:
+        if not m["go_active"]:
+            out.append("go_active és buit: cap competència sortiria al Go")
+        for cid in m["go_active"]:
+            if cid not in ids:
+                out.append(f"go_active: id desconegut {cid}")
     if not 0 <= m.get("ready_share", 0) <= 100:
         out.append("ready_share ha de ser un percentatge (0-100)")
     if not 0 <= m.get("flash_share", 0) <= 100:
@@ -424,6 +432,7 @@ def competence_state(answers: list, cfg: dict = CFG, depth: str | None = None) -
 def summarize(cur: dict, path: dict, as_of: str | None = None, cfg: dict = CFG) -> list[dict]:
     """One row per competence, as of a day (default: everything recorded)."""
     rows = []
+    asleep = asleep_ids(cur)
     for c in cur["competencies"]:
         ans = path["competencies"].get(c["id"], {}).get("answers", [])
         if as_of:
@@ -435,6 +444,7 @@ def summarize(cur: dict, path: dict, as_of: str | None = None, cfg: dict = CFG) 
         rows.append({
             "id": c["id"], "name": c["name"], "core": c["core"], "section": c["section"],
             "state": state, "n": len(ans), "depth": depth, "weight": c.get("weight", 1),
+            "asleep": c["id"] in asleep,
             "need": ecfg["min_answers"],
             "acc_all": (sum(a[1] for a in ans) / len(ans)) if ans else None,
             "acc_recent": (sum(a[1] for a in recent) / len(recent)) if recent else None,
@@ -478,6 +488,16 @@ def progress(rows: list[dict]) -> dict:
     }
 
 
+def asleep_ids(cur: dict) -> set[str]:
+    """ENCARREC-M7-GO-FOCUS: the level's competences that are NOT in `go_active`
+    (no key: none is asleep). They stay in the path with their progress; the Go
+    never offers them. A learner's own extras (`profile`) are never asleep."""
+    go = cur["meta"].get("go_active")
+    if go is None:
+        return set()
+    return {c["id"] for c in cur["competencies"] if c["id"] not in go and not c.get("profile")}
+
+
 def active_competences(rows: list[dict], path: dict, cfg: dict = CFG) -> list[str]:
     """What is NEW today: one competence per section, in file order — then shuffled.
 
@@ -503,11 +523,15 @@ def active_competences(rows: list[dict], path: dict, cfg: dict = CFG) -> list[st
     broken that. Reading and Speaking never call this (agent.ts only builds
     this note for math-learn / math-vocab) — untouched.
     """
+    asleep = {r["id"] for r in rows if r.get("asleep")}
     if path.get("reinforce"):
-        return list(path["reinforce"])[: cfg["max_active"]]
+        keep = [c for c in path["reinforce"] if c not in asleep]
+        if keep:
+            return keep[: cfg["max_active"]]
     sections: dict[str, list[dict]] = {}
     for r in rows:
-        sections.setdefault(r["section"], []).append(r)
+        if r["id"] not in asleep:
+            sections.setdefault(r["section"], []).append(r)
     picks: list[str] = []
     for rs in sections.values():
         for want_core in (True, False):
@@ -524,7 +548,7 @@ def active_competences(rows: list[dict], path: dict, cfg: dict = CFG) -> list[st
 
 def review_pool(rows: list[dict]) -> list[str]:
     """Started but not consolidated: they need to come back on other days. Weakest first."""
-    pool = [r for r in rows if r["state"] == "practicing" and not r["stalled"]]
+    pool = [r for r in rows if r["state"] == "practicing" and not r["stalled"] and not r.get("asleep")]
     pool.sort(key=lambda r: (r["acc_recent"] if r["acc_recent"] is not None else 0.0, r["last_day"] or ""))
     return [r["id"] for r in pool]
 
@@ -1330,6 +1354,12 @@ def _grade_steps_check(check: dict, text: str) -> bool:
                == "correct" for e, ln in zip(expected, lines))
 
 
+def _grade_list_check(check: dict, text: str, factor: bool) -> bool:
+    """A closed `List:` (a set of numbers) or `Factor:` (a prime factorisation) check: exact only."""
+    grader = mathgrade.grade_factorization if factor else mathgrade.grade_list
+    return grader(check["answer"], text)["score"] >= 8
+
+
 def grade_check(check: dict, text: str) -> bool:
     """Is `text` an accepted answer to this closed check? Case, punctuation and contractions'
     apostrophes do not matter; the answer may be the missing words or the whole sentence.
@@ -1339,6 +1369,8 @@ def grade_check(check: dict, text: str) -> bool:
         return _grade_math_check(check, text)
     if check["type"] == "Steps":
         return _grade_steps_check(check, text)
+    if check["type"] in ("List", "Factor"):
+        return _grade_list_check(check, text, check["type"] == "Factor")
     got = _norm(text)
     if not got:
         return False
@@ -1377,14 +1409,18 @@ def _question(check: dict, i: int, total: int) -> str:
         else:
             # WP1.1: a math bank item — the problem IS the question, and the
             # bank's own grader (compute/choose/compare/steps) decides.
-            head = {"compute": "Calcula:", "choose": "Quina operació resol el problema?",
-                    "compare": "Compara (>, < o =):", "steps": "Resol-ho pas a pas."}.get(b["type"], "Resol:")
+            text_choice = b["type"] == "choose" and not any(re.search(r"\d", str(o)) for o in b.get("options") or [])
+            head = {"compute": "Calcula:", "choose": "Contesta:" if text_choice else "Quina operació resol el problema?",
+                    "compare": "Compara (>, < o =):", "steps": "Resol-ho pas a pas.",
+                    "set": "Escriu la llista (separada per comes):",
+                    "factorization": "Descompon en factors primers:"}.get(b["type"], "Resol:")
             body = f"{b.get('instruction', '')} {b.get('problem', '')}".strip()
             if b.get("options") and b["type"] in ("choose", "compare"):
                 body += "  (" + " / ".join(b["options"]) + ")"
         return f"## Level test — question {i}/{total}\n\n**{head}** {body}\n\n**Type your answer:**"
     head = {"Complete": "Complete the sentence:", "Correct": "Correct the sentence:",
             "Meaning": "Which word means:", "Compute": "Calcula:",
+            "List": "Escriu la llista (separada per comes):", "Factor": "Descompon en factors primers:",
             "Steps": "Resol-ho pas a pas (una línia per pas)."}.get(
                 check["type"], "Complete the sentence:")
     return f"## Level test — question {i}/{total}\n\n**{head}** {check['prompt']}\n\n**Type your answer:**"
@@ -1973,7 +2009,10 @@ def review_due(answers: list, today: str, cfg: dict = CFG, depth: str | None = N
 def due_maintenance(cur: dict, path: dict, today: str, cfg: dict = CFG) -> list[str]:
     """Consolidated competences that are due, the longest-waiting first."""
     out = []
+    asleep = asleep_ids(cur)
     for c in cur["competencies"]:
+        if c["id"] in asleep:
+            continue
         ans = [a for a in path["competencies"].get(c["id"], {}).get("answers", []) if a[0] <= today]
         if ans and review_due(ans, today, cfg, c.get("depth")):
             out.append((ans[-1][0], c["id"]))
@@ -2082,12 +2121,12 @@ def next_target(cur: dict, data_dir: str | os.PathLike, today: str | None = None
         [c for c, _ in plan if c != last_id and not _rested_today(c)]
         or [c for c, _ in plan if c != last_id]
         or [c for c, _ in plan]
-        or [r["id"] for r in rows if r["core"]]
+        or [r["id"] for r in rows if r["core"] and not r.get("asleep")]
     )
     if only_vocab:
-        rest = [c for c in rest if by_id[c]["words"]] or [r["id"] for r in rows if by_id[r["id"]]["words"] and r["core"]]
+        rest = [c for c in rest if by_id[c]["words"]] or [r["id"] for r in rows if by_id[r["id"]]["words"] and r["core"] and not r.get("asleep")]
     if only_grammar:
-        rest = [c for c in rest if not by_id[c]["words"]] or [r["id"] for r in rows if not by_id[r["id"]]["words"] and r["core"]]
+        rest = [c for c in rest if not by_id[c]["words"]] or [r["id"] for r in rows if not by_id[r["id"]]["words"] and r["core"] and not r.get("asleep")]
     if not rest:
         return {}
     best = min(rest, key=lambda c: counts.get(c, 0))
@@ -2197,7 +2236,8 @@ def path_view(cur: dict, path: dict, as_of: str, cfg: dict = CFG, data_dir=None,
         if not sections or sections[-1]["name"] != r["section"]:
             sections.append({"name": r["section"], "items": []})
         sections[-1]["items"].append({
-            "id": r["id"], "name": r["name"], "core": r["core"], "state": r["state"], "label": LABEL[r["state"]],
+            "id": r["id"], "name": r["name"], "core": r["core"], "state": r["state"],
+            "label": "💤 adormida" if r.get("asleep") else LABEL[r["state"]],
             "n": r["n"], "need": r["need"], "depth": r["depth"], "resting": bool(r.get("resting_today")),
             "pct": r.get("display_pct"),
             # Only the fact that it is running low, never the count: this is the
@@ -2296,7 +2336,8 @@ def render_report(cur: dict, path: dict, as_of: str, admin: bool = False, cfg: d
         tag = "" if r["core"] else " (extra)"
         acc = f"{100 * r['acc_recent']:3.0f}%" if r["acc_recent"] is not None else "  - "
         rest = "  ⏸ avui" if r.get("resting_today") else ""
-        out.append(f"  {cells(r['state'])} {r['id'].split('.', 1)[-1][:34]:<34}{tag:<8} {LABEL[r['state']]:<12} {r['n']:>3}/{r['need']:<2} resp {acc}{rest}")
+        label = "💤 adormida" if r.get("asleep") else LABEL[r["state"]]
+        out.append(f"  {cells(r['state'])} {r['id'].split('.', 1)[-1][:34]:<34}{tag:<8} {label:<12} {r['n']:>3}/{r['need']:<2} resp {acc}{rest}")
     if not admin:
         return "\n".join(out)
 

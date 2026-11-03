@@ -538,5 +538,545 @@
     "why": "4 × 5 = 20 (producte rodó), i 20 × 8 = 160: reagrupar els factors no canvia el resultat.",
     "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_grouping.013",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "14 + 6 + 6",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(14 + 6) + 6",
+        "value": "26",
+        "accept": [
+          "(14 + 6) + 6 = 26"
+        ],
+        "error_class": "procedure",
+        "why": "14 i 6 sumen 20: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "20 + 6",
+        "value": "26",
+        "accept": [
+          "20 + 6 = 26"
+        ],
+        "error_class": "calculation",
+        "why": "14 + 6 = 20.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "26",
+        "value": "26",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "20 + 6 = 26.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "26",
+    "why": "14 + 6 = 20 (parella rodona), i 20 + 6 = 26: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.014",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 + 26 + 42",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(8 + 42) + 26",
+        "value": "76",
+        "accept": [
+          "(8 + 42) + 26 = 76"
+        ],
+        "error_class": "procedure",
+        "why": "8 i 42 sumen 50: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "50 + 26",
+        "value": "76",
+        "accept": [
+          "50 + 26 = 76"
+        ],
+        "error_class": "calculation",
+        "why": "8 + 42 = 50.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "76",
+        "value": "76",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "50 + 26 = 76.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "76",
+    "why": "8 + 42 = 50 (parella rodona), i 50 + 26 = 76: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.015",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × 16 × 25",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(8 × 25) × 16",
+        "value": "3200",
+        "accept": [
+          "(8 × 25) × 16 = 3200"
+        ],
+        "error_class": "procedure",
+        "why": "8 × 25 fa 200: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "200 × 16",
+        "value": "3200",
+        "accept": [
+          "200 × 16 = 3200"
+        ],
+        "error_class": "facts",
+        "why": "8 × 25 = 200.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "3200",
+        "value": "3200",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "200 × 16 = 3200.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "3200",
+    "why": "8 × 25 = 200 (producte rodó), i 200 × 16 = 3200: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.016",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "28 + 7 + 12",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(28 + 12) + 7",
+        "value": "47",
+        "accept": [
+          "(28 + 12) + 7 = 47"
+        ],
+        "error_class": "procedure",
+        "why": "28 i 12 sumen 40: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "40 + 7",
+        "value": "47",
+        "accept": [
+          "40 + 7 = 47"
+        ],
+        "error_class": "calculation",
+        "why": "28 + 12 = 40.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "47",
+        "value": "47",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "40 + 7 = 47.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "47",
+    "why": "28 + 12 = 40 (parella rodona), i 40 + 7 = 47: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.017",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "29 + 6 + 21",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(29 + 21) + 6",
+        "value": "56",
+        "accept": [
+          "(29 + 21) + 6 = 56"
+        ],
+        "error_class": "procedure",
+        "why": "29 i 21 sumen 50: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "50 + 6",
+        "value": "56",
+        "accept": [
+          "50 + 6 = 56"
+        ],
+        "error_class": "calculation",
+        "why": "29 + 21 = 50.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "56",
+        "value": "56",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "50 + 6 = 56.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "56",
+    "why": "29 + 21 = 50 (parella rodona), i 50 + 6 = 56: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.018",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2 × 17 × 5",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(2 × 5) × 17",
+        "value": "170",
+        "accept": [
+          "(2 × 5) × 17 = 170"
+        ],
+        "error_class": "procedure",
+        "why": "2 × 5 fa 10: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "10 × 17",
+        "value": "170",
+        "accept": [
+          "10 × 17 = 170"
+        ],
+        "error_class": "facts",
+        "why": "2 × 5 = 10.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "170",
+        "value": "170",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "10 × 17 = 170.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "170",
+    "why": "2 × 5 = 10 (producte rodó), i 10 × 17 = 170: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.019",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × 6 × 25",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(8 × 25) × 6",
+        "value": "1200",
+        "accept": [
+          "(8 × 25) × 6 = 1200"
+        ],
+        "error_class": "procedure",
+        "why": "8 × 25 fa 200: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "200 × 6",
+        "value": "1200",
+        "accept": [
+          "200 × 6 = 1200"
+        ],
+        "error_class": "facts",
+        "why": "8 × 25 = 200.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "1200",
+        "value": "1200",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "200 × 6 = 1200.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "1200",
+    "why": "8 × 25 = 200 (producte rodó), i 200 × 6 = 1200: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.020",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "4 × 6 × 5",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(4 × 5) × 6",
+        "value": "120",
+        "accept": [
+          "(4 × 5) × 6 = 120"
+        ],
+        "error_class": "procedure",
+        "why": "4 × 5 fa 20: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "20 × 6",
+        "value": "120",
+        "accept": [
+          "20 × 6 = 120"
+        ],
+        "error_class": "facts",
+        "why": "4 × 5 = 20.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "120",
+        "value": "120",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "20 × 6 = 120.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "120",
+    "why": "4 × 5 = 20 (producte rodó), i 20 × 6 = 120: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.021",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2 × 38 × 5",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(2 × 5) × 38",
+        "value": "380",
+        "accept": [
+          "(2 × 5) × 38 = 380"
+        ],
+        "error_class": "procedure",
+        "why": "2 × 5 fa 10: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "10 × 38",
+        "value": "380",
+        "accept": [
+          "10 × 38 = 380"
+        ],
+        "error_class": "facts",
+        "why": "2 × 5 = 10.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "380",
+        "value": "380",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "10 × 38 = 380.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "380",
+    "why": "2 × 5 = 10 (producte rodó), i 10 × 38 = 380: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.022",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2 × 29 × 25",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(2 × 25) × 29",
+        "value": "1450",
+        "accept": [
+          "(2 × 25) × 29 = 1450"
+        ],
+        "error_class": "procedure",
+        "why": "2 × 25 fa 50: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "50 × 29",
+        "value": "1450",
+        "accept": [
+          "50 × 29 = 1450"
+        ],
+        "error_class": "facts",
+        "why": "2 × 25 = 50.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "1450",
+        "value": "1450",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "50 × 29 = 1450.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "1450",
+    "why": "2 × 25 = 50 (producte rodó), i 50 × 29 = 1450: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.023",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "6 + 22 + 4",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(6 + 4) + 22",
+        "value": "32",
+        "accept": [
+          "(6 + 4) + 22 = 32"
+        ],
+        "error_class": "procedure",
+        "why": "6 i 4 sumen 10: agrupa'ls primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "10 + 22",
+        "value": "32",
+        "accept": [
+          "10 + 22 = 32"
+        ],
+        "error_class": "calculation",
+        "why": "6 + 4 = 10.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "32",
+        "value": "32",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "10 + 22 = 32.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "32",
+    "why": "6 + 4 = 10 (parella rodona), i 10 + 22 = 32: moure els sumands no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_grouping.024",
+    "competence": "m7.props_grouping",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "2 × 14 × 50",
+    "method": "grouping",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "(2 × 50) × 14",
+        "value": "1400",
+        "accept": [
+          "(2 × 50) × 14 = 1400"
+        ],
+        "error_class": "procedure",
+        "why": "2 × 50 fa 100: agrupa-los primer.",
+        "goal": "Propietat associativa i commutativa: agrupa primer els dos nombres que fan un resultat rodó (escriu-ho amb parèntesis)"
+      },
+      {
+        "n": 2,
+        "expect": "100 × 14",
+        "value": "1400",
+        "accept": [
+          "100 × 14 = 1400"
+        ],
+        "error_class": "facts",
+        "why": "2 × 50 = 100.",
+        "goal": "Calcula el parèntesi i escriu l'operació que en queda"
+      },
+      {
+        "n": 3,
+        "expect": "1400",
+        "value": "1400",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "100 × 14 = 1400.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "1400",
+    "why": "2 × 50 = 100 (producte rodó), i 100 × 14 = 1400: reagrupar els factors no canvia el resultat.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
   }
 ]

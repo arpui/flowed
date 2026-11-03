@@ -172,6 +172,7 @@ El format `.md` de `curriculum/` es conserva amb tres adaptacions:
 - Front matter: `language: math` (el camp es continua anomenant `language`; `find_curriculum` fa match amb el perfil), `level: m1…m6` (escala per decidir, D3).
 - `Forms:` → descripció del procediment; `Words:` → vocabulari del problema verbal; `Tags:` → paraules clau de l'error (`#carrying`, `#fractions`…); `Signals:` es conserva per al guard de competència.
 - `Check:` amb tipus nous `Compute:` i `Steps:` (tancats, comparables pel corrector §4.3) — els checkpoints i la prova de nivell ja funcionen amb checks tancats.
+- Front matter opcional `go_active:` (ENCARREC-M7-GO-FOCUS): llista d'ids que el Go pot oferir; les altres competències del nivell queden adormides (💤, progrés intacte, no compten per al Go però sí per al % i el test). Sense la clave, tot com abans.
 
 **Generació del banc:** a diferència d'idiomes (on calia generar amb LLM i filtrar amb jutge), el banc matemàtic es genera amb **plantilles paramètriques** (`scripts/mathbank.py`: «suma amb transport, 2 xifres», «fraccions amb denominadors no relacionats», N mostres, answer calculada pel mateix avaluador). Validació V-matemàtiques: answer única, pas a pas coherent amb l'avaluador, no repetits. Revisió humana per mostreig, com a idiomes. Això elimina el cost del jutge LLM i el soroll del 50 % d'ítems dolents.
 

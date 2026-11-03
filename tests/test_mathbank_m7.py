@@ -52,7 +52,7 @@ NEW_FAMILIES = ["integers_combined", "gcd_lcm_problems", "frac_combined", "gener
 NEW_COMPETENCES = {
     "m7.integers": "integers_combined", "m7.factor_gcd_lcm": "gcd_lcm_problems",
     "m7.fractions": "frac_combined", "m7.decimals_generatrix": "generatrix",
-    "m7.powers_roots": "powers_props", "m7.algebraic_language": "translate_expr",
+    "m7.powers_roots": "powers_rules", "m7.algebraic_language": "translate_expr",
     "m7.monomials": "monomials_ops", "m7.linear_equations": "linear_equations",
     "m7.proportionality": "proportion_problems", "m7.functions": "linear_function",
     "m7.pythagoras": "pythagoras", "m7.angles_lines": "polygon_angles",
@@ -64,6 +64,15 @@ NEW_COMPETENCES = {
 NEW_CORE = {"m7.integers", "m7.factor_gcd_lcm", "m7.fractions", "m7.powers_roots",
             "m7.algebraic_language", "m7.monomials", "m7.linear_equations",
             "m7.proportionality", "m7.pythagoras"}
+# ENCARREC-M7-GO-FOCUS (2026-11-03): the four Go blocks. Their families are generated
+# by the m7 Go families (divisibility, factorisation, lists) and they are all core.
+GO_FOCUS = {"m7.powers_base": "powers_base", "m7.divisors_multiples": "divisors_multiples",
+            "m7.divisibility_rules": "divisibility_rules", "m7.primes": "primes_mixed",
+            "m7.prime_factorization": "prime_factorization"}
+GO_CORE = set(GO_FOCUS)
+GO_ACTIVE = {"m7.props_grouping", "m7.props_distributive", "m7.integers", "m7.powers_roots",
+             "m7.powers_base", "m7.divisors_multiples", "m7.divisibility_rules", "m7.primes",
+             "m7.prime_factorization", "m7.factor_gcd_lcm"}
 OLD_COMPETENCES = ["m7.props_grouping", "m7.props_distributive", "m7.props_factor",
                    "m7.syntax_letters", "m7.value_numeric", "m7.distributive_letters",
                    "m7.factor_letters", "m7.problems_generic"]
@@ -71,6 +80,15 @@ OLD_COMPETENCES = ["m7.props_grouping", "m7.props_distributive", "m7.props_facto
 
 def _read(path: Path) -> list:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _gen_family(tmp: Path, competence: str, family: str, n: int, seed: int, date: str = FIXED_DATE) -> Path:
+    argv = ["gen", "--curriculum", str(CUR), "--competence", competence, "--family", family,
+            "--n", str(n), "--seed", str(seed), "--out", str(tmp), "--date", date]
+    with contextlib.redirect_stdout(io.StringIO()):
+        rc = mb.main(argv)
+    assert rc == 0, f"gen failed for {competence} ({family})"
+    return tmp / f"{competence}.json"
 
 
 def _gen(tmp: Path, competence: str, n: int, seed: int) -> Path:
@@ -192,11 +210,19 @@ class DiskBankTest(unittest.TestCase):
             self.assertEqual(mb.validate_file(BANK / f"{cid}.json"), [], cid)
 
     def test_ids_sequential_and_no_problem_repeated(self):
+        # ENCARREC-M7-GO-FOCUS §7: every active competence has at least 24 items
+        go_grown = {"m7.integers", "m7.powers_roots", "m7.factor_gcd_lcm"}
         for cid in NEW_COMPETENCES:
             items = _read(BANK / f"{cid}.json")
-            self.assertEqual(len(items), 12, cid)
+            want = 24 if cid in go_grown else 12
+            self.assertEqual(len(items), want, cid)
             nums = [int(it["id"].rsplit(".", 1)[1]) for it in items]
-            self.assertEqual(nums, list(range(1, 13)), cid)
+            self.assertEqual(nums, list(range(1, want + 1)), cid)
+        for cid in GO_FOCUS:
+            items = _read(BANK / f"{cid}.json")
+            self.assertGreaterEqual(len(items), 24, cid)
+            nums = [int(it["id"].rsplit(".", 1)[1]) for it in items]
+            self.assertEqual(nums, list(range(1, len(items) + 1)), cid)
             keys = [mb.norm_problem(it["problem"]) for it in items]
             self.assertEqual(len(keys), len(set(keys)), f"{cid}: a problem repeats")
 
@@ -206,12 +232,24 @@ class DiskBankTest(unittest.TestCase):
                 self.assertEqual(bankmod.grade(it, it["answer"])["score"], 10, it["id"])
 
     def test_generation_is_reproducible(self):
+        # The same generation history, run again, gives the same items (the `source`
+        # stamp aside: the appended ones were stamped with their own date).
         import tempfile
+        def bare(items):
+            return [{k: v for k, v in it.items() if k != "source"} for it in items]
+        history = {  # the appended competences: the original family first, then the Go family
+            "m7.integers": [("integers_combined", 42), ("integers_combined_long", 7)],
+            "m7.powers_roots": [("powers_props", 42), ("powers_rules", 7)],
+            "m7.factor_gcd_lcm": [("gcd_lcm_problems", 42), ("gcd_tiles", 7)],
+        }
         with tempfile.TemporaryDirectory() as d:
-            for cid in NEW_COMPETENCES:
-                fresh = _gen(Path(d), cid, 12, 42)
-                self.assertEqual(fresh.read_text(encoding="utf-8"),
-                                 (BANK / f"{cid}.json").read_text(encoding="utf-8"), cid)
+            for cid, steps in history.items():
+                for fam, seed in steps:
+                    fresh = _gen_family(Path(d), cid, fam, 12, seed, date="2026-11-03")
+                self.assertEqual(bare(_read(fresh)), bare(_read(BANK / f"{cid}.json")), cid)
+            for cid in GO_FOCUS:
+                fresh = _gen(Path(d), cid, 24, 7)
+                self.assertEqual(bare(_read(fresh)), bare(_read(BANK / f"{cid}.json")), cid)
 
 
 class M7CurriculumNewTest(unittest.TestCase):
@@ -230,15 +268,16 @@ class M7CurriculumNewTest(unittest.TestCase):
             self.assertIn(cid, self.comp, cid)
 
     def test_core_marks_and_checkpoint(self):
-        for cid in NEW_CORE:
+        for cid in NEW_CORE | GO_CORE:
             self.assertTrue(self.comp[cid]["core"], cid)
         for cid in set(NEW_COMPETENCES) - NEW_CORE:
             self.assertFalse(self.comp[cid]["core"], cid)
+        self.assertEqual(self.cur["meta"]["checkpoint_items"], 21)
         core = sum(1 for c in self.cur["competencies"] if c["core"])
         self.assertLessEqual(core, self.cur["meta"]["checkpoint_items"])
 
     def test_every_bank_family_exists(self):
-        for cid, fam in NEW_COMPETENCES.items():
+        for cid, fam in {**NEW_COMPETENCES, **GO_FOCUS}.items():
             self.assertEqual(mb.bank_family_for(CUR, cid), fam, cid)
             self.assertIn(fam, mb.FAMILIES)
 

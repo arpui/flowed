@@ -710,7 +710,9 @@ class M7CurriculumTest(unittest.TestCase):
         for c in cur["competencies"]:
             self.assertEqual(len(c["checks"]), 3, c["id"])
             for k in c["checks"]:
-                self.assertIn(k["type"], ("Compute", "Steps"), c["id"])
+                # ENCARREC-M7-GO-FOCUS: lists and factorisations are closed too (List, Factor),
+                # and a word choice is a Complete check
+                self.assertIn(k["type"], ("Compute", "Steps", "List", "Factor", "Complete"), c["id"])
 
 
 class M7DeterminismTest(unittest.TestCase):
@@ -844,7 +846,8 @@ class M7PilotOnDiskTest(unittest.TestCase):
             f = M7_PILOT / "steps" / f"{cid}__steps.json"
             self.assertTrue(f.exists(), cid)
             self.assertEqual(mb.validate_file(f), [], cid)
-            self.assertEqual(len(_read(f)), 12, cid)
+            # ENCARREC-M7-GO-FOCUS: the two active steps competences have 24 (every active one >= 24)
+            self.assertEqual(len(_read(f)), 24 if cid in ("m7.props_grouping", "m7.props_distributive") else 12, cid)
 
     def test_pilot_answers_grade_10_on_disk(self):
         for cid in M7_COMPUTE:

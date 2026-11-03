@@ -751,6 +751,7 @@ export class Agent {
     // the math taxonomy; language items keep the vocab/spelling/grammar split.
     const isMath =
       itemType === "compute" || itemType === "compare" || itemType === "steps" ||
+      itemType === "set" || itemType === "factorization" ||
       (itemType === "choose" && item.problem && !item.sentence);
     const verdict = String(graded.verdict ?? "");
     // A steps item names its own category: the FIRST failed step's error_class

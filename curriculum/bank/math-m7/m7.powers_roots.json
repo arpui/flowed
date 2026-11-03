@@ -178,5 +178,183 @@
     "why": "La base és la mateixa: en dividir es resten els exponents. 7 - 5 = 2, així que 2^7 ÷ 2^5 = 2^2.",
     "status": "validated",
     "source": "mathbank · 2026-10-16 · seed 42"
+  },
+  {
+    "id": "m7.powers_roots.013",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "(3^3)^2",
+    "answer": "3^6",
+    "also_accept": [
+      "729"
+    ],
+    "options": [],
+    "why": "Potència de potència: es multipliquen els exponents. 3 · 2 = 6, així que (3^3)^2 = 3^6.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.014",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "10^1 · 10^4",
+    "answer": "10^5",
+    "also_accept": [
+      "100000"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en multiplicar se sumen els exponents. 1 + 4 = 5, així que 10^1 · 10^4 = 10^5.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.015",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "2^3 · 2^2 ÷ 2^1",
+    "answer": "2^4",
+    "also_accept": [
+      "16"
+    ],
+    "options": [],
+    "why": "Mateixa base: primer se sumen els exponents del producte, 3 + 2 = 5, i després es resta l'exponent del divisor, 5 - 1 = 4. Així que el resultat és 2^4.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.016",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "7^1 · 2^0",
+    "answer": "7",
+    "also_accept": [],
+    "options": [],
+    "why": "Exponent 1: 7^1 = 7, qualsevol nombre elevat a 1 és ell mateix. Exponent 0: 2^0 = 1, qualsevol base (diferent de zero) elevada a 0 val 1. Així que 7 · 1 = 7.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.017",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "2^5 ÷ 2^4",
+    "answer": "2",
+    "also_accept": [
+      "2"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en dividir es resten els exponents. 5 - 4 = 1, així que 2^5 ÷ 2^4 = 2^1.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.018",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "2^3 · 2^2 ÷ 2^4",
+    "answer": "2",
+    "also_accept": [
+      "2"
+    ],
+    "options": [],
+    "why": "Mateixa base: primer se sumen els exponents del producte, 3 + 2 = 5, i després es resta l'exponent del divisor, 5 - 4 = 1. Així que el resultat és 2^1.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.019",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "3^1 · 3^6",
+    "answer": "3^7",
+    "also_accept": [
+      "2187"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en multiplicar se sumen els exponents. 1 + 6 = 7, així que 3^1 · 3^6 = 3^7.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.020",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "5^6 ÷ 5^4",
+    "answer": "5^2",
+    "also_accept": [
+      "25"
+    ],
+    "options": [],
+    "why": "La base és la mateixa: en dividir es resten els exponents. 6 - 4 = 2, així que 5^6 ÷ 5^4 = 5^2.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.021",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "2^4 · 2^3 ÷ 2^1",
+    "answer": "2^6",
+    "also_accept": [
+      "64"
+    ],
+    "options": [],
+    "why": "Mateixa base: primer se sumen els exponents del producte, 4 + 3 = 7, i després es resta l'exponent del divisor, 7 - 1 = 6. Així que el resultat és 2^6.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.022",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "10^3 · 10^4 ÷ 10^1",
+    "answer": "10^6",
+    "also_accept": [
+      "1000000"
+    ],
+    "options": [],
+    "why": "Mateixa base: primer se sumen els exponents del producte, 3 + 4 = 7, i després es resta l'exponent del divisor, 7 - 1 = 6. Així que el resultat és 10^6.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.023",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "2^2 · 2^3 ÷ 2^4",
+    "answer": "2",
+    "also_accept": [
+      "2"
+    ],
+    "options": [],
+    "why": "Mateixa base: primer se sumen els exponents del producte, 2 + 3 = 5, i després es resta l'exponent del divisor, 5 - 4 = 1. Així que el resultat és 2^1.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.powers_roots.024",
+    "competence": "m7.powers_roots",
+    "type": "compute",
+    "instruction": "Aplica les propietats de les potències i escriu el resultat com una sola potència.",
+    "problem": "7^4 · 7^5 ÷ 7^5",
+    "answer": "7^4",
+    "also_accept": [
+      "2401"
+    ],
+    "options": [],
+    "why": "Mateixa base: primer se sumen els exponents del producte, 4 + 5 = 9, i després es resta l'exponent del divisor, 9 - 5 = 4. Així que el resultat és 7^4.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
   }
 ]

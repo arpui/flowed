@@ -5,9 +5,10 @@ version: 1
 status: pilot
 pass_mark: 80
 carry_mark: 65
-checkpoint_items: 16
+checkpoint_items: 21
 ready_share: 50
 flash_share: 60
+go_active: m7.props_grouping, m7.props_distributive, m7.integers, m7.powers_roots, m7.powers_base, m7.divisors_multiples, m7.divisibility_rules, m7.primes, m7.prime_factorization, m7.factor_gcd_lcm
 ---
 
 # Math m7 — Àlgebra operativa (1r d'ESO)
@@ -37,6 +38,11 @@ flash_share: 60
 > **Clau `Bank:`**: família de plantilles del generador (`scripts/mathbank.py`);
 > les famílies `steps` s'han de generar amb `--family` explícit (l'escript
 > `gen` les escriu a `curriculum/bank/math-m7/steps/`).
+>
+> **`go_active:` (ENCARREC-M7-GO-FOCUS):** al Go només surten les competències
+> d'aquesta llista; les altres queden adormides (💤, amb el progrés intacte).
+> Despertar una competència = afegir-la a `go_active`. Sense la clau, tot
+> funciona com abans. Un id que no existeix és un error de validació.
 
 ---
 
@@ -165,15 +171,18 @@ Check:
 > que només té Flash (sense `Bank:`, com diu el disseny). El banc és a
 > `curriculum/bank/math-m7/` (fitxers nous). `checkpoint_items` passa a 16 perquè el
 > nombre de competències `[core]` ho exigeix (7 de les antigues + 9 de noves).
+> ENCARREC-M7-GO-FOCUS: 5 competències noves `[core]` més (`powers_base`,
+> `divisors_multiples`, `divisibility_rules`, `primes`, `prime_factorization`), així
+> `checkpoint_items` passa a 21.
 
 ## Nombres enters i divisibilitat
 
 ### m7.integers — Enters: signes, valor absolut i operacions combinades [core]
-Can do: Compute expressions with negative integers, powers, parentheses and nested parentheses, applying the sign rules.
+Can do: Compute long expressions (5 to 8 operations) with negative integers, powers, parentheses and parentheses inside parentheses, applying the sign rules.
 Depth: normal
 Weight: 2
 Requires: m7.props_grouping
-Forms: Primer els parèntesis (els de dins abans que els de fora); després les potències; després les multiplicacions; després les sumes i restes. Regla dels signes: + per + i − per − donen +; + per − i − per + donen −. Restar un negatiu és sumar el seu oposat.
+Forms: Primer els parèntesis (els de dins abans que els de fora: en un parèntesi niat, es resol el més interior); després les potències; després les multiplicacions i divisions; després les sumes i restes. Regla dels signes: + per + i − per − donen +; + per − i − per + donen −. Restar un negatiu és sumar el seu oposat. En una expressió llarga, escriu el resultat de cada parèntesi abans de seguir.
 Tags: #sign, #order_of_operations, #calculation, #procedure, enters, signe, negatiu, oposat, valor absolut, potència, parèntesi
 Signals: negatiu, signe, oposat, valor absolut, parèntesi, potència, combinada, enter
 Bank: integers_combined
@@ -183,11 +192,11 @@ Check:
 - Steps: (-4)^2 - 3 · (-5) → 16 + 15 ; 31
 
 ### m7.factor_gcd_lcm — Factors primers, MCD i mcm en problemes [core]
-Can do: Factorise numbers into primes and find the greatest common divisor or the least common multiple to solve a context problem.
+Can do: Factorise numbers into primes and find the greatest common divisor or the least common multiple to solve a context problem, such as the largest square tile for a floor.
 Depth: normal
 Weight: 2
 Requires: m7.props_grouping
-Forms: Descompon cada nombre en factors primers, dividint pel primer primer que hi cap. MCD: els factors comuns amb el menor exponent (el tros més gran que cap exactament en totes dues). mcm: tots els factors amb el major exponent (el primer moment en què coincideixen). Talls en trossos iguals és MCD; coincidir cada tant és mcm.
+Forms: Descompon cada nombre en factors primers, dividint pel primer primer que hi cap. MCD: els factors comuns amb el menor exponent (el tros més gran que cap exactament en totes dues). mcm: tots els factors amb el major exponent (el primer moment en què coincideixen). Talls en trossos iguals és MCD; coincidir cada tant és mcm. Rajoles: el costat de la rajola quadrada més gran és el MCD dels dos costats del terra, i el nombre de rajoles és el producte dels quocients (360 : 120 · 240 : 120 = 3 · 2 = 6).
 Tags: #procedure, #facts, #calculation, factors primers, MCD, mcm, divisor, múltiple, descomposició
 Signals: MCD, mcm, factors primers, divisor, múltiple, coincideixen, talls, iguals, tros, cada
 Bank: gcd_lcm_problems
@@ -195,6 +204,62 @@ Check:
 - Compute: Quin és el MCD de 36 i 48? → 12
 - Compute: Quin és el mcm de 6 i 8? → 24
 - Compute: Dos autobusos passen cada 12 i cada 18 minuts. Al cap de quants minuts coincideixen? → 36
+
+### m7.divisors_multiples — Divisors i múltiples [core]
+Can do: List all the divisors of a number and the first multiples of a number, and find how many multiples lie in a range or which multiple is the nearest to a number.
+Depth: normal
+Weight: 2
+Requires: m7.props_grouping
+Forms: Un divisor d'un nombre és un nombre que hi cap exactament (la divisió dona residu zero). Els divisors es troben en parelles que multipliquen el nombre (2 · 23 = 46, així que D(46) = {1, 2, 23, 46}). Un múltiple és el resultat de multiplicar un nombre per 1, 2, 3…; per comptar els múltiples d'un rang, divideix el límit pel nombre i mira el quocient, perquè el múltiple més gran que no passa del límit és d · quocient.
+Tags: #facts, #procedure, #calculation, divisor, múltiple, parella, quocient exacte, rang, D(n)
+Signals: divisor, múltiple, divisors de, múltiples de, cap exactament, més proper, entre, primers múltiples
+Bank: divisors_multiples
+Check:
+- List: Escriu tots els divisors de 46 → 1, 2, 23, 46
+- List: Escriu els cinc primers múltiples de 7 → 7, 14, 21, 28, 35
+- Compute: Quants múltiples de 9 hi ha entre 1 i 200? → 22
+
+### m7.divisibility_rules — Criteris de divisibilitat (del 2 a l'11) [core]
+Can do: Decide whether a number is divisible by 2 to 11 with the rule that looks at its digits, and find the digits that make a number divisible.
+Depth: normal
+Weight: 2
+Requires: m7.divisors_multiples
+Forms: Cada criteri mira una part del nombre: el 2, el 5 i el 10 miren l'última xifra; el 4 les dues últimes; el 8 les tres últimes; el 3 i el 9 sumen totes les xifres (la suma ha de ser múltiple de 3 o de 9); el 6 és 2 i 3 alhora; l'11 alterna les xifres des de la dreta i mira si el resultat és 0 o múltiple de 11. Per a una xifra que falta, prova les opcions que compleixen el criteri.
+Tags: #procedure, #facts, #calculation, criteri, divisibilitat, xifra, suma de xifres, últimes xifres, alternança
+Signals: divisible, criteri, xifres, suma de les xifres, última xifra, últimes, alternança, xifra que falta
+Bank: divisibility_rules
+Check:
+- List: Per quins d'aquests nombres és divisible 660: 2, 3, 4, 5, 6, 8, 9, 10, 11? → 2, 3, 4, 5, 6, 10, 11
+- List: Quina xifra pot anar a 4_2 perquè sigui divisible per 3? → 0, 3, 6, 9
+- Complete: És 3456 divisible per 9? → Sí / Si
+
+### m7.primes — Nombres primers i compostos [core]
+Can do: Tell whether a number is prime or composite, with the reason, and list the primes of a range with the sieve of Eratosthenes.
+Depth: normal
+Weight: 2
+Requires: m7.divisors_multiples
+Forms: Un nombre primer té exactament dos divisors (1 i ell mateix); un compost en té més. Per decidir-ho, prova els primers fins a l'arrel quadrada del nombre: si cap no el divideix exactament, és primer. Garbell d'Eratòstenes: escriu els nombres de l'interval i tatxa els múltiples de 2 (menys el 2), després els de 3, de 5 i de 7; els que queden són primers. L'1 no és primer.
+Tags: #facts, #procedure, #calculation, primer, compost, divisors, garbell, arrel quadrada, interval
+Signals: primer, compost, divisors, garbell, Eratòstenes, tatxa, interval, entre
+Bank: primes_mixed
+Check:
+- Complete: És 91 primer o compost? → compost
+- List: Escriu els nombres primers entre 30 i 50 → 31, 37, 41, 43, 47
+- Compute: Quin és el nombre de dues xifres més gran divisible per 2 i per 3? → 96
+
+### m7.prime_factorization — Descomposició en factors primers [core]
+Can do: Write a number as a product of prime factors with their powers, and build a number from its prime factors.
+Depth: normal
+Weight: 2
+Requires: m7.primes
+Forms: Divideix el nombre pel primer primer que hi cap (2, després 3, 5, 7…) i repeteix amb el quocient fins a arribar a 1. Després agrupa els primers repetits en potències: 2 · 2 · 2 · 3 · 3 · 5 = 2^3 · 3^2 · 5. Per construir un nombre a partir dels seus primers, calcula cada potència i multiplica de dos en dos.
+Tags: #procedure, #facts, #calculation, factor primer, descomposició, potència, quocient, divisió, producte
+Signals: descompon, factors primers, descomposició, potència, primer, quocient, construeix, de quin nombre
+Bank: prime_factorization
+Check:
+- Factor: Descompon 360 en factors primers → 2^3 · 3^2 · 5
+- Compute: Quin nombre és 2^2 · 3 · 7? → 84
+- Factor: Descompon 84 en factors primers → 2^2 · 3 · 7
 
 ## Fraccions, decimals i potències
 
@@ -226,18 +291,32 @@ Check:
 - Compute: 0,125 → 1/8
 
 ### m7.powers_roots — Propietats de les potències [core]
-Can do: Apply the exponent rules for products, quotients and powers of powers, and write the result as one power.
+Can do: Apply the exponent rules with one base (product, quotient, power of a power, exponents 1 and 0) and write the result as one power, then its value.
 Depth: normal
 Weight: 2
 Requires: m7.props_grouping
-Forms: Mateixa base: en multiplicar se sumen els exponents; en dividir es resten; potència de potència: es multipliquen. El resultat és una sola potència de la mateixa base (o el seu valor).
-Tags: #procedure, #facts, #calculation, potència, exponent, base, propietat, producte, quocient
-Signals: potència, exponent, base, mateixa base, elevat a, al quadrat, al cub
-Bank: powers_props
+Forms: Mateixa base: en multiplicar se sumen els exponents (2^3 · 2^4 = 2^7); en dividir es resten (3^8 ÷ 3^5 = 3^3); potència de potència: es multipliquen ((5^2)^3 = 5^6). Exponent 1: x^1 = x. Exponent 0: x^0 = 1. Primer expressa-ho com una sola potència (2^3 · 2^4 ÷ 2^2 = 2^5) i després, si cal, calcula'n el valor (32).
+Tags: #procedure, #facts, #calculation, potència, exponent, base, propietat, producte, quocient, exponent 0, exponent 1
+Signals: potència, exponent, base, mateixa base, elevat a, al quadrat, al cub, una sola potència
+Bank: powers_rules
 Check:
-- Compute: 2^3 × 2^4 → 2^7
-- Compute: 3^8 ÷ 3^5 → 27
+- Compute: 2^3 · 2^4 ÷ 2^2 → 2^5
+- Compute: 9^0 · 4^1 → 4
 - Compute: (5^2)^3 → 5^6
+
+### m7.powers_base — Canvi de base i potència d'un producte [core]
+Can do: Raise a product or a fraction to a power, and change the bases to a common one so that the exponent rules can be used.
+Depth: normal
+Weight: 2
+Requires: m7.powers_roots
+Forms: Potència d'un producte: cada factor s'eleva per separat ((2 · 5)^3 = 2^3 · 5^3). Potència d'una fracció: el numerador i el denominador per separat ((2/3)^3 = 8/27). Quan les bases no són iguals, escriu-les com a potència d'una mateixa base (4 = 2^2, 8 = 2^3, 9 = 3^2, 27 = 3^3) i després aplica les propietats: 4^3 · 2^5 = 2^6 · 2^5 = 2^11.
+Tags: #procedure, #facts, #calculation, base, canvi de base, potència de producte, potència de fracció, exponent, mateixa base
+Signals: base, canvi de base, potència d'un producte, potència d'una fracció, mateixa base, elevat a, expressa
+Bank: powers_base
+Check:
+- Compute: (2 · 5)^3 → 2^3 · 5^3
+- Compute: (2/3)^3 → 8/27
+- Compute: 4^3 · 2^5 → 2^11
 
 ## Àlgebra
 

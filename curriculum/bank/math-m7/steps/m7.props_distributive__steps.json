@@ -538,5 +538,545 @@
     "why": "10 + 6 es trenca en dues multiplicacions fàcils: 6 × 10 = 60 i 6 × 6 = 36; 60 + 36 = 96.",
     "status": "reviewed",
     "source": "mathbank · 2026-10-06 · seed 42"
+  },
+  {
+    "id": "m7.props_distributive.013",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "5 × (20 + 8)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "5 × 20 + 5 × 8",
+        "value": "140",
+        "accept": [
+          "5 × 20 + 5 × 8 = 140"
+        ],
+        "error_class": "procedure",
+        "why": "El 5 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "100 + 40",
+        "value": "140",
+        "accept": [
+          "100 + 40 = 140"
+        ],
+        "error_class": "facts",
+        "why": "5 × 20 = 100 i 5 × 8 = 40.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "140",
+        "value": "140",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "100 + 40 = 140.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "140",
+    "why": "20 + 8 es trenca en dues multiplicacions fàcils: 5 × 20 = 100 i 5 × 8 = 40; 100 + 40 = 140.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.014",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3 × (50 - 3)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × 50 - 3 × 3",
+        "value": "141",
+        "accept": [
+          "3 × 50 - 3 × 3 = 141"
+        ],
+        "error_class": "procedure",
+        "why": "El 3 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "150 - 9",
+        "value": "141",
+        "accept": [
+          "150 - 9 = 141"
+        ],
+        "error_class": "facts",
+        "why": "3 × 50 = 150 i 3 × 3 = 9.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "141",
+        "value": "141",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "150 - 9 = 141.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "141",
+    "why": "50 - 3 es trenca en dues multiplicacions fàcils: 3 × 50 = 150 i 3 × 3 = 9; 150 - 9 = 141.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.015",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3 × (50 - 5)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × 50 - 3 × 5",
+        "value": "135",
+        "accept": [
+          "3 × 50 - 3 × 5 = 135"
+        ],
+        "error_class": "procedure",
+        "why": "El 3 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "150 - 15",
+        "value": "135",
+        "accept": [
+          "150 - 15 = 135"
+        ],
+        "error_class": "facts",
+        "why": "3 × 50 = 150 i 3 × 5 = 15.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "135",
+        "value": "135",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "150 - 15 = 135.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "135",
+    "why": "50 - 5 es trenca en dues multiplicacions fàcils: 3 × 50 = 150 i 3 × 5 = 15; 150 - 15 = 135.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.016",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "6 × (40 - 3)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "6 × 40 - 6 × 3",
+        "value": "222",
+        "accept": [
+          "6 × 40 - 6 × 3 = 222"
+        ],
+        "error_class": "procedure",
+        "why": "El 6 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "240 - 18",
+        "value": "222",
+        "accept": [
+          "240 - 18 = 222"
+        ],
+        "error_class": "facts",
+        "why": "6 × 40 = 240 i 6 × 3 = 18.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "222",
+        "value": "222",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "240 - 18 = 222.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "222",
+    "why": "40 - 3 es trenca en dues multiplicacions fàcils: 6 × 40 = 240 i 6 × 3 = 18; 240 - 18 = 222.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.017",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "7 × (40 + 2)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × 40 + 7 × 2",
+        "value": "294",
+        "accept": [
+          "7 × 40 + 7 × 2 = 294"
+        ],
+        "error_class": "procedure",
+        "why": "El 7 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "280 + 14",
+        "value": "294",
+        "accept": [
+          "280 + 14 = 294"
+        ],
+        "error_class": "facts",
+        "why": "7 × 40 = 280 i 7 × 2 = 14.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "294",
+        "value": "294",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "280 + 14 = 294.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "294",
+    "why": "40 + 2 es trenca en dues multiplicacions fàcils: 7 × 40 = 280 i 7 × 2 = 14; 280 + 14 = 294.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.018",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "3 × (20 + 2)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "3 × 20 + 3 × 2",
+        "value": "66",
+        "accept": [
+          "3 × 20 + 3 × 2 = 66"
+        ],
+        "error_class": "procedure",
+        "why": "El 3 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "60 + 6",
+        "value": "66",
+        "accept": [
+          "60 + 6 = 66"
+        ],
+        "error_class": "facts",
+        "why": "3 × 20 = 60 i 3 × 2 = 6.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "66",
+        "value": "66",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "60 + 6 = 66.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "66",
+    "why": "20 + 2 es trenca en dues multiplicacions fàcils: 3 × 20 = 60 i 3 × 2 = 6; 60 + 6 = 66.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.019",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "6 × (10 - 5)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "6 × 10 - 6 × 5",
+        "value": "30",
+        "accept": [
+          "6 × 10 - 6 × 5 = 30"
+        ],
+        "error_class": "procedure",
+        "why": "El 6 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "60 - 30",
+        "value": "30",
+        "accept": [
+          "60 - 30 = 30"
+        ],
+        "error_class": "facts",
+        "why": "6 × 10 = 60 i 6 × 5 = 30.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "30",
+        "value": "30",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "60 - 30 = 30.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "30",
+    "why": "10 - 5 es trenca en dues multiplicacions fàcils: 6 × 10 = 60 i 6 × 5 = 30; 60 - 30 = 30.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.020",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "9 × (20 + 6)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "9 × 20 + 9 × 6",
+        "value": "234",
+        "accept": [
+          "9 × 20 + 9 × 6 = 234"
+        ],
+        "error_class": "procedure",
+        "why": "El 9 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "180 + 54",
+        "value": "234",
+        "accept": [
+          "180 + 54 = 234"
+        ],
+        "error_class": "facts",
+        "why": "9 × 20 = 180 i 9 × 6 = 54.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "234",
+        "value": "234",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "180 + 54 = 234.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "234",
+    "why": "20 + 6 es trenca en dues multiplicacions fàcils: 9 × 20 = 180 i 9 × 6 = 54; 180 + 54 = 234.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.021",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "7 × (10 + 6)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "7 × 10 + 7 × 6",
+        "value": "112",
+        "accept": [
+          "7 × 10 + 7 × 6 = 112"
+        ],
+        "error_class": "procedure",
+        "why": "El 7 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "70 + 42",
+        "value": "112",
+        "accept": [
+          "70 + 42 = 112"
+        ],
+        "error_class": "facts",
+        "why": "7 × 10 = 70 i 7 × 6 = 42.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "112",
+        "value": "112",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "70 + 42 = 112.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "112",
+    "why": "10 + 6 es trenca en dues multiplicacions fàcils: 7 × 10 = 70 i 7 × 6 = 42; 70 + 42 = 112.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.022",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × (20 + 3)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × 20 + 8 × 3",
+        "value": "184",
+        "accept": [
+          "8 × 20 + 8 × 3 = 184"
+        ],
+        "error_class": "procedure",
+        "why": "El 8 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "160 + 24",
+        "value": "184",
+        "accept": [
+          "160 + 24 = 184"
+        ],
+        "error_class": "facts",
+        "why": "8 × 20 = 160 i 8 × 3 = 24.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "184",
+        "value": "184",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "160 + 24 = 184.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "184",
+    "why": "20 + 3 es trenca en dues multiplicacions fàcils: 8 × 20 = 160 i 8 × 3 = 24; 160 + 24 = 184.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.023",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "8 × (20 - 7)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "8 × 20 - 8 × 7",
+        "value": "104",
+        "accept": [
+          "8 × 20 - 8 × 7 = 104"
+        ],
+        "error_class": "procedure",
+        "why": "El 8 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "160 - 56",
+        "value": "104",
+        "accept": [
+          "160 - 56 = 104"
+        ],
+        "error_class": "facts",
+        "why": "8 × 20 = 160 i 8 × 7 = 56.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "104",
+        "value": "104",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "160 - 56 = 104.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "104",
+    "why": "20 - 7 es trenca en dues multiplicacions fàcils: 8 × 20 = 160 i 8 × 7 = 56; 160 - 56 = 104.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
+  },
+  {
+    "id": "m7.props_distributive.024",
+    "competence": "m7.props_distributive",
+    "type": "steps",
+    "instruction": "Resol-ho pas a pas. Una línia per pas.",
+    "problem": "6 × (50 + 8)",
+    "method": "distributive",
+    "steps": [
+      {
+        "n": 1,
+        "expect": "6 × 50 + 6 × 8",
+        "value": "348",
+        "accept": [
+          "6 × 50 + 6 × 8 = 348"
+        ],
+        "error_class": "procedure",
+        "why": "El 6 de fora multiplica els dos termes del parèntesi.",
+        "goal": "Propietat distributiva: multiplica el factor de fora per cada terme del parèntesi (escriu les dues multiplicacions)"
+      },
+      {
+        "n": 2,
+        "expect": "300 + 48",
+        "value": "348",
+        "accept": [
+          "300 + 48 = 348"
+        ],
+        "error_class": "facts",
+        "why": "6 × 50 = 300 i 6 × 8 = 48.",
+        "goal": "Calcula cada multiplicació i escriu la suma o resta dels resultats"
+      },
+      {
+        "n": 3,
+        "expect": "348",
+        "value": "348",
+        "accept": [],
+        "error_class": "calculation",
+        "why": "300 + 48 = 348.",
+        "goal": "Calcula el resultat final"
+      }
+    ],
+    "answer": "348",
+    "why": "50 + 8 es trenca en dues multiplicacions fàcils: 6 × 50 = 300 i 6 × 8 = 48; 300 + 48 = 348.",
+    "status": "validated",
+    "source": "mathbank · 2026-11-03 · seed 7"
   }
 ]

@@ -330,7 +330,7 @@ _COMPARE_WORDS = {
 
 def _is_math_item(item: dict) -> bool:
     t = item.get("type")
-    if t in ("compute", "compare", "steps"):
+    if t in ("compute", "compare", "steps", "set", "factorization"):
         return True
     return t == "choose" and "problem" in item and "sentence" not in item
 
@@ -603,11 +603,35 @@ def _is_algebraic_answer(answer) -> bool:
         return True
 
 
+def _is_text_choice(item: dict) -> bool:
+    """A `choose` whose options are words, not numbers ("primer" / "compost",
+    "Sí" / "No"): graded by exact text. An option with a digit is a value or an
+    operation, and goes through mathgrade as before."""
+    opts = item.get("options") or []
+    return bool(opts) and not any(re.search(r"\d", str(o)) for o in opts)
+
+
+def _grade_set_or_factorization(item: dict, raw_answer: str, full: str) -> dict:
+    """ENCARREC-M7-GO-FOCUS §4: a list is graded as a set, a factorisation as a
+    multiset of prime powers (mathgrade.grade_list / grade_factorization)."""
+    if _math_is_empty(raw_answer):
+        return {"score": 0, "verdict": "empty", "note": item.get("why", ""), "correct_version": full}
+    grader = mathgrade.grade_list if item["type"] == "set" else mathgrade.grade_factorization
+    r = grader(item["answer"], raw_answer)
+    if r["verdict"] == "wrong" and not r.get("note"):
+        r["note"] = item.get("why", "")
+    r["correct_version"] = full
+    r["given"] = str(raw_answer or "").strip()
+    return r
+
+
 def _grade_math(item: dict, raw_answer: str) -> dict:
     full = _math_correct_version(item)
     t = item.get("type")
     if t == "steps":
         return _grade_steps(item, raw_answer)
+    if t in ("set", "factorization"):
+        return _grade_set_or_factorization(item, raw_answer, full)
     if t == "compare":
         if _math_is_empty(raw_answer):
             return {"score": 0, "verdict": "empty", "note": item.get("why", ""), "correct_version": full}
@@ -624,6 +648,10 @@ def _grade_math(item: dict, raw_answer: str) -> dict:
         norm = {str(a).strip().lower() for a in [item["answer"], *item.get("also_accept", [])]}
         if given.lower() in norm:
             return {"score": 10, "verdict": "correct", "note": "", "correct_version": full}
+        if _is_text_choice(item):
+            # a word choice ("primer" / "compost"): no value to compare, a wrong word is wrong
+            return {"score": 3, "verdict": "wrong", "note": item.get("why", ""), "correct_version": full,
+                    "got": given}
         if algebraic:
             r = mathgrade.grade_algebraic(item["answer"], given, item.get("also_accept", []),
                                           problem=item.get("expression") or item.get("problem"))

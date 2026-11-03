@@ -19,7 +19,9 @@ import { stepsV2CardTail } from "./steps.ts";
 export interface BankItem {
   id: string;
   competence: string;
-  type: "complete" | "choose" | "meaning" | "translate" | "correct" | "order" | "transform" | "compute" | "compare" | "steps";
+  type: "complete" | "choose" | "meaning" | "translate" | "correct" | "order" | "transform" | "compute" | "compare" | "steps"
+    /** math: a list answer graded as a set ("1, 2, 23, 46") and a prime factorisation (ENCARREC-M7-GO-FOCUS §4). */
+    | "set" | "factorization";
   instruction: string;
   /** Language items blank a "___" inside a sentence; math items carry a
    *  `problem` instead (DISSENY-MATEMATIQUES §4.1). */
@@ -93,6 +95,8 @@ export function isMathItem(item: BankItem): boolean {
     item.type === "compute" ||
     item.type === "compare" ||
     item.type === "steps" ||
+    item.type === "set" ||
+    item.type === "factorization" ||
     (item.type === "choose" && Boolean(item.problem) && !item.sentence)
   );
 }

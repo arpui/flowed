@@ -70,6 +70,7 @@ __all__ = [
     "ParseError", "Parsed", "parse_expr",
     "grade_single", "grade_step",
     "parse_poly", "poly_form", "grade_algebraic",
+    "parse_list", "grade_list", "parse_factorization", "grade_factorization",
     "EMPTY_ANSWERS",
 ]
 
@@ -769,6 +770,145 @@ def grade_algebraic(expected, given, also_accept=(), problem=None) -> dict:
                         expected=poly_form(exp), got=poly_form(got))
     return _verdict(3, "wrong", note, expected=poly_form(exp), got=poly_form(got),
                     category=cat, error_class=cat)
+
+
+# ------------------------------------------- lists and factorisations (m7 Go) ---
+# ENCARREC-M7-GO-FOCUS §4. A list answer ("divisors de 46": 1, 2, 23, 46) is a SET:
+# order, separators and braces do not matter, a repeated number counts once. A
+# factorisation ("2^3 · 3^2 · 5") is a multiset of prime powers: the same primes
+# with the same exponents, in any order. Neither is graded by value alone: 360 is
+# the right VALUE of "descompon 360" but not its factorisation.
+
+_LIST_SPLIT = re.compile(r"\s+[iIyY]\s+|[\s,;{}()]+")
+_SUPERSCRIPT = str.maketrans({"⁰": "^0", "¹": "^1", "²": "^2", "³": "^3", "⁴": "^4",
+                              "⁵": "^5", "⁶": "^6", "⁷": "^7", "⁸": "^8", "⁹": "^9"})
+
+
+def _is_prime(n: int) -> bool:
+    if n < 2:
+        return False
+    d = 2
+    while d * d <= n:
+        if n % d == 0:
+            return False
+        d += 1
+    return True
+
+
+def _ca_nums(nums) -> str:
+    """[14, 21, 28] -> 'el 14, el 21 i el 28' (the Catalan listing of a few numbers)."""
+    items = [f"el {n}" for n in nums]
+    if len(items) <= 1:
+        return "".join(items)
+    return ", ".join(items[:-1]) + " i " + items[-1]
+
+
+def parse_list(text) -> frozenset:
+    """A list of whole numbers as a SET: '1, 2, 23, 46' = '{46 23 2 1}' = '1 2 2 46'.
+    Raises ParseError on anything that is not a whole number."""
+    s = str(text or "").strip().translate(_OPS)
+    tokens = [t for t in _LIST_SPLIT.split(s) if t]
+    if not tokens:
+        raise ParseError("no hi ha cap nombre")
+    out = set()
+    for t in tokens:
+        if not re.fullmatch(r"\d+", t):
+            raise ParseError(f"«{t}» no és un nombre enter positiu")
+        out.add(int(t))
+    return frozenset(out)
+
+
+def grade_list(expected, given) -> dict:
+    """Grade a list answer as a set. Exact set -> correct 10. Otherwise the answer is
+    near (7 at most, never "known") when at least one number is right: the note says
+    what is missing ("et falta el 23") and what is extra ("sobra el 5"). Score is
+    proportional: (right - extra) / expected, clipped to 0..7."""
+    if _is_empty(given):
+        return _verdict(0, "empty", "resposta buida")
+    want = parse_list(expected)
+    shown = " · ".join(str(n) for n in sorted(want))
+    try:
+        got = parse_list(given)
+    except ParseError as e:
+        return _verdict(3, "wrong", f"no s'ha entès la llista ({e}): escriu els nombres separats per comes",
+                        expected=shown, got=str(given).strip(), error_class="procedure")
+    missing = sorted(want - got)
+    extra = sorted(got - want)
+    if not missing and not extra:
+        return _verdict(10, "correct", "", expected=shown, got=str(given).strip())
+    right = len(want & got)
+    score = max(0, min(7, int(10 * (right - len(extra)) / len(want) + 0.5)))
+    parts = []
+    if missing:
+        parts.append(f"et {'falta' if len(missing) == 1 else 'falten'} {_ca_nums(missing)}")
+    if extra:
+        parts.append(f"{'sobra' if len(extra) == 1 else 'sobren'} {_ca_nums(extra)}")
+    note = "; ".join(parts)
+    verdict = "near" if score >= 1 and right else "wrong"
+    return _verdict(score, verdict, note, expected=shown, got=str(given).strip(),
+                    missing=missing, extra=extra, error_class="incomplete" if missing else "facts")
+
+
+def parse_factorization(text) -> dict:
+    """'2^3 · 3^2 · 5' (also 2³·3², 2*2*2, x or ·, any order) -> {2: 3, 3: 2, 5: 1}.
+    Every factor must be a prime, optionally with an exponent; a repeated prime adds up.
+    Raises ParseError otherwise (so '4 · 90' and '360' are not factorisations)."""
+    s = str(text or "").strip().translate(_SUPERSCRIPT).translate(_OPS).replace("**", "^")
+    if not s:
+        raise ParseError("no hi ha cap factor")
+    fac: dict = {}
+    for piece in re.split(r"[*xX]", s):
+        m = re.fullmatch(r"\s*(\d+)\s*(?:\^\s*(\d+))?\s*", piece)
+        if not m:
+            raise ParseError(f"«{piece.strip()}» no és un factor primer amb el seu exponent")
+        p, e = int(m.group(1)), int(m.group(2) or 1)
+        if not _is_prime(p):
+            raise ParseError(f"{p} no és primer")
+        fac[p] = fac.get(p, 0) + e
+    return fac
+
+
+def _fac_value(fac: dict) -> int:
+    v = 1
+    for p, e in fac.items():
+        v *= p ** e
+    return v
+
+
+def grade_factorization(expected, given) -> dict:
+    """Grade a prime factorisation. Same primes and exponents, any order -> correct 10.
+    Same primes with one exponent wrong -> near 7. A right product that is not written as
+    primes ('360', '4 · 90') -> near 7 with the note that it must be factorised. Anything
+    else -> wrong 3, with the product the learner's factors really give."""
+    if _is_empty(given):
+        return _verdict(0, "empty", "resposta buida")
+    want = parse_factorization(expected)
+    want_v = _fac_value(want)
+    shown = " · ".join(f"{p}^{e}" if e > 1 else str(p) for p, e in sorted(want.items()))
+    try:
+        got = parse_factorization(given)
+    except ParseError as e:
+        try:
+            v = parse_expr(given).value
+        except ParseError:
+            v = None
+        if v is not None and v == want_v:
+            return _verdict(7, "near", "el valor és correcte, però cal escriure'l com a producte de factors primers",
+                            expected=shown, got=str(given).strip(), error_class="procedure")
+        return _verdict(3, "wrong", f"no és una descomposició en factors primers ({e})",
+                        expected=shown, got=str(given).strip(), error_class="procedure")
+    if got == want:
+        return _verdict(10, "correct", "", expected=shown, got=str(given).strip())
+    got_v = _fac_value(got)
+    if set(got) == set(want):
+        bad = next(p for p in want if want[p] != got.get(p))
+        return _verdict(7, "near", f"el factor {bad} no es repeteix tantes vegades",
+                        expected=shown, got=str(given).strip(), error_class="calculation")
+    if got_v != want_v:
+        note = f"el producte dels factors és {got_v}, i el nombre és {want_v}"
+    else:
+        note = "els factors no són els de la descomposició"
+    return _verdict(3, "wrong", note, expected=shown, got=str(given).strip(), error_class="calculation")
 
 
 # -------------------------------------------------------------------- CLI ---
