@@ -164,6 +164,25 @@ class GoActiveTest(unittest.TestCase):
             self.assertEqual(len(picks), 20)
             self.assertGreater(len(set(picks)), 1)
 
+    def test_every_active_competence_comes_up_early(self):
+        # 2026-11-03 (Albert, llvm): one new competence per SECTION hid divisibility and
+        # factorisation behind `integers`. With go_active each active one is its own slot.
+        rng = random.Random(7)
+        with tempfile.TemporaryDirectory() as d:
+            (Path(d) / ".records").mkdir()
+            seen, last = [], None
+            ts0 = int(dt.datetime(2026, 11, 3, 9, 0).timestamp() * 1000)
+            for i in range(12):  # all ten within the first twelve exercises (was the 36th before)
+                t = cu.next_target(self.cur, d, TODAY, last_id=last)
+                seen.append(t["id"])
+                last = t["id"]
+                rec = {"record_id": f"sim:{i}", "session_id": "sim", "ts": ts0 + i, "skill": "math",
+                       "exercise": t["id"], "learner_answer": "", "score": rng.choice([10, 7, 4]),
+                       "corrections": [], "competency": t["id"]}
+                with (Path(d) / ".records" / "sim.jsonl").open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(rec) + "\n")
+            self.assertEqual(set(seen), set(GO), sorted(set(GO) - set(seen)))
+
     def test_the_go_path_ids_are_the_level_ids(self):
         # the Go note and the bank look competences up by id: every active id has bank items
         for cid in GO:

@@ -531,7 +531,11 @@ def active_competences(rows: list[dict], path: dict, cfg: dict = CFG) -> list[st
     sections: dict[str, list[dict]] = {}
     for r in rows:
         if r["id"] not in asleep:
-            sections.setdefault(r["section"], []).append(r)
+            # With go_active (rows carry `asleep`), each active competence is its own slot: the chosen
+            # few must all come up, not one per section (2026-11-03, Albert: divisibility and
+            # factorisation never showed, queued behind `integers` in the same section).
+            key = r["id"] if asleep else r["section"]
+            sections.setdefault(key, []).append(r)
     picks: list[str] = []
     for rs in sections.values():
         for want_core in (True, False):
